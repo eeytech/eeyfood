@@ -2,7 +2,7 @@ import { MercadoPagoConfig, Payment } from "mercadopago";
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
-import { atualizarStatusPedido } from "@/lib/db";
+import { atualizarStatusPagamentoPedido } from "@/lib/db";
 
 const getPaymentId = (
   payload: Record<string, unknown> | null,
@@ -36,13 +36,21 @@ const getTopic = (
   return typeof rawTopic === "string" ? rawTopic : null;
 };
 
-const mapearStatusPedido = (status: string | undefined) => {
+const mapearStatusPagamento = (status: string | undefined) => {
   if (status === "approved") {
-    return "PAYMENT_CONFIRMED" as const;
+    return "PAID" as const;
   }
 
   if (["cancelled", "rejected", "refunded", "charged_back"].includes(status ?? "")) {
-    return "PAYMENT_FAILED" as const;
+    if (status === "refunded") {
+      return "REFUNDED" as const;
+    }
+
+    if (status === "cancelled") {
+      return "CANCELLED" as const;
+    }
+
+    return "FAILED" as const;
   }
 
   return null;
@@ -73,9 +81,9 @@ export async function POST(request: Request) {
 
   const payment = new Payment(client);
   const paymentDetails = await payment.get({ id: paymentId });
-  const status = mapearStatusPedido(paymentDetails.status);
+  const paymentStatus = mapearStatusPagamento(paymentDetails.status);
 
-  if (!status) {
+  if (!paymentStatus) {
     return NextResponse.json({ received: true });
   }
 
@@ -87,9 +95,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true });
   }
 
-  const updatedOrder = await atualizarStatusPedido({
+  const updatedOrder = await atualizarStatusPagamentoPedido({
     orderId,
-    status,
+    paymentStatus,
   });
 
   if (updatedOrder) {

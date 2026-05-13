@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { db } from "./client.js";
 import { menuCategoriesTable, orderProductsTable, ordersTable, productsTable, restaurantsTable, } from "./schema.js";
 const main = async () => {
@@ -245,6 +246,25 @@ const main = async () => {
                 restaurantId: restaurant.id,
             },
         ]);
+        const seededProducts = await tx
+            .select({
+            id: productsTable.id,
+            price: productsTable.price,
+        })
+            .from(productsTable)
+            .where(eq(productsTable.restaurantId, restaurant.id));
+        for (const product of seededProducts) {
+            await tx
+                .update(productsTable)
+                .set({
+                costPrice: Number((product.price * 0.42).toFixed(2)),
+                trackInventory: true,
+                stockQuantity: 50,
+                lowStockThreshold: 10,
+                updatedAt: new Date(),
+            })
+                .where(eq(productsTable.id, product.id));
+        }
     });
 };
 main()

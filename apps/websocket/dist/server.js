@@ -48,6 +48,25 @@ app.post("/eventos/novo-pedido", (request, response) => {
         received: true,
     });
 });
+app.post("/eventos/pedido-atualizado", (request, response) => {
+    const { orderId, restaurantSlug, paymentStatus, status } = request.body;
+    if (!orderId || !restaurantSlug) {
+        response.status(400).json({
+            message: "Payload inválido para atualização de pedido.",
+        });
+        return;
+    }
+    io.to(restaurantSlug).emit("ORDER_UPDATED", {
+        orderId,
+        restaurantSlug,
+        status,
+        paymentStatus,
+        sentAt: new Date().toISOString(),
+    });
+    response.status(202).json({
+        received: true,
+    });
+});
 const port = Number(process.env.PORT ?? 4000);
 httpServer.listen(port, () => {
     process.stdout.write(`Servidor de tempo real iniciado na porta ${String(port)}.\n`);

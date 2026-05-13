@@ -1,25 +1,25 @@
-import { buscarPedidosPorCpf } from "@/lib/db";
+import { buscarPedidosPorTelefone } from "@/lib/db";
 
-import { isValidCpf, removeCpfPunctuation } from "../menu/helpers/cpf";
-import CpfForm from "./components/cpf-form";
+import { isValidPhoneNumber, normalizePhoneNumber } from "../menu/helpers/phone";
 import OrderList from "./components/order-list";
+import PhoneForm from "./components/phone-form";
 
 interface OrdersPageProps {
-  searchParams: Promise<{ cpf: string }>;
+  searchParams: Promise<{ phone: string }>;
 }
 
 const OrdersPage = async ({ searchParams }: OrdersPageProps) => {
-  const { cpf } = await searchParams;
+  const { phone } = await searchParams;
 
-  if (!cpf) {
-    return <CpfForm />;
+  if (!phone) {
+    return <PhoneForm />;
   }
 
-  if (!isValidCpf(cpf)) {
-    return <CpfForm />;
+  if (!isValidPhoneNumber(phone)) {
+    return <PhoneForm />;
   }
 
-  const orders = await buscarPedidosPorCpf(removeCpfPunctuation(cpf));
+  const orders = await buscarPedidosPorTelefone(normalizePhoneNumber(phone));
   return <OrderList orders={orders} />;
 };
 

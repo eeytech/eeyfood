@@ -2,9 +2,10 @@ export { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 
 export { db, pool } from "./client.js";
 export {
+  atualizarStatusPagamentoPedido,
   atualizarStatusPedido,
   buscarPedidoRecebimentoPorId,
-  buscarPedidosPorCpf,
+  buscarPedidosPorTelefone,
   buscarProdutoDoRestaurante,
   buscarRestauranteComCardapioPorSlug,
   buscarRestaurantePorSlug,
@@ -13,6 +14,8 @@ export {
 } from "./queries.js";
 export type { CriarPedidoInput } from "./queries.js";
 export {
+  financialClosingsRelations,
+  financialClosingsTable,
   consumptionMethodEnum,
   menuCategoriesRelations,
   menuCategoriesTable,
@@ -21,28 +24,38 @@ export {
   ordersRelations,
   ordersTable,
   orderStatusEnum,
+  paymentStatusEnum,
   paymentMethodEnum,
   productsRelations,
   productsTable,
   restaurantsRelations,
   restaurantsTable,
+  stockMovementTypeEnum,
+  stockMovementsRelations,
+  stockMovementsTable,
 } from "./schema.js";
 export type {
   ConsumptionMethod,
+  FinancialClosing,
   MenuCategory,
   NewMenuCategory,
+  NewFinancialClosing,
   NewOrder,
   NewOrderProduct,
   NewProduct,
   NewRestaurant,
+  NewStockMovement,
   Order,
   OrderComItens,
   OrderProduct,
   OrderStatus,
   PaymentMethod,
+  PaymentStatus,
   PedidoRecebimento,
   Product,
   ProductComRestaurante,
   Restaurant,
   RestaurantComCategoriasEProdutos,
+  StockMovement,
+  StockMovementType,
 } from "./types.js";

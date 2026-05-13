@@ -12,19 +12,19 @@ const HomePage = () => {
             F
           </div>
           <CardTitle className="font-display text-4xl">
-            Painel de recebimento em tempo real
+            Central administrativa do restaurante
           </CardTitle>
           <CardDescription className="max-w-2xl text-base">
-            Acesse a operação do restaurante com uma fila viva de pedidos,
-            destaque de pagamentos presenciais e confirmação manual de baixa.
+            Acompanhe pedidos em tempo real, mantenha o cardápio atualizado,
+            gerencie estoque e consulte indicadores operacionais.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-4">
           <Button asChild size="lg">
-            <Link href="/fsw-donalds">Abrir painel principal</Link>
+            <Link href="/fsw-donalds/pedidos">Abrir operação principal</Link>
           </Button>
           <Button asChild size="lg" variant="outline">
-            <Link href="/fsw-donalds">Entrar com outro slug pela URL</Link>
+            <Link href="/fsw-donalds/cardapio">Ir para o cardápio</Link>
           </Button>
         </CardContent>
       </Card>
