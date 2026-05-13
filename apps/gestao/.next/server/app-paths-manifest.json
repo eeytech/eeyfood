@@ -1,0 +1,6 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/pedidos/[orderId]/route": "app/api/pedidos/[orderId]/route.js",
+  "/page": "app/page.js",
+  "/[slug]/page": "app/[slug]/page.js"
+}

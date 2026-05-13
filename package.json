@@ -1,0 +1,19 @@
+{
+  "name": "fullstackweek-donalds-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:vendas": "npm run dev -w @fsw/vendas",
+    "dev:gestao": "npm run dev -w @fsw/gestao",
+    "dev:websocket": "npm run dev -w @fsw/websocket",
+    "build": "npm run build -w @fsw/db && npm run build -w @fsw/websocket && npm run build -w @fsw/vendas && npm run build -w @fsw/gestao",
+    "lint": "npm run lint -w @fsw/db && npm run lint -w @fsw/websocket && npm run lint -w @fsw/vendas && npm run lint -w @fsw/gestao",
+    "db:generate": "npm run db:generate -w @fsw/db",
+    "db:migrate": "npm run db:migrate -w @fsw/db",
+    "db:seed": "npm run db:seed -w @fsw/db"
+  }
+}
