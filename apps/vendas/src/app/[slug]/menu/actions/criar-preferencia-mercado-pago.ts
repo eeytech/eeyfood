@@ -7,14 +7,14 @@ import { headers } from "next/headers";
 import { db } from "@/lib/db";
 
 import { CartProduct } from "../contexts/cart";
-import { removeCpfPunctuation } from "../helpers/cpf";
+import { normalizePhoneNumber } from "../helpers/phone";
 
 interface CriarPreferenciaMercadoPagoInput {
   products: CartProduct[];
   orderId: number;
   slug: string;
   consumptionMethod: ConsumptionMethod;
-  cpf: string;
+  phone: string;
 }
 
 export const criarPreferenciaMercadoPago = async ({
@@ -22,7 +22,7 @@ export const criarPreferenciaMercadoPago = async ({
   products,
   slug,
   consumptionMethod,
-  cpf,
+  phone,
 }: CriarPreferenciaMercadoPagoInput) => {
   const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
 
@@ -49,7 +49,7 @@ export const criarPreferenciaMercadoPago = async ({
 
   const searchParams = new URLSearchParams();
   searchParams.set("consumptionMethod", consumptionMethod);
-  searchParams.set("cpf", removeCpfPunctuation(cpf));
+  searchParams.set("phone", normalizePhoneNumber(phone));
 
   const client = new MercadoPagoConfig({
     accessToken,

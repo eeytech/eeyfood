@@ -3,14 +3,16 @@ export type {
   OrderComItens,
   OrderStatus,
   PaymentMethod,
+  PaymentStatus,
   Product,
   ProductComRestaurante,
   Restaurant,
   RestaurantComCategoriasEProdutos,
 } from "@fsw/db";
 export {
+  atualizarStatusPagamentoPedido,
   atualizarStatusPedido,
-  buscarPedidosPorCpf,
+  buscarPedidosPorTelefone,
   buscarProdutoDoRestaurante,
   buscarRestauranteComCardapioPorSlug,
   buscarRestaurantePorSlug,

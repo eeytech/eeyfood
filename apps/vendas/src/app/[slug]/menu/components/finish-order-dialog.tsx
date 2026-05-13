@@ -35,21 +35,21 @@ import type { ConsumptionMethod, PaymentMethod } from "@/lib/db";
 import { createOrder } from "../actions/create-order";
 import { criarPreferenciaMercadoPago } from "../actions/criar-preferencia-mercado-pago";
 import { CartContext } from "../contexts/cart";
-import { isValidCpf, removeCpfPunctuation } from "../helpers/cpf";
+import { isValidPhoneNumber, normalizePhoneNumber } from "../helpers/phone";
 
 const formSchema = z
   .object({
     name: z.string().trim().min(1, {
       message: "O nome é obrigatório.",
     }),
-    cpf: z
+    phone: z
       .string()
       .trim()
       .min(1, {
-        message: "O CPF é obrigatório.",
+        message: "O celular é obrigatório.",
       })
-      .refine((value) => isValidCpf(value), {
-        message: "CPF inválido.",
+      .refine((value) => isValidPhoneNumber(value), {
+        message: "Celular inválido.",
       }),
     paymentMethod: z.enum([
       "MERCADO_PAGO",
@@ -82,7 +82,7 @@ interface FinishOrderDialogProps {
 }
 
 interface PedidoOfflineConcluido {
-  cpf: string;
+  phone: string;
   paymentMethod: Extract<PaymentMethod, "DINHEIRO" | "CARTAO_PRESENCIAL">;
   changeFor?: number;
 }
@@ -122,7 +122,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      cpf: "",
+      phone: "",
       paymentMethod: "MERCADO_PAGO",
       changeFor: "",
     },
@@ -135,7 +135,9 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
   const consumptionMethod: ConsumptionMethod =
     searchParams.get("consumptionMethod") === "DINE_IN"
       ? "DINE_IN"
-      : "TAKEAWAY";
+      : searchParams.get("consumptionMethod") === "DELIVERY"
+        ? "DELIVERY"
+        : "TAKEAWAY";
 
   const handleDrawerOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
@@ -153,7 +155,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
 
     handleDrawerOpenChange(false);
     router.push(
-      `/${slug}/orders?cpf=${removeCpfPunctuation(pedidoOfflineConcluido.cpf)}`,
+      `/${slug}/orders?phone=${normalizePhoneNumber(pedidoOfflineConcluido.phone)}`,
     );
   };
 
@@ -170,7 +172,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
         consumptionMethod,
         paymentMethod: data.paymentMethod,
         changeFor,
-        customerCpf: data.cpf,
+        customerPhone: data.phone,
         customerName: data.name,
         products,
         slug,
@@ -182,7 +184,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
           orderId: order.id,
           slug,
           consumptionMethod,
-          cpf: data.cpf,
+          phone: data.phone,
         });
 
         clearCart();
@@ -192,7 +194,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
 
       clearCart();
       setPedidoOfflineConcluido({
-        cpf: data.cpf,
+        phone: data.phone,
         paymentMethod: data.paymentMethod,
         changeFor,
       });
@@ -280,14 +282,14 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
 
                   <FormField
                     control={form.control}
-                    name="cpf"
+                    name="phone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Seu CPF</FormLabel>
+                        <FormLabel>Seu celular</FormLabel>
                         <FormControl>
                           <PatternFormat
-                            placeholder="Digite seu CPF..."
-                            format="###.###.###-##"
+                            placeholder="Digite seu celular..."
+                            format="(##) #####-####"
                             customInput={Input}
                             {...field}
                           />

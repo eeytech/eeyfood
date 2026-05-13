@@ -1,4 +1,4 @@
-// File: C:\Users\Matheus\Documents\GitHub\fullstackweek-donalds\apps\vendas\src\app\api\webhooks\mercado-pago\route.ts
+// File: C:\Users\Matheus\Documents\GitHub\eeyfood\apps\vendas\src\app\api\webhooks\mercado-pago\route.ts
 import * as entry from '../../../../../../src/app/api/webhooks/mercado-pago/route.js'
 import type { NextRequest } from 'next/server.js'
 

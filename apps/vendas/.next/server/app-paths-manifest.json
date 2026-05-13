@@ -3,8 +3,8 @@
   "/api/webhooks/mercado-pago/route": "app/api/webhooks/mercado-pago/route.js",
   "/favicon.ico/route": "app/favicon.ico/route.js",
   "/[slug]/menu/[productId]/page": "app/[slug]/menu/[productId]/page.js",
-  "/page": "app/page.js",
-  "/[slug]/page": "app/[slug]/page.js",
   "/[slug]/orders/page": "app/[slug]/orders/page.js",
+  "/[slug]/page": "app/[slug]/page.js",
+  "/page": "app/page.js",
   "/[slug]/menu/page": "app/[slug]/menu/page.js"
 }

@@ -1,1 +1,1 @@
-{"/_not-found/page":"/_not-found","/api/pedidos/[orderId]/route":"/api/pedidos/[orderId]","/page":"/","/[slug]/page":"/[slug]"}
+{"/_not-found/page":"/_not-found","/api/pedidos/[orderId]/route":"/api/pedidos/[orderId]","/page":"/","/[slug]/relatorios/page":"/[slug]/relatorios","/[slug]/estoque/page":"/[slug]/estoque","/[slug]/page":"/[slug]","/[slug]/pedidos/page":"/[slug]/pedidos","/[slug]/cardapio/page":"/[slug]/cardapio"}

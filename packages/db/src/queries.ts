@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 
 import { db } from "./client.js";
 import {
@@ -7,6 +7,7 @@ import {
   ordersTable,
   productsTable,
   restaurantsTable,
+  stockMovementsTable,
 } from "./schema.js";
 import type {
   ConsumptionMethod,
@@ -14,6 +15,7 @@ import type {
   OrderComItens,
   OrderStatus,
   PaymentMethod,
+  PaymentStatus,
   PedidoRecebimento,
   Product,
   ProductComRestaurante,
@@ -23,15 +25,31 @@ import type {
 
 export interface CriarPedidoInput {
   customerName: string;
-  customerCpf: string;
+  customerPhone: string;
   slug: string;
   consumptionMethod: ConsumptionMethod;
   paymentMethod: PaymentMethod;
   changeFor?: number;
+  notes?: string;
   products: Array<{
     id: string;
     quantity: number;
   }>;
+}
+
+interface AtualizacaoPedidoBase {
+  id: number;
+  restaurantSlug: string;
+}
+
+export interface AtualizarStatusPedidoInput {
+  orderId: number;
+  status: OrderStatus;
+}
+
+export interface AtualizarStatusPagamentoPedidoInput {
+  orderId: number;
+  paymentStatus: PaymentStatus;
 }
 
 const agruparItensPorPedido = (
@@ -53,6 +71,42 @@ const agruparItensPorPedido = (
     ...pedido,
     orderProducts: itensPorPedido.get(pedido.id) ?? [],
   }));
+};
+
+const resolverSlugRestaurante = async (
+  restaurantId: string,
+): Promise<string | null> => {
+  const [restaurant] = await db
+    .select({
+      slug: restaurantsTable.slug,
+    })
+    .from(restaurantsTable)
+    .where(eq(restaurantsTable.id, restaurantId))
+    .limit(1);
+
+  return restaurant?.slug ?? null;
+};
+
+const getOrderStatusTimestamps = (status: OrderStatus) => {
+  const now = new Date();
+
+  if (status === "FINISHED") {
+    return {
+      finishedAt: now,
+      closedAt: now,
+      cancelledAt: null,
+    };
+  }
+
+  if (status === "CANCELLED") {
+    return {
+      finishedAt: null,
+      closedAt: now,
+      cancelledAt: now,
+    };
+  }
+
+  return {};
 };
 
 export const buscarRestaurantePorSlug = async (
@@ -84,9 +138,22 @@ export const buscarRestauranteComCardapioPorSlug = async (
     .from(menuCategoriesTable)
     .leftJoin(
       productsTable,
-      eq(productsTable.menuCategoryId, menuCategoriesTable.id),
+      and(
+        eq(productsTable.menuCategoryId, menuCategoriesTable.id),
+        eq(productsTable.isActive, true),
+      ),
     )
-    .where(eq(menuCategoriesTable.restaurantId, restaurant.id));
+    .where(
+      and(
+        eq(menuCategoriesTable.restaurantId, restaurant.id),
+        eq(menuCategoriesTable.isActive, true),
+      ),
+    )
+    .orderBy(
+      asc(menuCategoriesTable.displayOrder),
+      asc(menuCategoriesTable.name),
+      asc(productsTable.name),
+    );
 
   const categoriesMap = new Map<
     string,
@@ -134,7 +201,11 @@ export const buscarProdutoDoRestaurante = async ({
       eq(restaurantsTable.id, productsTable.restaurantId),
     )
     .where(
-      and(eq(productsTable.id, productId), eq(restaurantsTable.slug, slug)),
+      and(
+        eq(productsTable.id, productId),
+        eq(restaurantsTable.slug, slug),
+        eq(productsTable.isActive, true),
+      ),
     )
     .limit(1);
 
@@ -148,8 +219,8 @@ export const buscarProdutoDoRestaurante = async ({
   };
 };
 
-export const buscarPedidosPorCpf = async (
-  customerCpf: string,
+export const buscarPedidosPorTelefone = async (
+  customerPhone: string,
 ): Promise<OrderComItens[]> => {
   const pedidos = await db
     .select({
@@ -165,7 +236,7 @@ export const buscarPedidosPorCpf = async (
       restaurantsTable,
       eq(restaurantsTable.id, ordersTable.restaurantId),
     )
-    .where(eq(ordersTable.customerCpf, customerCpf))
+    .where(eq(ordersTable.customerPhone, customerPhone))
     .orderBy(desc(ordersTable.createdAt));
 
   if (pedidos.length === 0) {
@@ -207,56 +278,137 @@ export const criarPedido = async (input: CriarPedidoInput): Promise<Order> => {
     throw new Error("Restaurante não encontrado.");
   }
 
-  const productIds = input.products.map((product) => product.id);
+  const normalizedProducts = Array.from(
+    input.products.reduce((map, product) => {
+      const currentQuantity = map.get(product.id) ?? 0;
+      map.set(product.id, currentQuantity + product.quantity);
+      return map;
+    }, new Map<string, number>()),
+  ).map(([id, quantity]) => ({
+    id,
+    quantity,
+  }));
+
+  if (normalizedProducts.length === 0) {
+    throw new Error("O pedido precisa ter pelo menos um item.");
+  }
+
+  const productIds = normalizedProducts.map((product) => product.id);
   const productsWithPrices = await db
     .select()
     .from(productsTable)
-    .where(inArray(productsTable.id, productIds));
+    .where(
+      and(
+        inArray(productsTable.id, productIds),
+        eq(productsTable.restaurantId, restaurant.id),
+        eq(productsTable.isActive, true),
+      ),
+    );
 
   const productsMap = new Map<string, Product>(
     productsWithPrices.map((product) => [product.id, product]),
   );
 
-  const itens = input.products.map((product) => {
+  const itens = normalizedProducts.map((product) => {
     const currentProduct = productsMap.get(product.id);
 
     if (!currentProduct) {
       throw new Error("Produto não encontrado.");
     }
 
+    if (
+      currentProduct.trackInventory &&
+      currentProduct.stockQuantity < product.quantity
+    ) {
+      throw new Error(`Estoque insuficiente para o produto ${currentProduct.name}.`);
+    }
+
+    const lineTotal = currentProduct.price * product.quantity;
+    const unitCost = currentProduct.costPrice;
+
     return {
       productId: currentProduct.id,
+      productNameSnapshot: currentProduct.name,
       quantity: product.quantity,
       price: currentProduct.price,
+      unitCost,
+      lineTotal,
+      currentProduct,
     };
   });
 
-  const total = itens.reduce(
-    (accumulator, item) => accumulator + item.price * item.quantity,
-    0,
-  );
+  const subtotal = itens.reduce((accumulator, item) => {
+    return accumulator + item.lineTotal;
+  }, 0);
+  const estimatedCost = itens.reduce((accumulator, item) => {
+    return accumulator + item.unitCost * item.quantity;
+  }, 0);
+  const discountAmount = 0;
+  const deliveryFee = 0;
+  const total = subtotal + deliveryFee - discountAmount;
+  const estimatedProfit = total - estimatedCost;
 
   return db.transaction(async (tx) => {
     const [order] = await tx
       .insert(ordersTable)
       .values({
+        subtotal,
+        discountAmount,
+        deliveryFee,
         total,
+        estimatedCost,
+        estimatedProfit,
         status: "PENDING",
+        paymentStatus: "PENDING",
         consumptionMethod: input.consumptionMethod,
         paymentMethod: input.paymentMethod,
         changeFor: input.changeFor,
+        notes: input.notes,
         restaurantId: restaurant.id,
         customerName: input.customerName,
-        customerCpf: input.customerCpf,
+        customerPhone: input.customerPhone,
       })
       .returning();
 
     await tx.insert(orderProductsTable).values(
       itens.map((item) => ({
-        ...item,
+        productId: item.productId,
         orderId: order.id,
+        quantity: item.quantity,
+        price: item.price,
+        unitCost: item.unitCost,
+        lineTotal: item.lineTotal,
+        productNameSnapshot: item.productNameSnapshot,
       })),
     );
+
+    for (const item of itens) {
+      if (!item.currentProduct.trackInventory) {
+        continue;
+      }
+
+      const previousQuantity = item.currentProduct.stockQuantity;
+      const currentQuantity = previousQuantity - item.quantity;
+
+      await tx
+        .update(productsTable)
+        .set({
+          stockQuantity: currentQuantity,
+          updatedAt: new Date(),
+        })
+        .where(eq(productsTable.id, item.productId));
+
+      await tx.insert(stockMovementsTable).values({
+        restaurantId: restaurant.id,
+        productId: item.productId,
+        orderId: order.id,
+        type: "OUT",
+        quantityDelta: -item.quantity,
+        previousQuantity,
+        currentQuantity,
+        reason: `Baixa automática do pedido #${String(order.id)}`,
+      });
+    }
 
     return order;
   });
@@ -265,20 +417,121 @@ export const criarPedido = async (input: CriarPedidoInput): Promise<Order> => {
 export const atualizarStatusPedido = async ({
   orderId,
   status,
-}: {
-  orderId: number;
-  status: OrderStatus;
-}): Promise<{ id: number; status: OrderStatus; restaurantSlug: string } | null> => {
+}: AtualizarStatusPedidoInput): Promise<
+  (AtualizacaoPedidoBase & { status: OrderStatus }) | null
+> => {
+  const result = await db.transaction(async (tx) => {
+    const [existingOrder] = await tx
+      .select({
+        id: ordersTable.id,
+        status: ordersTable.status,
+        restaurantId: ordersTable.restaurantId,
+      })
+      .from(ordersTable)
+      .where(eq(ordersTable.id, orderId))
+      .limit(1);
+
+    if (!existingOrder) {
+      return null;
+    }
+
+    const [updatedOrder] = await tx
+      .update(ordersTable)
+      .set({
+        status,
+        ...getOrderStatusTimestamps(status),
+        updatedAt: new Date(),
+      })
+      .where(eq(ordersTable.id, orderId))
+      .returning({
+        id: ordersTable.id,
+        status: ordersTable.status,
+        restaurantId: ordersTable.restaurantId,
+      });
+
+    if (!updatedOrder) {
+      return null;
+    }
+
+    if (status === "CANCELLED" && existingOrder.status !== "CANCELLED") {
+      const orderItems = await tx
+        .select({
+          orderProduct: orderProductsTable,
+          product: productsTable,
+        })
+        .from(orderProductsTable)
+        .innerJoin(
+          productsTable,
+          eq(productsTable.id, orderProductsTable.productId),
+        )
+        .where(eq(orderProductsTable.orderId, orderId));
+
+      for (const item of orderItems) {
+        if (!item.product.trackInventory) {
+          continue;
+        }
+
+        const previousQuantity = item.product.stockQuantity;
+        const currentQuantity = previousQuantity + item.orderProduct.quantity;
+
+        await tx
+          .update(productsTable)
+          .set({
+            stockQuantity: currentQuantity,
+            updatedAt: new Date(),
+          })
+          .where(eq(productsTable.id, item.product.id));
+
+        await tx.insert(stockMovementsTable).values({
+          restaurantId: updatedOrder.restaurantId,
+          productId: item.product.id,
+          orderId,
+          type: "IN",
+          quantityDelta: item.orderProduct.quantity,
+          previousQuantity,
+          currentQuantity,
+          reason: `Reposição por cancelamento do pedido #${String(orderId)}`,
+        });
+      }
+    }
+
+    return updatedOrder;
+  });
+
+  if (!result) {
+    return null;
+  }
+
+  const restaurantSlug = await resolverSlugRestaurante(result.restaurantId);
+
+  if (!restaurantSlug) {
+    return null;
+  }
+
+  return {
+    id: result.id,
+    status: result.status,
+    restaurantSlug,
+  };
+};
+
+export const atualizarStatusPagamentoPedido = async ({
+  orderId,
+  paymentStatus,
+}: AtualizarStatusPagamentoPedidoInput): Promise<
+  (AtualizacaoPedidoBase & { paymentStatus: PaymentStatus }) | null
+> => {
   const [updatedOrder] = await db
     .update(ordersTable)
     .set({
-      status,
+      paymentStatus,
+      paidAt: paymentStatus === "PAID" ? new Date() : null,
       updatedAt: new Date(),
     })
     .where(eq(ordersTable.id, orderId))
     .returning({
       id: ordersTable.id,
-      status: ordersTable.status,
+      paymentStatus: ordersTable.paymentStatus,
       restaurantId: ordersTable.restaurantId,
     });
 
@@ -286,22 +539,16 @@ export const atualizarStatusPedido = async ({
     return null;
   }
 
-  const [restaurant] = await db
-    .select({
-      slug: restaurantsTable.slug,
-    })
-    .from(restaurantsTable)
-    .where(eq(restaurantsTable.id, updatedOrder.restaurantId))
-    .limit(1);
+  const restaurantSlug = await resolverSlugRestaurante(updatedOrder.restaurantId);
 
-  if (!restaurant) {
+  if (!restaurantSlug) {
     return null;
   }
 
   return {
     id: updatedOrder.id,
-    status: updatedOrder.status,
-    restaurantSlug: restaurant.slug,
+    paymentStatus: updatedOrder.paymentStatus,
+    restaurantSlug,
   };
 };
 

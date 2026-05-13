@@ -16,11 +16,28 @@ interface OrderListProps {
 
 const getStatusLabel = (status: OrderStatus) => {
   if (status === "FINISHED") return "Finalizado";
-  if (status === "IN_PREPARATION") return "Em preparo";
+  if (status === "CANCELLED") return "Cancelado";
+  if (status === "OUT_FOR_DELIVERY") return "Em entrega";
+  if (status === "READY_FOR_PICKUP") return "Pronto para retirada";
+  if (status === "IN_PREPARATION") return "Em produção";
   if (status === "PENDING") return "Pendente";
-  if (status === "PAYMENT_CONFIRMED") return "Pagamento confirmado";
-  if (status === "PAYMENT_FAILED") return "Pagamento falhou";
   return "";
+};
+
+const getStatusClassName = (status: OrderStatus) => {
+  if (status === "FINISHED") {
+    return "bg-emerald-500 text-white";
+  }
+
+  if (status === "CANCELLED") {
+    return "bg-rose-500 text-white";
+  }
+
+  if (status === "READY_FOR_PICKUP" || status === "OUT_FOR_DELIVERY") {
+    return "bg-amber-500 text-white";
+  }
+
+  return "bg-gray-200 text-gray-700";
 };
 
 const OrderList = ({ orders }: OrderListProps) => {
@@ -45,7 +62,7 @@ const OrderList = ({ orders }: OrderListProps) => {
         <Card key={order.id}>
           <CardContent className="space-y-4 p-5">
             <div
-              className={`w-fit rounded-full px-2 py-1 text-xs font-semibold text-white ${(["PAYMENT_CONFIRMED", "FINISHED"] as OrderStatus[]).includes(order.status) ? "bg-green-500 text-white" : "bg-gray-200 text-gray-500"}`}
+              className={`w-fit rounded-full px-2 py-1 text-xs font-semibold ${getStatusClassName(order.status)}`}
             >
               {getStatusLabel(order.status)}
             </div>

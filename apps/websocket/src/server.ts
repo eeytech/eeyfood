@@ -8,6 +8,11 @@ interface NovoPedidoPayload {
   restaurantSlug: string;
 }
 
+interface PedidoAtualizadoPayload extends NovoPedidoPayload {
+  status?: string;
+  paymentStatus?: string;
+}
+
 const app = express();
 const httpServer = createServer(app);
 
@@ -61,6 +66,35 @@ app.post(
     io.to(restaurantSlug).emit("NEW_ORDER", {
       orderId,
       restaurantSlug,
+      sentAt: new Date().toISOString(),
+    });
+
+    response.status(202).json({
+      received: true,
+    });
+  },
+);
+
+app.post(
+  "/eventos/pedido-atualizado",
+  (
+    request: express.Request<unknown, unknown, PedidoAtualizadoPayload>,
+    response,
+  ) => {
+    const { orderId, restaurantSlug, paymentStatus, status } = request.body;
+
+    if (!orderId || !restaurantSlug) {
+      response.status(400).json({
+        message: "Payload inválido para atualização de pedido.",
+      });
+      return;
+    }
+
+    io.to(restaurantSlug).emit("ORDER_UPDATED", {
+      orderId,
+      restaurantSlug,
+      status,
+      paymentStatus,
       sentAt: new Date().toISOString(),
     });
 

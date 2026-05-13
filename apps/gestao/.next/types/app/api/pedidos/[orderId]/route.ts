@@ -1,4 +1,4 @@
-// File: C:\Users\Matheus\Documents\GitHub\fullstackweek-donalds\apps\gestao\src\app\api\pedidos\[orderId]\route.ts
+// File: C:\Users\Matheus\Documents\GitHub\eeyfood\apps\gestao\src\app\api\pedidos\[orderId]\route.ts
 import * as entry from '../../../../../../src/app/api/pedidos/[orderId]/route.js'
 import type { NextRequest } from 'next/server.js'
 

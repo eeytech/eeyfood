@@ -5,11 +5,11 @@ import { revalidatePath } from "next/cache";
 import { type ConsumptionMethod, criarPedido, type PaymentMethod } from "@/lib/db";
 import { notificarNovoPedido } from "@/lib/notificar-novo-pedido";
 
-import { removeCpfPunctuation } from "../helpers/cpf";
+import { normalizePhoneNumber } from "../helpers/phone";
 
 interface CreateOrderInput {
   customerName: string;
-  customerCpf: string;
+  customerPhone: string;
   products: Array<{
     id: string;
     quantity: number;
@@ -23,7 +23,7 @@ interface CreateOrderInput {
 export const createOrder = async (input: CreateOrderInput) => {
   const order = await criarPedido({
     ...input,
-    customerCpf: removeCpfPunctuation(input.customerCpf),
+    customerPhone: normalizePhoneNumber(input.customerPhone),
     changeFor:
       input.paymentMethod === "DINHEIRO" && input.changeFor
         ? input.changeFor
