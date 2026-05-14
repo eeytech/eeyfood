@@ -1,9 +1,14 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckCircle2Icon, Loader2Icon } from "lucide-react";
+import {
+  CheckCircle2Icon,
+  Loader2Icon,
+  TicketPercentIcon,
+  WalletCardsIcon,
+} from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { PatternFormat } from "react-number-format";
 import { toast } from "sonner";
@@ -30,27 +35,42 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/helpers/format-currency";
-import type { ConsumptionMethod, PaymentMethod } from "@/lib/db";
+import type {
+  ConsumptionMethod,
+  PaymentMethod,
+  PedidoBeneficiosValidado,
+} from "@/lib/db";
 
 import { createOrder } from "../actions/create-order";
 import { criarPreferenciaMercadoPago } from "../actions/criar-preferencia-mercado-pago";
+import { saveAbandonedCart } from "../actions/save-abandoned-cart";
+import { validateOrderBenefits } from "../actions/validate-order-benefits";
 import { CartContext } from "../contexts/cart";
 import { isValidPhoneNumber, normalizePhoneNumber } from "../helpers/phone";
 
 const formSchema = z
   .object({
     name: z.string().trim().min(1, {
-      message: "O nome é obrigatório.",
+      message: "O nome e obrigatorio.",
     }),
     phone: z
       .string()
       .trim()
       .min(1, {
-        message: "O celular é obrigatório.",
+        message: "O celular e obrigatorio.",
       })
       .refine((value) => isValidPhoneNumber(value), {
-        message: "Celular inválido.",
+        message: "Celular invalido.",
       }),
+    couponCode: z
+      .string()
+      .trim()
+      .max(40, {
+        message: "O cupom deve ter no maximo 40 caracteres.",
+      })
+      .optional(),
+    fulfillmentTiming: z.enum(["ASAP", "SCHEDULED"]),
+    scheduledFor: z.string().trim().optional(),
     paymentMethod: z.enum([
       "MERCADO_PAGO",
       "DINHEIRO",
@@ -59,17 +79,47 @@ const formSchema = z
     changeFor: z.string().trim().optional(),
   })
   .superRefine((values, context) => {
-    if (values.paymentMethod !== "DINHEIRO" || !values.changeFor) {
+    if (values.paymentMethod === "DINHEIRO" && values.changeFor) {
+      const parsedValue = Number(values.changeFor.replace(",", "."));
+
+      if (Number.isNaN(parsedValue) || parsedValue <= 0) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["changeFor"],
+          message: "Informe um valor de troco valido.",
+        });
+      }
+    }
+
+    if (values.fulfillmentTiming !== "SCHEDULED") {
       return;
     }
 
-    const parsedValue = Number(values.changeFor.replace(",", "."));
-
-    if (Number.isNaN(parsedValue) || parsedValue <= 0) {
+    if (!values.scheduledFor) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["changeFor"],
-        message: "Informe um valor de troco válido.",
+        path: ["scheduledFor"],
+        message: "Selecione a data e hora do agendamento.",
+      });
+      return;
+    }
+
+    const scheduledFor = new Date(values.scheduledFor);
+
+    if (Number.isNaN(scheduledFor.getTime())) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["scheduledFor"],
+        message: "Data e hora de agendamento invalidas.",
+      });
+      return;
+    }
+
+    if (scheduledFor.getTime() < Date.now() + 15 * 60 * 1000) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["scheduledFor"],
+        message: "Agende com pelo menos 15 minutos de antecedencia.",
       });
     }
   });
@@ -83,9 +133,42 @@ interface FinishOrderDialogProps {
 
 interface PedidoOfflineConcluido {
   phone: string;
+  total: number;
+  scheduledFor?: string;
   paymentMethod: Extract<PaymentMethod, "DINHEIRO" | "CARTAO_PRESENCIAL">;
   changeFor?: number;
 }
+
+const formatDateTimeLocalInput = (date: Date) => {
+  const adjustedDate = new Date(
+    date.getTime() - date.getTimezoneOffset() * 60 * 1000,
+  );
+
+  return adjustedDate.toISOString().slice(0, 16);
+};
+
+const formatScheduledDate = (value: string) => {
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+};
+
+const getSchedulingLabel = (consumptionMethod: ConsumptionMethod) => {
+  return consumptionMethod === "DELIVERY" ? "entrega" : "retirada";
+};
+
+const createAbandonedCartSessionId = () => {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `abandoned-cart-${Date.now().toString()}-${Math.random()
+    .toString(36)
+    .slice(2, 10)}`;
+};
 
 const paymentOptions: Array<{
   value: PaymentMethod;
@@ -100,12 +183,12 @@ const paymentOptions: Array<{
   {
     value: "DINHEIRO",
     titulo: "Dinheiro",
-    descricao: "Pagamento no balcão ou na entrega, com troco opcional.",
+    descricao: "Pagamento no balcao ou na entrega, com troco opcional.",
   },
   {
     value: "CARTAO_PRESENCIAL",
-    titulo: "Maquininha no balcão/entrega",
-    descricao: "Pagamento presencial com cartão ao receber o pedido.",
+    titulo: "Maquininha no balcao/entrega",
+    descricao: "Pagamento presencial com cartao ao receber o pedido.",
   },
 ];
 
@@ -115,14 +198,21 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
   const { products, total, clearCart } = useContext(CartContext);
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
+  const [isValidatingBenefits, setIsValidatingBenefits] = useState(false);
+  const [useWalletBalance, setUseWalletBalance] = useState(false);
+  const [benefits, setBenefits] = useState<PedidoBeneficiosValidado | null>(null);
   const [pedidoOfflineConcluido, setPedidoOfflineConcluido] =
     useState<PedidoOfflineConcluido | null>(null);
+  const abandonedCartSessionIdRef = useRef(createAbandonedCartSessionId());
 
   const form = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       phone: "",
+      couponCode: "",
+      fulfillmentTiming: "ASAP",
+      scheduledFor: "",
       paymentMethod: "MERCADO_PAGO",
       changeFor: "",
     },
@@ -130,6 +220,11 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
   });
 
   const paymentMethod = form.watch("paymentMethod");
+  const watchedName = form.watch("name");
+  const watchedPhone = form.watch("phone");
+  const watchedCouponCode = form.watch("couponCode");
+  const fulfillmentTiming = form.watch("fulfillmentTiming");
+  const watchedScheduledFor = form.watch("scheduledFor");
   const needsChangeField = paymentMethod === "DINHEIRO";
 
   const consumptionMethod: ConsumptionMethod =
@@ -138,10 +233,88 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
       : searchParams.get("consumptionMethod") === "DELIVERY"
         ? "DELIVERY"
         : "TAKEAWAY";
+  const allowsScheduling = consumptionMethod !== "DINE_IN";
+  const schedulingLabel = getSchedulingLabel(consumptionMethod);
+  const minimumScheduleValue = formatDateTimeLocalInput(
+    new Date(Date.now() + 15 * 60 * 1000),
+  );
+
+  const checkoutSummary = benefits ?? {
+    subtotal: total,
+    deliveryFee: 0,
+    discountAmount: 0,
+    couponDiscountAmount: 0,
+    cashbackRedeemedAmount: 0,
+    total,
+    cashbackEarnedAmount: 0,
+    appliedCoupon: null,
+    wallet: null,
+  };
+
+  useEffect(() => {
+    setBenefits(null);
+    setUseWalletBalance(false);
+  }, [products, watchedPhone, watchedCouponCode]);
+
+  useEffect(() => {
+    if (!open || products.length === 0) {
+      return;
+    }
+
+    const hasCustomerData =
+      watchedName.trim().length > 0 || watchedPhone.replace(/\D/g, "").length > 0;
+
+    if (!hasCustomerData) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void saveAbandonedCart({
+        sessionId: abandonedCartSessionIdRef.current,
+        slug,
+        customerName: watchedName,
+        customerPhone: watchedPhone,
+        consumptionMethod,
+        paymentMethod,
+        couponCode: watchedCouponCode,
+        useWalletBalance,
+        scheduledFor:
+          fulfillmentTiming === "SCHEDULED" && watchedScheduledFor
+            ? new Date(watchedScheduledFor).toISOString()
+            : undefined,
+        products: products.map((product) => ({
+          id: product.id,
+          name: product.name,
+          quantity: product.quantity,
+          price: product.price,
+        })),
+      }).catch((error: unknown) => {
+        console.error("Falha ao salvar carrinho abandonado.", error);
+      });
+    }, 1500);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [
+    consumptionMethod,
+    fulfillmentTiming,
+    open,
+    paymentMethod,
+    products,
+    slug,
+    useWalletBalance,
+    watchedCouponCode,
+    watchedName,
+    watchedPhone,
+    watchedScheduledFor,
+  ]);
 
   const handleDrawerOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
       setPedidoOfflineConcluido(null);
+      setBenefits(null);
+      setUseWalletBalance(false);
       form.reset();
     }
 
@@ -159,6 +332,48 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
     );
   };
 
+  const handleValidateBenefits = async (nextUseWalletBalance = useWalletBalance) => {
+    if (!isValidPhoneNumber(watchedPhone)) {
+      form.setError("phone", {
+        message: "Informe um celular valido para consultar beneficios.",
+      });
+      return;
+    }
+
+    try {
+      setIsValidatingBenefits(true);
+
+      const validatedBenefits = await validateOrderBenefits({
+        customerPhone: watchedPhone,
+        slug,
+        couponCode: watchedCouponCode,
+        useWalletBalance: nextUseWalletBalance,
+        products,
+      });
+
+      setUseWalletBalance(nextUseWalletBalance);
+      setBenefits(validatedBenefits);
+    } catch (error) {
+      setBenefits(null);
+      if (nextUseWalletBalance !== useWalletBalance) {
+        setUseWalletBalance(false);
+      }
+
+      toast.error("Nao foi possivel validar cupom e cashback.", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "Revise os dados informados e tente novamente.",
+      });
+    } finally {
+      setIsValidatingBenefits(false);
+    }
+  };
+
+  const handleToggleWalletBalance = async () => {
+    await handleValidateBenefits(!useWalletBalance);
+  };
+
   const onSubmit = async (data: FormSchema) => {
     try {
       setIsLoading(true);
@@ -174,34 +389,58 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
         changeFor,
         customerPhone: data.phone,
         customerName: data.name,
+        scheduledFor:
+          allowsScheduling &&
+          data.fulfillmentTiming === "SCHEDULED" &&
+          data.scheduledFor
+            ? new Date(data.scheduledFor).toISOString()
+            : undefined,
+        abandonedCartSessionId: abandonedCartSessionIdRef.current,
+        couponCode: data.couponCode,
+        useWalletBalance,
         products,
         slug,
       });
 
       if (data.paymentMethod === "MERCADO_PAGO") {
+        const orderSummary = products
+          .map((product) => `${String(product.quantity)}x ${product.name}`)
+          .join(", ")
+          .slice(0, 240);
+
         const { initPoint } = await criarPreferenciaMercadoPago({
-          products,
           orderId: order.id,
+          orderTotal: order.total,
+          orderSummary,
           slug,
           consumptionMethod,
           phone: data.phone,
         });
 
+        abandonedCartSessionIdRef.current = createAbandonedCartSessionId();
         clearCart();
         window.location.assign(initPoint);
         return;
       }
 
+      abandonedCartSessionIdRef.current = createAbandonedCartSessionId();
       clearCart();
       setPedidoOfflineConcluido({
         phone: data.phone,
+        total: order.total,
+        scheduledFor: order.scheduledFor
+          ? new Date(order.scheduledFor).toISOString()
+          : undefined,
         paymentMethod: data.paymentMethod,
         changeFor,
       });
     } catch (error) {
       console.error(error);
-      toast.error("Não foi possível finalizar o pedido.", {
-        description: "Revise os dados e tente novamente em instantes.",
+      toast.error("Nao foi possivel finalizar o pedido.", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "Revise os dados e tente novamente em instantes.",
       });
     } finally {
       setIsLoading(false);
@@ -220,15 +459,30 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                 Pedido recebido
               </DrawerTitle>
               <DrawerDescription>
-                Seu pedido já foi salvo e a equipe do restaurante foi avisada.
+                Seu pedido ja foi salvo e a equipe do restaurante foi avisada.
               </DrawerDescription>
             </DrawerHeader>
             <div className="space-y-4 p-5">
               <div className="rounded-3xl border border-green-100 bg-green-50 p-4 text-sm text-green-900">
                 {pedidoOfflineConcluido.paymentMethod === "DINHEIRO"
-                  ? "O pagamento será feito em dinheiro no balcão ou na entrega."
-                  : "O pagamento será concluído na maquininha no balcão ou na entrega."}
+                  ? "O pagamento sera feito em dinheiro no balcao ou na entrega."
+                  : "O pagamento sera concluido na maquininha no balcao ou na entrega."}
               </div>
+
+              <div className="rounded-3xl border bg-muted p-4 text-sm">
+                Total registrado:{" "}
+                <strong>{formatCurrency(pedidoOfflineConcluido.total)}</strong>
+              </div>
+
+              {pedidoOfflineConcluido.scheduledFor ? (
+                <div className="rounded-3xl border bg-muted p-4 text-sm">
+                  Pedido agendado para{" "}
+                  <strong>
+                    {formatScheduledDate(pedidoOfflineConcluido.scheduledFor)}
+                  </strong>
+                  .
+                </div>
+              ) : null}
 
               {pedidoOfflineConcluido.changeFor ? (
                 <div className="rounded-3xl border bg-muted p-4 text-sm">
@@ -257,7 +511,8 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
             <DrawerHeader>
               <DrawerTitle>Finalizar pedido</DrawerTitle>
               <DrawerDescription>
-                Informe seus dados e escolha como prefere pagar.
+                Informe seus dados, valide os beneficios e escolha como prefere
+                pagar.
               </DrawerDescription>
             </DrawerHeader>
             <div className="p-5">
@@ -301,6 +556,204 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
 
                   <FormField
                     control={form.control}
+                    name="couponCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Cupom de desconto</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Ex.: BEMVINDO10"
+                            autoCapitalize="characters"
+                            {...field}
+                            value={field.value ?? ""}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {allowsScheduling ? (
+                    <div className="rounded-[28px] border bg-slate-50/80 p-4">
+                      <div className="space-y-1">
+                        <p className="text-sm font-semibold">
+                          Horario da {schedulingLabel}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Escolha se deseja receber o pedido o quanto antes ou em
+                          um horario agendado.
+                        </p>
+                      </div>
+
+                      <FormField
+                        control={form.control}
+                        name="fulfillmentTiming"
+                        render={({ field }) => (
+                          <FormItem className="mt-4 space-y-3">
+                            <FormControl>
+                              <div className="grid gap-3">
+                                {[
+                                  {
+                                    value: "ASAP" as const,
+                                    title: "O quanto antes",
+                                    description:
+                                      consumptionMethod === "DELIVERY"
+                                        ? "Vamos preparar e despachar assim que o pedido entrar."
+                                        : "Vamos preparar para retirada assim que o pedido entrar.",
+                                  },
+                                  {
+                                    value: "SCHEDULED" as const,
+                                    title: "Agendar horario",
+                                    description:
+                                      consumptionMethod === "DELIVERY"
+                                        ? "Defina a data e hora desejadas para a entrega."
+                                        : "Defina a data e hora desejadas para a retirada.",
+                                  },
+                                ].map((option) => (
+                                  <button
+                                    key={option.value}
+                                    type="button"
+                                    onClick={() => field.onChange(option.value)}
+                                    className={`rounded-3xl border px-4 py-3 text-left transition ${
+                                      field.value === option.value
+                                        ? "border-primary bg-primary/5"
+                                        : "border-border bg-background"
+                                    }`}
+                                  >
+                                    <p className="font-medium">{option.title}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {option.description}
+                                    </p>
+                                  </button>
+                                ))}
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {fulfillmentTiming === "SCHEDULED" ? (
+                        <FormField
+                          control={form.control}
+                          name="scheduledFor"
+                          render={({ field }) => (
+                            <FormItem className="mt-4">
+                              <FormLabel>Data e hora</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="datetime-local"
+                                  min={minimumScheduleValue}
+                                  {...field}
+                                  value={field.value ?? ""}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  <div className="rounded-[28px] border bg-slate-50/80 p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-1">
+                        <p className="flex items-center gap-2 text-sm font-semibold">
+                          <TicketPercentIcon size={16} />
+                          Cupons e cashback
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Validamos o cupom e o saldo pelo celular informado.
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="rounded-full"
+                        disabled={isValidatingBenefits || products.length === 0}
+                        onClick={() => handleValidateBenefits()}
+                      >
+                        {isValidatingBenefits ? (
+                          <Loader2Icon className="animate-spin" />
+                        ) : null}
+                        Validar beneficios
+                      </Button>
+                    </div>
+
+                    {benefits ? (
+                      <div className="mt-4 space-y-3">
+                        <div className="rounded-3xl border bg-background p-4 text-sm">
+                          {benefits.appliedCoupon ? (
+                            <p className="font-medium text-slate-900">
+                              Cupom aplicado: {benefits.appliedCoupon.code}
+                            </p>
+                          ) : (
+                            <p className="font-medium text-slate-900">
+                              Nenhum cupom aplicado.
+                            </p>
+                          )}
+                          <p className="mt-1 text-muted-foreground">
+                            {benefits.appliedCoupon?.description ??
+                              "Voce pode seguir sem desconto promocional."}
+                          </p>
+                        </div>
+
+                        <div className="rounded-3xl border bg-background p-4 text-sm">
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="flex items-center gap-2 font-medium text-slate-900">
+                                <WalletCardsIcon size={16} />
+                                Saldo de cashback
+                              </p>
+                              <p className="mt-1 text-muted-foreground">
+                                Disponivel agora:{" "}
+                                <strong>
+                                  {formatCurrency(
+                                    benefits.wallet?.currentBalance ?? 0,
+                                  )}
+                                </strong>
+                              </p>
+                            </div>
+
+                            {(benefits.wallet?.currentBalance ?? 0) > 0 ? (
+                              <Button
+                                type="button"
+                                variant={useWalletBalance ? "default" : "outline"}
+                                className="rounded-full"
+                                disabled={isValidatingBenefits}
+                                onClick={handleToggleWalletBalance}
+                              >
+                                {useWalletBalance
+                                  ? "Remover saldo"
+                                  : "Usar saldo"}
+                              </Button>
+                            ) : null}
+                          </div>
+
+                          {useWalletBalance &&
+                          benefits.wallet?.availableToRedeem ? (
+                            <p className="mt-3 text-emerald-700">
+                              Resgate aplicado:{" "}
+                              <strong>
+                                {formatCurrency(
+                                  benefits.wallet.availableToRedeem,
+                                )}
+                              </strong>
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="mt-4 text-sm text-muted-foreground">
+                        O total final continua sendo revalidado no servidor no
+                        momento da confirmacao.
+                      </p>
+                    )}
+                  </div>
+
+                  <FormField
+                    control={form.control}
                     name="paymentMethod"
                     render={({ field }) => (
                       <FormItem className="space-y-3">
@@ -312,7 +765,11 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                                 key={option.value}
                                 type="button"
                                 onClick={() => field.onChange(option.value)}
-                                className={`rounded-3xl border px-4 py-3 text-left transition ${field.value === option.value ? "border-primary bg-primary/5" : "border-border bg-background"}`}
+                                className={`rounded-3xl border px-4 py-3 text-left transition ${
+                                  field.value === option.value
+                                    ? "border-primary bg-primary/5"
+                                    : "border-border bg-background"
+                                }`}
                               >
                                 <p className="font-medium">{option.titulo}</p>
                                 <p className="text-sm text-muted-foreground">
@@ -347,8 +804,44 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                     />
                   ) : null}
 
-                  <div className="rounded-3xl border bg-muted/50 p-4 text-sm">
-                    Total do pedido: <strong>{formatCurrency(total)}</strong>
+                  <div className="rounded-[28px] border bg-muted/50 p-4 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span>Subtotal</span>
+                      <strong>{formatCurrency(checkoutSummary.subtotal)}</strong>
+                    </div>
+
+                    {checkoutSummary.couponDiscountAmount > 0 ? (
+                      <div className="mt-2 flex items-center justify-between text-emerald-700">
+                        <span>Desconto por cupom</span>
+                        <strong>
+                          -{formatCurrency(checkoutSummary.couponDiscountAmount)}
+                        </strong>
+                      </div>
+                    ) : null}
+
+                    {checkoutSummary.cashbackRedeemedAmount > 0 ? (
+                      <div className="mt-2 flex items-center justify-between text-emerald-700">
+                        <span>Cashback resgatado</span>
+                        <strong>
+                          -{formatCurrency(checkoutSummary.cashbackRedeemedAmount)}
+                        </strong>
+                      </div>
+                    ) : null}
+
+                    <div className="mt-3 flex items-center justify-between border-t pt-3 text-base">
+                      <span className="font-medium">Total do pedido</span>
+                      <strong>{formatCurrency(checkoutSummary.total)}</strong>
+                    </div>
+
+                    {checkoutSummary.cashbackEarnedAmount > 0 ? (
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        Apos o pagamento, este pedido gera{" "}
+                        <strong>
+                          {formatCurrency(checkoutSummary.cashbackEarnedAmount)}
+                        </strong>{" "}
+                        em cashback.
+                      </p>
+                    ) : null}
                   </div>
 
                   <DrawerFooter className="px-0">

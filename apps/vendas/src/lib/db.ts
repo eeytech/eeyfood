@@ -1,13 +1,17 @@
 export type {
+  AbandonedCart,
   ConsumptionMethod,
+  CriarPedidoInput,
   OrderComItens,
   OrderStatus,
   PaymentMethod,
   PaymentStatus,
+  PedidoBeneficiosValidado,
   Product,
   ProductComRestaurante,
   Restaurant,
   RestaurantComCategoriasEProdutos,
+  SalvarCarrinhoAbandonadoInput,
 } from "@fsw/db";
 export {
   atualizarStatusPagamentoPedido,
@@ -18,4 +22,6 @@ export {
   buscarRestaurantePorSlug,
   criarPedido,
   db,
+  salvarCarrinhoAbandonado,
+  validarBeneficiosPedido,
 } from "@fsw/db";

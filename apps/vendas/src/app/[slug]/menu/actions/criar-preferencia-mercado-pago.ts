@@ -1,17 +1,15 @@
 "use server";
 
-import { type ConsumptionMethod,inArray, productsTable } from "@fsw/db";
+import { type ConsumptionMethod } from "@fsw/db";
 import { MercadoPagoConfig, Preference } from "mercadopago";
 import { headers } from "next/headers";
 
-import { db } from "@/lib/db";
-
-import { CartProduct } from "../contexts/cart";
 import { normalizePhoneNumber } from "../helpers/phone";
 
 interface CriarPreferenciaMercadoPagoInput {
-  products: CartProduct[];
   orderId: number;
+  orderTotal: number;
+  orderSummary: string;
   slug: string;
   consumptionMethod: ConsumptionMethod;
   phone: string;
@@ -19,7 +17,8 @@ interface CriarPreferenciaMercadoPagoInput {
 
 export const criarPreferenciaMercadoPago = async ({
   orderId,
-  products,
+  orderTotal,
+  orderSummary,
   slug,
   consumptionMethod,
   phone,
@@ -27,25 +26,15 @@ export const criarPreferenciaMercadoPago = async ({
   const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
 
   if (!accessToken) {
-    throw new Error("A chave do Mercado Pago não foi configurada.");
+    throw new Error("A chave do Mercado Pago nao foi configurada.");
   }
 
   const cabecalhos = await headers();
-  const origin =
-    cabecalhos.get("origin") ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const origin = cabecalhos.get("origin") ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
 
   if (!origin) {
-    throw new Error("Não foi possível determinar a URL base da aplicação.");
+    throw new Error("Nao foi possivel determinar a URL base da aplicacao.");
   }
-
-  const productsWithPrices = await db
-    .select()
-    .from(productsTable)
-    .where(inArray(productsTable.id, products.map((product) => product.id)));
-
-  const productsMap = new Map(
-    productsWithPrices.map((product) => [product.id, product.price]),
-  );
 
   const searchParams = new URLSearchParams();
   searchParams.set("consumptionMethod", consumptionMethod);
@@ -72,21 +61,23 @@ export const criarPreferenciaMercadoPago = async ({
         orderId,
         restaurantSlug: slug,
       },
-      items: products.map((product) => ({
-        id: product.id,
-        title: product.name,
-        picture_url: product.imageUrl,
-        quantity: product.quantity,
-        currency_id: "BRL",
-        unit_price: productsMap.get(product.id) ?? product.price,
-      })),
+      items: [
+        {
+          id: String(orderId),
+          title: `Pedido #${String(orderId)}`,
+          description: orderSummary,
+          quantity: 1,
+          currency_id: "BRL",
+          unit_price: orderTotal,
+        },
+      ],
     },
   });
 
   const initPoint = response.init_point ?? response.sandbox_init_point;
 
   if (!initPoint) {
-    throw new Error("O Mercado Pago não retornou uma URL de pagamento.");
+    throw new Error("O Mercado Pago nao retornou uma URL de pagamento.");
   }
 
   return { initPoint };

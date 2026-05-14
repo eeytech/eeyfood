@@ -2,18 +2,26 @@ import { eq } from "drizzle-orm";
 
 import { db } from "./client.js";
 import {
+  abandonedCartsTable,
+  couponsTable,
+  diningTablesTable,
   menuCategoriesTable,
   orderProductsTable,
   ordersTable,
   productsTable,
   restaurantsTable,
+  walletsTable,
 } from "./schema.js";
 
 const main = async () => {
   await db.transaction(async (tx) => {
     await tx.delete(orderProductsTable);
     await tx.delete(ordersTable);
+    await tx.delete(abandonedCartsTable);
+    await tx.delete(walletsTable);
+    await tx.delete(couponsTable);
     await tx.delete(productsTable);
+    await tx.delete(diningTablesTable);
     await tx.delete(menuCategoriesTable);
     await tx.delete(restaurantsTable);
 
@@ -37,6 +45,33 @@ const main = async () => {
         restaurantId: restaurant.id,
       })
       .returning();
+
+    await tx.insert(diningTablesTable).values([
+      {
+        name: "Mesa 01",
+        seats: 4,
+        displayOrder: 1,
+        restaurantId: restaurant.id,
+      },
+      {
+        name: "Mesa 02",
+        seats: 4,
+        displayOrder: 2,
+        restaurantId: restaurant.id,
+      },
+      {
+        name: "Mesa 03",
+        seats: 6,
+        displayOrder: 3,
+        restaurantId: restaurant.id,
+      },
+      {
+        name: "Mesa 04",
+        seats: 2,
+        displayOrder: 4,
+        restaurantId: restaurant.id,
+      },
+    ]);
 
     await tx.insert(productsTable).values([
       {
@@ -309,6 +344,28 @@ const main = async () => {
         })
         .where(eq(productsTable.id, product.id));
     }
+
+    await tx.insert(couponsTable).values({
+      restaurantId: restaurant.id,
+      code: "BEMVINDO10",
+      description: "10% de desconto na primeira compra.",
+      discountType: "PERCENTAGE",
+      discountValue: 10,
+      minimumOrderValue: 20,
+      usageLimit: 500,
+      usageCount: 0,
+      perCustomerLimit: 1,
+      isActive: true,
+    });
+
+    await tx.insert(walletsTable).values({
+      restaurantId: restaurant.id,
+      customerPhone: "11999999999",
+      balance: 15,
+      totalEarned: 15,
+      totalRedeemed: 0,
+      lastCreditAt: new Date(),
+    });
   });
 };
 

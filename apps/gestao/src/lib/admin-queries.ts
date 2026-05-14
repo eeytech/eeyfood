@@ -4,6 +4,7 @@ import {
   buscarRestaurantePorSlug,
   db,
   eq,
+  listarMesasComandasPorSlug,
   listarPedidosRecebimentoPorSlug,
   menuCategoriesTable,
   productsTable,
@@ -39,6 +40,10 @@ export interface RelatorioBasico {
   history: RelatorioResumoDiario[];
   topProducts: ProdutoMaisVendido[];
 }
+
+export const listarMesasComandasGestao = async (slug: string) => {
+  return listarMesasComandasPorSlug(slug);
+};
 
 export const buscarRestauranteParaGestao = async (
   slug: string,
