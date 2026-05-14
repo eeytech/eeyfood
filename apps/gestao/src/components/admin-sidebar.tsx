@@ -5,7 +5,9 @@ import {
   BoxesIcon,
   ClipboardListIcon,
   LayoutGridIcon,
+  MonitorSmartphoneIcon,
   StoreIcon,
+  UsersRoundIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -18,6 +20,18 @@ interface AdminSidebarProps {
 }
 
 const navigationItems = [
+  {
+    href: "pdv",
+    label: "PDV",
+    description: "Venda rapida de balcao e fechamento imediato",
+    icon: MonitorSmartphoneIcon,
+  },
+  {
+    href: "comandas",
+    label: "Comandas",
+    description: "Mesas abertas e lancamentos em tempo real",
+    icon: UsersRoundIcon,
+  },
   {
     href: "pedidos",
     label: "Pedidos",

@@ -17,6 +17,10 @@ interface CreateOrderInput {
   consumptionMethod: ConsumptionMethod;
   paymentMethod: PaymentMethod;
   changeFor?: number;
+  scheduledFor?: string;
+  abandonedCartSessionId?: string;
+  couponCode?: string;
+  useWalletBalance?: boolean;
   slug: string;
 }
 
@@ -28,6 +32,10 @@ export const createOrder = async (input: CreateOrderInput) => {
       input.paymentMethod === "DINHEIRO" && input.changeFor
         ? input.changeFor
         : undefined,
+    scheduledFor: input.scheduledFor ? new Date(input.scheduledFor) : undefined,
+    abandonedCartSessionId: input.abandonedCartSessionId,
+    couponCode: input.couponCode?.trim().toUpperCase(),
+    useWalletBalance: input.useWalletBalance,
   });
 
   revalidatePath(`/${input.slug}/orders`);

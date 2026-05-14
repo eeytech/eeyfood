@@ -151,6 +151,10 @@ const formatDateTime = (value: Date | string) => {
   }).format(new Date(value));
 };
 
+const getOrderReferenceDate = (order: PedidoRecebimento) => {
+  return new Date(order.scheduledFor ?? order.createdAt).getTime();
+};
+
 const formatCurrency = (value: number | null) => {
   if (value === null) {
     return "R$ 0,00";
@@ -421,7 +425,7 @@ const PainelPedidos = ({
               {KANBAN_COLUMNS.map((column) => {
                 const ordersByColumn = orders
                   .filter((order) => order.status === column.status)
-                  .sort((left, right) => right.id - left.id);
+                  .sort((left, right) => getOrderReferenceDate(left) - getOrderReferenceDate(right));
 
                 return (
                   <div key={column.status} className="flex h-full flex-col gap-4">
@@ -500,6 +504,16 @@ const PainelPedidos = ({
                                   </p>
                                   <p className="font-semibold">
                                     {formatDateTime(order.createdAt)}
+                                  </p>
+                                </div>
+                                <div className="flex items-center justify-between gap-3">
+                                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                                    Atendimento
+                                  </p>
+                                  <p className="text-right font-semibold">
+                                    {order.scheduledFor
+                                      ? formatDateTime(order.scheduledFor)
+                                      : "O quanto antes"}
                                   </p>
                                 </div>
                                 <div className="flex items-center justify-between gap-3">

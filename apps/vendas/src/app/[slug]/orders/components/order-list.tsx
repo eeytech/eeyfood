@@ -40,6 +40,15 @@ const getStatusClassName = (status: OrderStatus) => {
   return "bg-gray-200 text-gray-700";
 };
 
+const formatDateTime = (value: Date | string) => {
+  return new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+  }).format(new Date(value));
+};
+
 const OrderList = ({ orders }: OrderListProps) => {
   const router = useRouter();
   const handleBackClick = () => router.back();
@@ -87,6 +96,15 @@ const OrderList = ({ orders }: OrderListProps) => {
                   <p className="text-sm">{orderProduct.product.name}</p>
                 </div>
               ))}
+            </div>
+            <Separator />
+            <div className="space-y-1 text-sm text-muted-foreground">
+              <p>Pedido criado em {formatDateTime(order.createdAt)}</p>
+              <p>
+                {order.scheduledFor
+                  ? `Agendado para ${formatDateTime(order.scheduledFor)}`
+                  : "Atendimento o quanto antes"}
+              </p>
             </div>
             <Separator />
             <p className="text-sm font-medium">{formatCurrency(order.total)}</p>

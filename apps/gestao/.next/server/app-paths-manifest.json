@@ -1,10 +1,13 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
+  "/api/comandas/[slug]/route": "app/api/comandas/[slug]/route.js",
   "/api/pedidos/[orderId]/route": "app/api/pedidos/[orderId]/route.js",
   "/page": "app/page.js",
-  "/[slug]/relatorios/page": "app/[slug]/relatorios/page.js",
-  "/[slug]/estoque/page": "app/[slug]/estoque/page.js",
   "/[slug]/page": "app/[slug]/page.js",
-  "/[slug]/pedidos/page": "app/[slug]/pedidos/page.js",
-  "/[slug]/cardapio/page": "app/[slug]/cardapio/page.js"
+  "/[slug]/relatorios/page": "app/[slug]/relatorios/page.js",
+  "/[slug]/cardapio/page": "app/[slug]/cardapio/page.js",
+  "/[slug]/comandas/page": "app/[slug]/comandas/page.js",
+  "/[slug]/pdv/page": "app/[slug]/pdv/page.js",
+  "/[slug]/estoque/page": "app/[slug]/estoque/page.js",
+  "/[slug]/pedidos/page": "app/[slug]/pedidos/page.js"
 }

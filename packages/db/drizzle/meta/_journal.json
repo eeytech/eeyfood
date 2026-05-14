@@ -22,6 +22,34 @@
       "when": 1778712000000,
       "tag": "0002_mobile_identity_phone",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1778711317163,
+      "tag": "0003_breezy_ink",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1778714706157,
+      "tag": "0004_slim_dakota_north",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1778715058930,
+      "tag": "0005_new_daimon_hellstrom",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1778716034402,
+      "tag": "0006_elite_senator_kelly",
+      "breakpoints": true
     }
   ]
 }
