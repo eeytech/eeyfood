@@ -1,9 +1,14 @@
 import type { MenuCategory, Product, Restaurant } from "@fsw/db";
 import {
+  aiSettingsTable,
   asc,
   buscarRestaurantePorSlug,
   db,
+  desc,
   eq,
+  financialCategoriesTable,
+  financialTransactionsTable,
+  listarCouriersPorSlug,
   listarMesasComandasPorSlug,
   listarPedidosRecebimentoPorSlug,
   menuCategoriesTable,
@@ -197,4 +202,54 @@ export const gerarRelatorioBasico = async (
     history,
     topProducts,
   };
+};
+
+export const listarCouriersGestao = async (slug: string) => {
+  return listarCouriersPorSlug(slug);
+};
+
+export const listarTransacoesFinanceirasPorSlug = async (slug: string) => {
+  const restaurant = await buscarRestaurantePorSlug(slug);
+  if (!restaurant) return [];
+
+  return db
+    .select({
+      transaction: financialTransactionsTable,
+      category: {
+        id: financialCategoriesTable.id,
+        name: financialCategoriesTable.name,
+        type: financialCategoriesTable.type,
+      },
+    })
+    .from(financialTransactionsTable)
+    .leftJoin(
+      financialCategoriesTable,
+      eq(financialCategoriesTable.id, financialTransactionsTable.categoryId),
+    )
+    .where(eq(financialTransactionsTable.restaurantId, restaurant.id))
+    .orderBy(desc(financialTransactionsTable.dueDate));
+};
+
+export const listarCategoriasFinanceirasGestao = async (slug: string) => {
+  const restaurant = await buscarRestaurantePorSlug(slug);
+  if (!restaurant) return [];
+
+  return db
+    .select()
+    .from(financialCategoriesTable)
+    .where(eq(financialCategoriesTable.restaurantId, restaurant.id))
+    .orderBy(asc(financialCategoriesTable.name));
+};
+
+export const buscarAiSettingsPorSlug = async (slug: string) => {
+  const restaurant = await buscarRestaurantePorSlug(slug);
+  if (!restaurant) return null;
+
+  const [settings] = await db
+    .select()
+    .from(aiSettingsTable)
+    .where(eq(aiSettingsTable.restaurantId, restaurant.id))
+    .limit(1);
+
+  return settings ?? null;
 };

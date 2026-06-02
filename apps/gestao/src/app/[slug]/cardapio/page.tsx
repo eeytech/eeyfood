@@ -202,6 +202,26 @@ const CardapioPage = async ({ params }: CardapioPageProps) => {
                     Produto ativo para vendas
                   </label>
                 </div>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="space-y-2">
+                    <label htmlFor="new-product-ncm" className="text-sm font-medium">
+                      NCM
+                    </label>
+                    <Input id="new-product-ncm" name="ncm" placeholder="Ex.: 21069090" maxLength={8} />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="new-product-cfop" className="text-sm font-medium">
+                      CFOP
+                    </label>
+                    <Input id="new-product-cfop" name="cfop" placeholder="5102" maxLength={4} />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="new-product-csosn" className="text-sm font-medium">
+                      CSOSN
+                    </label>
+                    <Input id="new-product-csosn" name="csosn" placeholder="102" maxLength={3} />
+                  </div>
+                </div>
                 <SubmitButton className="w-full rounded-full" pendingText="Criando produto...">
                   Criar produto
                 </SubmitButton>
@@ -371,6 +391,20 @@ const CardapioPage = async ({ params }: CardapioPageProps) => {
                             <div className="space-y-2">
                               <label className="text-sm font-medium">Trocar imagem por upload</label>
                               <Input name="imageFile" type="file" accept="image/*" />
+                            </div>
+                          </div>
+                          <div className="grid gap-4 lg:grid-cols-3">
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">NCM</label>
+                              <Input name="ncm" defaultValue={product.ncm ?? ""} maxLength={8} />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">CFOP</label>
+                              <Input name="cfop" defaultValue={product.cfop ?? ""} maxLength={4} />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">CSOSN</label>
+                              <Input name="csosn" defaultValue={product.csosn ?? ""} maxLength={3} />
                             </div>
                           </div>
                           <div className="flex flex-wrap gap-3">

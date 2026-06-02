@@ -38,6 +38,15 @@ export const stockMovementTypeEnum = pgEnum("StockMovementType", [
     "OUT",
     "ADJUSTMENT",
 ]);
+export const transactionTypeEnum = pgEnum("TransactionType", [
+    "REVENUE",
+    "EXPENSE",
+]);
+export const transactionStatusEnum = pgEnum("TransactionStatus", [
+    "PENDING",
+    "PAID",
+    "CANCELLED",
+]);
 export const restaurantsTable = pgTable("Restaurant", {
     id: uuid("id").defaultRandom().primaryKey(),
     name: text("name").notNull(),
@@ -81,6 +90,10 @@ export const productsTable = pgTable("Product", {
     imageUrl: text("imageUrl").notNull(),
     ingredients: text("ingredients").array().notNull(),
     sku: text("sku"),
+    // Campos Fiscais
+    ncm: text("ncm"),
+    cfop: text("cfop"),
+    csosn: text("csosn"),
     trackInventory: boolean("trackInventory").default(false).notNull(),
     stockQuantity: integer("stockQuantity").default(0).notNull(),
     lowStockThreshold: integer("lowStockThreshold").default(0).notNull(),
@@ -91,6 +104,51 @@ export const productsTable = pgTable("Product", {
     menuCategoryId: uuid("menuCategoryId")
         .notNull()
         .references(() => menuCategoriesTable.id, { onDelete: "cascade" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+export const financialCategoriesTable = pgTable("FinancialCategory", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    type: transactionTypeEnum("type").notNull(),
+    restaurantId: uuid("restaurantId")
+        .notNull()
+        .references(() => restaurantsTable.id, { onDelete: "cascade" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+export const aiSettingsTable = pgTable("AiSettings", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    restaurantId: uuid("restaurantId")
+        .notNull()
+        .unique()
+        .references(() => restaurantsTable.id, { onDelete: "cascade" }),
+    openaiApiKey: text("openaiApiKey"),
+    evolutionInstanceName: text("evolutionInstanceName"),
+    evolutionApiKey: text("evolutionApiKey"),
+    botName: text("botName").default("EeyFood Bot").notNull(),
+    systemPrompt: text("systemPrompt").default("Você é um atendente virtual de delivery educado e eficiente. Ajude o cliente a escolher itens do cardápio e finalize o pedido capturando nome, telefone e itens."),
+    isBotActive: boolean("isBotActive").default(false).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+export const financialTransactionsTable = pgTable("FinancialTransaction", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    description: text("description").notNull(),
+    amount: doublePrecision("amount").notNull(),
+    type: transactionTypeEnum("type").notNull(),
+    status: transactionStatusEnum("status").default("PENDING").notNull(),
+    dueDate: timestamp("dueDate").notNull(),
+    paidAt: timestamp("paidAt"),
+    categoryId: uuid("categoryId").references(() => financialCategoriesTable.id, {
+        onDelete: "set null",
+    }),
+    orderId: integer("orderId").references(() => ordersTable.id, {
+        onDelete: "set null",
+    }),
+    restaurantId: uuid("restaurantId")
+        .notNull()
+        .references(() => restaurantsTable.id, { onDelete: "cascade" }),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
@@ -161,6 +219,19 @@ export const abandonedCartsTable = pgTable("AbandonedCart", {
 }, (table) => ({
     restaurantSessionUniqueIndex: uniqueIndex("abandoned_cart_restaurant_session_unique").on(table.restaurantId, table.sessionId),
 }));
+export const couriersTable = pgTable("Courier", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    phone: text("phone").notNull(),
+    vehicleType: text("vehicleType"),
+    licensePlate: text("licensePlate"),
+    isActive: boolean("isActive").default(true).notNull(),
+    restaurantId: uuid("restaurantId")
+        .notNull()
+        .references(() => restaurantsTable.id, { onDelete: "cascade" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
 export const ordersTable = pgTable("Order", {
     id: serial("id").primaryKey(),
     subtotal: doublePrecision("subtotal").default(0).notNull(),
@@ -190,11 +261,16 @@ export const ordersTable = pgTable("Order", {
     diningTableId: uuid("diningTableId").references(() => diningTablesTable.id, {
         onDelete: "set null",
     }),
+    courierId: uuid("courierId").references(() => couriersTable.id, {
+        onDelete: "set null",
+    }),
     customerName: text("customerName").notNull(),
     customerPhone: text("customerPhone").notNull(),
     scheduledFor: timestamp("scheduledFor"),
     cashbackCreditedAt: timestamp("cashbackCreditedAt"),
     paidAt: timestamp("paidAt"),
+    dispatchedAt: timestamp("dispatchedAt"),
+    deliveredAt: timestamp("deliveredAt"),
     cancelledAt: timestamp("cancelledAt"),
     finishedAt: timestamp("finishedAt"),
     closedAt: timestamp("closedAt"),
@@ -250,7 +326,7 @@ export const financialClosingsTable = pgTable("FinancialClosing", {
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
-export const restaurantsRelations = relations(restaurantsTable, ({ many }) => ({
+export const restaurantsRelations = relations(restaurantsTable, ({ one, many }) => ({
     menuCategories: many(menuCategoriesTable),
     diningTables: many(diningTablesTable),
     products: many(productsTable),
@@ -260,6 +336,44 @@ export const restaurantsRelations = relations(restaurantsTable, ({ many }) => ({
     stockMovements: many(stockMovementsTable),
     wallets: many(walletsTable),
     financialClosings: many(financialClosingsTable),
+    couriers: many(couriersTable),
+    financialCategories: many(financialCategoriesTable),
+    financialTransactions: many(financialTransactionsTable),
+    aiSettings: one(aiSettingsTable),
+}));
+export const aiSettingsRelations = relations(aiSettingsTable, ({ one }) => ({
+    restaurant: one(restaurantsTable, {
+        fields: [aiSettingsTable.restaurantId],
+        references: [restaurantsTable.id],
+    }),
+}));
+export const financialCategoriesRelations = relations(financialCategoriesTable, ({ one, many }) => ({
+    restaurant: one(restaurantsTable, {
+        fields: [financialCategoriesTable.restaurantId],
+        references: [restaurantsTable.id],
+    }),
+    transactions: many(financialTransactionsTable),
+}));
+export const financialTransactionsRelations = relations(financialTransactionsTable, ({ one }) => ({
+    restaurant: one(restaurantsTable, {
+        fields: [financialTransactionsTable.restaurantId],
+        references: [restaurantsTable.id],
+    }),
+    category: one(financialCategoriesTable, {
+        fields: [financialTransactionsTable.categoryId],
+        references: [financialCategoriesTable.id],
+    }),
+    order: one(ordersTable, {
+        fields: [financialTransactionsTable.orderId],
+        references: [ordersTable.id],
+    }),
+}));
+export const couriersRelations = relations(couriersTable, ({ one, many }) => ({
+    restaurant: one(restaurantsTable, {
+        fields: [couriersTable.restaurantId],
+        references: [restaurantsTable.id],
+    }),
+    orders: many(ordersTable),
 }));
 export const menuCategoriesRelations = relations(menuCategoriesTable, ({ one, many }) => ({
     restaurant: one(restaurantsTable, {
@@ -318,6 +432,10 @@ export const ordersRelations = relations(ordersTable, ({ one, many }) => ({
     diningTable: one(diningTablesTable, {
         fields: [ordersTable.diningTableId],
         references: [diningTablesTable.id],
+    }),
+    courier: one(couriersTable, {
+        fields: [ordersTable.courierId],
+        references: [couriersTable.id],
     }),
     coupon: one(couponsTable, {
         fields: [ordersTable.couponId],

@@ -3,23 +3,49 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import {
   abandonedCartsTable,
   abandonedCartStatusEnum,
+  consumptionMethodEnum,
   couponDiscountTypeEnum,
   couponsTable,
+  couriersTable,
   diningTablesTable,
+  financialCategoriesTable,
   financialClosingsTable,
-  consumptionMethodEnum,
+  financialTransactionsTable,
   menuCategoriesTable,
   orderProductsTable,
   ordersTable,
   orderStatusEnum,
-  paymentStatusEnum,
   paymentMethodEnum,
+  paymentStatusEnum,
   productsTable,
   restaurantsTable,
   stockMovementsTable,
   stockMovementTypeEnum,
+  transactionStatusEnum,
+  transactionTypeEnum,
   walletsTable,
+  aiSettingsTable,
 } from "./schema.js";
+
+// ... (rest of types)
+
+export type AiSettings = InferSelectModel<typeof aiSettingsTable>;
+export type NewAiSettings = InferInsertModel<typeof aiSettingsTable>;
+
+
+// ... (rest of types)
+
+export type FinancialCategory = InferSelectModel<typeof financialCategoriesTable>;
+export type NewFinancialCategory = InferInsertModel<typeof financialCategoriesTable>;
+
+export type FinancialTransaction = InferSelectModel<typeof financialTransactionsTable>;
+export type NewFinancialTransaction = InferInsertModel<typeof financialTransactionsTable>;
+
+export type TransactionType = (typeof transactionTypeEnum.enumValues)[number];
+export type TransactionStatus = (typeof transactionStatusEnum.enumValues)[number];
+
+// ... update Product if needed, but InferSelectModel should handle it if schema was updated correctly
+
 
 export type Restaurant = InferSelectModel<typeof restaurantsTable>;
 export type NewRestaurant = InferInsertModel<typeof restaurantsTable>;
@@ -32,6 +58,9 @@ export type NewDiningTable = InferInsertModel<typeof diningTablesTable>;
 
 export type Product = InferSelectModel<typeof productsTable>;
 export type NewProduct = InferInsertModel<typeof productsTable>;
+
+export type Courier = InferSelectModel<typeof couriersTable>;
+export type NewCourier = InferInsertModel<typeof couriersTable>;
 
 export type Coupon = InferSelectModel<typeof couponsTable>;
 export type NewCoupon = InferInsertModel<typeof couponsTable>;
@@ -102,6 +131,7 @@ export interface PedidoBeneficiosValidado {
 export interface OrderComItens extends Order {
   restaurant: Pick<Restaurant, "name" | "avatarImageUrl" | "slug">;
   diningTable?: Pick<DiningTable, "id" | "name" | "seats"> | null;
+  courier?: Pick<Courier, "id" | "name" | "phone"> | null;
   orderProducts: Array<
     OrderProduct & {
       product: Product;
@@ -112,6 +142,7 @@ export interface OrderComItens extends Order {
 export interface PedidoRecebimento extends Order {
   restaurant: Pick<Restaurant, "id" | "name" | "slug">;
   diningTable?: Pick<DiningTable, "id" | "name" | "seats"> | null;
+  courier?: Pick<Courier, "id" | "name" | "phone"> | null;
   orderProducts: Array<
     OrderProduct & {
       product: Pick<Product, "id" | "name" | "imageUrl">;

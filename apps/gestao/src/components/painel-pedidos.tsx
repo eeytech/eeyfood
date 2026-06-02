@@ -1,23 +1,24 @@
 "use client";
 
-import type { OrderStatus, PedidoRecebimento } from "@fsw/db";
+import type { Courier, OrderStatus, PedidoRecebimento } from "@fsw/db";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
   BadgeDollarSignIcon,
+  BikeIcon,
   Clock3Icon,
-  CreditCardIcon,
   Loader2Icon,
   PackageCheckIcon,
+  PrinterIcon,
   RadioIcon,
   ReceiptTextIcon,
-  SmartphoneChargingIcon,
   UtensilsCrossedIcon,
   XCircleIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 
+import { dispatchOrderAction, getCouriersAction } from "@/app/[slug]/logistica-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +28,23 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+import { ThermalPrintLayout } from "./thermal-print-layout";
 
 interface PainelPedidosProps {
   slug: string;
@@ -211,6 +229,16 @@ const PainelPedidos = ({
   const [orders, setOrders] = useState(initialOrders);
   const [socketConnected, setSocketConnected] = useState(false);
   const [loadingOrderIds, setLoadingOrderIds] = useState<number[]>([]);
+  
+  // Estados para Impressão
+  const [orderToPrint, setOrderToPrint] = useState<PedidoRecebimento | null>(null);
+  const [printType, setPrintType] = useState<"PRODUCTION" | "DELIVERY">("PRODUCTION");
+  
+  // Estados para Despacho
+  const [orderToDispatch, setOrderToDispatch] = useState<PedidoRecebimento | null>(null);
+  const [couriers, setCouriers] = useState<Courier[]>([]);
+  const [selectedCourierId, setSelectedCourierId] = useState<string>("");
+  const [isDispatching, setIsDispatching] = useState(false);
 
   const websocketUrl =
     process.env.NEXT_PUBLIC_WEBSOCKET_URL ?? "http://localhost:4000";
@@ -255,7 +283,6 @@ const PainelPedidos = ({
       if (payload.restaurantSlug !== slug) {
         return;
       }
-
       await syncOrderById(payload.orderId);
     };
 
@@ -263,7 +290,6 @@ const PainelPedidos = ({
       if (payload.restaurantSlug !== slug) {
         return;
       }
-
       await syncOrderById(payload.orderId);
     };
 
@@ -271,6 +297,9 @@ const PainelPedidos = ({
     socket.on("disconnect", handleDisconnect);
     socket.on("NEW_ORDER", handleNewOrder);
     socket.on("ORDER_UPDATED", handleOrderUpdated);
+
+    // Carregar motoboys
+    getCouriersAction(slug).then(setCouriers);
 
     return () => {
       socket.off("connect", handleConnect);
@@ -281,16 +310,6 @@ const PainelPedidos = ({
     };
   }, [slug, websocketUrl]);
 
-  const pendingOrders = orders.filter((order) => order.status === "PENDING").length;
-  const paidOrders = orders.filter(
-    (order) => order.paymentStatus === "PAID",
-  ).length;
-  const activeOrders = orders.filter((order) =>
-    ["PENDING", "IN_PREPARATION", "READY_FOR_PICKUP", "OUT_FOR_DELIVERY"].includes(
-      order.status,
-    ),
-  ).length;
-
   const handleOrderPatch = async (
     orderId: number,
     payload: {
@@ -298,6 +317,13 @@ const PainelPedidos = ({
       paymentStatus?: PedidoRecebimento["paymentStatus"];
     },
   ) => {
+    // Se for despacho de entrega, abrir modal em vez de apenas avançar
+    const order = orders.find(o => o.id === orderId);
+    if (payload.status === "OUT_FOR_DELIVERY" && order?.consumptionMethod === "DELIVERY") {
+      setOrderToDispatch(order);
+      return;
+    }
+
     try {
       setLoadingOrderIds((currentOrderIds) => [...currentOrderIds, orderId]);
 
@@ -327,8 +353,85 @@ const PainelPedidos = ({
     }
   };
 
+  const handleDispatch = async () => {
+    if (!orderToDispatch || !selectedCourierId) return;
+
+    try {
+      setIsDispatching(true);
+      const result = await dispatchOrderAction(orderToDispatch.id, selectedCourierId);
+      
+      if (result) {
+        await syncOrderById(orderToDispatch.id);
+        setOrderToDispatch(null);
+        setSelectedCourierId("");
+      }
+    } finally {
+      setIsDispatching(false);
+    }
+  };
+
+  const handlePrint = (order: PedidoRecebimento, type: "PRODUCTION" | "DELIVERY") => {
+    setOrderToPrint(order);
+    setPrintType(type);
+    
+    // Pequeno timeout para garantir que o componente de impressão renderizou com os novos dados
+    setTimeout(() => {
+      window.print();
+    }, 100);
+  };
+
+  const pendingOrdersCount = orders.filter((order) => order.status === "PENDING").length;
+  const paidOrdersCount = orders.filter(
+    (order) => order.paymentStatus === "PAID",
+  ).length;
+  const activeOrdersCount = orders.filter((order) =>
+    ["PENDING", "IN_PREPARATION", "READY_FOR_PICKUP", "OUT_FOR_DELIVERY"].includes(
+      order.status,
+    ),
+  ).length;
+
   return (
     <main className="min-h-screen px-4 py-4 sm:px-6 lg:px-8">
+      {/* Componente de Impressão Oculto */}
+      {orderToPrint && (
+        <ThermalPrintLayout order={orderToPrint} type={printType} />
+      )}
+
+      {/* Modal de Despacho */}
+      <Dialog open={!!orderToDispatch} onOpenChange={(open) => !open && setOrderToDispatch(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Despachar Pedido #{orderToDispatch?.id}</DialogTitle>
+            <DialogDescription>
+              Selecione o motoboy que ficará responsável pela entrega para {orderToDispatch?.customerName}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            <Select value={selectedCourierId} onValueChange={setSelectedCourierId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione um motoboy" />
+              </SelectTrigger>
+              <SelectContent>
+                {couriers.map((courier) => (
+                  <SelectItem key={courier.id} value={courier.id}>
+                    {courier.name} ({courier.vehicleType ?? "MOTO"})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOrderToDispatch(null)}>Cancelar</Button>
+            <Button disabled={!selectedCourierId || isDispatching} onClick={handleDispatch}>
+              {isDispatching && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
+              Confirmar Despacho
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="mx-auto grid max-w-[1680px] gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
         <aside className="space-y-4">
           <Card className="bg-slate-950 text-white">
@@ -368,7 +471,7 @@ const PainelPedidos = ({
                 <div>
                   <p className="text-sm text-muted-foreground">Solicitados</p>
                   <p className="font-display text-3xl font-semibold">
-                    {pendingOrders}
+                    {pendingOrdersCount}
                   </p>
                 </div>
                 <Clock3Icon className="text-primary" />
@@ -379,7 +482,7 @@ const PainelPedidos = ({
                 <div>
                   <p className="text-sm text-muted-foreground">Pagos</p>
                   <p className="font-display text-3xl font-semibold">
-                    {paidOrders}
+                    {paidOrdersCount}
                   </p>
                 </div>
                 <BadgeDollarSignIcon className="text-primary" />
@@ -390,7 +493,7 @@ const PainelPedidos = ({
                 <div>
                   <p className="text-sm text-muted-foreground">Em operação</p>
                   <p className="font-display text-3xl font-semibold">
-                    {activeOrders}
+                    {activeOrdersCount}
                   </p>
                 </div>
                 <UtensilsCrossedIcon className="text-primary" />
@@ -468,9 +571,29 @@ const PainelPedidos = ({
                             <CardHeader className="space-y-4">
                               <div className="flex flex-wrap items-start justify-between gap-3">
                                 <div>
-                                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                                    Pedido #{String(order.id)}
-                                  </p>
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                                      Pedido #{String(order.id)}
+                                    </p>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-6 w-6"
+                                      onClick={() => handlePrint(order, "PRODUCTION")}
+                                      title="Imprimir Cozinha"
+                                    >
+                                      <PrinterIcon size={12} />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-6 w-6"
+                                      onClick={() => handlePrint(order, "DELIVERY")}
+                                      title="Imprimir Cupom Cliente"
+                                    >
+                                      <ReceiptTextIcon size={12} />
+                                    </Button>
+                                  </div>
                                   <CardTitle className="font-display text-2xl">
                                     {order.customerName}
                                   </CardTitle>
@@ -508,16 +631,6 @@ const PainelPedidos = ({
                                 </div>
                                 <div className="flex items-center justify-between gap-3">
                                   <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                                    Atendimento
-                                  </p>
-                                  <p className="text-right font-semibold">
-                                    {order.scheduledFor
-                                      ? formatDateTime(order.scheduledFor)
-                                      : "O quanto antes"}
-                                  </p>
-                                </div>
-                                <div className="flex items-center justify-between gap-3">
-                                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
                                     Consumo
                                   </p>
                                   <p className="font-semibold">
@@ -532,6 +645,17 @@ const PainelPedidos = ({
                                     {formatCurrency(order.total)}
                                   </p>
                                 </div>
+                                {order.courier && (
+                                  <div className="flex items-center justify-between gap-3 border-t border-white/20 pt-2">
+                                    <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                                      Motoboy
+                                    </p>
+                                    <p className="font-semibold flex items-center gap-1">
+                                      <BikeIcon size={14} />
+                                      {order.courier.name}
+                                    </p>
+                                  </div>
+                                )}
                               </div>
                             </CardHeader>
 
@@ -571,17 +695,6 @@ const PainelPedidos = ({
                               ) : null}
 
                               <div className="space-y-3 rounded-[24px] border bg-slate-50 p-4">
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                  {order.paymentMethod === "MERCADO_PAGO" ? (
-                                    <SmartphoneChargingIcon size={16} />
-                                  ) : (
-                                    <CreditCardIcon size={16} />
-                                  )}
-                                  {isOfflinePayment
-                                    ? "Pagamento presencial aguardando baixa"
-                                    : "Pagamento online acompanhado por webhook"}
-                                </div>
-
                                 <div className="grid gap-2">
                                   {isOfflinePayment &&
                                   order.paymentStatus !== "PAID" ? (
@@ -608,6 +721,7 @@ const PainelPedidos = ({
                                       <Button
                                         variant="outline"
                                         size="sm"
+                                        className="flex-1"
                                         disabled={isLoading}
                                         onClick={() =>
                                           handleOrderPatch(order.id, {
@@ -623,6 +737,7 @@ const PainelPedidos = ({
                                     {nextStatus ? (
                                       <Button
                                         size="sm"
+                                        className="flex-1"
                                         disabled={isLoading}
                                         onClick={() =>
                                           handleOrderPatch(order.id, {
@@ -631,7 +746,7 @@ const PainelPedidos = ({
                                         }
                                       >
                                         <ArrowRightIcon size={14} />
-                                        Avançar
+                                        {nextStatus === "OUT_FOR_DELIVERY" ? "Despachar" : "Avançar"}
                                       </Button>
                                     ) : null}
 
@@ -649,7 +764,6 @@ const PainelPedidos = ({
                                         }
                                       >
                                         <XCircleIcon size={14} />
-                                        Cancelar
                                       </Button>
                                     ) : null}
                                   </div>

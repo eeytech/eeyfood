@@ -44,7 +44,11 @@ const productSchema = z.object({
   stockQuantity: z.number().int().min(0),
   lowStockThreshold: z.number().int().min(0),
   isActive: z.boolean(),
+  ncm: z.string().trim().max(8, "NCM deve ter 8 dígitos.").optional(),
+  cfop: z.string().trim().max(4, "CFOP deve ter 4 dígitos.").optional(),
+  csosn: z.string().trim().max(3, "CSOSN deve ter 3 dígitos.").optional(),
 });
+
 
 const stockAdjustmentSchema = z.object({
   productId: z.string().uuid(),
@@ -187,6 +191,9 @@ export const createProductAction = async (slug: string, formData: FormData) => {
     stockQuantity: getNumberValue(formData.get("stockQuantity")),
     lowStockThreshold: getNumberValue(formData.get("lowStockThreshold")),
     isActive: getBooleanValue(formData.get("isActive")),
+    ncm: getOptionalStringValue(formData.get("ncm")),
+    cfop: getOptionalStringValue(formData.get("cfop")),
+    csosn: getOptionalStringValue(formData.get("csosn")),
   });
 
   if (!parsedData.success) {
@@ -206,19 +213,27 @@ export const createProductAction = async (slug: string, formData: FormData) => {
     costPrice: parsedData.data.costPrice,
     menuCategoryId: parsedData.data.menuCategoryId,
     sku: parsedData.data.sku,
-    ingredients: parsedData.data.ingredients
-      ? parsedData.data.ingredients.split(",").map((item) => item.trim()).filter(Boolean)
-      : [],
     imageUrl: parsedData.data.imageUrl,
     trackInventory: parsedData.data.trackInventory,
     stockQuantity: parsedData.data.stockQuantity,
     lowStockThreshold: parsedData.data.lowStockThreshold,
     isActive: parsedData.data.isActive,
+    ncm: parsedData.data.ncm,
+    cfop: parsedData.data.cfop,
+    csosn: parsedData.data.csosn,
+    ingredients: parsedData.data.ingredients
+      ? parsedData.data.ingredients
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean)
+      : [],
     restaurantId: restaurant.id,
   });
 
+
   revalidateRestaurantPaths(slug);
 };
+
 
 export const updateProductAction = async (slug: string, formData: FormData) => {
   const restaurant = await getRestaurantOrThrow(slug);
@@ -239,6 +254,9 @@ export const updateProductAction = async (slug: string, formData: FormData) => {
     stockQuantity: getNumberValue(formData.get("stockQuantity")),
     lowStockThreshold: getNumberValue(formData.get("lowStockThreshold")),
     isActive: getBooleanValue(formData.get("isActive")),
+    ncm: getOptionalStringValue(formData.get("ncm")),
+    cfop: getOptionalStringValue(formData.get("cfop")),
+    csosn: getOptionalStringValue(formData.get("csosn")),
   });
 
   if (!parsedData.success) {
@@ -260,17 +278,20 @@ export const updateProductAction = async (slug: string, formData: FormData) => {
       costPrice: parsedData.data.costPrice,
       menuCategoryId: parsedData.data.menuCategoryId,
       sku: parsedData.data.sku,
+      imageUrl: parsedData.data.imageUrl,
+      trackInventory: parsedData.data.trackInventory,
+      stockQuantity: parsedData.data.stockQuantity,
+      lowStockThreshold: parsedData.data.lowStockThreshold,
+      isActive: parsedData.data.isActive,
+      ncm: parsedData.data.ncm,
+      cfop: parsedData.data.cfop,
+      csosn: parsedData.data.csosn,
       ingredients: parsedData.data.ingredients
         ? parsedData.data.ingredients
             .split(",")
             .map((item) => item.trim())
             .filter(Boolean)
         : [],
-      imageUrl: parsedData.data.imageUrl,
-      trackInventory: parsedData.data.trackInventory,
-      stockQuantity: parsedData.data.stockQuantity,
-      lowStockThreshold: parsedData.data.lowStockThreshold,
-      isActive: parsedData.data.isActive,
       updatedAt: new Date(),
     })
     .where(
@@ -280,8 +301,10 @@ export const updateProductAction = async (slug: string, formData: FormData) => {
       ),
     );
 
+
   revalidateRestaurantPaths(slug);
 };
+
 
 export const deleteProductAction = async (slug: string, formData: FormData) => {
   const restaurant = await getRestaurantOrThrow(slug);

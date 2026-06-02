@@ -1,6 +1,60 @@
 import { and, asc, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { db } from "./client.js";
-import { abandonedCartsTable, couponsTable, diningTablesTable, menuCategoriesTable, orderProductsTable, ordersTable, productsTable, restaurantsTable, stockMovementsTable, walletsTable, } from "./schema.js";
+import { abandonedCartsTable, couponsTable, couriersTable, diningTablesTable, financialCategoriesTable, financialTransactionsTable, menuCategoriesTable, orderProductsTable, ordersTable, productsTable, restaurantsTable, stockMovementsTable, walletsTable, } from "./schema.js";
+// ... (rest of queries)
+export const listarCategoriasFinanceirasPorSlug = async (slug) => {
+    const restaurant = await buscarRestaurantePorSlug(slug);
+    if (!restaurant)
+        return [];
+    return db
+        .select()
+        .from(financialCategoriesTable)
+        .where(eq(financialCategoriesTable.restaurantId, restaurant.id))
+        .orderBy(asc(financialCategoriesTable.name));
+};
+export const criarTransacaoFinanceira = async (input) => {
+    const [transaction] = await db
+        .insert(financialTransactionsTable)
+        .values(input)
+        .returning();
+    if (!transaction) {
+        throw new Error("Falha ao criar transação financeira.");
+    }
+    return transaction;
+};
+export const atualizarStatusTransacao = async (transactionId, status, paidAt) => {
+    const [updated] = await db
+        .update(financialTransactionsTable)
+        .set({
+        status,
+        paidAt: status === "PAID" ? paidAt ?? new Date() : null,
+        updatedAt: new Date(),
+    })
+        .where(eq(financialTransactionsTable.id, transactionId))
+        .returning();
+    return updated ?? null;
+};
+export const buscarDREBasico = async (slug, startDate, endDate) => {
+    const restaurant = await buscarRestaurantePorSlug(slug);
+    if (!restaurant)
+        return null;
+    const transactions = await db
+        .select()
+        .from(financialTransactionsTable)
+        .where(and(eq(financialTransactionsTable.restaurantId, restaurant.id), gte(financialTransactionsTable.dueDate, startDate)));
+    // Lógica de agrupamento para DRE
+    const revenue = transactions
+        .filter((t) => t.type === "REVENUE" && t.status === "PAID")
+        .reduce((acc, t) => acc + t.amount, 0);
+    const expenses = transactions
+        .filter((t) => t.type === "EXPENSE" && t.status === "PAID")
+        .reduce((acc, t) => acc + t.amount, 0);
+    return {
+        revenue,
+        expenses,
+        netProfit: revenue - expenses,
+    };
+};
 const CASHBACK_PERCENTUAL_PADRAO = 0.05;
 const arredondarMoeda = (value) => {
     return Number(value.toFixed(2));
@@ -390,10 +444,16 @@ export const buscarPedidosPorTelefone = async (customerPhone) => {
             name: diningTablesTable.name,
             seats: diningTablesTable.seats,
         },
+        courier: {
+            id: couriersTable.id,
+            name: couriersTable.name,
+            phone: couriersTable.phone,
+        },
     })
         .from(ordersTable)
         .innerJoin(restaurantsTable, eq(restaurantsTable.id, ordersTable.restaurantId))
         .leftJoin(diningTablesTable, eq(diningTablesTable.id, ordersTable.diningTableId))
+        .leftJoin(couriersTable, eq(couriersTable.id, ordersTable.courierId))
         .where(eq(ordersTable.customerPhone, customerPhone))
         .orderBy(desc(ordersTable.createdAt));
     if (pedidos.length === 0) {
@@ -409,10 +469,11 @@ export const buscarPedidosPorTelefone = async (customerPhone) => {
         .from(orderProductsTable)
         .innerJoin(productsTable, eq(productsTable.id, orderProductsTable.productId))
         .where(inArray(orderProductsTable.orderId, orderIds));
-    const pedidosNormalizados = pedidos.map(({ order, restaurant, diningTable }) => ({
+    const pedidosNormalizados = pedidos.map(({ order, restaurant, diningTable, courier }) => ({
         ...order,
         restaurant,
         diningTable: diningTable ? diningTable : null,
+        courier: courier ? courier : null,
     }));
     return agruparItensPorPedido(pedidosNormalizados, itens.map((item) => ({
         orderId: item.orderId,
@@ -1017,10 +1078,16 @@ export const buscarPedidoRecebimentoPorId = async (orderId) => {
             name: diningTablesTable.name,
             seats: diningTablesTable.seats,
         },
+        courier: {
+            id: couriersTable.id,
+            name: couriersTable.name,
+            phone: couriersTable.phone,
+        },
     })
         .from(ordersTable)
         .innerJoin(restaurantsTable, eq(restaurantsTable.id, ordersTable.restaurantId))
         .leftJoin(diningTablesTable, eq(diningTablesTable.id, ordersTable.diningTableId))
+        .leftJoin(couriersTable, eq(couriersTable.id, ordersTable.courierId))
         .where(eq(ordersTable.id, orderId))
         .limit(1);
     if (!pedido) {
@@ -1042,6 +1109,7 @@ export const buscarPedidoRecebimentoPorId = async (orderId) => {
         ...pedido.order,
         restaurant: pedido.restaurant,
         diningTable: pedido.diningTable ? pedido.diningTable : null,
+        courier: pedido.courier ? pedido.courier : null,
         orderProducts: itens.map((item) => ({
             ...item.orderProduct,
             product: item.product,
@@ -1063,4 +1131,45 @@ export const listarPedidosRecebimentoPorSlug = async (slug) => {
         !(pedido.consumptionMethod === "DINE_IN" &&
             pedido.orderProducts.length === 0 &&
             pedidoEstaAtivo(pedido.status)));
+};
+export const listarCouriersPorSlug = async (slug) => {
+    const restaurant = await buscarRestaurantePorSlug(slug);
+    if (!restaurant) {
+        return [];
+    }
+    return db
+        .select()
+        .from(couriersTable)
+        .where(and(eq(couriersTable.restaurantId, restaurant.id), eq(couriersTable.isActive, true)))
+        .orderBy(asc(couriersTable.name));
+};
+export const despacharPedido = async ({ orderId, courierId, }) => {
+    const [updatedOrder] = await db
+        .update(ordersTable)
+        .set({
+        courierId,
+        status: "OUT_FOR_DELIVERY",
+        dispatchedAt: new Date(),
+        updatedAt: new Date(),
+    })
+        .where(eq(ordersTable.id, orderId))
+        .returning({
+        id: ordersTable.id,
+        courierId: ordersTable.courierId,
+        dispatchedAt: ordersTable.dispatchedAt,
+        restaurantId: ordersTable.restaurantId,
+    });
+    if (!updatedOrder || !updatedOrder.courierId || !updatedOrder.dispatchedAt) {
+        return null;
+    }
+    const restaurantSlug = await resolverSlugRestaurante(updatedOrder.restaurantId);
+    if (!restaurantSlug) {
+        return null;
+    }
+    return {
+        id: updatedOrder.id,
+        courierId: updatedOrder.courierId,
+        dispatchedAt: updatedOrder.dispatchedAt,
+        restaurantSlug,
+    };
 };

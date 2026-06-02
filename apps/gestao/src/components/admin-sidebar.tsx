@@ -6,6 +6,7 @@ import {
   ClipboardListIcon,
   LayoutGridIcon,
   MonitorSmartphoneIcon,
+  SparklesIcon,
   StoreIcon,
   UsersRoundIcon,
 } from "lucide-react";
@@ -37,6 +38,24 @@ const navigationItems = [
     label: "Pedidos",
     description: "Kanban e operação em tempo real",
     icon: ClipboardListIcon,
+  },
+  {
+    href: "financeiro",
+    label: "Financeiro",
+    description: "Contas a pagar, receber e DRE",
+    icon: BarChart3Icon,
+  },
+  {
+    href: "logistica",
+    label: "Logística",
+    description: "Cadastro de motoboys e frota",
+    icon: UsersRoundIcon,
+  },
+  {
+    href: "ai",
+    label: "IA Bot",
+    description: "Automação com WhatsApp",
+    icon: SparklesIcon,
   },
   {
     href: "cardapio",

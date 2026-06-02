@@ -1,4 +1,12 @@
-import type { AbandonedCart, ConsumptionMethod, MesaComanda, Order, OrderComItens, OrderStatus, PaymentMethod, PaymentStatus, PedidoBeneficiosValidado, PedidoRecebimento, ProductComRestaurante, Restaurant, RestaurantComCategoriasEProdutos } from "./types.js";
+import type { AbandonedCart, ConsumptionMethod, Courier, FinancialCategory, FinancialTransaction, MesaComanda, Order, OrderComItens, OrderStatus, PaymentMethod, PaymentStatus, PedidoBeneficiosValidado, PedidoRecebimento, ProductComRestaurante, Restaurant, RestaurantComCategoriasEProdutos, TransactionStatus } from "./types.js";
+export declare const listarCategoriasFinanceirasPorSlug: (slug: string) => Promise<FinancialCategory[]>;
+export declare const criarTransacaoFinanceira: (input: Omit<FinancialTransaction, "id" | "createdAt" | "updatedAt">) => Promise<FinancialTransaction>;
+export declare const atualizarStatusTransacao: (transactionId: string, status: TransactionStatus, paidAt?: Date | null) => Promise<FinancialTransaction | null>;
+export declare const buscarDREBasico: (slug: string, startDate: Date, endDate: Date) => Promise<{
+    revenue: number;
+    expenses: number;
+    netProfit: number;
+} | null>;
 export interface CriarPedidoInput {
     customerName: string;
     customerPhone: string;
@@ -72,6 +80,10 @@ export interface AtualizarStatusPagamentoPedidoInput {
     orderId: number;
     paymentStatus: PaymentStatus;
 }
+export interface DespacharPedidoInput {
+    orderId: number;
+    courierId: string;
+}
 export declare const buscarRestaurantePorSlug: (slug: string) => Promise<Restaurant | null>;
 export declare const salvarCarrinhoAbandonado: (input: SalvarCarrinhoAbandonadoInput) => Promise<AbandonedCart | null>;
 export declare const buscarRestauranteComCardapioPorSlug: (slug: string) => Promise<RestaurantComCategoriasEProdutos | null>;
@@ -94,4 +106,9 @@ export declare const atualizarStatusPagamentoPedido: ({ orderId, paymentStatus, 
 }) | null>;
 export declare const buscarPedidoRecebimentoPorId: (orderId: number) => Promise<PedidoRecebimento | null>;
 export declare const listarPedidosRecebimentoPorSlug: (slug: string) => Promise<PedidoRecebimento[]>;
+export declare const listarCouriersPorSlug: (slug: string) => Promise<Courier[]>;
+export declare const despacharPedido: ({ orderId, courierId, }: DespacharPedidoInput) => Promise<(AtualizacaoPedidoBase & {
+    courierId: string;
+    dispatchedAt: Date;
+}) | null>;
 export {};
