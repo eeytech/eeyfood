@@ -3,9 +3,9 @@ import { useContext } from "react";
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetDescription,
 } from "@/components/ui/sheet";
 
 import { CartContext } from "../contexts/cart";
