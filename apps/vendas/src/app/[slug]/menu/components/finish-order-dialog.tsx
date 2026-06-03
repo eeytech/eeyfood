@@ -262,7 +262,8 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
     }
 
     const hasCustomerData =
-      watchedName.trim().length > 0 || watchedPhone.replace(/\D/g, "").length > 0;
+      (watchedName?.trim()?.length ?? 0) > 0 ||
+      (watchedPhone?.replace(/\D/g, "").length ?? 0) > 0;
 
     if (!hasCustomerData) {
       return;

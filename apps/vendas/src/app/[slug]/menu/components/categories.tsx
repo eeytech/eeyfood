@@ -185,7 +185,7 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
               </div>
             </div>
 
-            <Products products={selectedCategory.products} />
+            <Products products={selectedCategory.products} restaurant={restaurant} />
           </section>
 
           <aside className="hidden lg:block">
