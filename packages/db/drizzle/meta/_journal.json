@@ -50,6 +50,13 @@
       "when": 1778716034402,
       "tag": "0006_elite_senator_kelly",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1780522248283,
+      "tag": "0007_cuddly_wrecking_crew",
+      "breakpoints": true
     }
   ]
 }
