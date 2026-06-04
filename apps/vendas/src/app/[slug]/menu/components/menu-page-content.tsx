@@ -8,9 +8,9 @@ import type {
   RestaurantComCategoriasEProdutos,
 } from "@fsw/db";
 
-import RestaurantCategories from "./components/categories";
-import RestaurantHeader from "./components/header";
-import OrdersSheet from "./components/orders-sheet";
+import RestaurantCategories from "./categories";
+import RestaurantHeader from "./header";
+import OrdersSheet from "./orders-sheet";
 
 interface RestaurantMenuPageContentProps {
   restaurant: RestaurantComCategoriasEProdutos;

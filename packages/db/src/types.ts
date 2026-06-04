@@ -112,7 +112,9 @@ export interface MesaComanda {
 }
 
 export interface ProductComRestaurante extends Product {
-  restaurant: Pick<Restaurant, "name" | "avatarImageUrl" | "slug">;
+  restaurant: Pick<Restaurant, "name" | "avatarImageUrl" | "slug" | "status"> & {
+    operatingHours: OperatingHours[];
+  };
 }
 
 export interface PedidoBeneficiosValidado {

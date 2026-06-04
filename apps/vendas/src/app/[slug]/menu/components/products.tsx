@@ -4,13 +4,13 @@ import Image from "next/image";
 import { useState } from "react";
 
 import { formatCurrency } from "@/helpers/format-currency";
-import type { Product, ProductComRestaurante, Restaurant } from "@/lib/db";
+import type { Product, ProductComRestaurante, RestaurantComCategoriasEProdutos } from "@/lib/db";
 
 import ProductSheet from "./product-sheet";
 
 interface ProductsProps {
   products: Product[];
-  restaurant: Pick<Restaurant, "name" | "avatarImageUrl" | "slug">;
+  restaurant: RestaurantComCategoriasEProdutos;
 }
 
 const Products = ({ products, restaurant }: ProductsProps) => {

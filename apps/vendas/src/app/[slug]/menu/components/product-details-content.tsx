@@ -27,8 +27,8 @@ const ProductDetailsContent = ({
   const [quantity, setQuantity] = useState<number>(1);
 
   const isOpen = isRestaurantOpen(
-    (product.restaurant as any).status || "AUTO",
-    (product.restaurant as any).operatingHours || [],
+    product.restaurant.status,
+    product.restaurant.operatingHours,
   );
 
   const handleDecreaseQuantity = () => {

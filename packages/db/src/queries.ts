@@ -811,9 +811,11 @@ export const buscarProdutoDoRestaurante = async ({
     .select({
       product: productsTable,
       restaurant: {
+        id: restaurantsTable.id,
         name: restaurantsTable.name,
         avatarImageUrl: restaurantsTable.avatarImageUrl,
         slug: restaurantsTable.slug,
+        status: restaurantsTable.status,
       },
     })
     .from(productsTable)
@@ -834,9 +836,18 @@ export const buscarProdutoDoRestaurante = async ({
     return null;
   }
 
+  const operatingHours = await db
+    .select()
+    .from(operatingHoursTable)
+    .where(eq(operatingHoursTable.restaurantId, row.restaurant.id))
+    .orderBy(asc(operatingHoursTable.dayOfWeek));
+
   return {
     ...row.product,
-    restaurant: row.restaurant,
+    restaurant: {
+      ...row.restaurant,
+      operatingHours,
+    },
   };
 };
 
