@@ -1,12 +1,15 @@
 "use server";
 
+import type { RestaurantStatus } from "@fsw/db";
 import {
   and,
   buscarRestaurantePorSlug,
   db,
   eq,
   menuCategoriesTable,
+  operatingHoursTable,
   productsTable,
+  restaurantsTable,
   stockMovementsTable,
 } from "@fsw/db";
 import { revalidatePath } from "next/cache";
@@ -386,7 +389,7 @@ export const updateRestaurantStatusAction = async (
   formData: FormData,
 ) => {
   const restaurant = await getRestaurantOrThrow(slug);
-  const status = getStringValue(formData.get("status")) as any;
+  const status = getStringValue(formData.get("status")) as RestaurantStatus;
 
   await db
     .update(restaurantsTable)

@@ -1,6 +1,5 @@
 import type {
   MenuCategory,
-  OperatingHours,
   Product,
   Restaurant,
 } from "@fsw/db";
@@ -19,7 +18,6 @@ import {
   menuCategoriesTable,
   operatingHoursTable,
   productsTable,
-  restaurantsTable,
 } from "@fsw/db";
 
 export interface CategoriaComProdutos extends MenuCategory {

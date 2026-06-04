@@ -1,5 +1,5 @@
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
-import { abandonedCartsTable, abandonedCartStatusEnum, consumptionMethodEnum, couponDiscountTypeEnum, couponsTable, couriersTable, diningTablesTable, financialCategoriesTable, financialClosingsTable, financialTransactionsTable, menuCategoriesTable, orderProductsTable, ordersTable, orderStatusEnum, paymentMethodEnum, paymentStatusEnum, productsTable, restaurantsTable, stockMovementsTable, stockMovementTypeEnum, transactionStatusEnum, transactionTypeEnum, walletsTable, aiSettingsTable } from "./schema.js";
+import { abandonedCartsTable, abandonedCartStatusEnum, consumptionMethodEnum, couponDiscountTypeEnum, couponsTable, couriersTable, diningTablesTable, financialCategoriesTable, financialClosingsTable, financialTransactionsTable, menuCategoriesTable, orderProductsTable, ordersTable, orderStatusEnum, paymentMethodEnum, paymentStatusEnum, productsTable, restaurantsTable, restaurantStatusEnum, operatingHoursTable, stockMovementsTable, stockMovementTypeEnum, transactionStatusEnum, transactionTypeEnum, walletsTable, aiSettingsTable } from "./schema.js";
 export type AiSettings = InferSelectModel<typeof aiSettingsTable>;
 export type NewAiSettings = InferInsertModel<typeof aiSettingsTable>;
 export type FinancialCategory = InferSelectModel<typeof financialCategoriesTable>;
@@ -32,8 +32,11 @@ export type StockMovement = InferSelectModel<typeof stockMovementsTable>;
 export type NewStockMovement = InferInsertModel<typeof stockMovementsTable>;
 export type FinancialClosing = InferSelectModel<typeof financialClosingsTable>;
 export type NewFinancialClosing = InferInsertModel<typeof financialClosingsTable>;
+export type OperatingHours = InferSelectModel<typeof operatingHoursTable>;
+export type NewOperatingHours = InferInsertModel<typeof operatingHoursTable>;
 export type OrderStatus = (typeof orderStatusEnum.enumValues)[number];
 export type PaymentStatus = (typeof paymentStatusEnum.enumValues)[number];
+export type RestaurantStatus = (typeof restaurantStatusEnum.enumValues)[number];
 export type ConsumptionMethod = (typeof consumptionMethodEnum.enumValues)[number];
 export type PaymentMethod = (typeof paymentMethodEnum.enumValues)[number];
 export type StockMovementType = (typeof stockMovementTypeEnum.enumValues)[number];
@@ -43,13 +46,16 @@ export interface RestaurantComCategoriasEProdutos extends Restaurant {
     menuCategories: Array<MenuCategory & {
         products: Product[];
     }>;
+    operatingHours: OperatingHours[];
 }
 export interface MesaComanda {
     table: DiningTable;
     currentOrder: PedidoRecebimento | null;
 }
 export interface ProductComRestaurante extends Product {
-    restaurant: Pick<Restaurant, "name" | "avatarImageUrl" | "slug">;
+    restaurant: Pick<Restaurant, "name" | "avatarImageUrl" | "slug" | "status"> & {
+        operatingHours: OperatingHours[];
+    };
 }
 export interface PedidoBeneficiosValidado {
     subtotal: number;

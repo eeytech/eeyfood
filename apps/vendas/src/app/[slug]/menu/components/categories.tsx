@@ -1,5 +1,10 @@
 "use client";
 
+import type {
+  MenuCategory,
+  Product,
+  RestaurantComCategoriasEProdutos,
+} from "@fsw/db";
 import { ClockIcon } from "lucide-react";
 import Image from "next/image";
 import { useContext, useState } from "react";
@@ -8,11 +13,6 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { formatCurrency } from "@/helpers/format-currency";
 import { getNextOpeningTime, isRestaurantOpen } from "@/helpers/restaurant-status";
-import type {
-  MenuCategory,
-  Product,
-  RestaurantComCategoriasEProdutos,
-} from "@fsw/db";
 
 import { CartContext } from "../contexts/cart";
 import CartPanel from "./cart-panel";

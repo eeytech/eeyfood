@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { db } from "./client.js";
-import { abandonedCartsTable, couponsTable, couriersTable, diningTablesTable, financialCategoriesTable, financialTransactionsTable, menuCategoriesTable, orderProductsTable, ordersTable, productsTable, restaurantsTable, stockMovementsTable, walletsTable, } from "./schema.js";
+import { abandonedCartsTable, couponsTable, couriersTable, diningTablesTable, financialCategoriesTable, financialTransactionsTable, menuCategoriesTable, operatingHoursTable, orderProductsTable, ordersTable, productsTable, restaurantsTable, stockMovementsTable, walletsTable, } from "./schema.js";
 // ... (rest of queries)
 export const listarCategoriasFinanceirasPorSlug = async (slug) => {
     const restaurant = await buscarRestaurantePorSlug(slug);
@@ -383,6 +383,11 @@ export const buscarRestauranteComCardapioPorSlug = async (slug) => {
     if (!restaurant) {
         return null;
     }
+    const operatingHours = await db
+        .select()
+        .from(operatingHoursTable)
+        .where(eq(operatingHoursTable.restaurantId, restaurant.id))
+        .orderBy(asc(operatingHoursTable.dayOfWeek));
     const rows = await db
         .select({
         category: menuCategoriesTable,
@@ -406,6 +411,7 @@ export const buscarRestauranteComCardapioPorSlug = async (slug) => {
     return {
         ...restaurant,
         menuCategories: Array.from(categoriesMap.values()),
+        operatingHours,
     };
 };
 export const buscarProdutoDoRestaurante = async ({ slug, productId, }) => {
@@ -413,9 +419,11 @@ export const buscarProdutoDoRestaurante = async ({ slug, productId, }) => {
         .select({
         product: productsTable,
         restaurant: {
+            id: restaurantsTable.id,
             name: restaurantsTable.name,
             avatarImageUrl: restaurantsTable.avatarImageUrl,
             slug: restaurantsTable.slug,
+            status: restaurantsTable.status,
         },
     })
         .from(productsTable)
@@ -425,9 +433,17 @@ export const buscarProdutoDoRestaurante = async ({ slug, productId, }) => {
     if (!row) {
         return null;
     }
+    const operatingHours = await db
+        .select()
+        .from(operatingHoursTable)
+        .where(eq(operatingHoursTable.restaurantId, row.restaurant.id))
+        .orderBy(asc(operatingHoursTable.dayOfWeek));
     return {
         ...row.product,
-        restaurant: row.restaurant,
+        restaurant: {
+            ...row.restaurant,
+            operatingHours,
+        },
     };
 };
 export const buscarPedidosPorTelefone = async (customerPhone) => {

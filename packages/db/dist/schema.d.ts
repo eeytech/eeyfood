@@ -7,6 +7,7 @@ export declare const abandonedCartStatusEnum: import("drizzle-orm/pg-core").PgEn
 export declare const stockMovementTypeEnum: import("drizzle-orm/pg-core").PgEnum<["IN", "OUT", "ADJUSTMENT"]>;
 export declare const transactionTypeEnum: import("drizzle-orm/pg-core").PgEnum<["REVENUE", "EXPENSE"]>;
 export declare const transactionStatusEnum: import("drizzle-orm/pg-core").PgEnum<["PENDING", "PAID", "CANCELLED"]>;
+export declare const restaurantStatusEnum: import("drizzle-orm/pg-core").PgEnum<["AUTO", "ALWAYS_OPEN", "ALWAYS_CLOSED"]>;
 export declare const restaurantsTable: import("drizzle-orm/pg-core").PgTableWithColumns<{
     name: "Restaurant";
     schema: undefined;
@@ -113,6 +114,23 @@ export declare const restaurantsTable: import("drizzle-orm/pg-core").PgTableWith
             identity: undefined;
             generated: undefined;
         }, {}, {}>;
+        status: import("drizzle-orm/pg-core").PgColumn<{
+            name: "status";
+            tableName: "Restaurant";
+            dataType: "string";
+            columnType: "PgEnumColumn";
+            data: "AUTO" | "ALWAYS_OPEN" | "ALWAYS_CLOSED";
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: ["AUTO", "ALWAYS_OPEN", "ALWAYS_CLOSED"];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
         createdAt: import("drizzle-orm/pg-core").PgColumn<{
             name: "createdAt";
             tableName: "Restaurant";
@@ -133,6 +151,132 @@ export declare const restaurantsTable: import("drizzle-orm/pg-core").PgTableWith
         updatedAt: import("drizzle-orm/pg-core").PgColumn<{
             name: "updatedAt";
             tableName: "Restaurant";
+            dataType: "date";
+            columnType: "PgTimestamp";
+            data: Date;
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+    };
+    dialect: "pg";
+}>;
+export declare const operatingHoursTable: import("drizzle-orm/pg-core").PgTableWithColumns<{
+    name: "OperatingHours";
+    schema: undefined;
+    columns: {
+        id: import("drizzle-orm/pg-core").PgColumn<{
+            name: "id";
+            tableName: "OperatingHours";
+            dataType: "string";
+            columnType: "PgUUID";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: true;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        restaurantId: import("drizzle-orm/pg-core").PgColumn<{
+            name: "restaurantId";
+            tableName: "OperatingHours";
+            dataType: "string";
+            columnType: "PgUUID";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        dayOfWeek: import("drizzle-orm/pg-core").PgColumn<{
+            name: "dayOfWeek";
+            tableName: "OperatingHours";
+            dataType: "number";
+            columnType: "PgInteger";
+            data: number;
+            driverParam: string | number;
+            notNull: true;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        openTime: import("drizzle-orm/pg-core").PgColumn<{
+            name: "openTime";
+            tableName: "OperatingHours";
+            dataType: "string";
+            columnType: "PgText";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        closeTime: import("drizzle-orm/pg-core").PgColumn<{
+            name: "closeTime";
+            tableName: "OperatingHours";
+            dataType: "string";
+            columnType: "PgText";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        createdAt: import("drizzle-orm/pg-core").PgColumn<{
+            name: "createdAt";
+            tableName: "OperatingHours";
+            dataType: "date";
+            columnType: "PgTimestamp";
+            data: Date;
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        updatedAt: import("drizzle-orm/pg-core").PgColumn<{
+            name: "updatedAt";
+            tableName: "OperatingHours";
             dataType: "date";
             columnType: "PgTimestamp";
             data: Date;
@@ -3349,6 +3493,7 @@ export declare const financialClosingsTable: import("drizzle-orm/pg-core").PgTab
 }>;
 export declare const restaurantsRelations: import("drizzle-orm").Relations<"Restaurant", {
     menuCategories: import("drizzle-orm").Many<"MenuCategory">;
+    operatingHours: import("drizzle-orm").Many<"OperatingHours">;
     diningTables: import("drizzle-orm").Many<"DiningTable">;
     products: import("drizzle-orm").Many<"Product">;
     coupons: import("drizzle-orm").Many<"Coupon">;
@@ -3361,6 +3506,9 @@ export declare const restaurantsRelations: import("drizzle-orm").Relations<"Rest
     financialCategories: import("drizzle-orm").Many<"FinancialCategory">;
     financialTransactions: import("drizzle-orm").Many<"FinancialTransaction">;
     aiSettings: import("drizzle-orm").One<"AiSettings", false>;
+}>;
+export declare const operatingHoursRelations: import("drizzle-orm").Relations<"OperatingHours", {
+    restaurant: import("drizzle-orm").One<"Restaurant", true>;
 }>;
 export declare const aiSettingsRelations: import("drizzle-orm").Relations<"AiSettings", {
     restaurant: import("drizzle-orm").One<"Restaurant", true>;

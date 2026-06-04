@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
-
 import type { RestaurantComCategoriasEProdutos } from "@fsw/db";
+import { useState } from "react";
 
 import RestaurantCategories from "./categories";
 import RestaurantHeader from "./header";

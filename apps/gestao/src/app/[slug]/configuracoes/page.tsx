@@ -1,4 +1,4 @@
-import { ClockIcon, Settings2Icon, StoreIcon } from "lucide-react";
+import { ClockIcon, Settings2Icon } from "lucide-react";
 import { notFound } from "next/navigation";
 
 import { updateOperatingHoursAction, updateRestaurantStatusAction } from "@/app/[slug]/actions";

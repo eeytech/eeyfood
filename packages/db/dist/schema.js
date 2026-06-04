@@ -47,6 +47,11 @@ export const transactionStatusEnum = pgEnum("TransactionStatus", [
     "PAID",
     "CANCELLED",
 ]);
+export const restaurantStatusEnum = pgEnum("RestaurantStatus", [
+    "AUTO",
+    "ALWAYS_OPEN",
+    "ALWAYS_CLOSED",
+]);
 export const restaurantsTable = pgTable("Restaurant", {
     id: uuid("id").defaultRandom().primaryKey(),
     name: text("name").notNull(),
@@ -54,9 +59,23 @@ export const restaurantsTable = pgTable("Restaurant", {
     description: text("description").notNull(),
     avatarImageUrl: text("avatarImageUrl").notNull(),
     coverImageUrl: text("coverImageUrl").notNull(),
+    status: restaurantStatusEnum("status").default("AUTO").notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
+export const operatingHoursTable = pgTable("OperatingHours", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    restaurantId: uuid("restaurantId")
+        .notNull()
+        .references(() => restaurantsTable.id, { onDelete: "cascade" }),
+    dayOfWeek: integer("dayOfWeek").notNull(), // 0-6 (Sunday-Saturday)
+    openTime: text("openTime").notNull(), // "HH:mm"
+    closeTime: text("closeTime").notNull(), // "HH:mm"
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+}, (table) => ({
+    restaurantDayUniqueIndex: uniqueIndex("operating_hours_restaurant_day_unique").on(table.restaurantId, table.dayOfWeek),
+}));
 export const menuCategoriesTable = pgTable("MenuCategory", {
     id: uuid("id").defaultRandom().primaryKey(),
     name: text("name").notNull(),
@@ -328,6 +347,7 @@ export const financialClosingsTable = pgTable("FinancialClosing", {
 });
 export const restaurantsRelations = relations(restaurantsTable, ({ one, many }) => ({
     menuCategories: many(menuCategoriesTable),
+    operatingHours: many(operatingHoursTable),
     diningTables: many(diningTablesTable),
     products: many(productsTable),
     coupons: many(couponsTable),
@@ -340,6 +360,12 @@ export const restaurantsRelations = relations(restaurantsTable, ({ one, many }) 
     financialCategories: many(financialCategoriesTable),
     financialTransactions: many(financialTransactionsTable),
     aiSettings: one(aiSettingsTable),
+}));
+export const operatingHoursRelations = relations(operatingHoursTable, ({ one }) => ({
+    restaurant: one(restaurantsTable, {
+        fields: [operatingHoursTable.restaurantId],
+        references: [restaurantsTable.id],
+    }),
 }));
 export const aiSettingsRelations = relations(aiSettingsTable, ({ one }) => ({
     restaurant: one(restaurantsTable, {
