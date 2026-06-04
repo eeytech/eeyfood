@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS "operating_hours_restaurant_day_unique" ON "OperatingHours" USING btree ("restaurantId","dayOfWeek");

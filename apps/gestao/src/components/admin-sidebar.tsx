@@ -75,6 +75,12 @@ const navigationItems = [
     description: "Faturamento, lucro e vendas",
     icon: BarChart3Icon,
   },
+  {
+    href: "configuracoes",
+    label: "Configurações",
+    description: "Horários e status do restaurante",
+    icon: StoreIcon,
+  },
 ];
 
 const AdminSidebar = ({ slug, restaurantName }: AdminSidebarProps) => {

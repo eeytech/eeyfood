@@ -1,5 +1,6 @@
 "use client";
 
+import { isRestaurantOpen, getNextOpeningTime } from "@fsw/db";
 import type {
   MenuCategory,
   Product,
@@ -16,6 +17,7 @@ import { formatCurrency } from "@/helpers/format-currency";
 import { CartContext } from "../contexts/cart";
 import CartPanel from "./cart-panel";
 import CartSheet from "./cart-sheet";
+import OrdersSheet from "./orders-sheet";
 import Products from "./products";
 
 interface RestaurantCategoriesProps {
@@ -29,6 +31,10 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
   const [selectedCategory, setSelectedCategory] =
     useState<MenuCategoriesWithProducts | null>(firstCategory);
   const { products, total, toggleCart, totalQuantity } = useContext(CartContext);
+  const [ordersSheetIsOpen, setOrdersSheetIsOpen] = useState(false);
+
+  const isOpen = isRestaurantOpen(restaurant.status, restaurant.operatingHours);
+  const nextOpening = getNextOpeningTime(restaurant.operatingHours);
 
   const handleCategoryClick = (category: MenuCategoriesWithProducts) => {
     setSelectedCategory(category);
@@ -67,9 +73,33 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
                   {restaurant.description}
                 </p>
               </div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+              <div
+                className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium ${
+                  isOpen
+                    ? "bg-emerald-50 text-emerald-700"
+                    : "bg-rose-50 text-rose-700"
+                }`}
+              >
                 <ClockIcon size={12} />
-                Aberto e pronto para receber pedidos
+                {isOpen ? (
+                  "Aberto e pronto para receber pedidos"
+                ) : nextOpening ? (
+                  `Fechado - Abre ${
+                    nextOpening.dayOfWeek === new Date().getDay()
+                      ? "às "
+                      : [
+                          "Domingo",
+                          "Segunda",
+                          "Terça",
+                          "Quarta",
+                          "Quinta",
+                          "Sexta",
+                          "Sábado",
+                        ][nextOpening.dayOfWeek] + " às "
+                  }${nextOpening.openTime}`
+                ) : (
+                  "Fechado no momento"
+                )}
               </div>
             </div>
           </div>

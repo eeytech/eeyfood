@@ -9,6 +9,7 @@ import {
   financialCategoriesTable,
   financialTransactionsTable,
   menuCategoriesTable,
+  operatingHoursTable,
   orderProductsTable,
   ordersTable,
   productsTable,
@@ -743,6 +744,12 @@ export const buscarRestauranteComCardapioPorSlug = async (
     return null;
   }
 
+  const operatingHours = await db
+    .select()
+    .from(operatingHoursTable)
+    .where(eq(operatingHoursTable.restaurantId, restaurant.id))
+    .orderBy(asc(operatingHoursTable.dayOfWeek));
+
   const rows = await db
     .select({
       category: menuCategoriesTable,
@@ -789,6 +796,7 @@ export const buscarRestauranteComCardapioPorSlug = async (
   return {
     ...restaurant,
     menuCategories: Array.from(categoriesMap.values()),
+    operatingHours,
   };
 };
 

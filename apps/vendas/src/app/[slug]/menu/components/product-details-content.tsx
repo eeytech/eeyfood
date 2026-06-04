@@ -1,5 +1,6 @@
 "use client";
 
+import { isRestaurantOpen } from "@fsw/db";
 import { ChefHatIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import Image from "next/image";
 import { useContext, useState } from "react";
@@ -24,6 +25,11 @@ const ProductDetailsContent = ({
 }: ProductDetailsContentProps) => {
   const { toggleCart, addProduct } = useContext(CartContext);
   const [quantity, setQuantity] = useState<number>(1);
+
+  const isOpen = isRestaurantOpen(
+    (product.restaurant as any).status || "AUTO",
+    (product.restaurant as any).operatingHours || [],
+  );
 
   const handleDecreaseQuantity = () => {
     setQuantity((prev) => {
@@ -125,9 +131,20 @@ const ProductDetailsContent = ({
           </ScrollArea>
         </div>
 
-        <Button className="mt-6 w-full rounded-full" onClick={handleAddToCart}>
-          Adicionar à sacola
-        </Button>
+        <div className="mt-6 space-y-3">
+          {!isOpen && (
+            <p className="text-center text-sm font-medium text-rose-600">
+              O restaurante está fechado no momento e não aceita novos pedidos.
+            </p>
+          )}
+          <Button
+            className="w-full rounded-full"
+            onClick={handleAddToCart}
+            disabled={!isOpen}
+          >
+            Adicionar à sacola
+          </Button>
+        </div>
       </div>
     </div>
   );

@@ -9,14 +9,21 @@ import type { Restaurant } from "@/lib/db";
 
 interface RestaurantHeaderProps {
   restaurant: Pick<Restaurant, "name" | "coverImageUrl">;
+  onOrdersClick?: () => void;
 }
 
-const RestaurantHeader = ({ restaurant }: RestaurantHeaderProps) => {
+const RestaurantHeader = ({ restaurant, onOrdersClick }: RestaurantHeaderProps) => {
   const { slug } = useParams<{ slug: string }>();
   const router = useRouter();
 
   const handleBackClick = () => router.back();
-  const handleOrdersClick = () => router.push(`/${slug}/orders`);
+  const handleOrdersClick = () => {
+    if (onOrdersClick) {
+      onOrdersClick();
+      return;
+    }
+    router.push(`/${slug}/orders`);
+  };
 
   return (
     <div className="relative h-[280px] w-full overflow-hidden sm:h-[320px] lg:h-[380px]">

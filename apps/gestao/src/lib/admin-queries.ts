@@ -1,4 +1,9 @@
-import type { MenuCategory, Product, Restaurant } from "@fsw/db";
+import type {
+  MenuCategory,
+  OperatingHours,
+  Product,
+  Restaurant,
+} from "@fsw/db";
 import {
   aiSettingsTable,
   asc,
@@ -12,7 +17,9 @@ import {
   listarMesasComandasPorSlug,
   listarPedidosRecebimentoPorSlug,
   menuCategoriesTable,
+  operatingHoursTable,
   productsTable,
+  restaurantsTable,
 } from "@fsw/db";
 
 export interface CategoriaComProdutos extends MenuCategory {
@@ -252,4 +259,20 @@ export const buscarAiSettingsPorSlug = async (slug: string) => {
     .limit(1);
 
   return settings ?? null;
+};
+
+export const buscarConfiguracoesRestaurante = async (slug: string) => {
+  const restaurant = await buscarRestaurantePorSlug(slug);
+  if (!restaurant) return null;
+
+  const operatingHours = await db
+    .select()
+    .from(operatingHoursTable)
+    .where(eq(operatingHoursTable.restaurantId, restaurant.id))
+    .orderBy(asc(operatingHoursTable.dayOfWeek));
+
+  return {
+    restaurant,
+    operatingHours,
+  };
 };

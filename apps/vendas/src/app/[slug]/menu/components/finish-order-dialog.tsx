@@ -16,16 +16,6 @@ import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
-import {
   Form,
   FormControl,
   FormField,
@@ -34,6 +24,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { formatCurrency } from "@/helpers/format-currency";
 import type {
   ConsumptionMethod,
@@ -449,21 +446,20 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
   };
 
   return (
-    <Drawer open={open} onOpenChange={handleDrawerOpenChange}>
-      <DrawerTrigger asChild></DrawerTrigger>
-      <DrawerContent>
+    <Sheet open={open} onOpenChange={handleDrawerOpenChange}>
+      <SheetContent className="w-full max-w-md overflow-y-auto sm:w-[540px] sm:max-w-xl">
         {pedidoOfflineConcluido ? (
           <>
-            <DrawerHeader>
-              <DrawerTitle className="flex items-center gap-2">
+            <SheetHeader>
+              <SheetTitle className="flex items-center gap-2">
                 <CheckCircle2Icon className="text-green-600" />
                 Pedido recebido
-              </DrawerTitle>
-              <DrawerDescription>
+              </SheetTitle>
+              <SheetDescription>
                 Seu pedido ja foi salvo e a equipe do restaurante foi avisada.
-              </DrawerDescription>
-            </DrawerHeader>
-            <div className="space-y-4 p-5">
+              </SheetDescription>
+            </SheetHeader>
+            <div className="space-y-4 py-5">
               <div className="rounded-3xl border border-green-100 bg-green-50 p-4 text-sm text-green-900">
                 {pedidoOfflineConcluido.paymentMethod === "DINHEIRO"
                   ? "O pagamento sera feito em dinheiro no balcao ou na entrega."
@@ -495,28 +491,30 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                 </div>
               ) : null}
 
-              <DrawerFooter className="px-0">
+              <div className="flex flex-col gap-3 pt-4">
                 <Button className="rounded-full" onClick={handleViewOrders}>
                   Ver meus pedidos
                 </Button>
-                <DrawerClose asChild>
-                  <Button className="rounded-full" variant="outline">
-                    Fechar
-                  </Button>
-                </DrawerClose>
-              </DrawerFooter>
+                <Button
+                  className="rounded-full"
+                  variant="outline"
+                  onClick={() => handleDrawerOpenChange(false)}
+                >
+                  Fechar
+                </Button>
+              </div>
             </div>
           </>
         ) : (
           <>
-            <DrawerHeader>
-              <DrawerTitle>Finalizar pedido</DrawerTitle>
-              <DrawerDescription>
+            <SheetHeader>
+              <SheetTitle>Finalizar pedido</SheetTitle>
+              <SheetDescription>
                 Informe seus dados, valide os beneficios e escolha como prefere
                 pagar.
-              </DrawerDescription>
-            </DrawerHeader>
-            <div className="p-5">
+              </SheetDescription>
+            </SheetHeader>
+            <div className="py-5">
               <Form {...form}>
                 <form
                   onSubmit={form.handleSubmit(onSubmit)}
@@ -845,31 +843,35 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                     ) : null}
                   </div>
 
-                  <DrawerFooter className="px-0">
+                  <div className="flex flex-col gap-3 pt-4">
                     <Button
                       type="submit"
                       variant="destructive"
                       className="rounded-full"
                       disabled={isLoading}
                     >
-                      {isLoading ? <Loader2Icon className="animate-spin" /> : null}
+                      {isLoading ? (
+                        <Loader2Icon className="animate-spin" />
+                      ) : null}
                       {paymentMethod === "MERCADO_PAGO"
                         ? "Ir para pagamento"
                         : "Confirmar pedido"}
                     </Button>
-                    <DrawerClose asChild>
-                      <Button className="w-full rounded-full" variant="outline">
-                        Cancelar
-                      </Button>
-                    </DrawerClose>
-                  </DrawerFooter>
+                    <Button
+                      className="w-full rounded-full"
+                      variant="outline"
+                      onClick={() => handleDrawerOpenChange(false)}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
                 </form>
               </Form>
             </div>
           </>
         )}
-      </DrawerContent>
-    </Drawer>
+      </SheetContent>
+    </Sheet>
   );
 };
 

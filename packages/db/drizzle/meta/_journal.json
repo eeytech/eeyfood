@@ -57,6 +57,20 @@
       "when": 1780522248283,
       "tag": "0007_cuddly_wrecking_crew",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1780546551768,
+      "tag": "0008_bitter_marrow",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1780546783316,
+      "tag": "0009_glossy_malice",
+      "breakpoints": true
     }
   ]
 }

@@ -82,6 +82,7 @@ const revalidateRestaurantPaths = (slug: string) => {
   revalidatePath(`/${slug}/cardapio`);
   revalidatePath(`/${slug}/estoque`);
   revalidatePath(`/${slug}/relatorios`);
+  revalidatePath(`/${slug}/configuracoes`);
   revalidatePath(`/${slug}/menu`, "page");
 };
 
@@ -376,6 +377,70 @@ export const updateStockAction = async (slug: string, formData: FormData) => {
       reason: parsedData.data.reason,
     });
   }
+
+  revalidateRestaurantPaths(slug);
+};
+
+export const updateRestaurantStatusAction = async (
+  slug: string,
+  formData: FormData,
+) => {
+  const restaurant = await getRestaurantOrThrow(slug);
+  const status = getStringValue(formData.get("status")) as any;
+
+  await db
+    .update(restaurantsTable)
+    .set({
+      status,
+      updatedAt: new Date(),
+    })
+    .where(eq(restaurantsTable.id, restaurant.id));
+
+  revalidateRestaurantPaths(slug);
+};
+
+export const updateOperatingHoursAction = async (
+  slug: string,
+  formData: FormData,
+) => {
+  const restaurant = await getRestaurantOrThrow(slug);
+
+  const days = [0, 1, 2, 3, 4, 5, 6];
+
+  await db.transaction(async (tx) => {
+    for (const day of days) {
+      const openTime = formData.get(`openTime-${day}`) as string;
+      const closeTime = formData.get(`closeTime-${day}`) as string;
+      const isOpen = getBooleanValue(formData.get(`isOpen-${day}`));
+
+      if (isOpen && openTime && closeTime) {
+        await tx
+          .delete(operatingHoursTable)
+          .where(
+            and(
+              eq(operatingHoursTable.restaurantId, restaurant.id),
+              eq(operatingHoursTable.dayOfWeek, day),
+            ),
+          );
+
+        await tx.insert(operatingHoursTable).values({
+          restaurantId: restaurant.id,
+          dayOfWeek: day,
+          openTime,
+          closeTime,
+        });
+      } else {
+        await tx
+          .delete(operatingHoursTable)
+          .where(
+            and(
+              eq(operatingHoursTable.restaurantId, restaurant.id),
+              eq(operatingHoursTable.dayOfWeek, day),
+            ),
+          );
+      }
+    }
+  });
 
   revalidateRestaurantPaths(slug);
 };

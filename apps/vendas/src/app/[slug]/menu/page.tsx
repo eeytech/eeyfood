@@ -2,8 +2,7 @@ import { notFound } from "next/navigation";
 
 import { buscarRestauranteComCardapioPorSlug } from "@/lib/db";
 
-import RestaurantCategories from "./components/categories";
-import RestaurantHeader from "./components/header";
+import RestaurantMenuPageContent from "./components/menu-page-content";
 
 interface RestaurantMenuPageProps {
   params: Promise<{ slug: string }>;
@@ -33,12 +32,7 @@ const RestaurantMenuPage = async ({
     return notFound();
   }
 
-  return (
-    <div>
-      <RestaurantHeader restaurant={restaurant} />
-      <RestaurantCategories restaurant={restaurant} />
-    </div>
-  );
+  return <RestaurantMenuPageContent restaurant={restaurant} />;
 };
 
 export default RestaurantMenuPage;
