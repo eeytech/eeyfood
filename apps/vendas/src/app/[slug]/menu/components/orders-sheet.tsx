@@ -1,9 +1,9 @@
 "use client";
 
 import { ScrollTextIcon } from "lucide-react";
-import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
+import { buscarPedidosPorTelefoneAction } from "@/app/[slug]/orders/actions";
 import {
   Sheet,
   SheetContent,
@@ -11,7 +11,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { buscarPedidosPorTelefoneAction } from "@/app/[slug]/orders/actions";
 import type { OrderComItens } from "@/lib/db";
 
 import OrderList from "../../orders/components/order-list";
@@ -23,30 +22,17 @@ interface OrdersSheetProps {
 }
 
 const OrdersSheet = ({ open, onOpenChange }: OrdersSheetProps) => {
-  const { slug } = useParams<{ slug: string }>();
   const [phone, setPhone] = useState<string | null>(null);
   const [orders, setOrders] = useState<OrderComItens[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    if (open && phone) {
-      const fetchOrders = async () => {
-        setIsLoading(true);
-        try {
-          const data = await buscarPedidosPorTelefoneAction(phone);
-          setOrders(data);
-        } catch (error) {
-          console.error(error);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      fetchOrders();
+  const handlePhoneSubmit = async (submittedPhone: string) => {
+    try {
+      const data = await buscarPedidosPorTelefoneAction(submittedPhone);
+      setOrders(data);
+      setPhone(submittedPhone);
+    } catch (error) {
+      console.error(error);
     }
-  }, [open, phone]);
-
-  const handlePhoneSubmit = (submittedPhone: string) => {
-    setPhone(submittedPhone);
   };
 
   return (
@@ -63,9 +49,16 @@ const OrdersSheet = ({ open, onOpenChange }: OrdersSheetProps) => {
         </SheetHeader>
 
         {!phone ? (
-          <PhoneFormSide onSubmit={handlePhoneSubmit} onCancel={() => onOpenChange(false)} />
+          <PhoneFormSide
+            onSubmit={handlePhoneSubmit}
+            onCancel={() => onOpenChange(false)}
+          />
         ) : (
-          <OrderList orders={orders} isSidePanel onBackClick={() => setPhone(null)} />
+          <OrderList
+            orders={orders}
+            isSidePanel
+            onBackClick={() => setPhone(null)}
+          />
         )}
       </SheetContent>
     </Sheet>

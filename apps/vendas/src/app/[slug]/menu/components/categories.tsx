@@ -1,11 +1,5 @@
 "use client";
 
-import { isRestaurantOpen, getNextOpeningTime } from "@/helpers/restaurant-status";
-import type {
-  MenuCategory,
-  Product,
-  RestaurantComCategoriasEProdutos,
-} from "@fsw/db";
 import { ClockIcon } from "lucide-react";
 import Image from "next/image";
 import { useContext, useState } from "react";
@@ -13,11 +7,16 @@ import { useContext, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { formatCurrency } from "@/helpers/format-currency";
+import { getNextOpeningTime, isRestaurantOpen } from "@/helpers/restaurant-status";
+import type {
+  MenuCategory,
+  Product,
+  RestaurantComCategoriasEProdutos,
+} from "@fsw/db";
 
 import { CartContext } from "../contexts/cart";
 import CartPanel from "./cart-panel";
 import CartSheet from "./cart-sheet";
-import OrdersSheet from "./orders-sheet";
 import Products from "./products";
 
 interface RestaurantCategoriesProps {
@@ -31,7 +30,6 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
   const [selectedCategory, setSelectedCategory] =
     useState<MenuCategoriesWithProducts | null>(firstCategory);
   const { products, total, toggleCart, totalQuantity } = useContext(CartContext);
-  const [ordersSheetIsOpen, setOrdersSheetIsOpen] = useState(false);
 
   const isOpen = isRestaurantOpen(restaurant.status, restaurant.operatingHours);
   const nextOpening = getNextOpeningTime(restaurant.operatingHours);
