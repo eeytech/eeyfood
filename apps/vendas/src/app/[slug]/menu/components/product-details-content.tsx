@@ -1,6 +1,6 @@
 "use client";
 
-import { isRestaurantOpen } from "@fsw/db";
+import { isRestaurantOpen } from "@/helpers/restaurant-status";
 import { ChefHatIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import Image from "next/image";
 import { useContext, useState } from "react";

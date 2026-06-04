@@ -1,6 +1,6 @@
 "use client";
 
-import { isRestaurantOpen, getNextOpeningTime } from "@fsw/db";
+import { isRestaurantOpen, getNextOpeningTime } from "@/helpers/restaurant-status";
 import type {
   MenuCategory,
   Product,
