@@ -16,7 +16,7 @@ const CartSheet = () => {
 
   return (
     <Sheet open={isOpen} onOpenChange={toggleCart}>
-      <SheetContent className="w-full max-w-md sm:w-[440px]">
+      <SheetContent className="w-full sm:max-w-md md:max-w-lg lg:max-w-xl">
         <SheetHeader className="pb-4">
           <SheetTitle className="text-left">Resumo do pedido</SheetTitle>
           <SheetDescription className="sr-only">

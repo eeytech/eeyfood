@@ -37,7 +37,7 @@ const OrdersSheet = ({ open, onOpenChange }: OrdersSheetProps) => {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full max-w-md overflow-y-auto sm:w-[540px] sm:max-w-xl">
+      <SheetContent className="w-full overflow-y-auto sm:max-w-xl md:max-w-2xl lg:max-w-3xl">
         <SheetHeader className="pb-4">
           <SheetTitle className="flex items-center gap-2 text-xl">
             <ScrollTextIcon size={18} />

@@ -447,7 +447,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
 
   return (
     <Sheet open={open} onOpenChange={handleDrawerOpenChange}>
-      <SheetContent className="w-full max-w-md overflow-y-auto sm:w-[540px] sm:max-w-xl">
+      <SheetContent className="w-full overflow-y-auto sm:max-w-xl md:max-w-2xl lg:max-w-3xl">
         {pedidoOfflineConcluido ? (
           <>
             <SheetHeader>
