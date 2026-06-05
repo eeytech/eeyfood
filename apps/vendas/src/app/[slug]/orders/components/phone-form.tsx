@@ -8,14 +8,12 @@ import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   Form,
   FormControl,
@@ -61,22 +59,22 @@ const PhoneForm = () => {
   };
 
   return (
-    <Drawer open>
-      <DrawerContent>
-        <DrawerHeader>
-          <DrawerTitle>Visualizar Pedidos</DrawerTitle>
-          <DrawerDescription>
+    <Sheet open onOpenChange={(open) => !open && handleCancel()}>
+      <SheetContent className="w-full sm:max-w-md md:max-w-lg lg:max-w-xl">
+        <SheetHeader className="pb-4">
+          <SheetTitle className="text-left">Visualizar Pedidos</SheetTitle>
+          <SheetDescription>
             Insira seu celular abaixo para visualizar seus pedidos.
-          </DrawerDescription>
-        </DrawerHeader>
+          </SheetDescription>
+        </SheetHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 py-8">
             <FormField
               control={form.control}
               name="phone"
               render={({ field }) => (
-                <FormItem className="px-4">
+                <FormItem>
                   <FormLabel>Seu celular</FormLabel>
                   <FormControl>
                     <PatternFormat
@@ -90,24 +88,23 @@ const PhoneForm = () => {
                 </FormItem>
               )}
             />
-            <DrawerFooter>
-              <Button variant="destructive" className="w-full rounded-full">
+            <div className="flex flex-col gap-3">
+              <Button type="submit" variant="destructive" className="w-full rounded-full">
                 Confirmar
               </Button>
-              <DrawerClose asChild>
-                <Button
-                  variant="outline"
-                  className="w-full rounded-full"
-                  onClick={handleCancel}
-                >
-                  Cancelar
-                </Button>
-              </DrawerClose>
-            </DrawerFooter>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full rounded-full"
+                onClick={handleCancel}
+              >
+                Cancelar
+              </Button>
+            </div>
           </form>
         </Form>
-      </DrawerContent>
-    </Drawer>
+      </SheetContent>
+    </Sheet>
   );
 };
 

@@ -308,7 +308,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
     watchedScheduledFor,
   ]);
 
-  const handleDrawerOpenChange = (nextOpen: boolean) => {
+  const handleSheetOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
       setPedidoOfflineConcluido(null);
       setBenefits(null);
@@ -324,7 +324,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
       return;
     }
 
-    handleDrawerOpenChange(false);
+    handleSheetOpenChange(false);
     router.push(
       `/${slug}/orders?phone=${normalizePhoneNumber(pedidoOfflineConcluido.phone)}`,
     );
@@ -446,12 +446,12 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
   };
 
   return (
-    <Sheet open={open} onOpenChange={handleDrawerOpenChange}>
+    <Sheet open={open} onOpenChange={handleSheetOpenChange}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-xl md:max-w-2xl lg:max-w-3xl">
         {pedidoOfflineConcluido ? (
           <>
-            <SheetHeader>
-              <SheetTitle className="flex items-center gap-2">
+            <SheetHeader className="pb-4">
+              <SheetTitle className="flex items-center gap-2 text-left">
                 <CheckCircle2Icon className="text-green-600" />
                 Pedido recebido
               </SheetTitle>
@@ -498,7 +498,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                 <Button
                   className="rounded-full"
                   variant="outline"
-                  onClick={() => handleDrawerOpenChange(false)}
+                  onClick={() => handleSheetOpenChange(false)}
                 >
                   Fechar
                 </Button>
@@ -507,8 +507,8 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
           </>
         ) : (
           <>
-            <SheetHeader>
-              <SheetTitle>Finalizar pedido</SheetTitle>
+            <SheetHeader className="pb-4">
+              <SheetTitle className="text-left">Finalizar pedido</SheetTitle>
               <SheetDescription>
                 Informe seus dados, valide os beneficios e escolha como prefere
                 pagar.
@@ -860,7 +860,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                     <Button
                       className="w-full rounded-full"
                       variant="outline"
-                      onClick={() => handleDrawerOpenChange(false)}
+                      onClick={() => handleSheetOpenChange(false)}
                     >
                       Cancelar
                     </Button>
