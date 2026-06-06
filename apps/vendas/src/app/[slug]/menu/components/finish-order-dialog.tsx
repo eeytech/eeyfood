@@ -214,7 +214,6 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
       paymentMethod: "MERCADO_PAGO",
       changeFor: "",
     },
-    shouldUnregister: true,
   });
 
   const paymentMethod = form.watch("paymentMethod");
@@ -376,6 +375,9 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
   const onSubmit = async (data: FormSchema) => {
     try {
       setIsLoading(true);
+      toast.info("Processando seu pedido...", {
+        description: "Aguarde um momento enquanto finalizamos tudo.",
+      });
 
       const changeFor =
         data.paymentMethod === "DINHEIRO" && data.changeFor
@@ -519,7 +521,12 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
         ) : (
           <Form {...form}>
             <form
-              onSubmit={form.handleSubmit(onSubmit)}
+              onSubmit={form.handleSubmit(onSubmit, (errors) => {
+                console.error("Erro de validacao no checkout:", errors);
+                toast.error("Por favor, verifique os campos do formulario.", {
+                  description: "Alguns dados obrigatorios estao ausentes ou invalidos.",
+                });
+              })}
               className="flex h-full flex-col overflow-hidden"
             >
               <div className="flex-auto overflow-hidden">
