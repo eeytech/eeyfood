@@ -35,7 +35,7 @@ export const ThermalPrintLayout = React.forwardRef<
   return (
     <div
       ref={ref}
-      className="hidden print:block thermal-print-area w-[80mm] p-4 text-black font-mono text-[12px] leading-tight"
+      className="hidden print:block w-[80mm] p-4 text-black font-mono text-[12px] leading-tight"
       style={{ width: "80mm" }}
     >
       {/* Cabeçalho */}

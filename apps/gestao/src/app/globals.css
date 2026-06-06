@@ -45,32 +45,6 @@
     size: 80mm auto;
   }
   
-  /* Esconde absolutamente tudo */
-  body * {
-    visibility: hidden !important;
-    height: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    overflow: hidden !important;
-  }
-  
-  /* Mostra apenas a área de impressão e seus filhos */
-  .thermal-print-area,
-  .thermal-print-area * {
-    visibility: visible !important;
-    height: auto !important;
-    overflow: visible !important;
-  }
-
-  .thermal-print-area {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 80mm !important;
-    margin: 0 !important;
-    padding: 4mm !important; /* Um pouco de respiro nas bordas */
-  }
-  
   body {
     background: white !important;
     background-image: none !important;

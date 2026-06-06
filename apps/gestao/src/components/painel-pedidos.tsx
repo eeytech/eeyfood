@@ -44,8 +44,6 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-import { ThermalPrintLayout } from "./thermal-print-layout";
-
 interface PainelPedidosProps {
   slug: string;
   initialOrders: PedidoRecebimento[];
@@ -228,10 +226,6 @@ const PainelPedidos = ({
   const [socketConnected, setSocketConnected] = useState(false);
   const [loadingOrderIds, setLoadingOrderIds] = useState<number[]>([]);
   
-  // Estados para Impressão
-  const [orderToPrint, setOrderToPrint] = useState<PedidoRecebimento | null>(null);
-  const [printType, setPrintType] = useState<"PRODUCTION" | "DELIVERY">("PRODUCTION");
-  
   // Estados para Despacho
   const [orderToDispatch, setOrderToDispatch] = useState<PedidoRecebimento | null>(null);
   const [couriers, setCouriers] = useState<Courier[]>([]);
@@ -369,13 +363,154 @@ const PainelPedidos = ({
   };
 
   const handlePrint = (order: PedidoRecebimento, type: "PRODUCTION" | "DELIVERY") => {
-    setOrderToPrint(order);
-    setPrintType(type);
-    
-    // Pequeno timeout para garantir que o componente de impressão renderizou com os novos dados
-    setTimeout(() => {
-      window.print();
-    }, 100);
+    // 1. Criar um iframe oculto para isolar a impressão
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "absolute";
+    iframe.style.top = "-9999px";
+    iframe.style.left = "-9999px";
+    document.body.appendChild(iframe);
+
+    const isProduction = type === "PRODUCTION";
+
+    // 2. Elaborar apenas as informações necessárias (HTML puro e isolado)
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Impressão Pedido #${order.id}</title>
+          <style>
+            @page { margin: 0; size: 80mm auto; }
+            body { 
+              margin: 0; 
+              padding: 4mm; 
+              width: 72mm; 
+              font-family: monospace; 
+              font-size: 12px; 
+              line-height: 1.2;
+              color: black;
+            }
+            .text-center { text-align: center; }
+            .text-xl { font-size: 18px; }
+            .text-lg { font-size: 16px; }
+            .font-bold { font-weight: bold; }
+            .uppercase { text-transform: uppercase; }
+            .border-t { border-top: 1px dashed black; }
+            .my-2 { margin-top: 8px; margin-bottom: 8px; }
+            .mb-4 { margin-bottom: 16px; }
+            .flex { display: flex; }
+            .justify-between { justify-content: space-between; }
+            .italic { font-style: italic; }
+            .h-20 { height: 80px; }
+          </style>
+        </head>
+        <body>
+          <div class="text-center mb-4">
+            <h1 class="text-lg font-bold uppercase">${order.restaurant.name}</h1>
+            ${!isProduction ? `<p style="font-size: 10px;">CNPJ: 00.000.000/0001-00</p>` : ""}
+            <div class="border-t my-2"></div>
+            <h2 class="font-bold">${isProduction ? "CUPOM DE PRODUÇÃO" : "CUPOM DE ENTREGA"}</h2>
+            <p class="text-xl font-bold">PEDIDO #${order.id}</p>
+          </div>
+
+          ${!isProduction ? `
+            <div class="mb-4">
+              <p><span class="font-bold">CLIENTE:</span> ${order.customerName}</p>
+              <p><span class="font-bold">TEL:</span> ${order.customerPhone}</p>
+              <p><span class="font-bold">DATA:</span> ${formatDateTime(order.createdAt)}</p>
+              <p><span class="font-bold">MÉTODO:</span> ${
+                order.consumptionMethod === "DELIVERY" ? "ENTREGA" : 
+                order.consumptionMethod === "DINE_IN" ? "SALÃO" : "PARA LEVAR"
+              }</p>
+              ${order.notes ? `<p class="italic"><span class="font-bold">OBS:</span> ${order.notes}</p>` : ""}
+            </div>
+          ` : ""}
+
+          ${isProduction && order.notes ? `
+            <div class="mb-4" style="border: 1px solid black; padding: 4px;">
+              <p class="font-bold">OBSERVAÇÕES DO PEDIDO:</p>
+              <p>${order.notes}</p>
+            </div>
+          ` : ""}
+
+          <div class="border-t my-2"></div>
+
+          <div class="mb-4">
+            <div class="flex justify-between font-bold">
+              <span>ITEM</span>
+              <span>QTD</span>
+            </div>
+            ${order.orderProducts.map(item => `
+              <div class="flex justify-between">
+                <span>${item.product.name}</span>
+                <span>${item.quantity}x</span>
+              </div>
+            `).join('')}
+          </div>
+
+          ${!isProduction ? `
+            <div class="border-t my-2"></div>
+            <div style="gap: 4px; display: flex; flex-direction: column;">
+              <div class="flex justify-between">
+                <span>SUBTOTAL</span>
+                <span>${formatCurrency(order.subtotal)}</span>
+              </div>
+              ${order.deliveryFee > 0 ? `
+                <div class="flex justify-between">
+                  <span>TAXA ENTREGA</span>
+                  <span>${formatCurrency(order.deliveryFee)}</span>
+                </div>
+              ` : ""}
+              ${order.discountAmount > 0 ? `
+                <div class="flex justify-between">
+                  <span>DESCONTO</span>
+                  <span>-${formatCurrency(order.discountAmount)}</span>
+                </div>
+              ` : ""}
+              <div class="flex justify-between font-bold text-lg" style="padding-top: 4px;">
+                <span>TOTAL</span>
+                <span>${formatCurrency(order.total)}</span>
+              </div>
+            </div>
+
+            <div class="border-t my-2"></div>
+
+            <div class="mb-4">
+              <p><span class="font-bold">PAGAMENTO:</span> ${
+                order.paymentMethod === "DINHEIRO" ? "DINHEIRO" : 
+                order.paymentMethod === "CARTAO_PRESENCIAL" ? "CARTÃO (PRESENCIAL)" : "ONLINE"
+              }</p>
+              <p><span class="font-bold">STATUS:</span> ${order.paymentStatus === "PAID" ? "PAGO" : "PENDENTE"}</p>
+              ${order.paymentMethod === "DINHEIRO" && order.changeFor ? `
+                <p class="font-bold">TROCO PARA: ${formatCurrency(order.changeFor)}</p>
+              ` : ""}
+            </div>
+          ` : ""}
+
+          <div class="text-center h-20" style="margin-top: 20px; font-size: 10px;">
+            <p>Obrigado pela preferência!</p>
+            <p>www.eeyfood.com.br</p>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const doc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (doc) {
+      doc.open();
+      doc.write(html);
+      doc.close();
+
+      // 3. Executar a impressão assim que o conteúdo carregar
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        
+        // Remover o iframe após a impressão
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 1000);
+      }, 500);
+    }
   };
 
   const pendingOrdersCount = orders.filter((order) => order.status === "PENDING").length;
@@ -390,11 +525,6 @@ const PainelPedidos = ({
 
   return (
     <div className="space-y-6">
-      {/* Componente de Impressão Oculto */}
-      {orderToPrint && (
-        <ThermalPrintLayout order={orderToPrint} type={printType} />
-      )}
-
       {/* Modal de Despacho */}
       <Dialog open={!!orderToDispatch} onOpenChange={(open) => !open && setOrderToDispatch(null)}>
         <DialogContent>
