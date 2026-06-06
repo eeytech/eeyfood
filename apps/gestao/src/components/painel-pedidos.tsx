@@ -10,7 +10,6 @@ import {
   Loader2Icon,
   PackageCheckIcon,
   PrinterIcon,
-  RadioIcon,
   ReceiptTextIcon,
   UtensilsCrossedIcon,
   XCircleIcon,
@@ -43,12 +42,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 import { ThermalPrintLayout } from "./thermal-print-layout";
 
 interface PainelPedidosProps {
   slug: string;
-  restaurantName: string;
   initialOrders: PedidoRecebimento[];
 }
 
@@ -223,7 +222,6 @@ const getPreviousStatus = (order: PedidoRecebimento): OrderStatus | null => {
 
 const PainelPedidos = ({
   slug,
-  restaurantName,
   initialOrders,
 }: PainelPedidosProps) => {
   const [orders, setOrders] = useState(initialOrders);
@@ -391,13 +389,14 @@ const PainelPedidos = ({
   ).length;
 
   return (
-    <div className="space-y-6">
+    <>
       {/* Componente de Impressão Oculto */}
       {orderToPrint && (
         <ThermalPrintLayout order={orderToPrint} type={printType} />
       )}
 
-      {/* Modal de Despacho */}
+      <div className="space-y-6 print:hidden">
+        {/* Modal de Despacho */}
       <Dialog open={!!orderToDispatch} onOpenChange={(open) => !open && setOrderToDispatch(null)}>
         <DialogContent>
           <DialogHeader>
@@ -758,7 +757,7 @@ const PainelPedidos = ({
           </div>
         </section>
       </div>
-    </main>
+    </>
   );
 };
 

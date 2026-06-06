@@ -94,7 +94,7 @@ const AdminSidebar = ({ slug, restaurantName }: AdminSidebarProps) => {
   return (
     <aside
       className={cn(
-        "relative flex h-screen shrink-0 flex-col bg-slate-950 p-4 text-white transition-all duration-300 ease-in-out",
+        "relative flex h-screen shrink-0 flex-col bg-slate-950 p-4 text-white transition-all duration-300 ease-in-out print:hidden",
         isCollapsed ? "w-[100px]" : "w-[280px]",
       )}
     >

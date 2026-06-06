@@ -22,7 +22,6 @@ const PedidosPage = async ({ params }: PedidosPageProps) => {
   return (
     <PainelPedidos
       initialOrders={orders}
-      restaurantName={restaurant.name}
       slug={slug}
     />
   );

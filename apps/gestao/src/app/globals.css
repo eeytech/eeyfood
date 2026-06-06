@@ -39,6 +39,18 @@
   }
 }
 
+@media print {
+  @page {
+    margin: 0;
+    size: 80mm auto;
+  }
+  
+  body {
+    background: white !important;
+    background-image: none !important;
+  }
+}
+
 @layer utilities {
   .font-display {
     font-family: var(--font-space-grotesk), sans-serif;
