@@ -391,7 +391,7 @@ const PainelPedidos = ({
   ).length;
 
   return (
-    <main className="min-h-screen px-4 py-4 sm:px-6 lg:px-8">
+    <div className="space-y-6">
       {/* Componente de Impressão Oculto */}
       {orderToPrint && (
         <ThermalPrintLayout order={orderToPrint} type={printType} />
@@ -432,96 +432,73 @@ const PainelPedidos = ({
         </DialogContent>
       </Dialog>
 
-      <div className="mx-auto grid max-w-[1680px] gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-        <aside className="space-y-4">
-          <Card className="bg-slate-950 text-white">
-            <CardHeader>
-              <Badge variant="secondary" className="w-fit bg-white/10 text-white">
-                Gestão operacional
-              </Badge>
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card>
+          <CardContent className="flex items-center justify-between p-6">
+            <div>
+              <p className="text-sm text-muted-foreground uppercase tracking-wider font-semibold">Solicitados</p>
+              <p className="font-display text-4xl font-bold mt-1">
+                {pendingOrdersCount}
+              </p>
+            </div>
+            <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <Clock3Icon className="text-primary" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center justify-between p-6">
+            <div>
+              <p className="text-sm text-muted-foreground uppercase tracking-wider font-semibold">Pagos</p>
+              <p className="font-display text-4xl font-bold mt-1">
+                {paidOrdersCount}
+              </p>
+            </div>
+            <div className="h-12 w-12 rounded-2xl bg-emerald-100 flex items-center justify-center">
+              <BadgeDollarSignIcon className="text-emerald-600" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center justify-between p-6">
+            <div>
+              <p className="text-sm text-muted-foreground uppercase tracking-wider font-semibold">Em operação</p>
+              <p className="font-display text-4xl font-bold mt-1">
+                {activeOrdersCount}
+              </p>
+            </div>
+            <div className="h-12 w-12 rounded-2xl bg-blue-100 flex items-center justify-center">
+              <UtensilsCrossedIcon className="text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <section className="space-y-4">
+        <Card className="border-white/80 bg-white/85">
+          <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
               <CardTitle className="font-display text-3xl">
-                {restaurantName}
+                Fluxo de pedidos
               </CardTitle>
-              <CardDescription className="text-slate-300">
-                Acompanhe a fila de produção, retirada e entrega em tempo real.
+              <CardDescription>
+                Acompanhe o status de cada pedido e avance conforme a produção.
               </CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-3 text-sm">
-              <div className="flex items-center justify-between rounded-3xl border border-white/10 bg-white/5 px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <RadioIcon size={16} />
-                  <span>Tempo real</span>
-                </div>
-                <span
-                  className={`h-2.5 w-2.5 rounded-full ${socketConnected ? "bg-emerald-400" : "bg-rose-400"}`}
-                />
-              </div>
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                  Sala do restaurante
-                </p>
-                <p className="mt-2 font-mono text-sm text-slate-100">{slug}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="grid gap-4 sm:grid-cols-3 xl:grid-cols-1">
-            <Card>
-              <CardContent className="flex items-center justify-between p-6">
-                <div>
-                  <p className="text-sm text-muted-foreground">Solicitados</p>
-                  <p className="font-display text-3xl font-semibold">
-                    {pendingOrdersCount}
-                  </p>
-                </div>
-                <Clock3Icon className="text-primary" />
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="flex items-center justify-between p-6">
-                <div>
-                  <p className="text-sm text-muted-foreground">Pagos</p>
-                  <p className="font-display text-3xl font-semibold">
-                    {paidOrdersCount}
-                  </p>
-                </div>
-                <BadgeDollarSignIcon className="text-primary" />
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="flex items-center justify-between p-6">
-                <div>
-                  <p className="text-sm text-muted-foreground">Em operação</p>
-                  <p className="font-display text-3xl font-semibold">
-                    {activeOrdersCount}
-                  </p>
-                </div>
-                <UtensilsCrossedIcon className="text-primary" />
-              </CardContent>
-            </Card>
-          </div>
-        </aside>
-
-        <section className="space-y-4">
-          <Card className="border-white/80 bg-white/85">
-            <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <CardTitle className="font-display text-3xl">
-                  Fluxo de pedidos
-                </CardTitle>
-                <CardDescription>
-                  Arraste depois, opere agora por clique: cada coluna representa uma
-                  etapa do processo.
-                </CardDescription>
-              </div>
+            </div>
+            <div className="flex items-center gap-3">
               <Badge
                 variant={socketConnected ? "success" : "danger"}
                 className="w-fit"
               >
                 {socketConnected ? "Canal sincronizado" : "Reconectando"}
               </Badge>
-            </CardHeader>
-          </Card>
+              <span className={cn(
+                "h-3 w-3 rounded-full animate-pulse",
+                socketConnected ? "bg-emerald-500" : "bg-rose-500"
+              )} />
+            </div>
+          </CardHeader>
+        </Card>
 
           <div className="overflow-x-auto pb-2">
             <div className="grid min-w-[1600px] grid-cols-6 gap-4">
