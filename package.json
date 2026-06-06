@@ -15,5 +15,9 @@
     "db:generate": "npm run db:generate -w @fsw/db",
     "db:migrate": "npm run db:migrate -w @fsw/db",
     "db:seed": "npm run db:seed -w @fsw/db"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "pg": "^8.21.0"
   }
 }

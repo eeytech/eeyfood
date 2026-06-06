@@ -53,7 +53,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const clearCart = () => {
     setProducts([]);
-    setIsOpen(false);
   };
 
   const addProduct = (product: CartProduct) => {

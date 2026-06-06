@@ -14,6 +14,9 @@ export const notificarNovoPedido = async ({
   }
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
     await fetch(`${websocketServerUrl}/eventos/novo-pedido`, {
       method: "POST",
       headers: {
@@ -24,7 +27,10 @@ export const notificarNovoPedido = async ({
         restaurantSlug,
       }),
       cache: "no-store",
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
   } catch (error) {
     console.error("Falha ao notificar o servidor de tempo real.", error);
   }

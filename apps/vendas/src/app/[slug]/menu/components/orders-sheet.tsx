@@ -4,6 +4,7 @@ import { ScrollTextIcon } from "lucide-react";
 import { useState } from "react";
 
 import { buscarPedidosPorTelefoneAction } from "@/app/[slug]/orders/actions";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Sheet,
   SheetContent,
@@ -35,31 +36,44 @@ const OrdersSheet = ({ open, onOpenChange }: OrdersSheetProps) => {
     }
   };
 
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-xl md:max-w-2xl lg:max-w-3xl">
-        <SheetHeader className="pb-4">
-          <SheetTitle className="flex items-center gap-2 text-xl">
-            <ScrollTextIcon size={18} />
-            Meus Pedidos
-          </SheetTitle>
-          <SheetDescription>
-            Acompanhe o status dos seus pedidos realizados.
-          </SheetDescription>
-        </SheetHeader>
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      setPhone(null);
+    }
+    onOpenChange(nextOpen);
+  };
 
-        {!phone ? (
-          <PhoneFormSide
-            onSubmit={handlePhoneSubmit}
-            onCancel={() => onOpenChange(false)}
-          />
-        ) : (
-          <OrderList
-            orders={orders}
-            isSidePanel
-            onBackClick={() => setPhone(null)}
-          />
-        )}
+  return (
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <SheetContent className="flex flex-col gap-0 p-0 w-full sm:max-w-md md:max-w-lg lg:max-w-xl">
+        <div className="flex-auto overflow-hidden">
+          <ScrollArea className="h-full">
+            <div className="p-6">
+              <SheetHeader className="pb-4">
+                <SheetTitle className="flex items-center gap-2 text-xl">
+                  <ScrollTextIcon size={18} />
+                  Meus Pedidos
+                </SheetTitle>
+                <SheetDescription>
+                  Acompanhe o status dos seus pedidos realizados.
+                </SheetDescription>
+              </SheetHeader>
+
+              {!phone ? (
+                <PhoneFormSide
+                  onSubmit={handlePhoneSubmit}
+                  onCancel={() => handleOpenChange(false)}
+                />
+              ) : (
+                <OrderList
+                  orders={orders}
+                  isSidePanel
+                  onBackClick={() => setPhone(null)}
+                />
+              )}
+            </div>
+          </ScrollArea>
+        </div>
       </SheetContent>
     </Sheet>
   );

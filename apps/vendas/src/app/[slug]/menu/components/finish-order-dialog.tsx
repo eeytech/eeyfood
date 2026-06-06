@@ -24,6 +24,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Sheet,
   SheetContent,
@@ -447,168 +448,345 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
 
   return (
     <Sheet open={open} onOpenChange={handleSheetOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-xl md:max-w-2xl lg:max-w-3xl">
+      <SheetContent className="flex flex-col gap-0 p-0 w-full sm:max-w-md md:max-w-lg lg:max-w-xl">
         {pedidoOfflineConcluido ? (
-          <>
-            <SheetHeader className="pb-4">
-              <SheetTitle className="flex items-center gap-2 text-left">
-                <CheckCircle2Icon className="text-green-600" />
-                Pedido recebido
-              </SheetTitle>
-              <SheetDescription>
-                Seu pedido ja foi salvo e a equipe do restaurante foi avisada.
-              </SheetDescription>
-            </SheetHeader>
-            <div className="space-y-4 py-5">
-              <div className="rounded-3xl border border-green-100 bg-green-50 p-4 text-sm text-green-900">
-                {pedidoOfflineConcluido.paymentMethod === "DINHEIRO"
-                  ? "O pagamento sera feito em dinheiro no balcao ou na entrega."
-                  : "O pagamento sera concluido na maquininha no balcao ou na entrega."}
-              </div>
+          <div className="flex h-full flex-col overflow-hidden">
+            <div className="flex-auto overflow-hidden">
+              <ScrollArea className="h-full">
+                <div className="p-6">
+                  <SheetHeader className="pb-4">
+                    <SheetTitle className="flex items-center gap-2 text-left">
+                      <CheckCircle2Icon className="text-green-600" />
+                      Pedido recebido
+                    </SheetTitle>
+                    <SheetDescription>
+                      Seu pedido ja foi salvo e a equipe do restaurante foi
+                      avisada.
+                    </SheetDescription>
+                  </SheetHeader>
+                  <div className="space-y-4 py-5">
+                    <div className="rounded-3xl border border-green-100 bg-green-50 p-4 text-sm text-green-900">
+                      {pedidoOfflineConcluido.paymentMethod === "DINHEIRO"
+                        ? "O pagamento sera feito em dinheiro no balcao ou na entrega."
+                        : "O pagamento sera concluido na maquininha no balcao ou na entrega."}
+                    </div>
 
-              <div className="rounded-3xl border bg-muted p-4 text-sm">
-                Total registrado:{" "}
-                <strong>{formatCurrency(pedidoOfflineConcluido.total)}</strong>
-              </div>
+                    <div className="rounded-3xl border bg-muted p-4 text-sm">
+                      Total registrado:{" "}
+                      <strong>
+                        {formatCurrency(pedidoOfflineConcluido.total)}
+                      </strong>
+                    </div>
 
-              {pedidoOfflineConcluido.scheduledFor ? (
-                <div className="rounded-3xl border bg-muted p-4 text-sm">
-                  Pedido agendado para{" "}
-                  <strong>
-                    {formatScheduledDate(pedidoOfflineConcluido.scheduledFor)}
-                  </strong>
-                  .
+                    {pedidoOfflineConcluido.scheduledFor ? (
+                      <div className="rounded-3xl border bg-muted p-4 text-sm">
+                        Pedido agendado para{" "}
+                        <strong>
+                          {formatScheduledDate(
+                            pedidoOfflineConcluido.scheduledFor,
+                          )}
+                        </strong>
+                        .
+                      </div>
+                    ) : null}
+
+                    {pedidoOfflineConcluido.changeFor ? (
+                      <div className="rounded-3xl border bg-muted p-4 text-sm">
+                        Troco solicitado para{" "}
+                        <strong>
+                          {formatCurrency(pedidoOfflineConcluido.changeFor)}
+                        </strong>
+                        .
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
-              ) : null}
-
-              {pedidoOfflineConcluido.changeFor ? (
-                <div className="rounded-3xl border bg-muted p-4 text-sm">
-                  Troco solicitado para{" "}
-                  <strong>
-                    {formatCurrency(pedidoOfflineConcluido.changeFor)}
-                  </strong>
-                  .
-                </div>
-              ) : null}
-
-              <div className="flex flex-col gap-3 pt-4">
-                <Button className="rounded-full" onClick={handleViewOrders}>
-                  Ver meus pedidos
-                </Button>
-                <Button
-                  className="rounded-full"
-                  variant="outline"
-                  onClick={() => handleSheetOpenChange(false)}
-                >
-                  Fechar
-                </Button>
-              </div>
+              </ScrollArea>
             </div>
-          </>
+            <div className="flex flex-col gap-3 p-6 border-t bg-background">
+              <Button className="rounded-full" onClick={handleViewOrders}>
+                Ver meus pedidos
+              </Button>
+              <Button
+                className="rounded-full"
+                variant="outline"
+                onClick={() => handleSheetOpenChange(false)}
+              >
+                Fechar
+              </Button>
+            </div>
+          </div>
         ) : (
-          <>
-            <SheetHeader className="pb-4">
-              <SheetTitle className="text-left">Finalizar pedido</SheetTitle>
-              <SheetDescription>
-                Informe seus dados, valide os beneficios e escolha como prefere
-                pagar.
-              </SheetDescription>
-            </SheetHeader>
-            <div className="py-5">
-              <Form {...form}>
-                <form
-                  onSubmit={form.handleSubmit(onSubmit)}
-                  className="space-y-6"
-                >
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Seu nome</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Digite seu nome..." {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="flex h-full flex-col overflow-hidden"
+            >
+              <div className="flex-auto overflow-hidden">
+                <ScrollArea className="h-full">
+                  <div className="p-6">
+                    <SheetHeader className="pb-4">
+                      <SheetTitle className="text-left">
+                        Finalizar pedido
+                      </SheetTitle>
+                      <SheetDescription>
+                        Informe seus dados, valide os beneficios e escolha como
+                        prefere pagar.
+                      </SheetDescription>
+                    </SheetHeader>
+                    <div className="space-y-6 py-5">
+                      <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Seu nome</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Digite seu nome..."
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                  <FormField
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Seu celular</FormLabel>
-                        <FormControl>
-                          <PatternFormat
-                            placeholder="Digite seu celular..."
-                            format="(##) #####-####"
-                            customInput={Input}
-                            {...field}
+                      <FormField
+                        control={form.control}
+                        name="phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Seu celular</FormLabel>
+                            <FormControl>
+                              <PatternFormat
+                                placeholder="Digite seu celular..."
+                                format="(##) #####-####"
+                                customInput={Input}
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="couponCode"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Cupom de desconto</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Ex.: BEMVINDO10"
+                                autoCapitalize="characters"
+                                {...field}
+                                value={field.value ?? ""}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {allowsScheduling ? (
+                        <div className="rounded-[28px] border bg-slate-50/80 p-4">
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold">
+                              Horario da {schedulingLabel}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              Escolha se deseja receber o pedido o quanto antes
+                              ou em um horario agendado.
+                            </p>
+                          </div>
+
+                          <FormField
+                            control={form.control}
+                            name="fulfillmentTiming"
+                            render={({ field }) => (
+                              <FormItem className="mt-4 space-y-3">
+                                <FormControl>
+                                  <div className="grid gap-3">
+                                    {[
+                                      {
+                                        value: "ASAP" as const,
+                                        title: "O quanto antes",
+                                        description:
+                                          consumptionMethod === "DELIVERY"
+                                            ? "Vamos preparar e despachar assim que o pedido entrar."
+                                            : "Vamos preparar para retirada assim que o pedido entrar.",
+                                      },
+                                      {
+                                        value: "SCHEDULED" as const,
+                                        title: "Agendar horario",
+                                        description:
+                                          consumptionMethod === "DELIVERY"
+                                            ? "Defina a data e hora desejadas para a entrega."
+                                            : "Defina a data e hora desejadas para a retirada.",
+                                      },
+                                    ].map((option) => (
+                                      <button
+                                        key={option.value}
+                                        type="button"
+                                        onClick={() =>
+                                          field.onChange(option.value)
+                                        }
+                                        className={`rounded-3xl border px-4 py-3 text-left transition ${
+                                          field.value === option.value
+                                            ? "border-primary bg-primary/5"
+                                            : "border-border bg-background"
+                                        }`}
+                                      >
+                                        <p className="font-medium">
+                                          {option.title}
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                          {option.description}
+                                        </p>
+                                      </button>
+                                    ))}
+                                  </div>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
                           />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
 
-                  <FormField
-                    control={form.control}
-                    name="couponCode"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Cupom de desconto</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Ex.: BEMVINDO10"
-                            autoCapitalize="characters"
-                            {...field}
-                            value={field.value ?? ""}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                          {fulfillmentTiming === "SCHEDULED" ? (
+                            <FormField
+                              control={form.control}
+                              name="scheduledFor"
+                              render={({ field }) => (
+                                <FormItem className="mt-4">
+                                  <FormLabel>Data e hora</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type="datetime-local"
+                                      min={minimumScheduleValue}
+                                      {...field}
+                                      value={field.value ?? ""}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          ) : null}
+                        </div>
+                      ) : null}
 
-                  {allowsScheduling ? (
-                    <div className="rounded-[28px] border bg-slate-50/80 p-4">
-                      <div className="space-y-1">
-                        <p className="text-sm font-semibold">
-                          Horario da {schedulingLabel}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Escolha se deseja receber o pedido o quanto antes ou em
-                          um horario agendado.
-                        </p>
+                      <div className="rounded-[28px] border bg-slate-50/80 p-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="space-y-1">
+                            <p className="flex items-center gap-2 text-sm font-semibold">
+                              <TicketPercentIcon size={16} />
+                              Cupons e cashback
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              Validamos o cupom e o saldo pelo celular
+                              informado.
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="rounded-full"
+                            disabled={
+                              isValidatingBenefits || products.length === 0
+                            }
+                            onClick={() => handleValidateBenefits()}
+                          >
+                            {isValidatingBenefits ? (
+                              <Loader2Icon className="animate-spin" />
+                            ) : null}
+                            Validar beneficios
+                          </Button>
+                        </div>
+
+                        {benefits ? (
+                          <div className="mt-4 space-y-3">
+                            <div className="rounded-3xl border bg-background p-4 text-sm">
+                              {benefits.appliedCoupon ? (
+                                <p className="font-medium text-slate-900">
+                                  Cupom aplicado: {benefits.appliedCoupon.code}
+                                </p>
+                              ) : (
+                                <p className="font-medium text-slate-900">
+                                  Nenhum cupom aplicado.
+                                </p>
+                              )}
+                              <p className="mt-1 text-muted-foreground">
+                                {benefits.appliedCoupon?.description ??
+                                  "Voce pode seguir sem desconto promocional."}
+                              </p>
+                            </div>
+
+                            <div className="rounded-3xl border bg-background p-4 text-sm">
+                              <div className="flex items-center justify-between gap-3">
+                                <div>
+                                  <p className="flex items-center gap-2 font-medium text-slate-900">
+                                    <WalletCardsIcon size={16} />
+                                    Saldo de cashback
+                                  </p>
+                                  <p className="mt-1 text-muted-foreground">
+                                    Disponivel agora:{" "}
+                                    <strong>
+                                      {formatCurrency(
+                                        benefits.wallet?.currentBalance ?? 0,
+                                      )}
+                                    </strong>
+                                  </p>
+                                </div>
+
+                                {(benefits.wallet?.currentBalance ?? 0) > 0 ? (
+                                  <Button
+                                    type="button"
+                                    variant={
+                                      useWalletBalance ? "default" : "outline"
+                                    }
+                                    className="rounded-full"
+                                    disabled={isValidatingBenefits}
+                                    onClick={handleToggleWalletBalance}
+                                  >
+                                    {useWalletBalance
+                                      ? "Remover saldo"
+                                      : "Usar saldo"}
+                                  </Button>
+                                ) : null}
+                              </div>
+
+                              {useWalletBalance &&
+                              benefits.wallet?.availableToRedeem ? (
+                                <p className="mt-3 text-emerald-700">
+                                  Resgate aplicado:{" "}
+                                  <strong>
+                                    {formatCurrency(
+                                      benefits.wallet.availableToRedeem,
+                                    )}
+                                  </strong>
+                                </p>
+                              ) : null}
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="mt-4 text-sm text-muted-foreground">
+                            O total final continua sendo revalidado no servidor
+                            no momento da confirmacao.
+                          </p>
+                        )}
                       </div>
 
                       <FormField
                         control={form.control}
-                        name="fulfillmentTiming"
+                        name="paymentMethod"
                         render={({ field }) => (
-                          <FormItem className="mt-4 space-y-3">
+                          <FormItem className="space-y-3">
+                            <FormLabel>Forma de pagamento</FormLabel>
                             <FormControl>
                               <div className="grid gap-3">
-                                {[
-                                  {
-                                    value: "ASAP" as const,
-                                    title: "O quanto antes",
-                                    description:
-                                      consumptionMethod === "DELIVERY"
-                                        ? "Vamos preparar e despachar assim que o pedido entrar."
-                                        : "Vamos preparar para retirada assim que o pedido entrar.",
-                                  },
-                                  {
-                                    value: "SCHEDULED" as const,
-                                    title: "Agendar horario",
-                                    description:
-                                      consumptionMethod === "DELIVERY"
-                                        ? "Defina a data e hora desejadas para a entrega."
-                                        : "Defina a data e hora desejadas para a retirada.",
-                                  },
-                                ].map((option) => (
+                                {paymentOptions.map((option) => (
                                   <button
                                     key={option.value}
                                     type="button"
@@ -619,9 +797,11 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                                         : "border-border bg-background"
                                     }`}
                                   >
-                                    <p className="font-medium">{option.title}</p>
+                                    <p className="font-medium">
+                                      {option.titulo}
+                                    </p>
                                     <p className="text-sm text-muted-foreground">
-                                      {option.description}
+                                      {option.descricao}
                                     </p>
                                   </button>
                                 ))}
@@ -632,19 +812,20 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                         )}
                       />
 
-                      {fulfillmentTiming === "SCHEDULED" ? (
+                      {needsChangeField ? (
                         <FormField
                           control={form.control}
-                          name="scheduledFor"
+                          name="changeFor"
                           render={({ field }) => (
-                            <FormItem className="mt-4">
-                              <FormLabel>Data e hora</FormLabel>
+                            <FormItem>
+                              <FormLabel>
+                                Precisa de troco para quanto?
+                              </FormLabel>
                               <FormControl>
                                 <Input
-                                  type="datetime-local"
-                                  min={minimumScheduleValue}
+                                  placeholder="Ex.: 50,00"
+                                  inputMode="decimal"
                                   {...field}
-                                  value={field.value ?? ""}
                                 />
                               </FormControl>
                               <FormMessage />
@@ -652,223 +833,82 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                           )}
                         />
                       ) : null}
-                    </div>
-                  ) : null}
 
-                  <div className="rounded-[28px] border bg-slate-50/80 p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="space-y-1">
-                        <p className="flex items-center gap-2 text-sm font-semibold">
-                          <TicketPercentIcon size={16} />
-                          Cupons e cashback
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Validamos o cupom e o saldo pelo celular informado.
-                        </p>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="rounded-full"
-                        disabled={isValidatingBenefits || products.length === 0}
-                        onClick={() => handleValidateBenefits()}
-                      >
-                        {isValidatingBenefits ? (
-                          <Loader2Icon className="animate-spin" />
+                      <div className="rounded-[28px] border bg-muted/50 p-4 text-sm">
+                        <div className="flex items-center justify-between">
+                          <span>Subtotal</span>
+                          <strong>
+                            {formatCurrency(checkoutSummary.subtotal)}
+                          </strong>
+                        </div>
+
+                        {checkoutSummary.couponDiscountAmount > 0 ? (
+                          <div className="mt-2 flex items-center justify-between text-emerald-700">
+                            <span>Desconto por cupom</span>
+                            <strong>
+                              -{formatCurrency(checkoutSummary.couponDiscountAmount)}
+                            </strong>
+                          </div>
                         ) : null}
-                        Validar beneficios
-                      </Button>
-                    </div>
 
-                    {benefits ? (
-                      <div className="mt-4 space-y-3">
-                        <div className="rounded-3xl border bg-background p-4 text-sm">
-                          {benefits.appliedCoupon ? (
-                            <p className="font-medium text-slate-900">
-                              Cupom aplicado: {benefits.appliedCoupon.code}
-                            </p>
-                          ) : (
-                            <p className="font-medium text-slate-900">
-                              Nenhum cupom aplicado.
-                            </p>
-                          )}
-                          <p className="mt-1 text-muted-foreground">
-                            {benefits.appliedCoupon?.description ??
-                              "Voce pode seguir sem desconto promocional."}
+                        {checkoutSummary.cashbackRedeemedAmount > 0 ? (
+                          <div className="mt-2 flex items-center justify-between text-emerald-700">
+                            <span>Cashback resgatado</span>
+                            <strong>
+                              -{formatCurrency(checkoutSummary.cashbackRedeemedAmount)}
+                            </strong>
+                          </div>
+                        ) : null}
+
+                        <div className="mt-3 flex items-center justify-between border-t pt-3 text-base">
+                          <span className="font-medium">Total do pedido</span>
+                          <strong>
+                            {formatCurrency(checkoutSummary.total)}
+                          </strong>
+                        </div>
+
+                        {checkoutSummary.cashbackEarnedAmount > 0 ? (
+                          <p className="mt-3 text-xs text-muted-foreground">
+                            Apos o pagamento, este pedido gera{" "}
+                            <strong>
+                              {formatCurrency(
+                                checkoutSummary.cashbackEarnedAmount,
+                              )}
+                            </strong>{" "}
+                            em cashback.
                           </p>
-                        </div>
-
-                        <div className="rounded-3xl border bg-background p-4 text-sm">
-                          <div className="flex items-center justify-between gap-3">
-                            <div>
-                              <p className="flex items-center gap-2 font-medium text-slate-900">
-                                <WalletCardsIcon size={16} />
-                                Saldo de cashback
-                              </p>
-                              <p className="mt-1 text-muted-foreground">
-                                Disponivel agora:{" "}
-                                <strong>
-                                  {formatCurrency(
-                                    benefits.wallet?.currentBalance ?? 0,
-                                  )}
-                                </strong>
-                              </p>
-                            </div>
-
-                            {(benefits.wallet?.currentBalance ?? 0) > 0 ? (
-                              <Button
-                                type="button"
-                                variant={useWalletBalance ? "default" : "outline"}
-                                className="rounded-full"
-                                disabled={isValidatingBenefits}
-                                onClick={handleToggleWalletBalance}
-                              >
-                                {useWalletBalance
-                                  ? "Remover saldo"
-                                  : "Usar saldo"}
-                              </Button>
-                            ) : null}
-                          </div>
-
-                          {useWalletBalance &&
-                          benefits.wallet?.availableToRedeem ? (
-                            <p className="mt-3 text-emerald-700">
-                              Resgate aplicado:{" "}
-                              <strong>
-                                {formatCurrency(
-                                  benefits.wallet.availableToRedeem,
-                                )}
-                              </strong>
-                            </p>
-                          ) : null}
-                        </div>
+                        ) : null}
                       </div>
-                    ) : (
-                      <p className="mt-4 text-sm text-muted-foreground">
-                        O total final continua sendo revalidado no servidor no
-                        momento da confirmacao.
-                      </p>
-                    )}
+                    </div>
                   </div>
+                </ScrollArea>
+              </div>
 
-                  <FormField
-                    control={form.control}
-                    name="paymentMethod"
-                    render={({ field }) => (
-                      <FormItem className="space-y-3">
-                        <FormLabel>Forma de pagamento</FormLabel>
-                        <FormControl>
-                          <div className="grid gap-3">
-                            {paymentOptions.map((option) => (
-                              <button
-                                key={option.value}
-                                type="button"
-                                onClick={() => field.onChange(option.value)}
-                                className={`rounded-3xl border px-4 py-3 text-left transition ${
-                                  field.value === option.value
-                                    ? "border-primary bg-primary/5"
-                                    : "border-border bg-background"
-                                }`}
-                              >
-                                <p className="font-medium">{option.titulo}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  {option.descricao}
-                                </p>
-                              </button>
-                            ))}
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {needsChangeField ? (
-                    <FormField
-                      control={form.control}
-                      name="changeFor"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Precisa de troco para quanto?</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Ex.: 50,00"
-                              inputMode="decimal"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+              <div className="flex flex-col gap-3 p-6 border-t bg-background">
+                <Button
+                  type="submit"
+                  variant="destructive"
+                  className="rounded-full"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <Loader2Icon className="animate-spin" />
                   ) : null}
-
-                  <div className="rounded-[28px] border bg-muted/50 p-4 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span>Subtotal</span>
-                      <strong>{formatCurrency(checkoutSummary.subtotal)}</strong>
-                    </div>
-
-                    {checkoutSummary.couponDiscountAmount > 0 ? (
-                      <div className="mt-2 flex items-center justify-between text-emerald-700">
-                        <span>Desconto por cupom</span>
-                        <strong>
-                          -{formatCurrency(checkoutSummary.couponDiscountAmount)}
-                        </strong>
-                      </div>
-                    ) : null}
-
-                    {checkoutSummary.cashbackRedeemedAmount > 0 ? (
-                      <div className="mt-2 flex items-center justify-between text-emerald-700">
-                        <span>Cashback resgatado</span>
-                        <strong>
-                          -{formatCurrency(checkoutSummary.cashbackRedeemedAmount)}
-                        </strong>
-                      </div>
-                    ) : null}
-
-                    <div className="mt-3 flex items-center justify-between border-t pt-3 text-base">
-                      <span className="font-medium">Total do pedido</span>
-                      <strong>{formatCurrency(checkoutSummary.total)}</strong>
-                    </div>
-
-                    {checkoutSummary.cashbackEarnedAmount > 0 ? (
-                      <p className="mt-3 text-xs text-muted-foreground">
-                        Apos o pagamento, este pedido gera{" "}
-                        <strong>
-                          {formatCurrency(checkoutSummary.cashbackEarnedAmount)}
-                        </strong>{" "}
-                        em cashback.
-                      </p>
-                    ) : null}
-                  </div>
-
-                  <div className="flex flex-col gap-3 pt-4">
-                    <Button
-                      type="submit"
-                      variant="destructive"
-                      className="rounded-full"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? (
-                        <Loader2Icon className="animate-spin" />
-                      ) : null}
-                      {paymentMethod === "MERCADO_PAGO"
-                        ? "Ir para pagamento"
-                        : "Confirmar pedido"}
-                    </Button>
-                    <Button
-                      className="w-full rounded-full"
-                      variant="outline"
-                      onClick={() => handleSheetOpenChange(false)}
-                    >
-                      Cancelar
-                    </Button>
-                  </div>
-                </form>
-              </Form>
-            </div>
-          </>
+                  {paymentMethod === "MERCADO_PAGO"
+                    ? "Ir para pagamento"
+                    : "Confirmar pedido"}
+                </Button>
+                <Button
+                  className="w-full rounded-full"
+                  variant="outline"
+                  type="button"
+                  onClick={() => handleSheetOpenChange(false)}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          </Form>
         )}
       </SheetContent>
     </Sheet>
