@@ -450,10 +450,10 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
 
   return (
     <Sheet open={open} onOpenChange={handleSheetOpenChange}>
-      <SheetContent className="flex flex-col gap-0 p-0 w-full sm:max-w-md md:max-w-lg lg:max-w-xl">
+      <SheetContent className="flex h-full flex-col gap-0 p-0 w-full sm:max-w-md md:max-w-lg lg:max-w-xl">
         {pedidoOfflineConcluido ? (
-          <div className="flex h-full flex-col overflow-hidden">
-            <div className="flex-auto overflow-hidden">
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <div className="flex-1 overflow-hidden">
               <ScrollArea className="h-full">
                 <div className="p-6">
                   <SheetHeader className="pb-4">
@@ -527,9 +527,9 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                   description: "Alguns dados obrigatorios estao ausentes ou invalidos.",
                 });
               })}
-              className="flex h-full flex-col overflow-hidden"
+              className="flex flex-1 flex-col overflow-hidden"
             >
-              <div className="flex-auto overflow-hidden">
+              <div className="flex-1 overflow-hidden">
                 <ScrollArea className="h-full">
                   <div className="p-6">
                     <SheetHeader className="pb-4">
