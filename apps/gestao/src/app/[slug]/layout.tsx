@@ -20,9 +20,9 @@ const RestaurantLayout = async ({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 print:bg-white print:h-auto print:overflow-visible">
+    <div className="flex h-screen overflow-hidden bg-slate-50">
       <AdminSidebar slug={slug} restaurantName={restaurant.name} />
-      <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 print:p-0 print:overflow-visible">
+      <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-[1600px]">{children}</div>
       </main>
     </div>

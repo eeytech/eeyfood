@@ -389,14 +389,13 @@ const PainelPedidos = ({
   ).length;
 
   return (
-    <>
+    <div className="space-y-6">
       {/* Componente de Impressão Oculto */}
       {orderToPrint && (
         <ThermalPrintLayout order={orderToPrint} type={printType} />
       )}
 
-      <div className="space-y-6 print:hidden">
-        {/* Modal de Despacho */}
+      {/* Modal de Despacho */}
       <Dialog open={!!orderToDispatch} onOpenChange={(open) => !open && setOrderToDispatch(null)}>
         <DialogContent>
           <DialogHeader>
@@ -757,7 +756,6 @@ const PainelPedidos = ({
           </div>
         </section>
       </div>
-    </>
   );
 };
 
