@@ -18,9 +18,15 @@ const ProductPage = async ({ params }: ProductPageProps) => {
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <ProductHeader product={product} />
-      <ProductDetails product={product} />
+    <div className="mx-auto flex h-full max-w-[1200px] flex-col lg:h-auto lg:p-10">
+      <div className="flex flex-col overflow-hidden lg:flex-row lg:rounded-[48px] lg:border lg:bg-white lg:shadow-2xl lg:shadow-slate-200/50">
+        <div className="lg:w-1/2">
+          <ProductHeader product={product} />
+        </div>
+        <div className="lg:w-1/2">
+          <ProductDetails product={product} />
+        </div>
+      </div>
     </div>
   );
 };

@@ -10,7 +10,7 @@ interface ProductDetailsProps {
 
 const ProductDetails = ({ product }: ProductDetailsProps) => {
   return (
-    <div className="flex-auto overflow-hidden bg-white mt-[-1.5rem] rounded-t-3xl relative z-50">
+    <div className="relative z-50 flex-auto overflow-hidden bg-white lg:mt-0 lg:rounded-none">
       <ProductDetailsContent product={product} showImage={false} />
     </div>
   );

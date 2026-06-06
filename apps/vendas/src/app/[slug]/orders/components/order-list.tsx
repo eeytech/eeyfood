@@ -62,22 +62,26 @@ const OrderList = ({ orders, isSidePanel, onBackClick }: OrderListProps) => {
   };
 
   return (
-    <div className={`space-y-6 ${isSidePanel ? "py-4" : "p-6"}`}>
+    <div
+      className={`mx-auto w-full space-y-6 ${isSidePanel ? "py-4" : "max-w-4xl p-6"}`}
+    >
       {!isSidePanel && (
-        <>
+        <div className="flex flex-col gap-6">
           <Button
             size="icon"
             variant="secondary"
-            className="rounded-full"
+            className="rounded-full shadow-sm"
             onClick={handleBackClick}
           >
             <ChevronLeftIcon />
           </Button>
           <div className="flex items-center gap-3">
-            <ScrollTextIcon />
-            <h2 className="text-lg font-semibold">Meus Pedidos</h2>
+            <ScrollTextIcon className="text-primary" />
+            <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+              Meus Pedidos
+            </h2>
           </div>
-        </>
+        </div>
       )}
       {isSidePanel && (
         <Button
@@ -92,60 +96,94 @@ const OrderList = ({ orders, isSidePanel, onBackClick }: OrderListProps) => {
       )}
       {orders.length === 0 ? (
         <div className="rounded-[32px] border border-dashed bg-slate-50 px-6 py-12 text-center">
-          <p className="text-lg font-medium text-slate-950">
+          <p className="text-xl font-medium text-slate-950">
             Nenhum pedido encontrado
           </p>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="mt-2 text-muted-foreground">
             Voce ainda nao realizou pedidos com este numero.
           </p>
         </div>
       ) : (
-        orders.map((order) => (
-          <Card key={order.id}>
-            <CardContent className="space-y-4 p-5">
-              <div
-                className={`w-fit rounded-full px-2 py-1 text-xs font-semibold ${getStatusClassName(order.status)}`}
-              >
-                {getStatusLabel(order.status)}
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="relative h-5 w-5">
-                  <Image
-                    src={order.restaurant.avatarImageUrl}
-                    alt={order.restaurant.name}
-                    className="rounded-sm"
-                    fill
-                  />
-                </div>
-                <p className="text-sm font-semibold">{order.restaurant.name}</p>
-              </div>
-              <Separator />
-              <div className="space-y-2">
-                {order.orderProducts.map((orderProduct) => (
-                  <div key={orderProduct.id} className="flex items-center gap-2">
-                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-400 text-xs font-semibold text-white">
-                      {orderProduct.quantity}
+        <div className="grid gap-4 sm:grid-cols-1">
+          {orders.map((order) => (
+            <Card
+              key={order.id}
+              className="overflow-hidden rounded-[24px] border-slate-200 shadow-sm transition hover:shadow-md"
+            >
+              <CardContent className="space-y-4 p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="relative h-10 w-10 overflow-hidden rounded-xl border">
+                      <Image
+                        src={order.restaurant.avatarImageUrl}
+                        alt={order.restaurant.name}
+                        className="object-cover"
+                        fill
+                      />
                     </div>
-                    <p className="text-sm">{orderProduct.product.name}</p>
+                    <div>
+                      <p className="font-bold text-slate-900">
+                        {order.restaurant.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Realizado em {formatDateTime(order.createdAt)}
+                      </p>
+                    </div>
                   </div>
-                ))}
-              </div>
-              <Separator />
-              <div className="space-y-1 text-sm text-muted-foreground">
-                <p>Pedido criado em {formatDateTime(order.createdAt)}</p>
-                <p>
-                  {order.scheduledFor
-                    ? `Agendado para ${formatDateTime(order.scheduledFor)}`
-                    : "Atendimento o quanto antes"}
-                </p>
-              </div>
-              <Separator />
-              <p className="text-sm font-medium">
-                {formatCurrency(order.total)}
-              </p>
-            </CardContent>
-          </Card>
-        ))
+                  <div
+                    className={`rounded-full px-3 py-1 text-xs font-bold ${getStatusClassName(order.status)}`}
+                  >
+                    {getStatusLabel(order.status)}
+                  </div>
+                </div>
+
+                <Separator className="bg-slate-100" />
+
+                <div className="space-y-3">
+                  {order.orderProducts.map((orderProduct) => (
+                    <div
+                      key={orderProduct.id}
+                      className="flex items-center justify-between gap-4"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600">
+                          {orderProduct.quantity}
+                        </div>
+                        <p className="text-sm text-slate-700">
+                          {orderProduct.product.name}
+                        </p>
+                      </div>
+                      <p className="text-sm font-medium text-slate-900">
+                        {formatCurrency(
+                          orderProduct.product.price * orderProduct.quantity,
+                        )}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <Separator className="bg-slate-100" />
+
+                <div className="flex items-center justify-between bg-slate-50/50 -mx-6 -mb-6 p-6">
+                  <div className="space-y-0.5">
+                    <p className="text-xs text-muted-foreground">Total pago</p>
+                    <p className="text-lg font-bold text-slate-950">
+                      {formatCurrency(order.total)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">Agendamento</p>
+                    <p className="text-sm font-medium text-slate-700">
+                      {order.scheduledFor
+                        ? formatDateTime(order.scheduledFor)
+                        : "Imediato"}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
     </div>
   );
