@@ -57,12 +57,13 @@ const ProductDetailsContent = ({
   return (
     <div className="flex h-full flex-col overflow-hidden lg:bg-white">
       {showImage && (
-        <div className="relative min-h-[250px] w-full bg-slate-100 lg:min-h-[400px]">
+        <div className="relative aspect-square w-full overflow-hidden bg-slate-100 sm:aspect-video lg:aspect-square">
           <Image
             src={product.imageUrl}
             alt={product.name}
             fill
-            className="object-contain p-8 lg:p-12"
+            className="object-cover transition-transform duration-500 hover:scale-105"
+            priority
           />
         </div>
       )}
@@ -73,16 +74,16 @@ const ProductDetailsContent = ({
             <Image
               src={product.restaurant.avatarImageUrl}
               alt={product.restaurant.name}
-              width={20}
-              height={20}
-              className="rounded-full"
+              width={24}
+              height={24}
+              className="rounded-full ring-2 ring-white"
             />
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm font-medium text-muted-foreground">
               {product.restaurant.name}
             </p>
           </div>
 
-          <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
             {product.name}
           </h2>
 
@@ -93,35 +94,35 @@ const ProductDetailsContent = ({
             <div className="flex items-center gap-4 text-center">
               <Button
                 variant="outline"
-                className="h-10 w-10 rounded-2xl border-slate-200 shadow-sm transition hover:bg-slate-50 active:scale-95"
+                className="h-11 w-11 rounded-[18px] border-slate-200 shadow-sm transition hover:bg-slate-50 active:scale-95"
                 onClick={handleDecreaseQuantity}
               >
-                <ChevronLeftIcon size={18} />
+                <ChevronLeftIcon size={20} />
               </Button>
-              <p className="w-6 text-lg font-bold">{quantity}</p>
+              <p className="w-8 text-xl font-semibold">{quantity}</p>
               <Button
                 variant="destructive"
-                className="h-10 w-10 rounded-2xl shadow-md transition hover:scale-105 active:scale-95"
+                className="h-11 w-11 rounded-[18px] shadow-md shadow-destructive/10 transition hover:scale-105 active:scale-95"
                 onClick={handleIncreaseQuantity}
               >
-                <ChevronRightIcon size={18} />
+                <ChevronRightIcon size={20} />
               </Button>
             </div>
           </div>
 
           <ScrollArea className="h-full">
-            <div className="mt-8 space-y-4">
-              <h4 className="text-lg font-bold text-slate-950">Sobre</h4>
-              <p className="text-base leading-relaxed text-slate-600">
+            <div className="mt-8 space-y-3">
+              <h4 className="text-lg font-semibold text-slate-950">Sobre</h4>
+              <p className="text-base font-medium leading-relaxed text-slate-500">
                 {product.description}
               </p>
             </div>
 
             {product.ingredients.length > 0 && (
-              <div className="mt-8 space-y-4 pb-6">
+              <div className="mt-8 space-y-3 pb-6">
                 <div className="flex items-center gap-2">
                   <ChefHatIcon size={20} className="text-slate-800" />
-                  <h4 className="text-lg font-bold text-slate-950">
+                  <h4 className="text-lg font-semibold text-slate-950">
                     Ingredientes
                   </h4>
                 </div>
@@ -129,7 +130,7 @@ const ProductDetailsContent = ({
                   {product.ingredients.map((ingredient) => (
                     <li
                       key={ingredient}
-                      className="flex items-center gap-2 text-base text-slate-600"
+                      className="flex items-center gap-2 text-base font-medium text-slate-500"
                     >
                       <span className="h-1.5 w-1.5 rounded-full bg-slate-300" />
                       {ingredient}
@@ -143,12 +144,12 @@ const ProductDetailsContent = ({
 
         <div className="mt-8 space-y-4 border-t pt-6 lg:mt-auto">
           {!isOpen && (
-            <p className="rounded-2xl bg-rose-50 p-3 text-center text-sm font-semibold text-rose-600">
+            <p className="rounded-2xl bg-rose-50 p-4 text-center text-sm font-semibold text-rose-600 border border-rose-100">
               O restaurante está fechado no momento e não aceita novos pedidos.
             </p>
           )}
           <Button
-            className="h-14 w-full rounded-full text-lg font-bold shadow-lg shadow-destructive/20 transition hover:scale-[1.01] active:scale-[0.99]"
+            className="h-14 w-full rounded-2xl text-lg font-bold shadow-lg shadow-destructive/20 transition hover:scale-[1.01] active:scale-[0.99]"
             onClick={handleAddToCart}
             disabled={!isOpen}
           >

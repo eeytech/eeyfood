@@ -17,14 +17,14 @@ import { formatCurrency } from "@/helpers/format-currency";
 
 import { CartContext } from "../contexts/cart";
 import CartProductItem from "./cart-product-item";
-import FinishOrderDialog from "./finish-order-dialog";
+import FinishOrderSheet from "./finish-order-sheet";
 
 interface CartPanelProps {
   variant?: "sidebar" | "sheet";
 }
 
 const CartPanel = ({ variant = "sidebar" }: CartPanelProps) => {
-  const [finishOrderDialogIsOpen, setFinishOrderDialogIsOpen] = useState(false);
+  const [finishOrderSheetIsOpen, setFinishOrderSheetIsOpen] = useState(false);
   const { products, total, totalQuantity } = useContext(CartContext);
   const hasProducts = products.length > 0;
 
@@ -88,16 +88,16 @@ const CartPanel = ({ variant = "sidebar" }: CartPanelProps) => {
           <Button
             className="h-12 w-full rounded-full text-base font-bold shadow-lg shadow-primary/20 transition hover:scale-[1.02] active:scale-[0.98]"
             disabled={!hasProducts}
-            onClick={() => setFinishOrderDialogIsOpen(true)}
+            onClick={() => setFinishOrderSheetIsOpen(true)}
           >
             Finalizar pedido
           </Button>
         </CardFooter>
       </Card>
 
-      <FinishOrderDialog
-        open={finishOrderDialogIsOpen}
-        onOpenChange={setFinishOrderDialogIsOpen}
+      <FinishOrderSheet
+        open={finishOrderSheetIsOpen}
+        onOpenChange={setFinishOrderSheetIsOpen}
       />
     </>
   );

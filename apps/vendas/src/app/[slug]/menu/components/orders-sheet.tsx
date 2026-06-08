@@ -45,7 +45,7 @@ const OrdersSheet = ({ open, onOpenChange }: OrdersSheetProps) => {
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent className="flex flex-col gap-0 p-0 w-full sm:max-w-md md:max-w-lg lg:max-w-xl">
+      <SheetContent side="right" className="flex flex-col gap-0 p-0 w-full sm:max-w-[450px]">
         <div className="flex-auto overflow-hidden">
           <ScrollArea className="h-full">
             <div className="p-6">
