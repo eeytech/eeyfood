@@ -1,9 +1,11 @@
 import "./globals.css";
 
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Poppins } from "next/font/google";
 
 import { Toaster } from "@/components/ui/sonner";
+import { PWARegister } from "@/components/pwa-register";
+import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
 
 import { CartProvider } from "./[slug]/menu/contexts/cart";
 
@@ -13,8 +15,24 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "FSW Donalds",
-  description: "Experiência digital para pedidos com fricção zero.",
+  title: "eeYfood - Cardápio Digital",
+  description: "Experiência digital para pedidos com fricção zero e muito cashback.",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "eeYfood",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#ef4444",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
@@ -25,6 +43,8 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={`${poppins.className} antialiased`}>
+        <PWARegister />
+        <PWAInstallPrompt />
         <CartProvider>{children}</CartProvider>
         <Toaster />
       </body>

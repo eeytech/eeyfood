@@ -12,6 +12,7 @@ interface ValidateOrderBenefitsInput {
   products: Array<{
     id: string;
     quantity: number;
+    selectedOptions?: string[];
   }>;
 }
 

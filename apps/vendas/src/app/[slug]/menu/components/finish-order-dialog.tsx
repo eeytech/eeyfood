@@ -5,6 +5,7 @@ import {
   CheckCircle2Icon,
   Loader2Icon,
   TicketPercentIcon,
+  TrendingUpIcon,
   WalletCardsIcon,
 } from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -41,8 +42,18 @@ import type {
 
 import { createOrder } from "../actions/create-order";
 import { criarPreferenciaMercadoPago } from "../actions/criar-preferencia-mercado-pago";
+import { getAvailableSchedulingSlots } from "../actions/get-scheduling-slots";
 import { saveAbandonedCart } from "../actions/save-abandoned-cart";
 import { validateOrderBenefits } from "../actions/validate-order-benefits";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { CartContext } from "../contexts/cart";
 import { isValidPhoneNumber, normalizePhoneNumber } from "../helpers/phone";
 
@@ -201,6 +212,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
   const [benefits, setBenefits] = useState<PedidoBeneficiosValidado | null>(null);
   const [pedidoOfflineConcluido, setPedidoOfflineConcluido] =
     useState<PedidoOfflineConcluido | null>(null);
+  const [schedulingSlots, setSchedulingSlots] = useState<any[]>([]);
   const abandonedCartSessionIdRef = useRef(createAbandonedCartSessionId());
 
   const form = useForm<FormSchema>({
@@ -247,6 +259,21 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
     appliedCoupon: null,
     wallet: null,
   };
+
+  useEffect(() => {
+    const fetchSlots = async () => {
+      if (fulfillmentTiming === "SCHEDULED" && schedulingSlots.length === 0) {
+        const slots = await getAvailableSchedulingSlots(slug);
+        setSchedulingSlots(slots);
+        
+        if (slots.length > 0 && slots[0].items.length > 0 && !form.getValues("scheduledFor")) {
+          form.setValue("scheduledFor", slots[0].items[0].value);
+        }
+      }
+    };
+
+    void fetchSlots();
+  }, [fulfillmentTiming, slug, schedulingSlots.length, form]);
 
   useEffect(() => {
     setBenefits(null);
@@ -346,7 +373,11 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
         slug,
         couponCode: watchedCouponCode,
         useWalletBalance: nextUseWalletBalance,
-        products,
+        products: products.map((product) => ({
+          id: product.id,
+          quantity: product.quantity,
+          selectedOptions: product.selectedOptions?.map((opt) => opt.id),
+        })),
       });
 
       setUseWalletBalance(nextUseWalletBalance);
@@ -399,7 +430,11 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
         abandonedCartSessionId: abandonedCartSessionIdRef.current,
         couponCode: data.couponCode,
         useWalletBalance,
-        products,
+        products: products.map((product) => ({
+          id: product.id,
+          quantity: product.quantity,
+          selectedOptions: product.selectedOptions?.map((opt) => opt.id),
+        })),
         slug,
       });
 
@@ -666,16 +701,41 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                               control={form.control}
                               name="scheduledFor"
                               render={({ field }) => (
-                                <FormItem className="mt-4">
-                                  <FormLabel>Data e hora</FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      type="datetime-local"
-                                      min={minimumScheduleValue}
-                                      {...field}
-                                      value={field.value ?? ""}
-                                    />
-                                  </FormControl>
+                                <FormItem className="mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                  <FormLabel className="text-xs font-bold uppercase text-slate-400">Data e hora</FormLabel>
+                                  <Select
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                    value={field.value}
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger className="h-12 rounded-xl">
+                                        <SelectValue placeholder="Escolha um horário..." />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent className="rounded-2xl">
+                                      {schedulingSlots.length > 0 ? (
+                                        schedulingSlots.map((group) => (
+                                          <SelectGroup key={group.date}>
+                                            <SelectLabel className="text-primary font-bold">{group.label}</SelectLabel>
+                                            {group.items.map((slot: any) => (
+                                              <SelectItem 
+                                                key={slot.value} 
+                                                value={slot.value}
+                                                className="rounded-lg"
+                                              >
+                                                {slot.label}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectGroup>
+                                        ))
+                                      ) : (
+                                        <div className="p-4 text-center text-xs text-muted-foreground">
+                                          {isLoading ? "Carregando horários..." : "Nenhum horário disponível."}
+                                        </div>
+                                      )}
+                                    </SelectContent>
+                                  </Select>
                                   <FormMessage />
                                 </FormItem>
                               )}
@@ -885,6 +945,20 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                             em cashback.
                           </p>
                         ) : null}
+
+                        {checkoutSummary.nextLoyaltyRule && (
+                          <div className="mt-4 flex flex-col gap-1 rounded-xl bg-blue-50 px-4 py-3 border border-blue-100 animate-pulse">
+                            <div className="flex items-center gap-2">
+                              <TrendingUpIcon size={16} className="text-blue-600" />
+                              <p className="text-[11px] font-bold text-blue-700">
+                                Dica: Peça mais {formatCurrency(checkoutSummary.nextLoyaltyRule.remainingAmount)}!
+                              </p>
+                            </div>
+                            <p className="text-[11px] text-blue-600">
+                              Ganhe <strong>{checkoutSummary.nextLoyaltyRule.cashbackPercent}%</strong> de cashback em vez de {((checkoutSummary.cashbackEarnedAmount / checkoutSummary.total) * 100).toFixed(0)}%!
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

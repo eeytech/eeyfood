@@ -21,17 +21,34 @@ import {
   restaurantsTable,
   restaurantStatusEnum,
   operatingHoursTable,
+  productOptionGroupsTable,
+  productOptionsTable,
+  orderProductOptionsTable,
+  orderRatingsTable,
   stockMovementsTable,
   stockMovementTypeEnum,
   transactionStatusEnum,
   transactionTypeEnum,
   walletsTable,
+  loyaltyRulesTable,
   aiSettingsTable,
-} from "./schema.js";
+  } from "./schema.js";
 
-// ... (rest of types)
+  // ...
 
-export type AiSettings = InferSelectModel<typeof aiSettingsTable>;
+  export type ProductOptionGroup = InferSelectModel<typeof productOptionGroupsTable>;
+  export type NewProductOptionGroup = InferInsertModel<typeof productOptionGroupsTable>;
+
+  export type ProductOption = InferSelectModel<typeof productOptionsTable>;
+  export type NewProductOption = InferInsertModel<typeof productOptionsTable>;
+
+  export type OrderProductOption = InferSelectModel<typeof orderProductOptionsTable>;
+  export type NewOrderProductOption = InferInsertModel<typeof orderProductOptionsTable>;
+
+  export type OrderRating = InferSelectModel<typeof orderRatingsTable>;
+  export type NewOrderRating = InferInsertModel<typeof orderRatingsTable>;
+
+  export type AiSettings = InferSelectModel<typeof aiSettingsTable>;
 export type NewAiSettings = InferInsertModel<typeof aiSettingsTable>;
 
 
@@ -69,6 +86,9 @@ export type NewCoupon = InferInsertModel<typeof couponsTable>;
 
 export type Wallet = InferSelectModel<typeof walletsTable>;
 export type NewWallet = InferInsertModel<typeof walletsTable>;
+
+export type LoyaltyRule = InferSelectModel<typeof loyaltyRulesTable>;
+export type NewLoyaltyRule = InferInsertModel<typeof loyaltyRulesTable>;
 
 export type AbandonedCart = InferSelectModel<typeof abandonedCartsTable>;
 export type NewAbandonedCart = InferInsertModel<typeof abandonedCartsTable>;
@@ -135,6 +155,11 @@ export interface PedidoBeneficiosValidado {
     remainingBalance: number;
     availableToRedeem: number;
   } | null;
+  nextLoyaltyRule?: {
+    minOrderValue: number;
+    cashbackPercent: number;
+    remainingAmount: number;
+  } | null;
 }
 
 export interface OrderComItens extends Order {
@@ -144,6 +169,7 @@ export interface OrderComItens extends Order {
   orderProducts: Array<
     OrderProduct & {
       product: Product;
+      orderProductOptions: OrderProductOption[];
     }
   >;
 }
@@ -155,6 +181,7 @@ export interface PedidoRecebimento extends Order {
   orderProducts: Array<
     OrderProduct & {
       product: Pick<Product, "id" | "name" | "imageUrl">;
+      orderProductOptions: OrderProductOption[];
     }
   >;
 }

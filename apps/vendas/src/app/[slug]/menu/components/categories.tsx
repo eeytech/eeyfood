@@ -5,7 +5,7 @@ import type {
   Product,
   RestaurantComCategoriasEProdutos,
 } from "@fsw/db";
-import { ClockIcon } from "lucide-react";
+import { ClockIcon, StarIcon } from "lucide-react";
 import Image from "next/image";
 import { useContext, useState } from "react";
 
@@ -20,7 +20,7 @@ import CartSheet from "./cart-sheet";
 import Products from "./products";
 
 interface RestaurantCategoriesProps {
-  restaurant: RestaurantComCategoriasEProdutos;
+  restaurant: RestaurantComCategoriasEProdutos & { rating: number; ratingCount: number };
 }
 
 type MenuCategoriesWithProducts = MenuCategory & { products: Product[] };
@@ -64,9 +64,19 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
             />
             <div className="space-y-2">
               <div>
-                <h2 className="text-2xl font-semibold tracking-tight text-slate-950">
-                  {restaurant.name}
-                </h2>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-2xl font-semibold tracking-tight text-slate-950">
+                    {restaurant.name}
+                  </h2>
+                  {restaurant.ratingCount > 0 && (
+                    <div className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-amber-700">
+                      <StarIcon size={12} className="fill-amber-600" />
+                      <span className="text-[11px] font-bold">
+                        {restaurant.rating.toFixed(1)}
+                      </span>
+                    </div>
+                  )}
+                </div>
                 <p className="max-w-2xl text-sm text-slate-600">
                   {restaurant.description}
                 </p>
@@ -132,7 +142,7 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
 
         <div className="mt-6 lg:hidden">
           <ScrollArea className="w-full">
-            <div className="flex w-max gap-3 pb-2">
+            <nav className="flex w-max gap-3 pb-2" aria-label="Categorias do cardápio">
               {restaurant.menuCategories.map((category) => {
                 const isSelected = selectedCategory.id === category.id;
 
@@ -143,19 +153,23 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
                     variant={isSelected ? "default" : "secondary"}
                     size="sm"
                     className="rounded-full px-4"
+                    aria-current={isSelected ? "page" : undefined}
                   >
                     {category.name}
                   </Button>
                 );
               })}
-            </div>
+            </nav>
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
         </div>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)_340px] xl:grid-cols-[260px_minmax(0,1fr)_360px]">
           <aside className="hidden lg:block">
-            <div className="sticky top-6 space-y-3 rounded-[32px] border bg-white p-4 shadow-sm">
+            <nav 
+              className="sticky top-6 space-y-3 rounded-[32px] border bg-white p-4 shadow-sm"
+              aria-label="Categorias do cardápio"
+            >
               <div className="px-2">
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
                   Categorias
@@ -175,6 +189,7 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
                       type="button"
                       onClick={() => handleCategoryClick(category)}
                       className={`flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left transition ${isSelected ? "bg-slate-950 text-white shadow-lg" : "bg-slate-50 text-slate-800 hover:bg-slate-100"}`}
+                      aria-current={isSelected ? "page" : undefined}
                     >
                       <div>
                         <p className="font-medium">{category.name}</p>
@@ -187,12 +202,13 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
                       </div>
                       <span
                         className={`h-2.5 w-2.5 rounded-full ${isSelected ? "bg-emerald-400" : "bg-slate-300"}`}
+                        aria-hidden="true"
                       />
                     </button>
                   );
                 })}
               </div>
-            </div>
+            </nav>
           </aside>
 
           <section className="space-y-5">

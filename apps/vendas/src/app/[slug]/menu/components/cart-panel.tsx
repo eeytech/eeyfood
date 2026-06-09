@@ -17,6 +17,7 @@ import { formatCurrency } from "@/helpers/format-currency";
 
 import { CartContext } from "../contexts/cart";
 import CartProductItem from "./cart-product-item";
+import CartRecommendations from "./cart-recommendations";
 import FinishOrderSheet from "./finish-order-sheet";
 
 interface CartPanelProps {
@@ -39,10 +40,10 @@ const CartPanel = ({ variant = "sidebar" }: CartPanelProps) => {
       >
         <CardHeader className={variant === "sheet" ? "px-0 pt-0" : "px-6 pt-8"}>
           <CardTitle className="flex items-center gap-2 text-xl font-bold tracking-tight">
-            <ShoppingBagIcon size={20} className="text-primary" />
+            <ShoppingBagIcon size={20} className="text-primary" aria-hidden="true" />
             Sua sacola
           </CardTitle>
-          <CardDescription className="text-sm">
+          <CardDescription className="text-sm" aria-live="polite">
             {hasProducts
               ? `${String(totalQuantity)} ${totalQuantity === 1 ? "item selecionado" : "itens selecionados"}`
               : "Adicione produtos para começar seu pedido."}
@@ -58,8 +59,10 @@ const CartPanel = ({ variant = "sidebar" }: CartPanelProps) => {
             <ScrollArea className={variant === "sidebar" ? "h-[450px]" : "h-[500px]"}>
               <div className="space-y-4 pr-4">
                 {products.map((product) => (
-                  <CartProductItem key={product.id} product={product} />
+                  <CartProductItem key={product.cartItemId} product={product} />
                 ))}
+                
+                <CartRecommendations />
               </div>
             </ScrollArea>
           ) : (
@@ -81,7 +84,7 @@ const CartPanel = ({ variant = "sidebar" }: CartPanelProps) => {
         >
           <div className="flex w-full items-center justify-between">
             <p className="text-sm font-medium text-muted-foreground">Subtotal</p>
-            <p className="text-xl font-bold text-slate-900">
+            <p className="text-xl font-bold text-slate-900" aria-live="polite">
               {formatCurrency(total)}
             </p>
           </div>

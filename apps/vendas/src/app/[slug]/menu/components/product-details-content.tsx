@@ -1,19 +1,23 @@
 "use client";
 
-import { ChefHatIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { ChefHatIcon, ChevronLeftIcon, ChevronRightIcon, CircleCheckIcon } from "lucide-react";
 import Image from "next/image";
-import { useContext, useState } from "react";
+import { useContext, useState, useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatCurrency } from "@/helpers/format-currency";
 import { isRestaurantOpen } from "@/helpers/restaurant-status";
-import type { ProductComRestaurante } from "@/lib/db";
+import type { ProductComRestaurante, ProductOption, ProductOptionGroup } from "@/lib/db";
 
 import { CartContext } from "../contexts/cart";
 
+interface ProductWithModifier extends ProductComRestaurante {
+  optionGroups: (ProductOptionGroup & { options: ProductOption[] })[];
+}
+
 interface ProductDetailsContentProps {
-  product: ProductComRestaurante;
+  product: ProductWithModifier;
   onAddToCart?: () => void;
   showImage?: boolean;
 }
@@ -25,6 +29,7 @@ const ProductDetailsContent = ({
 }: ProductDetailsContentProps) => {
   const { toggleCart, addProduct } = useContext(CartContext);
   const [quantity, setQuantity] = useState<number>(1);
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string[]>>({});
 
   const isOpen = isRestaurantOpen(
     product.restaurant.status,
@@ -32,24 +37,79 @@ const ProductDetailsContent = ({
   );
 
   const handleDecreaseQuantity = () => {
-    setQuantity((prev) => {
-      if (prev === 1) {
-        return 1;
-      }
-
-      return prev - 1;
-    });
+    setQuantity((prev) => (prev === 1 ? 1 : prev - 1));
   };
 
   const handleIncreaseQuantity = () => {
     setQuantity((prev) => prev + 1);
   };
 
+  const handleOptionToggle = (groupId: string, optionId: string, maxOptions: number) => {
+    setSelectedOptions((prev) => {
+      const currentSelected = prev[groupId] || [];
+      const isSelected = currentSelected.includes(optionId);
+
+      if (isSelected) {
+        return {
+          ...prev,
+          groupId: currentSelected.filter((id) => id !== optionId),
+        };
+      }
+
+      if (maxOptions === 1) {
+        return { ...prev, [groupId]: [optionId] };
+      }
+
+      if (currentSelected.length < maxOptions) {
+        return { ...prev, [groupId]: [...currentSelected, optionId] };
+      }
+
+      return prev;
+    });
+  };
+
+  const selectedOptionsList = useMemo(() => {
+    const list: ProductOption[] = [];
+    Object.values(selectedOptions).forEach((ids) => {
+      ids.forEach((id) => {
+        const option = product.optionGroups
+          .flatMap((g) => g.options)
+          .find((o) => o.id === id);
+        if (option) list.push(option);
+      });
+    });
+    return list;
+  }, [selectedOptions, product.optionGroups]);
+
+  const unitPrice = useMemo(() => {
+    const optionsTotal = selectedOptionsList.reduce((acc, opt) => acc + opt.price, 0);
+    return product.price + optionsTotal;
+  }, [product.price, selectedOptionsList]);
+
+  const canAddToCart = useMemo(() => {
+    return product.optionGroups.every((group) => {
+      const selected = selectedOptions[group.id] || [];
+      return selected.length >= group.minOptions;
+    });
+  }, [product.optionGroups, selectedOptions]);
+
   const handleAddToCart = () => {
+    if (!canAddToCart) return;
+
+    const sortedOptionIds = selectedOptionsList.map((o) => o.id).sort();
+    const cartItemId = `${product.id}${sortedOptionIds.length > 0 ? `-${sortedOptionIds.join("-")}` : ""}`;
+
     addProduct({
       ...product,
+      cartItemId,
       quantity,
+      selectedOptions: selectedOptionsList.map((o) => ({
+        id: o.id,
+        name: o.name,
+        price: o.price,
+      })),
     });
+    
     onAddToCart?.();
     toggleCart();
   };
@@ -89,34 +149,84 @@ const ProductDetailsContent = ({
 
           <div className="mt-4 flex items-center justify-between sm:mt-6">
             <h3 className="text-2xl font-bold text-slate-950 sm:text-3xl">
-              {formatCurrency(product.price)}
+              {formatCurrency(unitPrice)}
             </h3>
-            <div className="flex items-center gap-4 text-center">
+            <div className="flex items-center gap-4 text-center" role="group" aria-label="Seleção de quantidade">
               <Button
                 variant="outline"
                 className="h-11 w-11 rounded-[18px] border-slate-200 shadow-sm transition hover:bg-slate-50 active:scale-95"
                 onClick={handleDecreaseQuantity}
+                aria-label="Diminuir quantidade"
               >
-                <ChevronLeftIcon size={20} />
+                <ChevronLeftIcon size={20} aria-hidden="true" />
               </Button>
-              <p className="w-8 text-xl font-semibold">{quantity}</p>
+              <p className="w-8 text-xl font-semibold" aria-live="polite">{quantity}</p>
               <Button
                 variant="destructive"
                 className="h-11 w-11 rounded-[18px] shadow-md shadow-destructive/10 transition hover:scale-105 active:scale-95"
                 onClick={handleIncreaseQuantity}
+                aria-label="Aumentar quantidade"
               >
-                <ChevronRightIcon size={20} />
+                <ChevronRightIcon size={20} aria-hidden="true" />
               </Button>
             </div>
           </div>
 
-          <ScrollArea className="h-full">
+          <ScrollArea className="h-full pr-4">
             <div className="mt-8 space-y-3">
               <h4 className="text-lg font-semibold text-slate-950">Sobre</h4>
               <p className="text-base font-medium leading-relaxed text-slate-500">
                 {product.description}
               </p>
             </div>
+
+            {/* Renderização dos Grupos de Opções */}
+            {product.optionGroups.map((group) => (
+              <div key={group.id} className="mt-8 space-y-4">
+                <div className="flex flex-col gap-1">
+                  <h4 className="text-lg font-semibold text-slate-950">{group.name}</h4>
+                  <p className="text-sm text-slate-500">
+                    {group.minOptions > 0 ? `Obrigatório • ` : ""}
+                    {group.maxOptions === 1 ? "Selecione 1 opção" : `Selecione até ${group.maxOptions} opções`}
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  {group.options.map((option) => {
+                    const isSelected = (selectedOptions[group.id] || []).includes(option.id);
+                    return (
+                      <button
+                        key={option.id}
+                        onClick={() => handleOptionToggle(group.id, option.id, group.maxOptions)}
+                        aria-pressed={isSelected}
+                        className={`flex w-full items-center justify-between rounded-2xl border p-4 transition-all ${
+                          isSelected 
+                            ? "border-destructive bg-destructive/5 ring-1 ring-destructive" 
+                            : "border-slate-100 hover:border-slate-200"
+                        }`}
+                      >
+                        <div className="flex flex-col items-start text-left">
+                          <span className={`text-sm font-semibold ${isSelected ? "text-destructive" : "text-slate-900"}`}>
+                            {option.name}
+                          </span>
+                          {option.description && (
+                            <span className="text-xs text-slate-500">{option.description}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {option.price > 0 && (
+                            <span className={`text-sm font-medium ${isSelected ? "text-destructive" : "text-slate-600"}`}>
+                              + {formatCurrency(option.price)}
+                            </span>
+                          )}
+                          {isSelected && <CircleCheckIcon size={20} className="text-destructive" />}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
 
             {product.ingredients.length > 0 && (
               <div className="mt-8 space-y-3 pb-6">
@@ -151,9 +261,9 @@ const ProductDetailsContent = ({
           <Button
             className="h-14 w-full rounded-2xl text-lg font-bold shadow-lg shadow-destructive/20 transition hover:scale-[1.01] active:scale-[0.99]"
             onClick={handleAddToCart}
-            disabled={!isOpen}
+            disabled={!isOpen || !canAddToCart}
           >
-            Adicionar à sacola
+            Adicionar à sacola • {formatCurrency(unitPrice * quantity)}
           </Button>
         </div>
       </div>

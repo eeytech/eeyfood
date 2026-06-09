@@ -1,14 +1,17 @@
 "use client";
 
-import { ChevronLeftIcon, ScrollTextIcon } from "lucide-react";
+import { ChevronLeftIcon, ScrollTextIcon, MapPinIcon } from "lucide-react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useRouter, useParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { formatCurrency } from "@/helpers/format-currency";
 import type { OrderComItens, OrderStatus } from "@/lib/db";
+
+import { RatingDialog } from "./rating-dialog";
 
 interface OrderListProps {
   orders: OrderComItens[];
@@ -53,6 +56,8 @@ const formatDateTime = (value: Date | string) => {
 
 const OrderList = ({ orders, isSidePanel, onBackClick }: OrderListProps) => {
   const router = useRouter();
+  const { slug } = useParams<{ slug: string }>();
+  
   const handleBackClick = () => {
     if (onBackClick) {
       onBackClick();
@@ -163,6 +168,28 @@ const OrderList = ({ orders, isSidePanel, onBackClick }: OrderListProps) => {
                 </div>
 
                 <Separator className="bg-slate-100" />
+
+                {(order.status === "OUT_FOR_DELIVERY" || order.status === "IN_PREPARATION") && (
+                  <Button
+                    className="w-full rounded-2xl bg-blue-600 font-bold shadow-md shadow-blue-100"
+                    asChild
+                  >
+                    <Link href={`/${slug}/orders/${order.id}/tracking`}>
+                      <MapPinIcon className="mr-2 h-4 w-4" />
+                      Rastrear Entrega
+                    </Link>
+                  </Button>
+                )}
+
+                {order.status === "FINISHED" && (
+                  <RatingDialog
+                    orderId={order.id}
+                    restaurantId={order.restaurantId}
+                    restaurantName={order.restaurant.name}
+                    customerName={order.customerName}
+                    slug={slug}
+                  />
+                )}
 
                 <div className="flex items-center justify-between bg-slate-50/50 -mx-6 -mb-6 p-6">
                   <div className="space-y-0.5">

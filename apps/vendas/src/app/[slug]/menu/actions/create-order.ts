@@ -13,6 +13,7 @@ interface CreateOrderInput {
   products: Array<{
     id: string;
     quantity: number;
+    selectedOptions?: string[];
   }>;
   consumptionMethod: ConsumptionMethod;
   paymentMethod: PaymentMethod;

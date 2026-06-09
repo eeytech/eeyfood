@@ -15,6 +15,10 @@ const CartProductItem = ({ product }: CartItemProps) => {
   const { decreaseProductQuantity, increaseProductQuantity, removeProduct } =
     useContext(CartContext);
 
+  const optionsTotal =
+    product.selectedOptions?.reduce((acc, opt) => acc + opt.price, 0) || 0;
+  const unitPrice = product.price + optionsTotal;
+
   return (
     <div className="flex items-start justify-between gap-3 rounded-[24px] border bg-white p-3">
       <div className="flex min-w-0 items-start gap-3">
@@ -27,29 +31,38 @@ const CartProductItem = ({ product }: CartItemProps) => {
           />
         </div>
 
-        <div className="min-w-0 space-y-2">
+        <div className="min-w-0 space-y-1">
           <p className="line-clamp-2 text-sm font-medium text-slate-900">
             {product.name}
           </p>
-          <p className="text-sm font-semibold">{formatCurrency(product.price)}</p>
+          
+          {product.selectedOptions && product.selectedOptions.length > 0 && (
+            <p className="text-xs text-slate-500 italic">
+              {product.selectedOptions.map((opt) => opt.name).join(", ")}
+            </p>
+          )}
 
-          <div className="flex items-center gap-2">
+          <p className="text-sm font-semibold">{formatCurrency(unitPrice)}</p>
+
+          <div className="flex items-center gap-2 pt-1" role="group" aria-label="Controle de quantidade">
             <Button
               className="h-8 w-8 rounded-full"
               variant="outline"
-              onClick={() => decreaseProductQuantity(product.id)}
+              onClick={() => decreaseProductQuantity(product.cartItemId)}
+              aria-label={`Remover uma unidade de ${product.name}`}
             >
-              <MinusIcon size={14} />
+              <MinusIcon size={14} aria-hidden="true" />
             </Button>
-            <p className="w-6 text-center text-sm font-medium">
+            <p className="w-6 text-center text-sm font-medium" aria-live="polite">
               {String(product.quantity)}
             </p>
             <Button
               className="h-8 w-8 rounded-full"
               variant="outline"
-              onClick={() => increaseProductQuantity(product.id)}
+              onClick={() => increaseProductQuantity(product.cartItemId)}
+              aria-label={`Adicionar uma unidade de ${product.name}`}
             >
-              <PlusIcon size={14} />
+              <PlusIcon size={14} aria-hidden="true" />
             </Button>
           </div>
         </div>
@@ -58,9 +71,10 @@ const CartProductItem = ({ product }: CartItemProps) => {
       <Button
         className="h-9 w-9 shrink-0 rounded-full"
         variant="ghost"
-        onClick={() => removeProduct(product.id)}
+        onClick={() => removeProduct(product.cartItemId)}
+        aria-label={`Remover ${product.name} do carrinho`}
       >
-        <TrashIcon size={16} />
+        <TrashIcon size={16} aria-hidden="true" />
       </Button>
     </div>
   );
