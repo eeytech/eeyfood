@@ -9,6 +9,8 @@ export type {
   PedidoBeneficiosValidado,
   Product,
   ProductComRestaurante,
+  ProductOption,
+  ProductOptionGroup,
   Restaurant,
   RestaurantComCategoriasEProdutos,
   SalvarCarrinhoAbandonadoInput,

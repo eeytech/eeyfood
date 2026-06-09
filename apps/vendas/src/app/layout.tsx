@@ -3,9 +3,9 @@ import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { Poppins } from "next/font/google";
 
-import { Toaster } from "@/components/ui/sonner";
-import { PWARegister } from "@/components/pwa-register";
 import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
+import { PWARegister } from "@/components/pwa-register";
+import { Toaster } from "@/components/ui/sonner";
 
 import { CartProvider } from "./[slug]/menu/contexts/cart";
 

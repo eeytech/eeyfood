@@ -2,7 +2,7 @@
 
 import { ChefHatIcon, ChevronLeftIcon, ChevronRightIcon, CircleCheckIcon } from "lucide-react";
 import Image from "next/image";
-import { useContext, useState, useMemo } from "react";
+import { useContext, useMemo,useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -13,7 +13,7 @@ import type { ProductComRestaurante, ProductOption, ProductOptionGroup } from "@
 import { CartContext } from "../contexts/cart";
 
 interface ProductWithModifier extends ProductComRestaurante {
-  optionGroups: (ProductOptionGroup & { options: ProductOption[] })[];
+  optionGroups?: (ProductOptionGroup & { options: ProductOption[] })[];
 }
 
 interface ProductDetailsContentProps {
@@ -31,10 +31,14 @@ const ProductDetailsContent = ({
   const [quantity, setQuantity] = useState<number>(1);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string[]>>({});
 
+  const optionGroups = useMemo(() => product.optionGroups || [], [product.optionGroups]);
+
   const isOpen = isRestaurantOpen(
     product.restaurant.status,
     product.restaurant.operatingHours,
   );
+
+  const isOutOfStock = product.trackInventory && product.stockQuantity <= 0;
 
   const handleDecreaseQuantity = () => {
     setQuantity((prev) => (prev === 1 ? 1 : prev - 1));
@@ -52,7 +56,7 @@ const ProductDetailsContent = ({
       if (isSelected) {
         return {
           ...prev,
-          groupId: currentSelected.filter((id) => id !== optionId),
+          [groupId]: currentSelected.filter((id) => id !== optionId),
         };
       }
 
@@ -72,14 +76,14 @@ const ProductDetailsContent = ({
     const list: ProductOption[] = [];
     Object.values(selectedOptions).forEach((ids) => {
       ids.forEach((id) => {
-        const option = product.optionGroups
+        const option = optionGroups
           .flatMap((g) => g.options)
           .find((o) => o.id === id);
         if (option) list.push(option);
       });
     });
     return list;
-  }, [selectedOptions, product.optionGroups]);
+  }, [selectedOptions, optionGroups]);
 
   const unitPrice = useMemo(() => {
     const optionsTotal = selectedOptionsList.reduce((acc, opt) => acc + opt.price, 0);
@@ -87,11 +91,11 @@ const ProductDetailsContent = ({
   }, [product.price, selectedOptionsList]);
 
   const canAddToCart = useMemo(() => {
-    return product.optionGroups.every((group) => {
+    return optionGroups.every((group) => {
       const selected = selectedOptions[group.id] || [];
       return selected.length >= group.minOptions;
     });
-  }, [product.optionGroups, selectedOptions]);
+  }, [optionGroups, selectedOptions]);
 
   const handleAddToCart = () => {
     if (!canAddToCart) return;
@@ -181,7 +185,7 @@ const ProductDetailsContent = ({
             </div>
 
             {/* Renderização dos Grupos de Opções */}
-            {product.optionGroups.map((group) => (
+            {optionGroups.map((group) => (
               <div key={group.id} className="mt-8 space-y-4">
                 <div className="flex flex-col gap-1">
                   <h4 className="text-lg font-semibold text-slate-950">{group.name}</h4>
@@ -192,7 +196,7 @@ const ProductDetailsContent = ({
                 </div>
                 
                 <div className="space-y-2">
-                  {group.options.map((option) => {
+                  {group.options.map((option: ProductOption) => {
                     const isSelected = (selectedOptions[group.id] || []).includes(option.id);
                     return (
                       <button
@@ -258,10 +262,17 @@ const ProductDetailsContent = ({
               O restaurante está fechado no momento e não aceita novos pedidos.
             </p>
           )}
+
+          {isOutOfStock && (
+            <p className="rounded-2xl bg-amber-50 p-4 text-center text-sm font-semibold text-amber-600 border border-amber-100">
+              Produto temporariamente esgotado.
+            </p>
+          )}
+
           <Button
             className="h-14 w-full rounded-2xl text-lg font-bold shadow-lg shadow-destructive/20 transition hover:scale-[1.01] active:scale-[0.99]"
             onClick={handleAddToCart}
-            disabled={!isOpen || !canAddToCart}
+            disabled={!isOpen || !canAddToCart || isOutOfStock}
           >
             Adicionar à sacola • {formatCurrency(unitPrice * quantity)}
           </Button>

@@ -29,7 +29,7 @@ const CartRecommendations = () => {
         setIsLoading(true);
         const cartProductIds = products.map((p) => p.id);
         const data = await getUpsellRecommendations(slug, cartProductIds);
-        setRecommendations(data as any);
+        setRecommendations(data as Product[]);
       } catch (error) {
         console.error("Erro ao buscar recomendações:", error);
       } finally {
@@ -38,7 +38,7 @@ const CartRecommendations = () => {
     };
 
     fetchRecommendations();
-  }, [products.length, slug]); // Só revalida se o número de itens mudar ou slug
+  }, [products, slug]); // Só revalida se o número de itens mudar ou slug
 
   if (recommendations.length === 0 || isLoading) return null;
 

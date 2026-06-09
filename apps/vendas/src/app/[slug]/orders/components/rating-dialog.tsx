@@ -1,11 +1,11 @@
 "use client";
 
-import { StarIcon, CameraIcon, Loader2Icon } from "lucide-react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2Icon, StarIcon } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { toast } from "sonner";
+import * as z from "zod";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -60,7 +60,7 @@ export const RatingDialog = ({ orderId, restaurantId, restaurantName, customerNa
       });
       toast.success("Obrigado pela sua avaliação!");
       setIsOpen(false);
-    } catch (error) {
+    } catch {
       toast.error("Erro ao enviar avaliação. Tente novamente.");
     } finally {
       setIsLoading(false);

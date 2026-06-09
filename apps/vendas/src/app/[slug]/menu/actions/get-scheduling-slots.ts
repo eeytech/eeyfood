@@ -2,16 +2,13 @@
 
 import { buscarRestaurantePorSlug } from "@fsw/db";
 import { 
+  addDays,
   addMinutes, 
   format, 
-  isBefore, 
   isAfter, 
+  isBefore, 
   setHours, 
   setMinutes, 
-  startOfHour, 
-  addDays,
-  parse,
-  isSameDay
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -29,7 +26,6 @@ export const getAvailableSchedulingSlots = async (slug: string) => {
 
   for (let i = 0; i < daysToGenerate; i++) {
     const currentDay = addDays(now, i);
-    const dayOfWeek = currentDay.getDay();
 
     // Aqui poderíamos filtrar pelos horários reais do banco
     // Simulando: Aberto das 11:00 às 23:00

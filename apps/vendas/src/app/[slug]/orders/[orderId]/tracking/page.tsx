@@ -1,18 +1,24 @@
 "use client";
 
-import { ChevronLeftIcon, MapPinIcon, BikeIcon, StoreIcon, ClockIcon } from "lucide-react";
+import "leaflet/dist/leaflet.css";
+
+import { Courier, Order, Restaurant } from "@fsw/db";
+import L from "leaflet";
+import { BikeIcon, ChevronLeftIcon, ClockIcon } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatCurrency } from "@/helpers/format-currency";
 
 import { getOrderTracking } from "../../actions/get-order-tracking";
+
+interface OrderTracking extends Order {
+  restaurant: Restaurant;
+  courier: Courier | null;
+}
 
 // Corrigir ícones do Leaflet que quebram no Next.js
 const DefaultIcon = L.icon({
@@ -52,13 +58,13 @@ const ChangeView = ({ center }: { center: [number, number] }) => {
 
 const TrackingPage = () => {
   const { slug, orderId } = useParams<{ slug: string; orderId: string }>();
-  const [order, setOrder] = useState<any>(null);
+  const [order, setOrder] = useState<OrderTracking | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchOrder = async () => {
       const data = await getOrderTracking(Number(orderId));
-      if (data) setOrder(data);
+      if (data) setOrder(data as OrderTracking);
       setIsLoading(false);
     };
 
@@ -71,8 +77,8 @@ const TrackingPage = () => {
   if (!order) return <div className="p-10 text-center">Pedido não encontrado.</div>;
 
   const restaurantPos: [number, number] = [order.restaurant.latitude || -23.5505, order.restaurant.longitude || -46.6333];
-  const courierPos: [number, number] | null = order.courier?.latitude ? [order.courier.latitude, order.courier.longitude] : null;
-  const customerPos: [number, number] | null = order.deliveryLatitude ? [order.deliveryLatitude, order.deliveryLongitude] : null;
+  const courierPos: [number, number] | null = (order.courier?.latitude && order.courier?.longitude) ? [order.courier.latitude, order.courier.longitude] : null;
+  const customerPos: [number, number] | null = (order.deliveryLatitude && order.deliveryLongitude) ? [order.deliveryLatitude, order.deliveryLongitude] : null;
 
   const centerPos = courierPos || restaurantPos;
 
@@ -108,7 +114,7 @@ const TrackingPage = () => {
 
           {courierPos && (
             <Marker position={courierPos} icon={courierIcon}>
-              <Popup>Entregador: {order.courier.name}</Popup>
+              <Popup>Entregador: {order.courier?.name}</Popup>
             </Marker>
           )}
 

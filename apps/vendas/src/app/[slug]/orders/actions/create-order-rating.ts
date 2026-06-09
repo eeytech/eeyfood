@@ -1,8 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { db, orderRatingsTable, ordersTable } from "@fsw/db";
+import { db, orderRatingsTable } from "@fsw/db";
 import { and, eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 
 interface CreateRatingInput {
   orderId: number;

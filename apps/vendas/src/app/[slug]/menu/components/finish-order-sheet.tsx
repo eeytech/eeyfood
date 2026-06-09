@@ -32,25 +32,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { formatCurrency } from "@/helpers/format-currency";
-import type {
-  ConsumptionMethod,
-  PaymentMethod,
-  PedidoBeneficiosValidado,
-} from "@/lib/db";
-
-import { createOrder } from "../actions/create-order";
-import { criarPreferenciaMercadoPago } from "../actions/criar-preferencia-mercado-pago";
-import { getAvailableSchedulingSlots } from "../actions/get-scheduling-slots";
-import { saveAbandonedCart } from "../actions/save-abandoned-cart";
-import { validateOrderBenefits } from "../actions/validate-order-benefits";
-import {
   Select,
   SelectContent,
   SelectGroup,
@@ -59,6 +40,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { formatCurrency } from "@/helpers/format-currency";
+import { isRestaurantOpen } from "@/helpers/restaurant-status";
+import type {
+  ConsumptionMethod,
+  PaymentMethod,
+  PedidoBeneficiosValidado,
+  RestaurantComCategoriasEProdutos,
+} from "@/lib/db";
+
+import { createOrder } from "../actions/create-order";
+import { criarPreferenciaMercadoPago } from "../actions/criar-preferencia-mercado-pago";
+import { getAvailableSchedulingSlots } from "../actions/get-scheduling-slots";
+import { saveAbandonedCart } from "../actions/save-abandoned-cart";
+import { validateOrderBenefits } from "../actions/validate-order-benefits";
 import { CartContext } from "../contexts/cart";
 import { isValidPhoneNumber, normalizePhoneNumber } from "../helpers/phone";
 
@@ -143,6 +145,7 @@ type FormSchema = z.infer<typeof formSchema>;
 interface FinishOrderSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  restaurant: RestaurantComCategoriasEProdutos;
 }
 
 interface PedidoOfflineConcluido {
@@ -153,13 +156,14 @@ interface PedidoOfflineConcluido {
   changeFor?: number;
 }
 
-const formatDateTimeLocalInput = (date: Date) => {
-  const adjustedDate = new Date(
-    date.getTime() - date.getTimezoneOffset() * 60 * 1000,
-  );
-
-  return adjustedDate.toISOString().slice(0, 16);
-};
+interface SchedulingSlotGroup {
+  label: string;
+  date: string;
+  items: Array<{
+    value: string;
+    label: string;
+  }>;
+}
 
 const formatScheduledDate = (value: string) => {
   return new Intl.DateTimeFormat("pt-BR", {
@@ -217,7 +221,11 @@ const SectionHeader = ({ icon, title }: { icon: React.ReactNode; title: string }
   </div>
 );
 
-const FinishOrderSheet = ({ open, onOpenChange }: FinishOrderSheetProps) => {
+const FinishOrderSheet = ({
+  open,
+  onOpenChange,
+  restaurant,
+}: FinishOrderSheetProps) => {
   const router = useRouter();
   const { slug } = useParams<{ slug: string }>();
   const { products, total, clearCart } = useContext(CartContext);
@@ -228,7 +236,7 @@ const FinishOrderSheet = ({ open, onOpenChange }: FinishOrderSheetProps) => {
   const [benefits, setBenefits] = useState<PedidoBeneficiosValidado | null>(null);
   const [pedidoOfflineConcluido, setPedidoOfflineConcluido] =
     useState<PedidoOfflineConcluido | null>(null);
-  const [schedulingSlots, setSchedulingSlots] = useState<any[]>([]);
+  const [schedulingSlots, setSchedulingSlots] = useState<SchedulingSlotGroup[]>([]);
   const abandonedCartSessionIdRef = useRef(createAbandonedCartSessionId());
 
   const form = useForm<FormSchema>({
@@ -260,8 +268,9 @@ const FinishOrderSheet = ({ open, onOpenChange }: FinishOrderSheetProps) => {
         : "TAKEAWAY";
   const allowsScheduling = consumptionMethod !== "DINE_IN";
   const schedulingLabel = getSchedulingLabel(consumptionMethod);
-  const minimumScheduleValue = formatDateTimeLocalInput(
-    new Date(Date.now() + 15 * 60 * 1000),
+  const isOpen = isRestaurantOpen(
+    restaurant.status,
+    restaurant.operatingHours,
   );
 
   const checkoutSummary = benefits ?? {
@@ -723,7 +732,7 @@ const FinishOrderSheet = ({ open, onOpenChange }: FinishOrderSheetProps) => {
                                           schedulingSlots.map((group) => (
                                             <SelectGroup key={group.date}>
                                               <SelectLabel className="text-primary font-bold">{group.label}</SelectLabel>
-                                              {group.items.map((slot: any) => (
+                                              {group.items.map((slot) => (
                                                 <SelectItem 
                                                   key={slot.value} 
                                                   value={slot.value}
@@ -964,10 +973,15 @@ const FinishOrderSheet = ({ open, onOpenChange }: FinishOrderSheetProps) => {
               </div>
 
               <div className="flex flex-col gap-3 p-6 border-t bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.04)]">
+                {!isOpen && fulfillmentTiming !== "SCHEDULED" && (
+                  <p className="rounded-xl bg-rose-50 p-3 text-center text-xs font-semibold text-rose-600 border border-rose-100 mb-2">
+                    O restaurante está fechado e não aceita pedidos imediatos.
+                  </p>
+                )}
                 <Button
                   type="submit"
                   className="h-14 w-full rounded-2xl bg-destructive text-lg font-bold shadow-lg shadow-destructive/20 transition-all hover:scale-[1.01] active:scale-[0.99]"
-                  disabled={isLoading}
+                  disabled={isLoading || (!isOpen && fulfillmentTiming !== "SCHEDULED")}
                 >
                   {isLoading ? (
                     <Loader2Icon className="animate-spin mr-2" />

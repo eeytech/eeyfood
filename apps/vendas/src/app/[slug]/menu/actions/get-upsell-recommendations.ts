@@ -1,8 +1,7 @@
 "use server";
 
+import { db, menuCategoriesTable,productsTable, restaurantsTable } from "@fsw/db";
 import { and, eq, inArray, notInArray } from "drizzle-orm";
-
-import { db, productsTable, restaurantsTable, menuCategoriesTable } from "@fsw/db";
 
 export const getUpsellRecommendations = async (slug: string, cartProductIds: string[]) => {
   const restaurant = await db.query.restaurantsTable.findFirst({

@@ -1,5 +1,13 @@
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
-import { abandonedCartsTable, abandonedCartStatusEnum, consumptionMethodEnum, couponDiscountTypeEnum, couponsTable, couriersTable, diningTablesTable, financialCategoriesTable, financialClosingsTable, financialTransactionsTable, menuCategoriesTable, orderProductsTable, ordersTable, orderStatusEnum, paymentMethodEnum, paymentStatusEnum, productsTable, restaurantsTable, restaurantStatusEnum, operatingHoursTable, stockMovementsTable, stockMovementTypeEnum, transactionStatusEnum, transactionTypeEnum, walletsTable, aiSettingsTable } from "./schema.js";
+import { abandonedCartsTable, abandonedCartStatusEnum, consumptionMethodEnum, couponDiscountTypeEnum, couponsTable, couriersTable, diningTablesTable, financialCategoriesTable, financialClosingsTable, financialTransactionsTable, menuCategoriesTable, orderProductsTable, ordersTable, orderStatusEnum, paymentMethodEnum, paymentStatusEnum, productsTable, restaurantsTable, restaurantStatusEnum, operatingHoursTable, productOptionGroupsTable, productOptionsTable, orderProductOptionsTable, orderRatingsTable, stockMovementsTable, stockMovementTypeEnum, transactionStatusEnum, transactionTypeEnum, walletsTable, loyaltyRulesTable, aiSettingsTable } from "./schema.js";
+export type ProductOptionGroup = InferSelectModel<typeof productOptionGroupsTable>;
+export type NewProductOptionGroup = InferInsertModel<typeof productOptionGroupsTable>;
+export type ProductOption = InferSelectModel<typeof productOptionsTable>;
+export type NewProductOption = InferInsertModel<typeof productOptionsTable>;
+export type OrderProductOption = InferSelectModel<typeof orderProductOptionsTable>;
+export type NewOrderProductOption = InferInsertModel<typeof orderProductOptionsTable>;
+export type OrderRating = InferSelectModel<typeof orderRatingsTable>;
+export type NewOrderRating = InferInsertModel<typeof orderRatingsTable>;
 export type AiSettings = InferSelectModel<typeof aiSettingsTable>;
 export type NewAiSettings = InferInsertModel<typeof aiSettingsTable>;
 export type FinancialCategory = InferSelectModel<typeof financialCategoriesTable>;
@@ -22,6 +30,8 @@ export type Coupon = InferSelectModel<typeof couponsTable>;
 export type NewCoupon = InferInsertModel<typeof couponsTable>;
 export type Wallet = InferSelectModel<typeof walletsTable>;
 export type NewWallet = InferInsertModel<typeof walletsTable>;
+export type LoyaltyRule = InferSelectModel<typeof loyaltyRulesTable>;
+export type NewLoyaltyRule = InferInsertModel<typeof loyaltyRulesTable>;
 export type AbandonedCart = InferSelectModel<typeof abandonedCartsTable>;
 export type NewAbandonedCart = InferInsertModel<typeof abandonedCartsTable>;
 export type Order = InferSelectModel<typeof ordersTable>;
@@ -72,6 +82,11 @@ export interface PedidoBeneficiosValidado {
         remainingBalance: number;
         availableToRedeem: number;
     } | null;
+    nextLoyaltyRule?: {
+        minOrderValue: number;
+        cashbackPercent: number;
+        remainingAmount: number;
+    } | null;
 }
 export interface OrderComItens extends Order {
     restaurant: Pick<Restaurant, "name" | "avatarImageUrl" | "slug">;
@@ -79,6 +94,7 @@ export interface OrderComItens extends Order {
     courier?: Pick<Courier, "id" | "name" | "phone"> | null;
     orderProducts: Array<OrderProduct & {
         product: Product;
+        orderProductOptions: OrderProductOption[];
     }>;
 }
 export interface PedidoRecebimento extends Order {
@@ -87,5 +103,6 @@ export interface PedidoRecebimento extends Order {
     courier?: Pick<Courier, "id" | "name" | "phone"> | null;
     orderProducts: Array<OrderProduct & {
         product: Pick<Product, "id" | "name" | "imageUrl">;
+        orderProductOptions: OrderProductOption[];
     }>;
 }

@@ -234,7 +234,7 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
 
           <aside className="hidden lg:block">
             <div className="sticky top-6">
-              <CartPanel />
+              <CartPanel restaurant={restaurant} />
             </div>
           </aside>
         </div>
@@ -258,7 +258,7 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
         </div>
       )}
 
-      <CartSheet />
+      <CartSheet restaurant={restaurant} />
     </div>
   );
 };

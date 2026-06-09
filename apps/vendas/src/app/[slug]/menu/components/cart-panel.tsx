@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatCurrency } from "@/helpers/format-currency";
+import type { RestaurantComCategoriasEProdutos } from "@/lib/db";
 
 import { CartContext } from "../contexts/cart";
 import CartProductItem from "./cart-product-item";
@@ -22,9 +23,10 @@ import FinishOrderSheet from "./finish-order-sheet";
 
 interface CartPanelProps {
   variant?: "sidebar" | "sheet";
+  restaurant: RestaurantComCategoriasEProdutos;
 }
 
-const CartPanel = ({ variant = "sidebar" }: CartPanelProps) => {
+const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
   const [finishOrderSheetIsOpen, setFinishOrderSheetIsOpen] = useState(false);
   const { products, total, totalQuantity } = useContext(CartContext);
   const hasProducts = products.length > 0;
@@ -101,6 +103,7 @@ const CartPanel = ({ variant = "sidebar" }: CartPanelProps) => {
       <FinishOrderSheet
         open={finishOrderSheetIsOpen}
         onOpenChange={setFinishOrderSheetIsOpen}
+        restaurant={restaurant}
       />
     </>
   );

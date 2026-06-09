@@ -1,11 +1,11 @@
 "use client";
 
-import type { ProductComRestaurante } from "@/lib/db";
+import type { ProductComRestaurante, ProductOption, ProductOptionGroup } from "@/lib/db";
 
 import ProductDetailsContent from "../../components/product-details-content";
 
 interface ProductDetailsProps {
-  product: ProductComRestaurante;
+  product: ProductComRestaurante & { optionGroups: (ProductOptionGroup & { options: ProductOption[] })[] };
 }
 
 const ProductDetails = ({ product }: ProductDetailsProps) => {

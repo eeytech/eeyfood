@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, gte, inArray, sql } from "drizzle-orm";
 
 import { db } from "./client.js";
+import { isRestaurantOpen } from "./restaurant-utils.js";
 import {
   abandonedCartsTable,
   couponsTable,
@@ -18,6 +19,9 @@ import {
   stockMovementsTable,
   walletsTable,
   loyaltyRulesTable,
+  productOptionsTable,
+  productOptionGroupsTable,
+  orderProductOptionsTable,
 } from "./schema.js";
 import type {
   AbandonedCart,
@@ -30,6 +34,7 @@ import type {
   MesaComanda,
   Order,
   OrderComItens,
+  OrderProductOption,
   OrderStatus,
   PaymentMethod,
   PaymentStatus,
@@ -37,6 +42,8 @@ import type {
   PedidoRecebimento,
   Product,
   ProductComRestaurante,
+  ProductOption,
+  ProductOptionGroup,
   Restaurant,
   RestaurantComCategoriasEProdutos,
   TransactionStatus,
@@ -631,6 +638,20 @@ const carregarContextoPedidoCalculado = async (
     throw new Error("Restaurante nao encontrado.");
   }
 
+  const operatingHours = await db
+    .select()
+    .from(operatingHoursTable)
+    .where(eq(operatingHoursTable.restaurantId, restaurant.id));
+
+  const isOpen = isRestaurantOpen(restaurant.status, operatingHours);
+  const isScheduled = (input as any).scheduledFor !== undefined;
+
+  if (!isOpen && !isScheduled) {
+    throw new Error(
+      "O restaurante está fechado no momento e não aceita novos pedidos.",
+    );
+  }
+
   // Usamos os produtos originais do input para preservar as opções selecionadas por item
   const productsInput = input.products;
 
@@ -784,6 +805,19 @@ const carregarContextoPedidoCalculado = async (
     total * (cashbackPercent / 100),
   );
 
+  // Encontrar a próxima regra de fidelidade (para upsell)
+  const nextLoyaltyRule = [...loyaltyRules]
+    .reverse()
+    .find((rule) => rule.minOrderValue > subtotal);
+
+  const nextLoyaltyRuleFormatted = nextLoyaltyRule
+    ? {
+        minOrderValue: nextLoyaltyRule.minOrderValue,
+        cashbackPercent: nextLoyaltyRule.cashbackPercent,
+        remainingAmount: arredondarMoeda(nextLoyaltyRule.minOrderValue - subtotal),
+      }
+    : null;
+
   return {
     restaurant,
     itens,
@@ -797,6 +831,7 @@ const carregarContextoPedidoCalculado = async (
     discountAmount,
     total,
     cashbackEarnedAmount,
+    nextLoyaltyRule: nextLoyaltyRuleFormatted,
   };
 };
 
@@ -985,6 +1020,21 @@ export const buscarPedidosPorTelefone = async (
     .innerJoin(productsTable, eq(productsTable.id, orderProductsTable.productId))
     .where(inArray(orderProductsTable.orderId, orderIds));
 
+  const orderProductIds = itens.map((i) => i.orderProduct.id);
+  const options = orderProductIds.length > 0
+    ? await db
+        .select()
+        .from(orderProductOptionsTable)
+        .where(inArray(orderProductOptionsTable.orderProductId, orderProductIds))
+    : [];
+
+  const optionsMap = new Map<string, OrderProductOption[]>();
+  options.forEach((opt) => {
+    const list = optionsMap.get(opt.orderProductId) ?? [];
+    list.push(opt);
+    optionsMap.set(opt.orderProductId, list);
+  });
+
   const pedidosNormalizados = pedidos.map(({ order, restaurant, diningTable, courier }) => ({
     ...order,
     restaurant,
@@ -999,6 +1049,7 @@ export const buscarPedidosPorTelefone = async (
       item: {
         ...item.orderProduct,
         product: item.product,
+        orderProductOptions: optionsMap.get(item.orderProduct.id) ?? [],
       },
     })),
   );
@@ -1850,6 +1901,21 @@ export const buscarPedidoRecebimentoPorId = async (
     .innerJoin(productsTable, eq(productsTable.id, orderProductsTable.productId))
     .where(eq(orderProductsTable.orderId, orderId));
 
+  const orderProductIds = itens.map((i) => i.orderProduct.id);
+  const options = orderProductIds.length > 0
+    ? await db
+        .select()
+        .from(orderProductOptionsTable)
+        .where(inArray(orderProductOptionsTable.orderProductId, orderProductIds))
+    : [];
+
+  const optionsMap = new Map<string, OrderProductOption[]>();
+  options.forEach((opt) => {
+    const list = optionsMap.get(opt.orderProductId) ?? [];
+    list.push(opt);
+    optionsMap.set(opt.orderProductId, list);
+  });
+
   return {
     ...pedido.order,
     restaurant: pedido.restaurant,
@@ -1858,6 +1924,7 @@ export const buscarPedidoRecebimentoPorId = async (
     orderProducts: itens.map((item) => ({
       ...item.orderProduct,
       product: item.product,
+      orderProductOptions: optionsMap.get(item.orderProduct.id) ?? [],
     })),
   };
 };

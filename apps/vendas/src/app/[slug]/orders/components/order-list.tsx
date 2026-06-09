@@ -1,9 +1,9 @@
 "use client";
 
-import { ChevronLeftIcon, ScrollTextIcon, MapPinIcon } from "lucide-react";
+import { ChevronLeftIcon, MapPinIcon,ScrollTextIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter, useParams } from "next/navigation";
+import { useParams,useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";

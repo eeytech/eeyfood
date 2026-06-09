@@ -1,7 +1,7 @@
 "use server";
 
+import { couriersTable,db } from "@fsw/db";
 import { eq } from "drizzle-orm";
-import { db, couriersTable } from "@fsw/db";
 
 export const updateCourierLocation = async (courierId: string, latitude: number, longitude: number) => {
   try {

@@ -27,6 +27,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -45,15 +54,6 @@ import { criarPreferenciaMercadoPago } from "../actions/criar-preferencia-mercad
 import { getAvailableSchedulingSlots } from "../actions/get-scheduling-slots";
 import { saveAbandonedCart } from "../actions/save-abandoned-cart";
 import { validateOrderBenefits } from "../actions/validate-order-benefits";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { CartContext } from "../contexts/cart";
 import { isValidPhoneNumber, normalizePhoneNumber } from "../helpers/phone";
 
@@ -148,13 +148,14 @@ interface PedidoOfflineConcluido {
   changeFor?: number;
 }
 
-const formatDateTimeLocalInput = (date: Date) => {
-  const adjustedDate = new Date(
-    date.getTime() - date.getTimezoneOffset() * 60 * 1000,
-  );
-
-  return adjustedDate.toISOString().slice(0, 16);
-};
+interface SchedulingSlotGroup {
+  label: string;
+  date: string;
+  items: Array<{
+    value: string;
+    label: string;
+  }>;
+}
 
 const formatScheduledDate = (value: string) => {
   return new Intl.DateTimeFormat("pt-BR", {
@@ -212,7 +213,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
   const [benefits, setBenefits] = useState<PedidoBeneficiosValidado | null>(null);
   const [pedidoOfflineConcluido, setPedidoOfflineConcluido] =
     useState<PedidoOfflineConcluido | null>(null);
-  const [schedulingSlots, setSchedulingSlots] = useState<any[]>([]);
+  const [schedulingSlots, setSchedulingSlots] = useState<SchedulingSlotGroup[]>([]);
   const abandonedCartSessionIdRef = useRef(createAbandonedCartSessionId());
 
   const form = useForm<FormSchema>({
@@ -244,9 +245,6 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
         : "TAKEAWAY";
   const allowsScheduling = consumptionMethod !== "DINE_IN";
   const schedulingLabel = getSchedulingLabel(consumptionMethod);
-  const minimumScheduleValue = formatDateTimeLocalInput(
-    new Date(Date.now() + 15 * 60 * 1000),
-  );
 
   const checkoutSummary = benefits ?? {
     subtotal: total,
@@ -718,7 +716,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                                         schedulingSlots.map((group) => (
                                           <SelectGroup key={group.date}>
                                             <SelectLabel className="text-primary font-bold">{group.label}</SelectLabel>
-                                            {group.items.map((slot: any) => (
+                                            {group.items.map((slot) => (
                                               <SelectItem 
                                                 key={slot.value} 
                                                 value={slot.value}

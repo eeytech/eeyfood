@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { db } from "./client.js";
-import { abandonedCartsTable, couponsTable, couriersTable, diningTablesTable, financialCategoriesTable, financialTransactionsTable, menuCategoriesTable, operatingHoursTable, orderProductsTable, ordersTable, productsTable, restaurantsTable, stockMovementsTable, walletsTable, } from "./schema.js";
+import { isRestaurantOpen } from "./restaurant-utils.js";
+import { abandonedCartsTable, couponsTable, couriersTable, diningTablesTable, financialCategoriesTable, financialTransactionsTable, menuCategoriesTable, operatingHoursTable, orderProductsTable, orderRatingsTable, ordersTable, productsTable, restaurantsTable, stockMovementsTable, walletsTable, loyaltyRulesTable, productOptionsTable, productOptionGroupsTable, orderProductOptionsTable, } from "./schema.js";
 // ... (rest of queries)
 export const listarCategoriasFinanceirasPorSlug = async (slug) => {
     const restaurant = await buscarRestaurantePorSlug(slug);
@@ -55,7 +56,6 @@ export const buscarDREBasico = async (slug, startDate, endDate) => {
         netProfit: revenue - expenses,
     };
 };
-const CASHBACK_PERCENTUAL_PADRAO = 0.05;
 const arredondarMoeda = (value) => {
     return Number(value.toFixed(2));
 };
@@ -304,34 +304,67 @@ const carregarContextoPedidoCalculado = async (input) => {
     if (!restaurant) {
         throw new Error("Restaurante nao encontrado.");
     }
-    const normalizedProducts = normalizarProdutosPedido(input.products);
-    if (normalizedProducts.length === 0) {
+    const operatingHours = await db
+        .select()
+        .from(operatingHoursTable)
+        .where(eq(operatingHoursTable.restaurantId, restaurant.id));
+    const isOpen = isRestaurantOpen(restaurant.status, operatingHours);
+    const isScheduled = input.scheduledFor !== undefined;
+    if (!isOpen && !isScheduled) {
+        throw new Error("O restaurante está fechado no momento e não aceita novos pedidos.");
+    }
+    // Usamos os produtos originais do input para preservar as opções selecionadas por item
+    const productsInput = input.products;
+    if (productsInput.length === 0) {
         throw new Error("O pedido precisa ter pelo menos um item.");
     }
-    const productIds = normalizedProducts.map((product) => product.id);
+    const productIds = Array.from(new Set(productsInput.map((p) => p.id)));
     const productsWithPrices = await db
         .select()
         .from(productsTable)
         .where(and(inArray(productsTable.id, productIds), eq(productsTable.restaurantId, restaurant.id), eq(productsTable.isActive, true)));
     const productsMap = new Map(productsWithPrices.map((product) => [product.id, product]));
-    const itens = normalizedProducts.map((product) => {
-        const currentProduct = productsMap.get(product.id);
+    // Carregar todas as opções selecionadas de uma vez para otimizar
+    const allOptionIds = Array.from(new Set(productsInput.flatMap((p) => p.selectedOptions || [])));
+    const optionsMap = new Map();
+    if (allOptionIds.length > 0) {
+        const options = await db
+            .select()
+            .from(productOptionsTable)
+            .where(inArray(productOptionsTable.id, allOptionIds));
+        options.forEach((o) => optionsMap.set(o.id, o));
+    }
+    const itens = productsInput.map((itemInput) => {
+        const currentProduct = productsMap.get(itemInput.id);
         if (!currentProduct) {
             throw new Error("Produto nao encontrado.");
         }
         if (currentProduct.trackInventory &&
-            currentProduct.stockQuantity < product.quantity) {
+            currentProduct.stockQuantity < itemInput.quantity) {
             throw new Error(`Estoque insuficiente para o produto ${currentProduct.name}.`);
         }
-        const lineTotal = arredondarMoeda(currentProduct.price * product.quantity);
+        const selectedOptions = (itemInput.selectedOptions || []).map((optId) => {
+            const option = optionsMap.get(optId);
+            if (!option)
+                throw new Error("Opção selecionada não encontrada.");
+            return {
+                id: option.id,
+                name: option.name,
+                price: option.price,
+            };
+        });
+        const optionsPrice = selectedOptions.reduce((acc, opt) => acc + opt.price, 0);
+        const unitPrice = currentProduct.price + optionsPrice;
+        const lineTotal = arredondarMoeda(unitPrice * itemInput.quantity);
         return {
             productId: currentProduct.id,
             productNameSnapshot: currentProduct.name,
-            quantity: product.quantity,
+            quantity: itemInput.quantity,
             price: currentProduct.price,
             unitCost: currentProduct.costPrice,
             lineTotal,
             currentProduct,
+            selectedOptions,
         };
     });
     const subtotal = arredondarMoeda(itens.reduce((accumulator, item) => {
@@ -362,7 +395,29 @@ const carregarContextoPedidoCalculado = async (input) => {
     const deliveryFee = 0;
     const discountAmount = arredondarMoeda(couponDiscountAmount + cashbackRedeemedAmount);
     const total = arredondarMoeda(Math.max(subtotal + deliveryFee - discountAmount, 0));
-    const cashbackEarnedAmount = arredondarMoeda(total * CASHBACK_PERCENTUAL_PADRAO);
+    // Buscar regras de fidelidade ativas para o restaurante
+    const loyaltyRules = await db
+        .select()
+        .from(loyaltyRulesTable)
+        .where(and(eq(loyaltyRulesTable.restaurantId, restaurant.id), eq(loyaltyRulesTable.isActive, true)))
+        .orderBy(desc(loyaltyRulesTable.minOrderValue));
+    // Encontrar a melhor regra aplicável ao subtotal atual
+    const applicableRule = loyaltyRules.find((rule) => subtotal >= rule.minOrderValue);
+    const cashbackPercent = applicableRule
+        ? applicableRule.cashbackPercent
+        : restaurant.cashbackPercent;
+    const cashbackEarnedAmount = arredondarMoeda(total * (cashbackPercent / 100));
+    // Encontrar a próxima regra de fidelidade (para upsell)
+    const nextLoyaltyRule = [...loyaltyRules]
+        .reverse()
+        .find((rule) => rule.minOrderValue > subtotal);
+    const nextLoyaltyRuleFormatted = nextLoyaltyRule
+        ? {
+            minOrderValue: nextLoyaltyRule.minOrderValue,
+            cashbackPercent: nextLoyaltyRule.cashbackPercent,
+            remainingAmount: arredondarMoeda(nextLoyaltyRule.minOrderValue - subtotal),
+        }
+        : null;
     return {
         restaurant,
         itens,
@@ -376,6 +431,7 @@ const carregarContextoPedidoCalculado = async (input) => {
         discountAmount,
         total,
         cashbackEarnedAmount,
+        nextLoyaltyRule: nextLoyaltyRuleFormatted,
     };
 };
 export const buscarRestauranteComCardapioPorSlug = async (slug) => {
@@ -383,6 +439,29 @@ export const buscarRestauranteComCardapioPorSlug = async (slug) => {
     if (!restaurant) {
         return null;
     }
+    // Buscar estatísticas de avaliação
+    const ratings = await db
+        .select({
+        avgStars: sql `avg(${orderRatingsTable.stars})`,
+        count: sql `count(*)`,
+    })
+        .from(orderRatingsTable)
+        .where(and(eq(orderRatingsTable.restaurantId, restaurant.id), eq(orderRatingsTable.isActive, true)));
+    const rating = Number(ratings[0]?.avgStars || 0);
+    const ratingCount = Number(ratings[0]?.count || 0);
+    // Buscar IDs dos produtos mais vendidos para a tag Bestseller
+    const topSellers = await db
+        .select({
+        productId: orderProductsTable.productId,
+        totalQuantity: sql `sum(${orderProductsTable.quantity})`,
+    })
+        .from(orderProductsTable)
+        .innerJoin(ordersTable, eq(ordersTable.id, orderProductsTable.orderId))
+        .where(eq(ordersTable.restaurantId, restaurant.id))
+        .groupBy(orderProductsTable.productId)
+        .orderBy(desc(sql `sum(${orderProductsTable.quantity})`))
+        .limit(10);
+    const topSellerIds = new Set(topSellers.map((s) => s.productId));
     const operatingHours = await db
         .select()
         .from(operatingHoursTable)
@@ -404,7 +483,10 @@ export const buscarRestauranteComCardapioPorSlug = async (slug) => {
             products: [],
         };
         if (row.product) {
-            currentCategory.products.push(row.product);
+            currentCategory.products.push({
+                ...row.product,
+                isBestseller: topSellerIds.has(row.product.id),
+            });
         }
         categoriesMap.set(row.category.id, currentCategory);
     }
@@ -412,39 +494,33 @@ export const buscarRestauranteComCardapioPorSlug = async (slug) => {
         ...restaurant,
         menuCategories: Array.from(categoriesMap.values()),
         operatingHours,
+        rating,
+        ratingCount,
     };
 };
 export const buscarProdutoDoRestaurante = async ({ slug, productId, }) => {
-    const [row] = await db
-        .select({
-        product: productsTable,
-        restaurant: {
-            id: restaurantsTable.id,
-            name: restaurantsTable.name,
-            avatarImageUrl: restaurantsTable.avatarImageUrl,
-            slug: restaurantsTable.slug,
-            status: restaurantsTable.status,
+    const product = await db.query.productsTable.findFirst({
+        where: and(eq(productsTable.id, productId), eq(productsTable.isActive, true)),
+        with: {
+            restaurant: {
+                with: {
+                    operatingHours: true,
+                },
+            },
+            optionGroups: {
+                with: {
+                    options: {
+                        orderBy: asc(productOptionsTable.displayOrder),
+                    },
+                },
+                orderBy: asc(productOptionGroupsTable.displayOrder),
+            },
         },
-    })
-        .from(productsTable)
-        .innerJoin(restaurantsTable, eq(restaurantsTable.id, productsTable.restaurantId))
-        .where(and(eq(productsTable.id, productId), eq(restaurantsTable.slug, slug), eq(productsTable.isActive, true)))
-        .limit(1);
-    if (!row) {
+    });
+    if (!product || product.restaurant.slug !== slug) {
         return null;
     }
-    const operatingHours = await db
-        .select()
-        .from(operatingHoursTable)
-        .where(eq(operatingHoursTable.restaurantId, row.restaurant.id))
-        .orderBy(asc(operatingHoursTable.dayOfWeek));
-    return {
-        ...row.product,
-        restaurant: {
-            ...row.restaurant,
-            operatingHours,
-        },
-    };
+    return product;
 };
 export const buscarPedidosPorTelefone = async (customerPhone) => {
     const pedidos = await db
@@ -485,6 +561,19 @@ export const buscarPedidosPorTelefone = async (customerPhone) => {
         .from(orderProductsTable)
         .innerJoin(productsTable, eq(productsTable.id, orderProductsTable.productId))
         .where(inArray(orderProductsTable.orderId, orderIds));
+    const orderProductIds = itens.map((i) => i.orderProduct.id);
+    const options = orderProductIds.length > 0
+        ? await db
+            .select()
+            .from(orderProductOptionsTable)
+            .where(inArray(orderProductOptionsTable.orderProductId, orderProductIds))
+        : [];
+    const optionsMap = new Map();
+    options.forEach((opt) => {
+        const list = optionsMap.get(opt.orderProductId) ?? [];
+        list.push(opt);
+        optionsMap.set(opt.orderProductId, list);
+    });
     const pedidosNormalizados = pedidos.map(({ order, restaurant, diningTable, courier }) => ({
         ...order,
         restaurant,
@@ -496,6 +585,7 @@ export const buscarPedidosPorTelefone = async (customerPhone) => {
         item: {
             ...item.orderProduct,
             product: item.product,
+            orderProductOptions: optionsMap.get(item.orderProduct.id) ?? [],
         },
     })));
 };
@@ -1121,6 +1211,19 @@ export const buscarPedidoRecebimentoPorId = async (orderId) => {
         .from(orderProductsTable)
         .innerJoin(productsTable, eq(productsTable.id, orderProductsTable.productId))
         .where(eq(orderProductsTable.orderId, orderId));
+    const orderProductIds = itens.map((i) => i.orderProduct.id);
+    const options = orderProductIds.length > 0
+        ? await db
+            .select()
+            .from(orderProductOptionsTable)
+            .where(inArray(orderProductOptionsTable.orderProductId, orderProductIds))
+        : [];
+    const optionsMap = new Map();
+    options.forEach((opt) => {
+        const list = optionsMap.get(opt.orderProductId) ?? [];
+        list.push(opt);
+        optionsMap.set(opt.orderProductId, list);
+    });
     return {
         ...pedido.order,
         restaurant: pedido.restaurant,
@@ -1129,6 +1232,7 @@ export const buscarPedidoRecebimentoPorId = async (orderId) => {
         orderProducts: itens.map((item) => ({
             ...item.orderProduct,
             product: item.product,
+            orderProductOptions: optionsMap.get(item.orderProduct.id) ?? [],
         })),
     };
 };
@@ -1158,6 +1262,16 @@ export const listarCouriersPorSlug = async (slug) => {
         .from(couriersTable)
         .where(and(eq(couriersTable.restaurantId, restaurant.id), eq(couriersTable.isActive, true)))
         .orderBy(asc(couriersTable.name));
+};
+export const buscarPedidoParaRastreamento = async (orderId) => {
+    const pedido = await db.query.ordersTable.findFirst({
+        where: eq(ordersTable.id, orderId),
+        with: {
+            restaurant: true,
+            courier: true,
+        },
+    });
+    return pedido;
 };
 export const despacharPedido = async ({ orderId, courierId, }) => {
     const [updatedOrder] = await db

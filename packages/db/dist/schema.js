@@ -60,6 +60,10 @@ export const restaurantsTable = pgTable("Restaurant", {
     avatarImageUrl: text("avatarImageUrl").notNull(),
     coverImageUrl: text("coverImageUrl").notNull(),
     status: restaurantStatusEnum("status").default("AUTO").notNull(),
+    cashbackPercent: doublePrecision("cashbackPercent").default(0).notNull(),
+    address: text("address"),
+    latitude: doublePrecision("latitude"),
+    longitude: doublePrecision("longitude"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
@@ -209,6 +213,18 @@ export const walletsTable = pgTable("Wallet", {
 }, (table) => ({
     restaurantPhoneUniqueIndex: uniqueIndex("wallet_restaurant_phone_unique").on(table.restaurantId, table.customerPhone),
 }));
+export const loyaltyRulesTable = pgTable("LoyaltyRule", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    restaurantId: uuid("restaurantId")
+        .notNull()
+        .references(() => restaurantsTable.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    minOrderValue: doublePrecision("minOrderValue").default(0).notNull(),
+    cashbackPercent: doublePrecision("cashbackPercent").notNull(),
+    isActive: boolean("isActive").default(true).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
 export const abandonedCartsTable = pgTable("AbandonedCart", {
     id: uuid("id").defaultRandom().primaryKey(),
     sessionId: text("sessionId").notNull(),
@@ -244,6 +260,8 @@ export const couriersTable = pgTable("Courier", {
     phone: text("phone").notNull(),
     vehicleType: text("vehicleType"),
     licensePlate: text("licensePlate"),
+    latitude: doublePrecision("latitude"),
+    longitude: doublePrecision("longitude"),
     isActive: boolean("isActive").default(true).notNull(),
     restaurantId: uuid("restaurantId")
         .notNull()
@@ -285,6 +303,9 @@ export const ordersTable = pgTable("Order", {
     }),
     customerName: text("customerName").notNull(),
     customerPhone: text("customerPhone").notNull(),
+    deliveryAddress: text("deliveryAddress"),
+    deliveryLatitude: doublePrecision("deliveryLatitude"),
+    deliveryLongitude: doublePrecision("deliveryLongitude"),
     scheduledFor: timestamp("scheduledFor"),
     cashbackCreditedAt: timestamp("cashbackCreditedAt"),
     paidAt: timestamp("paidAt"),
@@ -309,6 +330,59 @@ export const orderProductsTable = pgTable("OrderProduct", {
     unitCost: doublePrecision("unitCost").default(0).notNull(),
     lineTotal: doublePrecision("lineTotal").default(0).notNull(),
     productNameSnapshot: text("productNameSnapshot").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+export const productOptionGroupsTable = pgTable("ProductOptionGroup", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    minOptions: integer("minOptions").default(0).notNull(),
+    maxOptions: integer("maxOptions").default(1).notNull(),
+    displayOrder: integer("displayOrder").default(0).notNull(),
+    productId: uuid("productId")
+        .notNull()
+        .references(() => productsTable.id, { onDelete: "cascade" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+export const productOptionsTable = pgTable("ProductOption", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    description: text("description"),
+    price: doublePrecision("price").default(0).notNull(),
+    displayOrder: integer("displayOrder").default(0).notNull(),
+    productOptionGroupId: uuid("productOptionGroupId")
+        .notNull()
+        .references(() => productOptionGroupsTable.id, { onDelete: "cascade" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+export const orderProductOptionsTable = pgTable("OrderProductOption", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    orderProductId: uuid("orderProductId")
+        .notNull()
+        .references(() => orderProductsTable.id, { onDelete: "cascade" }),
+    productOptionId: uuid("productOptionId")
+        .notNull()
+        .references(() => productOptionsTable.id, { onDelete: "set null" }),
+    nameSnapshot: text("nameSnapshot").notNull(),
+    priceSnapshot: doublePrecision("priceSnapshot").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+export const orderRatingsTable = pgTable("OrderRating", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    orderId: integer("orderId")
+        .notNull()
+        .references(() => ordersTable.id, { onDelete: "cascade" }),
+    restaurantId: uuid("restaurantId")
+        .notNull()
+        .references(() => restaurantsTable.id, { onDelete: "cascade" }),
+    customerName: text("customerName").notNull(),
+    stars: integer("stars").notNull(),
+    comment: text("comment"),
+    imageUrl: text("imageUrl"),
+    isActive: boolean("isActive").default(true).notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
@@ -360,6 +434,17 @@ export const restaurantsRelations = relations(restaurantsTable, ({ one, many }) 
     financialCategories: many(financialCategoriesTable),
     financialTransactions: many(financialTransactionsTable),
     aiSettings: one(aiSettingsTable),
+    ratings: many(orderRatingsTable),
+}));
+export const orderRatingsRelations = relations(orderRatingsTable, ({ one }) => ({
+    order: one(ordersTable, {
+        fields: [orderRatingsTable.orderId],
+        references: [ordersTable.id],
+    }),
+    restaurant: one(restaurantsTable, {
+        fields: [orderRatingsTable.restaurantId],
+        references: [restaurantsTable.id],
+    }),
 }));
 export const operatingHoursRelations = relations(operatingHoursTable, ({ one }) => ({
     restaurant: one(restaurantsTable, {
@@ -426,6 +511,20 @@ export const productsRelations = relations(productsTable, ({ one, many }) => ({
     }),
     orderProducts: many(orderProductsTable),
     stockMovements: many(stockMovementsTable),
+    optionGroups: many(productOptionGroupsTable),
+}));
+export const productOptionGroupsRelations = relations(productOptionGroupsTable, ({ one, many }) => ({
+    product: one(productsTable, {
+        fields: [productOptionGroupsTable.productId],
+        references: [productsTable.id],
+    }),
+    options: many(productOptionsTable),
+}));
+export const productOptionsRelations = relations(productOptionsTable, ({ one }) => ({
+    group: one(productOptionGroupsTable, {
+        fields: [productOptionsTable.productOptionGroupId],
+        references: [productOptionGroupsTable.id],
+    }),
 }));
 export const couponsRelations = relations(couponsTable, ({ one, many }) => ({
     restaurant: one(restaurantsTable, {
@@ -433,6 +532,12 @@ export const couponsRelations = relations(couponsTable, ({ one, many }) => ({
         references: [restaurantsTable.id],
     }),
     orders: many(ordersTable),
+}));
+export const loyaltyRulesRelations = relations(loyaltyRulesTable, ({ one }) => ({
+    restaurant: one(restaurantsTable, {
+        fields: [loyaltyRulesTable.restaurantId],
+        references: [restaurantsTable.id],
+    }),
 }));
 export const walletsRelations = relations(walletsTable, ({ one }) => ({
     restaurant: one(restaurantsTable, {
@@ -470,7 +575,7 @@ export const ordersRelations = relations(ordersTable, ({ one, many }) => ({
     orderProducts: many(orderProductsTable),
     stockMovements: many(stockMovementsTable),
 }));
-export const orderProductsRelations = relations(orderProductsTable, ({ one }) => ({
+export const orderProductsRelations = relations(orderProductsTable, ({ one, many }) => ({
     product: one(productsTable, {
         fields: [orderProductsTable.productId],
         references: [productsTable.id],
@@ -478,6 +583,17 @@ export const orderProductsRelations = relations(orderProductsTable, ({ one }) =>
     order: one(ordersTable, {
         fields: [orderProductsTable.orderId],
         references: [ordersTable.id],
+    }),
+    orderProductOptions: many(orderProductOptionsTable),
+}));
+export const orderProductOptionsRelations = relations(orderProductOptionsTable, ({ one }) => ({
+    orderProduct: one(orderProductsTable, {
+        fields: [orderProductOptionsTable.orderProductId],
+        references: [orderProductsTable.id],
+    }),
+    productOption: one(productOptionsTable, {
+        fields: [orderProductOptionsTable.productOptionId],
+        references: [productOptionsTable.id],
     }),
 }));
 export const stockMovementsRelations = relations(stockMovementsTable, ({ one }) => ({

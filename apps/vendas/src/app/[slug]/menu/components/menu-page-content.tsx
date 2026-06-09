@@ -8,7 +8,10 @@ import RestaurantHeader from "./header";
 import OrdersSheet from "./orders-sheet";
 
 interface RestaurantMenuPageContentProps {
-  restaurant: RestaurantComCategoriasEProdutos;
+  restaurant: RestaurantComCategoriasEProdutos & {
+    rating: number;
+    ratingCount: number;
+  };
 }
 
 const RestaurantMenuPageContent = ({

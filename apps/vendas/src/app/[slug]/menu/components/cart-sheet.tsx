@@ -7,11 +7,16 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import type { RestaurantComCategoriasEProdutos } from "@/lib/db";
 
 import { CartContext } from "../contexts/cart";
 import CartPanel from "./cart-panel";
 
-const CartSheet = () => {
+interface CartSheetProps {
+  restaurant: RestaurantComCategoriasEProdutos;
+}
+
+const CartSheet = ({ restaurant }: CartSheetProps) => {
   const { isOpen, toggleCart } = useContext(CartContext);
 
   return (
@@ -24,7 +29,7 @@ const CartSheet = () => {
             o pedido.
           </SheetDescription>
         </SheetHeader>
-        <CartPanel variant="sheet" />
+        <CartPanel variant="sheet" restaurant={restaurant} />
       </SheetContent>
     </Sheet>
   );
