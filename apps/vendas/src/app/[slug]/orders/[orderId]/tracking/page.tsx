@@ -1,60 +1,31 @@
 "use client";
 
-import "leaflet/dist/leaflet.css";
-
 import { Courier, Order, Restaurant } from "@fsw/db";
-import L from "leaflet";
 import { BikeIcon, ChevronLeftIcon, ClockIcon } from "lucide-react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { getOrderTracking } from "../../actions/get-order-tracking";
 
+// Importar o mapa dinamicamente para evitar erros de SSR com Leaflet
+const OrderMap = dynamic(() => import("./components/order-map"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full w-full items-center justify-center bg-slate-100 text-sm text-muted-foreground">
+      Carregando mapa...
+    </div>
+  ),
+});
+
 interface OrderTracking extends Order {
   restaurant: Restaurant;
   courier: Courier | null;
 }
-
-// Corrigir ícones do Leaflet que quebram no Next.js
-const DefaultIcon = L.icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-});
-L.Marker.prototype.options.icon = DefaultIcon;
-
-const restaurantIcon = L.divIcon({
-  html: '<div class="bg-primary p-2 rounded-full border-2 border-white shadow-lg text-white"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></div>',
-  className: "",
-  iconSize: [36, 36],
-  iconAnchor: [18, 18],
-});
-
-const courierIcon = L.divIcon({
-  html: '<div class="bg-blue-600 p-2 rounded-full border-2 border-white shadow-lg text-white animate-bounce"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg></div>',
-  className: "",
-  iconSize: [36, 36],
-  iconAnchor: [18, 18],
-});
-
-const customerIcon = L.divIcon({
-  html: '<div class="bg-emerald-600 p-2 rounded-full border-2 border-white shadow-lg text-white"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg></div>',
-  className: "",
-  iconSize: [36, 36],
-  iconAnchor: [18, 18],
-});
-
-const ChangeView = ({ center }: { center: [number, number] }) => {
-  const map = useMap();
-  map.setView(center);
-  return null;
-};
 
 const TrackingPage = () => {
   const { slug, orderId } = useParams<{ slug: string; orderId: string }>();
@@ -73,14 +44,14 @@ const TrackingPage = () => {
     return () => clearInterval(interval);
   }, [orderId]);
 
-  if (isLoading) return <div className="flex h-screen items-center justify-center">Carregando mapa...</div>;
-  if (!order) return <div className="p-10 text-center">Pedido não encontrado.</div>;
-
-  const restaurantPos: [number, number] = [order.restaurant.latitude || -23.5505, order.restaurant.longitude || -46.6333];
-  const courierPos: [number, number] | null = (order.courier?.latitude && order.courier?.longitude) ? [order.courier.latitude, order.courier.longitude] : null;
-  const customerPos: [number, number] | null = (order.deliveryLatitude && order.deliveryLongitude) ? [order.deliveryLatitude, order.deliveryLongitude] : null;
-
-  const centerPos = courierPos || restaurantPos;
+  if (isLoading)
+    return (
+      <div className="flex h-screen items-center justify-center">
+        Carregando mapa...
+      </div>
+    );
+  if (!order)
+    return <div className="p-10 text-center">Pedido não encontrado.</div>;
 
   return (
     <div className="flex h-screen flex-col bg-slate-50">
@@ -93,33 +64,15 @@ const TrackingPage = () => {
         </Button>
         <div>
           <h1 className="text-lg font-bold">Rastrear Pedido #{orderId}</h1>
-          <p className="text-xs text-muted-foreground">{order.restaurant.name}</p>
+          <p className="text-xs text-muted-foreground">
+            {order.restaurant.name}
+          </p>
         </div>
       </div>
 
       {/* Map */}
       <div className="relative flex-1">
-        <MapContainer center={centerPos} zoom={15} className="h-full w-full">
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-          
-          <Marker position={restaurantPos} icon={restaurantIcon}>
-            <Popup>Restaurante: {order.restaurant.name}</Popup>
-          </Marker>
-
-          {customerPos && (
-            <Marker position={customerPos} icon={customerIcon}>
-              <Popup>Sua Localização</Popup>
-            </Marker>
-          )}
-
-          {courierPos && (
-            <Marker position={courierPos} icon={courierIcon}>
-              <Popup>Entregador: {order.courier?.name}</Popup>
-            </Marker>
-          )}
-
-          <ChangeView center={centerPos} />
-        </MapContainer>
+        <OrderMap order={order} />
 
         {/* Status Overlay */}
         <div className="absolute bottom-6 left-4 right-4 z-[1000]">
@@ -127,7 +80,9 @@ const TrackingPage = () => {
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base font-bold">
-                  {order.status === "OUT_FOR_DELIVERY" ? "🚀 A caminho da sua casa!" : "👨‍🍳 Preparando seu pedido..."}
+                  {order.status === "OUT_FOR_DELIVERY"
+                    ? "🚀 A caminho da sua casa!"
+                    : "👨‍🍳 Preparando seu pedido..."}
                 </CardTitle>
                 <div className="flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-bold text-emerald-700">
                   <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-600" />
@@ -141,17 +96,27 @@ const TrackingPage = () => {
                   <BikeIcon className="text-slate-600" size={24} />
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Entregador</p>
-                  <p className="font-bold text-slate-900">{order.courier?.name || "Aguardando entregador..."}</p>
+                  <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                    Entregador
+                  </p>
+                  <p className="font-bold text-slate-900">
+                    {order.courier?.name || "Aguardando entregador..."}
+                  </p>
                 </div>
               </div>
 
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <ClockIcon size={16} className="text-muted-foreground" />
-                  <span className="text-sm font-medium">Previsão: 15-25 min</span>
+                  <span className="text-sm font-medium">
+                    Previsão: 15-25 min
+                  </span>
                 </div>
-                <Button size="sm" className="rounded-full bg-blue-600 font-bold" asChild>
+                <Button
+                  size="sm"
+                  className="rounded-full bg-blue-600 font-bold"
+                  asChild
+                >
                   <a href={`tel:${order.courier?.phone}`}>Ligar</a>
                 </Button>
               </div>
