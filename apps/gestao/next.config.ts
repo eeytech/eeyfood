@@ -7,9 +7,7 @@ const __dirname = path.dirname(__filename);
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  experimental: {
-    outputFileTracingRoot: path.join(__dirname, "../../"),
-  },
+  outputFileTracingRoot: path.join(__dirname, "../../"),
   transpilePackages: ["@fsw/db"],
   images: {
     remotePatterns: [{ hostname: "u9a6wmr3as.ufs.sh" }],
