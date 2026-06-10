@@ -11,10 +11,8 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [{ hostname: "u9a6wmr3as.ufs.sh" }],
   },
-  experimental: {
-    serverComponentsExternalPackages: ["sharp"],
-    outputFileTracingRoot: path.join(__dirname, "../../"),
-  },
+  serverExternalPackages: ["sharp"],
+  outputFileTracingRoot: path.join(__dirname, "../../"),
 };
 
 export default nextConfig;
