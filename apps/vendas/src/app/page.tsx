@@ -48,22 +48,15 @@ const HomePage = () => {
 
       <div className="z-10 w-full max-w-md space-y-10">
         <div className="space-y-4 text-center">
-          <div className="mx-auto mb-2 flex h-24 w-24 items-center justify-center">
+          <div className="mx-auto flex h-32 w-full items-center justify-center">
             <Image
-              src="/logosemtexto.png"
+              src="/logocomtexto.png"
               alt="eeyFood Logo"
-              width={100}
-              height={100}
+              width={300}
+              height={120}
               className="object-contain"
+              priority
             />
-          </div>
-          <div className="space-y-1">
-            <h1 className="text-5xl font-extrabold tracking-tight text-slate-900">
-              eeyFood
-            </h1>
-            <p className="text-lg font-medium text-slate-500/80">
-              Sua refeição favorita, a um clique de distância.
-            </p>
           </div>
         </div>
 
@@ -109,29 +102,28 @@ const HomePage = () => {
           </CardContent>
         </Card>
 
-        <p className="text-center text-sm font-medium text-slate-400">
-          &copy; {new Date().getFullYear()} eeyFood. Todos os direitos
-          reservados.
-        </p>
-
-        <div className="flex flex-col items-center justify-center space-y-3 pt-2">
-          <div className="flex items-center space-x-6">
+        <div className="flex flex-col items-center space-y-1 text-sm font-medium text-slate-400/80">
+          <p>
+            &copy; {new Date().getFullYear()} eeyFood. Todos os direitos
+            reservados.
+          </p>
+          <div className="flex items-center space-x-4">
             <Link
               href="https://eeytech.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center space-x-2 text-sm font-medium text-slate-500 transition-colors hover:text-primary"
+              className="flex items-center space-x-1.5 transition-colors hover:text-primary"
             >
-              <GlobeIcon size={16} />
+              <GlobeIcon size={14} />
               <span>eeytech.com</span>
             </Link>
             <Link
               href="https://wa.me/5516988063477"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center space-x-2 text-sm font-medium text-slate-500 transition-colors hover:text-green-600"
+              className="flex items-center space-x-1.5 transition-colors hover:text-green-600"
             >
-              <MessageCircleIcon size={16} />
+              <MessageCircleIcon size={14} />
               <span>WhatsApp</span>
             </Link>
           </div>
