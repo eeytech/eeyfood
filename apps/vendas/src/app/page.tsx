@@ -3,8 +3,9 @@
 import { GlobeIcon, MessageCircleIcon, ShoppingBagIcon, UtensilsIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +21,18 @@ import { Label } from "@/components/ui/label";
 const HomePage = () => {
   const [restaurantName, setRestaurantName] = useState("");
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const error = searchParams.get("error");
+    if (error === "not_found") {
+      toast.error("Restaurante não encontrado", {
+        description: "Verifique o nome e tente novamente.",
+      });
+      // Remove error from URL without refreshing
+      router.replace("/");
+    }
+  }, [searchParams, router]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

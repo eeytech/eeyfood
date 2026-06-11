@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 
 import { buscarRestaurantePorSlug } from "@/lib/db";
 
@@ -14,7 +14,7 @@ const RestaurantPage = async ({ params }: RestaurantPageProps) => {
   const restaurant = await buscarRestaurantePorSlug(slug);
 
   if (!restaurant) {
-    return notFound();
+    return redirect("/?error=not_found");
   }
 
   return (

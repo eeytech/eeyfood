@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 
 import { buscarRestauranteComCardapioPorSlug } from "@/lib/db";
 
@@ -23,13 +23,13 @@ const RestaurantMenuPage = async ({
   const { consumptionMethod } = await searchParams;
 
   if (!isConsumptionMethodValid(consumptionMethod)) {
-    return notFound();
+    return redirect("/?error=not_found");
   }
 
   const restaurant = await buscarRestauranteComCardapioPorSlug(slug);
 
   if (!restaurant) {
-    return notFound();
+    return redirect("/?error=not_found");
   }
 
   return <RestaurantMenuPageContent restaurant={restaurant} />;

@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 
 import { buscarProdutoDoRestaurante } from "@/lib/db";
 
@@ -14,7 +14,7 @@ const ProductPage = async ({ params }: ProductPageProps) => {
   const product = await buscarProdutoDoRestaurante({ slug, productId });
 
   if (!product) {
-    return notFound();
+    return redirect("/?error=not_found");
   }
 
   return (
