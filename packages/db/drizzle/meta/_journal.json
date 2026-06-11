@@ -78,6 +78,13 @@
       "when": 1780547000000,
       "tag": "0010_repair_database_sync",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1781150365364,
+      "tag": "0011_burly_goblin_queen",
+      "breakpoints": true
     }
   ]
 }
