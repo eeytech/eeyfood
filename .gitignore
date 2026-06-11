@@ -20,7 +20,7 @@ out/
 # production
 build/
 dist/
-drizzle/
+# drizzle/ is removed to allow migrations to be committed
 
 # misc
 .DS_Store
