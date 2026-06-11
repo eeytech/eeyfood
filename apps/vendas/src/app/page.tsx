@@ -115,7 +115,7 @@ const HomePage = () => {
               className="flex items-center space-x-1.5 transition-colors hover:text-primary"
             >
               <GlobeIcon size={14} />
-              <span>eeytech.com</span>
+              <span>www.eeytech.com</span>
             </Link>
             <Link
               href="https://wa.me/5516988063477"
