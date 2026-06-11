@@ -45,7 +45,7 @@ export default function RootLayout({
         <PWARegister />
         <PWAInstallPrompt />
         <CartProvider>{children}</CartProvider>
-        <Toaster position="top-center" richColors />
+        <Toaster position="top-center" />
       </body>
     </html>
   );
