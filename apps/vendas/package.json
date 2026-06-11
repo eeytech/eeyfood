@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "rm -rf .next && next build",
-    "start": "next start",
+    "build": "find .next -mindepth 1 -maxdepth 1 ! -name 'cache' -exec rm -rf {} + && next build && mkdir -p .next/standalone/apps/vendas/.next && cp -r .next/static .next/standalone/apps/vendas/.next/static && cp -r public .next/standalone/apps/vendas/public",
+    "start": "node .next/standalone/apps/vendas/server.js",
     "lint": "eslint . --ignore-pattern .next --ignore-pattern node_modules"
   },
   "dependencies": {
