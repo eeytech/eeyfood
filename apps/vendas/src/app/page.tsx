@@ -1,6 +1,8 @@
 "use client";
 
-import { ShoppingBagIcon, UtensilsIcon } from "lucide-react";
+import { GlobeIcon, MessageCircleIcon, ShoppingBagIcon, UtensilsIcon } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -46,12 +48,18 @@ const HomePage = () => {
 
       <div className="z-10 w-full max-w-md space-y-10">
         <div className="space-y-4 text-center">
-          <div className="mx-auto mb-2 flex h-20 w-20 items-center justify-center rounded-[28px] bg-destructive text-white shadow-xl shadow-destructive/30 ring-8 ring-white/50">
-            <UtensilsIcon size={38} />
+          <div className="mx-auto mb-2 flex h-24 w-24 items-center justify-center">
+            <Image
+              src="/logosemtexto.png"
+              alt="eeyFood Logo"
+              width={100}
+              height={100}
+              className="object-contain"
+            />
           </div>
           <div className="space-y-1">
             <h1 className="text-5xl font-extrabold tracking-tight text-slate-900">
-              EeyFood
+              eeyFood
             </h1>
             <p className="text-lg font-medium text-slate-500/80">
               Sua refeição favorita, a um clique de distância.
@@ -102,9 +110,32 @@ const HomePage = () => {
         </Card>
 
         <p className="text-center text-sm font-medium text-slate-400">
-          &copy; {new Date().getFullYear()} EeyFood. Todos os direitos
+          &copy; {new Date().getFullYear()} eeyFood. Todos os direitos
           reservados.
         </p>
+
+        <div className="flex flex-col items-center justify-center space-y-3 pt-2">
+          <div className="flex items-center space-x-6">
+            <Link
+              href="https://eeytech.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center space-x-2 text-sm font-medium text-slate-500 transition-colors hover:text-primary"
+            >
+              <GlobeIcon size={16} />
+              <span>eeytech.com</span>
+            </Link>
+            <Link
+              href="https://wa.me/5516988063477"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center space-x-2 text-sm font-medium text-slate-500 transition-colors hover:text-green-600"
+            >
+              <MessageCircleIcon size={16} />
+              <span>WhatsApp</span>
+            </Link>
+          </div>
+        </div>
       </div>
     </main>
   );
