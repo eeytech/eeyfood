@@ -251,7 +251,7 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
           <div className="hidden lg:block lg:w-[340px]">
             <div className="rounded-[28px] border bg-white px-5 py-4 shadow-sm">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                Sacola atual
+                Pedido atual
               </p>
               <div className="mt-3 flex items-end justify-between gap-4">
                 <div>
@@ -261,7 +261,7 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
                   <p className="text-sm text-muted-foreground">
                     {totalQuantity === 0
                       ? "Nenhum item selecionado"
-                      : `${String(totalQuantity)} ${totalQuantity === 1 ? "item" : "itens"} na sacola`}
+                      : `${String(totalQuantity)} ${totalQuantity === 1 ? "item" : "itens"} no pedido`}
                   </p>
                 </div>
                 <Button
@@ -419,9 +419,6 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
                   className="scroll-mt-20 space-y-5"
                 >
                   <div>
-                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
-                      Categoria
-                    </p>
                     <h3 className="text-3xl font-semibold tracking-tight text-slate-950">
                       {category.name}
                     </h3>

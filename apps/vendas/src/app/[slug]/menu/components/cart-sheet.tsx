@@ -25,8 +25,7 @@ const CartSheet = ({ restaurant }: CartSheetProps) => {
         <SheetHeader className="pb-4">
           <SheetTitle className="text-left">Resumo do pedido</SheetTitle>
           <SheetDescription className="sr-only">
-            Confira os itens que voce adicionou a sua sacola antes de finalizar
-            o pedido.
+            Confira os itens que voce adicionou ao seu pedido antes de finalizar.
           </SheetDescription>
         </SheetHeader>
         <CartPanel variant="sheet" restaurant={restaurant} />

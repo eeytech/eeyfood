@@ -43,7 +43,7 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
         <CardHeader className={variant === "sheet" ? "px-0 pt-0" : "px-6 pt-8"}>
           <CardTitle className="flex items-center gap-2 text-xl font-bold tracking-tight">
             <ShoppingBagIcon size={20} className="text-primary" aria-hidden="true" />
-            Sua sacola
+            Seu pedido
           </CardTitle>
           <CardDescription className="text-sm" aria-live="polite">
             {hasProducts
