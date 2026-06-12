@@ -861,20 +861,53 @@ export const buscarRestauranteComCardapioPorSlug = async (
   const rating = Number(ratings[0]?.avgStars || 0);
   const ratingCount = Number(ratings[0]?.count || 0);
 
-  // Buscar IDs dos produtos mais vendidos para a tag Bestseller
-  const topSellers = await db
+  // Contar produtos ativos por categoria
+  const categoryProductCounts = await db
+    .select({
+      categoryId: menuCategoriesTable.id,
+      activeCount: sql<number>`count(case when ${productsTable.isActive} = true then 1 end)`.as('activeCount'),
+    })
+    .from(menuCategoriesTable)
+    .leftJoin(productsTable, eq(productsTable.menuCategoryId, menuCategoriesTable.id))
+    .where(
+      and(
+        eq(menuCategoriesTable.restaurantId, restaurant.id),
+        eq(menuCategoriesTable.isActive, true),
+      ),
+    )
+    .groupBy(menuCategoriesTable.id);
+
+  const categoryCountMap = new Map(
+    categoryProductCounts.map((cc) => [cc.categoryId, cc.activeCount]),
+  );
+
+  // Buscar bestsellers por categoria usando window function
+  // A consulta agrupa produtos por categoria, soma as vendas,
+  // e ordena por quantidade vendida dentro de cada categoria
+  const bestsellersRaw = await db
     .select({
       productId: orderProductsTable.productId,
-      totalQuantity: sql<number>`sum(${orderProductsTable.quantity})`,
+      categoryId: productsTable.menuCategoryId,
+      totalQuantity: sql<number>`sum(${orderProductsTable.quantity})`.as('totalQuantity'),
+      rowNumber: sql<number>`row_number() over (partition by ${productsTable.menuCategoryId} order by sum(${orderProductsTable.quantity}) desc, ${productsTable.id})`.as('rowNumber'),
     })
     .from(orderProductsTable)
     .innerJoin(ordersTable, eq(ordersTable.id, orderProductsTable.orderId))
+    .innerJoin(productsTable, eq(productsTable.id, orderProductsTable.productId))
     .where(eq(ordersTable.restaurantId, restaurant.id))
-    .groupBy(orderProductsTable.productId)
-    .orderBy(desc(sql`sum(${orderProductsTable.quantity})`))
-    .limit(10);
+    .groupBy(orderProductsTable.productId, productsTable.menuCategoryId, productsTable.id);
 
-  const topSellerIds = new Set(topSellers.map((s) => s.productId));
+  // Determinar bestsellers baseado nas regras de negócio:
+  // - Categorias com ≤5 produtos: TOP 1
+  // - Categorias com >5 produtos: TOP 3
+  const topSellerIds = new Set<string>();
+  for (const product of bestsellersRaw) {
+    const activeCount = categoryCountMap.get(product.categoryId) || 0;
+    const limit = activeCount <= 5 ? 1 : 3;
+    if (product.rowNumber <= limit) {
+      topSellerIds.add(product.productId);
+    }
+  }
 
   const operatingHours = await db
     .select()

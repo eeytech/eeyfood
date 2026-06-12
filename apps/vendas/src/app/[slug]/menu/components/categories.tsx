@@ -226,7 +226,7 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
               >
                 <ClockIcon size={12} />
                 {isOpen ? (
-                  `Aberto • Fecha às ${closeTime || "--:--"}`
+                  closeTime ? `Aberto • Fecha às ${closeTime}` : "Aberto e pronto para receber pedidos"
                 ) : nextOpening ? (
                   `Fechado • Abre ${
                     nextOpening.dayOfWeek === new Date().getDay()

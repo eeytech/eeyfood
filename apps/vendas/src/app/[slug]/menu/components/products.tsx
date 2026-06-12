@@ -58,7 +58,7 @@ const Products = ({ products, restaurant }: ProductsProps) => {
               />
               {product.isBestseller && (
                 <div 
-                  className="absolute left-4 top-4 flex items-center gap-1.5 rounded-full bg-rose-600 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-widest text-white shadow-xl shadow-rose-950/20"
+                  className="absolute left-4 top-4 flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-widest text-white shadow-xl shadow-secondary/30"
                   aria-label="Item muito popular"
                 >
                   <FlameIcon size={12} className="fill-white" aria-hidden="true" />
