@@ -1,5 +1,6 @@
-import { ReactNode } from "react";
 import { Metadata } from "next";
+import { ReactNode } from "react";
+
 import { buscarRestaurantePorSlug } from "@/lib/db";
 
 interface RestaurantLayoutProps {
