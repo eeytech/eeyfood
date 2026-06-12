@@ -40,7 +40,7 @@ const RestaurantHeader = ({ restaurant, onOrdersClick }: RestaurantHeaderProps) 
         <Button
           variant="secondary"
           size="icon"
-          className="rounded-full border border-white/40 bg-white/85 backdrop-blur"
+          className="rounded-full border-none bg-secondary text-secondary-foreground shadow-lg transition-transform hover:scale-105 hover:bg-secondary-hover"
           onClick={handleBackClick}
         >
           <ChevronLeftIcon />
@@ -48,7 +48,7 @@ const RestaurantHeader = ({ restaurant, onOrdersClick }: RestaurantHeaderProps) 
         <Button
           variant="secondary"
           size="icon"
-          className="rounded-full border border-white/40 bg-white/85 backdrop-blur"
+          className="rounded-full border-none bg-secondary text-secondary-foreground shadow-lg transition-transform hover:scale-105 hover:bg-secondary-hover"
           onClick={handleOrdersClick}
         >
           <ScrollTextIcon />

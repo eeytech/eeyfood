@@ -1,19 +1,52 @@
 import type { OperatingHours, RestaurantStatus } from "@fsw/db";
 
+const getBrazilTime = () => {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Sao_Paulo",
+    weekday: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+
+  let dayOfWeekStr = "";
+  let hours = 0;
+  let minutes = 0;
+
+  for (const part of parts) {
+    if (part.type === "weekday") dayOfWeekStr = part.value;
+    if (part.type === "hour") hours = parseInt(part.value);
+    if (part.type === "minute") minutes = parseInt(part.value);
+  }
+
+  const weekdays = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
+  const dayOfWeek = weekdays.indexOf(dayOfWeekStr);
+
+  return { dayOfWeek, hours, minutes };
+};
+
 export const isRestaurantOpen = (
   status: RestaurantStatus,
   operatingHours: OperatingHours[],
 ) => {
-  if (status === "ALWAYS_OPEN") return true;
-  if (status === "ALWAYS_CLOSED") return false;
+  if (status === "ALWAYS_OPEN") return { isOpen: true };
+  if (status === "ALWAYS_CLOSED") return { isOpen: false };
 
-  const now = new Date();
-  const dayOfWeek = now.getDay(); // 0 (Sunday) to 6 (Saturday)
-  const currentTime = now.getHours() * 60 + now.getMinutes();
+  const { dayOfWeek, hours, minutes } = getBrazilTime();
+  const currentTime = hours * 60 + minutes;
 
   const todayHours = operatingHours.find((h) => h.dayOfWeek === dayOfWeek);
 
-  if (!todayHours) return false;
+  if (!todayHours) return { isOpen: false };
 
   const [openH, openM] = todayHours.openTime.split(":").map(Number);
   const [closeH, closeM] = todayHours.closeTime.split(":").map(Number);
@@ -21,17 +54,24 @@ export const isRestaurantOpen = (
   const openTimeMinutes = openH * 60 + openM;
   const closeTimeMinutes = closeH * 60 + closeM;
 
+  let isOpen = false;
+
   // Handle shifts that cross midnight
   if (closeTimeMinutes < openTimeMinutes) {
-    return currentTime >= openTimeMinutes || currentTime <= closeTimeMinutes;
+    isOpen = currentTime >= openTimeMinutes || currentTime <= closeTimeMinutes;
+  } else {
+    isOpen = currentTime >= openTimeMinutes && currentTime <= closeTimeMinutes;
   }
 
-  return currentTime >= openTimeMinutes && currentTime <= closeTimeMinutes;
+  return { 
+    isOpen, 
+    closeTime: isOpen ? todayHours.closeTime : undefined 
+  };
 };
 
 export const getNextOpeningTime = (operatingHours: OperatingHours[]) => {
-  const now = new Date();
-  const dayOfWeek = now.getDay();
+  const { dayOfWeek, hours, minutes } = getBrazilTime();
+  const currentTimeMinutes = hours * 60 + minutes;
   
   // Sort hours by day and time
   const sortedHours = [...operatingHours].sort((a, b) => {
@@ -51,8 +91,7 @@ export const getNextOpeningTime = (operatingHours: OperatingHours[]) => {
         // Today: check if opening is in the future
         const [openH, openM] = h.openTime.split(":").map(Number);
         const openTimeMinutes = openH * 60 + openM;
-        const currentTimeMinutes = now.getHours() * 60 + now.getMinutes();
-        
+
         if (openTimeMinutes > currentTimeMinutes) {
           return h;
         }

@@ -145,7 +145,7 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
   const { products, total, toggleCart, totalQuantity } =
     useContext(CartContext);
 
-  const isOpen = isRestaurantOpen(restaurant.status, restaurant.operatingHours);
+  const { isOpen, closeTime } = isRestaurantOpen(restaurant.status, restaurant.operatingHours);
   const nextOpening = getNextOpeningTime(restaurant.operatingHours);
 
   const categoryIds = useMemo(
@@ -221,14 +221,14 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
                 className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium ${
                   isOpen
                     ? "bg-emerald-50 text-emerald-700"
-                    : "bg-rose-50 text-rose-700"
+                    : "bg-primary/10 text-primary"
                 }`}
               >
                 <ClockIcon size={12} />
                 {isOpen ? (
-                  "Aberto e pronto para receber pedidos"
+                  `Aberto • Fecha às ${closeTime || "--:--"}`
                 ) : nextOpening ? (
-                  `Fechado - Abre ${
+                  `Fechado • Abre ${
                     nextOpening.dayOfWeek === new Date().getDay()
                       ? "às "
                       : [
