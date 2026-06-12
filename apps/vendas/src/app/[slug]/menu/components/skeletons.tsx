@@ -33,4 +33,4 @@ const CategoryNavSkeleton = () => (
   </div>
 );
 
-export { ProductCardSkeleton, CategoryNavSkeleton };
+export { CategoryNavSkeleton, ProductCardSkeleton };
