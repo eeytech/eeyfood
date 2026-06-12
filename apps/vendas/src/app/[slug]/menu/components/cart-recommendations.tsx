@@ -66,11 +66,11 @@ const CartRecommendations = () => {
               />
             </div>
             <div className="flex flex-col gap-1 px-1">
-              <p className="truncate text-[11px] font-bold text-slate-800">
+              <p className="truncate text-xs font-bold text-slate-800">
                 {product.name}
               </p>
               <div className="flex items-center justify-between gap-1">
-                <span className="text-[11px] font-extrabold text-primary">
+                <span className="text-xs font-extrabold text-primary">
                   {formatCurrency(product.price)}
                 </span>
                 <Button

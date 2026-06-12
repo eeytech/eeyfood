@@ -280,7 +280,7 @@ const ProductDetailsContent = ({
                 maxLength={200}
                 className="min-h-[80px] rounded-xl border-slate-200 focus-visible:ring-destructive text-sm"
               />
-              <p className="text-right text-[10px] text-slate-400">
+              <p className="text-right text-xs text-slate-400">
                 {comment.length}/200
               </p>
             </div>

@@ -519,25 +519,25 @@ const FinishOrderSheet = ({
           <div className="flex flex-1 flex-col overflow-hidden">
             <div className="flex-1 overflow-hidden">
               <ScrollArea className="h-full">
-                <div className="p-6">
-                  <SheetHeader className="pb-4">
-                    <SheetTitle className="flex items-center gap-2 text-left">
-                      <CheckCircle2Icon className="text-green-600" />
+                <div className="p-4">
+                  <SheetHeader className="pb-3">
+                    <SheetTitle className="flex items-center gap-2 text-left text-lg">
+                      <CheckCircle2Icon className="text-green-600" size={20} />
                       Pedido recebido
                     </SheetTitle>
-                    <SheetDescription>
+                    <SheetDescription className="text-sm">
                       Seu pedido já foi salvo e a equipe do restaurante foi
                       avisada.
                     </SheetDescription>
                   </SheetHeader>
-                  <div className="space-y-4 py-5">
-                    <div className="rounded-3xl border border-green-100 bg-green-50 p-4 text-sm text-green-900">
+                  <div className="space-y-3 py-4">
+                    <div className="rounded-2xl border border-green-100 bg-green-50 p-3 text-xs text-green-900">
                       {pedidoOfflineConcluido.paymentMethod === "DINHEIRO"
                         ? "O pagamento será feito em dinheiro no balcão ou na entrega."
                         : "O pagamento será concluído na maquininha no balcão ou na entrega."}
                     </div>
 
-                    <div className="rounded-3xl border bg-muted p-4 text-sm">
+                    <div className="rounded-2xl border bg-muted p-3 text-xs">
                       Total registrado:{" "}
                       <strong>
                         {formatCurrency(pedidoOfflineConcluido.total)}
@@ -545,7 +545,7 @@ const FinishOrderSheet = ({
                     </div>
 
                     {pedidoOfflineConcluido.scheduledFor ? (
-                      <div className="rounded-3xl border bg-muted p-4 text-sm">
+                      <div className="rounded-2xl border bg-muted p-3 text-xs">
                         Pedido agendado para{" "}
                         <strong>
                           {formatScheduledDate(
@@ -557,7 +557,7 @@ const FinishOrderSheet = ({
                     ) : null}
 
                     {pedidoOfflineConcluido.changeFor ? (
-                      <div className="rounded-3xl border bg-muted p-4 text-sm">
+                      <div className="rounded-2xl border bg-muted p-3 text-xs">
                         Troco solicitado para{" "}
                         <strong>
                           {formatCurrency(pedidoOfflineConcluido.changeFor)}
@@ -569,12 +569,12 @@ const FinishOrderSheet = ({
                 </div>
               </ScrollArea>
             </div>
-            <div className="flex flex-col gap-3 p-6 border-t bg-background">
-              <Button className="rounded-full" onClick={handleViewOrders}>
+            <div className="flex flex-col gap-2.5 p-4 border-t bg-background">
+              <Button className="rounded-full h-10 text-sm" onClick={handleViewOrders}>
                 Ver meus pedidos
               </Button>
               <Button
-                className="rounded-full"
+                className="rounded-full h-10 text-sm"
                 variant="outline"
                 onClick={() => handleSheetOpenChange(false)}
               >
@@ -595,36 +595,36 @@ const FinishOrderSheet = ({
             >
               <div className="flex-1 overflow-hidden">
                 <ScrollArea className="h-full">
-                  <div className="p-6">
-                    <SheetHeader className="pb-4">
-                      <SheetTitle className="text-left">
+                  <div className="p-4">
+                    <SheetHeader className="pb-3">
+                      <SheetTitle className="text-left text-lg">
                         Finalizar pedido
                       </SheetTitle>
-                      <SheetDescription>
+                      <SheetDescription className="text-xs">
                         Informe seus dados, valide os benefícios e escolha como
                         prefere pagar.
                       </SheetDescription>
                     </SheetHeader>
                     
-                    <div className="space-y-10 py-8">
+                    <div className="space-y-8 py-6">
                       {/* Identificação */}
                       <section>
-                        <SectionHeader icon={<UserIcon size={18} />} title="Identificação" />
-                        <div className="space-y-4">
+                        <SectionHeader icon={<UserIcon size={16} />} title="Identificação" />
+                        <div className="space-y-3">
                           <FormField
                             control={form.control}
                             name="name"
                             render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Seu nome</FormLabel>
+                              <FormItem className="space-y-1">
+                                <FormLabel className="text-xs">Seu nome</FormLabel>
                                 <FormControl>
                                   <Input
                                     placeholder="Digite seu nome..."
-                                    className="rounded-2xl"
+                                    className="rounded-xl h-9 text-sm"
                                     {...field}
                                   />
                                 </FormControl>
-                                <FormMessage />
+                                <FormMessage className="text-[10px]" />
                               </FormItem>
                             )}
                           />
@@ -633,18 +633,18 @@ const FinishOrderSheet = ({
                             control={form.control}
                             name="phone"
                             render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Seu celular</FormLabel>
+                              <FormItem className="space-y-1">
+                                <FormLabel className="text-xs">Seu celular</FormLabel>
                                 <FormControl>
                                   <PatternFormat
                                     placeholder="Digite seu celular..."
                                     format="(##) #####-####"
                                     customInput={Input}
-                                    className="rounded-2xl"
+                                    className="rounded-xl h-9 text-sm"
                                     {...field}
                                   />
                                 </FormControl>
-                                <FormMessage />
+                                <FormMessage className="text-[10px]" />
                               </FormItem>
                             )}
                           />
@@ -654,13 +654,13 @@ const FinishOrderSheet = ({
                       {/* Entrega / Agendamento */}
                       {allowsScheduling && (
                         <section>
-                          <SectionHeader icon={<MapPinIcon size={18} />} title="Entrega / Retirada" />
-                          <div className="rounded-[28px] border bg-slate-50/50 p-5 space-y-4">
+                          <SectionHeader icon={<MapPinIcon size={16} />} title="Entrega / Retirada" />
+                          <div className="rounded-[24px] border bg-slate-50/50 p-4 space-y-3">
                             <div className="space-y-1">
-                              <p className="text-sm font-semibold">
+                              <p className="text-xs font-semibold">
                                 Horário da {schedulingLabel}
                               </p>
-                              <p className="text-xs text-muted-foreground leading-relaxed">
+                              <p className="text-[10px] text-muted-foreground leading-relaxed">
                                 Escolha se deseja receber o pedido o quanto antes
                                 ou em um horário agendado.
                               </p>
@@ -670,9 +670,9 @@ const FinishOrderSheet = ({
                               control={form.control}
                               name="fulfillmentTiming"
                               render={({ field }) => (
-                                <FormItem className="space-y-3">
+                                <FormItem className="space-y-2">
                                   <FormControl>
-                                    <div className="grid gap-3">
+                                    <div className="grid gap-2.5">
                                       {[
                                         {
                                           value: "ASAP" as const,
@@ -692,23 +692,23 @@ const FinishOrderSheet = ({
                                           key={option.value}
                                           type="button"
                                           onClick={() => field.onChange(option.value)}
-                                          className={`rounded-2xl border px-4 py-3 text-left transition-all ${
+                                          className={`rounded-xl border px-3 py-2 text-left transition-all ${
                                             field.value === option.value
                                               ? "border-primary bg-primary/5 ring-1 ring-primary/20"
                                               : "border-border bg-background hover:bg-slate-50"
                                           }`}
                                         >
-                                          <p className="text-sm font-bold">
+                                          <p className="text-xs font-bold">
                                             {option.title}
                                           </p>
-                                          <p className="text-xs text-muted-foreground">
+                                          <p className="text-[10px] text-muted-foreground">
                                             {option.description}
                                           </p>
                                         </button>
                                       ))}
                                     </div>
                                   </FormControl>
-                                  <FormMessage />
+                                  <FormMessage className="text-[10px]" />
                                 </FormItem>
                               )}
                             />
@@ -718,28 +718,28 @@ const FinishOrderSheet = ({
                                 control={form.control}
                                 name="scheduledFor"
                                 render={({ field }) => (
-                                  <FormItem className="animate-in fade-in slide-in-from-top-2 duration-300">
-                                    <FormLabel className="text-xs font-bold uppercase text-slate-400">Data e hora</FormLabel>
+                                  <FormItem className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-1.5">
+                                    <FormLabel className="text-[10px] font-bold uppercase text-slate-400">Data e hora</FormLabel>
                                     <Select
                                       onValueChange={field.onChange}
                                       defaultValue={field.value}
                                       value={field.value}
                                     >
                                       <FormControl>
-                                        <SelectTrigger className="h-12 rounded-xl">
+                                        <SelectTrigger className="h-10 rounded-xl text-sm">
                                           <SelectValue placeholder="Escolha um horário..." />
                                         </SelectTrigger>
                                       </FormControl>
-                                      <SelectContent className="rounded-2xl">
+                                      <SelectContent className="rounded-xl">
                                         {schedulingSlots.length > 0 ? (
                                           schedulingSlots.map((group) => (
                                             <SelectGroup key={group.date}>
-                                              <SelectLabel className="text-primary font-bold">{group.label}</SelectLabel>
+                                              <SelectLabel className="text-primary font-bold text-xs">{group.label}</SelectLabel>
                                               {group.items.map((slot) => (
                                                 <SelectItem 
                                                   key={slot.value} 
                                                   value={slot.value}
-                                                  className="rounded-lg"
+                                                  className="rounded-lg text-sm"
                                                 >
                                                   {slot.label}
                                                 </SelectItem>
@@ -747,13 +747,13 @@ const FinishOrderSheet = ({
                                             </SelectGroup>
                                           ))
                                         ) : (
-                                          <div className="p-4 text-center text-xs text-muted-foreground">
+                                          <div className="p-3 text-center text-xs text-muted-foreground">
                                             {isLoading ? "Carregando horários..." : "Nenhum horário disponível."}
                                           </div>
                                         )}
                                       </SelectContent>
                                     </Select>
-                                    <FormMessage />
+                                    <FormMessage className="text-[10px]" />
                                   </FormItem>
                                 )}
                               />
@@ -764,20 +764,20 @@ const FinishOrderSheet = ({
 
                       {/* Benefícios */}
                       <section>
-                        <SectionHeader icon={<TicketPercentIcon size={18} />} title="Benefícios" />
-                        <div className="rounded-[28px] border bg-slate-50/50 p-5 space-y-6">
+                        <SectionHeader icon={<TicketPercentIcon size={16} />} title="Benefícios" />
+                        <div className="rounded-[24px] border bg-slate-50/50 p-4 space-y-4">
                           <FormField
                             control={form.control}
                             name="couponCode"
                             render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Cupom de desconto</FormLabel>
+                              <FormItem className="space-y-1.5">
+                                <FormLabel className="text-xs">Cupom de desconto</FormLabel>
                                 <div className="flex gap-2">
                                   <FormControl>
                                     <Input
                                       placeholder="Ex.: BEMVINDO10"
                                       autoCapitalize="characters"
-                                      className="rounded-xl uppercase"
+                                      className="rounded-xl uppercase h-9 text-sm"
                                       {...field}
                                       value={field.value ?? ""}
                                     />
@@ -785,18 +785,18 @@ const FinishOrderSheet = ({
                                   <Button
                                     type="button"
                                     variant="outline"
-                                    className="rounded-xl px-4"
+                                    className="rounded-xl h-9 px-3 text-xs"
                                     disabled={isValidatingBenefits || !watchedPhone}
                                     onClick={() => handleValidateBenefits()}
                                   >
                                     {isValidatingBenefits ? (
-                                      <Loader2Icon className="animate-spin h-4 w-4" />
+                                      <Loader2Icon className="animate-spin h-3.5 w-3.5" />
                                     ) : (
                                       "Aplicar"
                                     )}
                                   </Button>
                                 </div>
-                                <FormMessage />
+                                <FormMessage className="text-[10px]" />
                                 {!watchedPhone && (
                                   <p className="text-[10px] text-muted-foreground mt-1 italic">
                                     * Informe seu celular para aplicar cupons.
@@ -807,16 +807,16 @@ const FinishOrderSheet = ({
                           />
 
                           {benefits ? (
-                            <div className="space-y-3 animate-in fade-in duration-500">
-                              <div className="rounded-2xl border bg-white p-4 text-sm shadow-sm">
+                            <div className="space-y-2.5 animate-in fade-in duration-500">
+                              <div className="rounded-xl border bg-white p-3 text-sm shadow-sm">
                                 <div className="flex items-center justify-between gap-3">
-                                  <div className="flex items-center gap-3">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                                      <WalletCardsIcon size={20} />
+                                  <div className="flex items-center gap-2.5">
+                                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                      <WalletCardsIcon size={18} />
                                     </div>
                                     <div>
-                                      <p className="font-bold text-slate-800">Seu Cashback</p>
-                                      <p className="text-xs text-muted-foreground">
+                                      <p className="font-bold text-slate-800 text-xs">Seu Cashback</p>
+                                      <p className="text-[10px] text-muted-foreground">
                                         Saldo: <strong>{formatCurrency(benefits.wallet?.currentBalance ?? 0)}</strong>
                                       </p>
                                     </div>
@@ -826,7 +826,7 @@ const FinishOrderSheet = ({
                                     <Button
                                       type="button"
                                       variant={useWalletBalance ? "default" : "outline"}
-                                      className="h-8 rounded-full text-xs px-4"
+                                      className="h-7 rounded-full text-[10px] px-3"
                                       disabled={isValidatingBenefits}
                                       onClick={handleToggleWalletBalance}
                                     >
@@ -836,7 +836,7 @@ const FinishOrderSheet = ({
                                 </div>
 
                                 {useWalletBalance && benefits.wallet?.availableToRedeem ? (
-                                  <p className="mt-3 text-xs font-semibold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 inline-block">
+                                  <p className="mt-2 text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 inline-block">
                                     Resgate de {formatCurrency(benefits.wallet.availableToRedeem)} aplicado!
                                   </p>
                                 ) : null}
@@ -848,47 +848,47 @@ const FinishOrderSheet = ({
 
                       {/* Pagamento */}
                       <section>
-                        <SectionHeader icon={<HandCoinsIcon size={18} />} title="Pagamento" />
-                        <div className="space-y-4">
+                        <SectionHeader icon={<HandCoinsIcon size={16} />} title="Pagamento" />
+                        <div className="space-y-3">
                           <FormField
                             control={form.control}
                             name="paymentMethod"
                             render={({ field }) => (
-                              <FormItem className="space-y-3">
+                              <FormItem className="space-y-2.5">
                                 <FormControl>
-                                  <div className="grid gap-3">
+                                  <div className="grid gap-2.5">
                                     {paymentOptions.map((option) => (
                                       <button
                                         key={option.value}
                                         type="button"
                                         onClick={() => field.onChange(option.value)}
-                                        className={`flex items-center gap-4 rounded-2xl border px-4 py-4 text-left transition-all ${
+                                        className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-left transition-all ${
                                           field.value === option.value
                                             ? "border-primary bg-primary/5 ring-1 ring-primary/20"
                                             : "border-border bg-background hover:bg-slate-50"
                                         }`}
                                       >
-                                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted">
                                           {option.icon}
                                         </div>
                                         <div className="flex-1">
-                                          <p className="text-sm font-bold">
+                                          <p className="text-xs font-bold">
                                             {option.titulo}
                                           </p>
-                                          <p className="text-xs text-muted-foreground">
+                                          <p className="text-[10px] text-muted-foreground leading-tight">
                                             {option.descricao}
                                           </p>
                                         </div>
-                                        <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${
+                                        <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${
                                           field.value === option.value ? "border-primary" : "border-slate-300"
                                         }`}>
-                                          {field.value === option.value && <div className="h-2.5 w-2.5 rounded-full bg-primary" />}
+                                          {field.value === option.value && <div className="h-2 w-2 rounded-full bg-primary" />}
                                         </div>
                                       </button>
                                     ))}
                                   </div>
                                 </FormControl>
-                                <FormMessage />
+                                <FormMessage className="text-[10px]" />
                               </FormItem>
                             )}
                           />
@@ -898,17 +898,17 @@ const FinishOrderSheet = ({
                               control={form.control}
                               name="changeFor"
                               render={({ field }) => (
-                                <FormItem className="animate-in fade-in slide-in-from-top-2">
-                                  <FormLabel>Troco para quanto?</FormLabel>
+                                <FormItem className="animate-in fade-in slide-in-from-top-2 space-y-1">
+                                  <FormLabel className="text-xs">Troco para quanto?</FormLabel>
                                   <FormControl>
                                     <Input
                                       placeholder="Ex.: 50,00"
                                       inputMode="decimal"
-                                      className="rounded-xl"
+                                      className="rounded-xl h-9 text-sm"
                                       {...field}
                                     />
                                   </FormControl>
-                                  <FormMessage />
+                                  <FormMessage className="text-[10px]" />
                                 </FormItem>
                               )}
                             />
@@ -918,52 +918,52 @@ const FinishOrderSheet = ({
 
                       {/* Resumo */}
                       <section>
-                        <SectionHeader icon={<ShoppingBagIcon size={18} />} title="Resumo do Pedido" />
-                        <div className="rounded-[32px] border bg-slate-50/80 p-6 space-y-3">
-                          <div className="flex items-center justify-between text-sm">
+                        <SectionHeader icon={<ShoppingBagIcon size={16} />} title="Resumo do Pedido" />
+                        <div className="rounded-[24px] border bg-slate-50/80 p-4 space-y-2.5">
+                          <div className="flex items-center justify-between text-xs">
                             <span className="text-slate-500">Subtotal</span>
                             <span className="font-semibold">{formatCurrency(checkoutSummary.subtotal)}</span>
                           </div>
 
                           {checkoutSummary.couponDiscountAmount > 0 && (
-                            <div className="flex items-center justify-between text-sm text-emerald-600 font-medium">
+                            <div className="flex items-center justify-between text-xs text-emerald-600 font-medium">
                               <span>Cupom de Desconto</span>
                               <span>-{formatCurrency(checkoutSummary.couponDiscountAmount)}</span>
                             </div>
                           )}
 
                           {checkoutSummary.cashbackRedeemedAmount > 0 && (
-                            <div className="flex items-center justify-between text-sm text-emerald-600 font-medium">
+                            <div className="flex items-center justify-between text-xs text-emerald-600 font-medium">
                               <span>Cashback Resgatado</span>
                               <span>-{formatCurrency(checkoutSummary.cashbackRedeemedAmount)}</span>
                             </div>
                           )}
 
-                          <div className="flex items-center justify-between pt-4 border-t border-slate-200 mt-2">
-                            <span className="font-bold text-slate-800">Total Final</span>
-                            <span className="text-xl font-extrabold text-primary">
+                          <div className="flex items-center justify-between pt-3 border-t border-slate-200 mt-1.5">
+                            <span className="font-bold text-slate-800 text-sm">Total Final</span>
+                            <span className="text-lg font-extrabold text-primary">
                               {formatCurrency(checkoutSummary.total)}
                             </span>
                           </div>
 
                           {checkoutSummary.cashbackEarnedAmount > 0 && (
-                            <div className="mt-4 flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-3 border border-emerald-100">
-                              <WalletCardsIcon size={16} className="text-emerald-600" />
-                              <p className="text-[11px] font-medium text-emerald-700">
+                            <div className="mt-3 flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 border border-emerald-100">
+                              <WalletCardsIcon size={14} className="text-emerald-600" />
+                              <p className="text-[10px] font-medium text-emerald-700 leading-tight">
                                 Este pedido vai te render <strong>{formatCurrency(checkoutSummary.cashbackEarnedAmount)}</strong> de cashback!
                               </p>
                             </div>
                           )}
 
                           {checkoutSummary.nextLoyaltyRule && (
-                            <div className="mt-2 flex flex-col gap-1 rounded-xl bg-blue-50 px-4 py-3 border border-blue-100 animate-pulse">
+                            <div className="mt-2 flex flex-col gap-1 rounded-xl bg-blue-50 px-3 py-2 border border-blue-100 animate-pulse">
                               <div className="flex items-center gap-2">
-                                <TrendingUpIcon size={16} className="text-blue-600" />
-                                <p className="text-[11px] font-bold text-blue-700">
+                                <TrendingUpIcon size={14} className="text-blue-600" />
+                                <p className="text-[10px] font-bold text-blue-700">
                                   Dica de Ouro!
                                 </p>
                               </div>
-                              <p className="text-[11px] text-blue-600">
+                              <p className="text-[10px] text-blue-600 leading-tight">
                                 Adicione mais <strong>{formatCurrency(checkoutSummary.nextLoyaltyRule.remainingAmount)}</strong> e ganhe <strong>{checkoutSummary.nextLoyaltyRule.cashbackPercent}%</strong> de cashback em vez de {((checkoutSummary.cashbackEarnedAmount / checkoutSummary.total) * 100).toFixed(0)}%!
                               </p>
                             </div>
@@ -975,26 +975,26 @@ const FinishOrderSheet = ({
                 </ScrollArea>
               </div>
 
-              <div className="flex flex-col gap-3 p-6 border-t bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.04)]">
+              <div className="flex flex-col gap-2.5 p-4 border-t bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.04)]">
                 {!isOpen && fulfillmentTiming !== "SCHEDULED" && (
-                  <p className="rounded-xl bg-rose-50 p-3 text-center text-xs font-semibold text-rose-600 border border-rose-100 mb-2">
+                  <p className="rounded-xl bg-rose-50 p-2 text-center text-[10px] font-semibold text-rose-600 border border-rose-100 mb-1">
                     O restaurante está fechado e não aceita pedidos imediatos.
                   </p>
                 )}
                 <Button
                   type="submit"
-                  className="h-14 w-full rounded-2xl bg-destructive text-lg font-bold shadow-lg shadow-destructive/20 transition-all hover:scale-[1.01] active:scale-[0.99]"
+                  className="h-11 w-full rounded-2xl bg-destructive text-base font-bold shadow-lg shadow-destructive/20 transition-all hover:scale-[1.01] active:scale-[0.99]"
                   disabled={isLoading || (!isOpen && fulfillmentTiming !== "SCHEDULED")}
                 >
                   {isLoading ? (
-                    <Loader2Icon className="animate-spin mr-2" />
+                    <Loader2Icon className="animate-spin mr-2 h-4 w-4" />
                   ) : null}
                   {paymentMethod === "MERCADO_PAGO"
                     ? "Ir para Pagamento"
                     : "Confirmar Pedido"}
                 </Button>
                 <Button
-                  className="w-full h-12 rounded-2xl text-slate-500 font-medium"
+                  className="w-full h-10 rounded-2xl text-slate-500 font-medium text-xs"
                   variant="ghost"
                   type="button"
                   onClick={() => handleSheetOpenChange(false)}

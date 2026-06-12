@@ -56,15 +56,15 @@ const TrackingPage = () => {
   return (
     <div className="flex h-screen flex-col bg-slate-50">
       {/* Header */}
-      <div className="flex items-center gap-4 border-b bg-white px-4 py-4 shadow-sm">
-        <Button variant="ghost" size="icon" asChild className="rounded-full">
+      <div className="flex items-center gap-3 border-b bg-white px-3 py-3 shadow-sm">
+        <Button variant="ghost" size="icon" asChild className="rounded-full h-9 w-9">
           <Link href={`/${slug}/orders`}>
-            <ChevronLeftIcon size={24} />
+            <ChevronLeftIcon size={20} />
           </Link>
         </Button>
         <div>
-          <h1 className="text-lg font-bold">Rastrear Pedido #{orderId}</h1>
-          <p className="text-xs text-muted-foreground">
+          <h1 className="text-base font-bold">Rastrear Pedido #{orderId}</h1>
+          <p className="text-[10px] text-muted-foreground">
             {order.restaurant.name}
           </p>
         </div>
@@ -75,46 +75,46 @@ const TrackingPage = () => {
         <OrderMap order={order} />
 
         {/* Status Overlay */}
-        <div className="absolute bottom-6 left-4 right-4 z-[1000]">
-          <Card className="rounded-[32px] border-none shadow-2xl ring-1 ring-black/5">
-            <CardHeader className="pb-2">
+        <div className="absolute bottom-4 left-3 right-3 z-[1000]">
+          <Card className="rounded-[24px] border-none shadow-2xl ring-1 ring-black/5">
+            <CardHeader className="pb-1.5 pt-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-bold">
+                <CardTitle className="text-sm font-bold">
                   {order.status === "OUT_FOR_DELIVERY"
                     ? "🚀 A caminho da sua casa!"
                     : "👨‍🍳 Preparando seu pedido..."}
                 </CardTitle>
-                <div className="flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-bold text-emerald-700">
+                <div className="flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700">
                   <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-600" />
                   AO VIVO
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-4 border-b pb-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100">
-                  <BikeIcon className="text-slate-600" size={24} />
+            <CardContent className="space-y-3 pb-4">
+              <div className="flex items-center gap-3 border-b pb-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
+                  <BikeIcon className="text-slate-600" size={20} />
                 </div>
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">
                     Entregador
                   </p>
-                  <p className="font-bold text-slate-900">
+                  <p className="text-sm font-bold text-slate-900">
                     {order.courier?.name || "Aguardando entregador..."}
                   </p>
                 </div>
               </div>
 
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <ClockIcon size={16} className="text-muted-foreground" />
-                  <span className="text-sm font-medium">
+                <div className="flex items-center gap-1.5">
+                  <ClockIcon size={14} className="text-muted-foreground" />
+                  <span className="text-xs font-medium">
                     Previsão: 15-25 min
                   </span>
                 </div>
                 <Button
                   size="sm"
-                  className="rounded-full bg-blue-600 font-bold"
+                  className="rounded-full h-8 px-4 bg-blue-600 font-bold text-xs"
                   asChild
                 >
                   <a href={`tel:${order.courier?.phone}`}>Ligar</a>

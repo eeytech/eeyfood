@@ -40,12 +40,12 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
             : "border-0 shadow-none"
         }
       >
-        <CardHeader className={variant === "sheet" ? "px-0 pt-0" : "px-6 pt-8"}>
-          <CardTitle className="flex items-center gap-2 text-xl font-bold tracking-tight">
-            <ShoppingBagIcon size={20} className="text-primary" aria-hidden="true" />
+        <CardHeader className={variant === "sheet" ? "px-0 pt-0" : "px-4 pt-6"}>
+          <CardTitle className="flex items-center gap-2 text-lg font-bold tracking-tight">
+            <ShoppingBagIcon size={18} className="text-primary" aria-hidden="true" />
             Seu pedido
           </CardTitle>
-          <CardDescription className="text-sm" aria-live="polite">
+          <CardDescription className="text-xs" aria-live="polite">
             {hasProducts
               ? `${String(totalQuantity)} ${totalQuantity === 1 ? "item selecionado" : "itens selecionados"}`
               : "Adicione produtos para começar seu pedido."}
@@ -54,12 +54,12 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
 
         <CardContent
           className={
-            variant === "sheet" ? "flex flex-col gap-4 px-0 pb-0" : "flex flex-col gap-4 px-6"
+            variant === "sheet" ? "flex flex-col gap-3 px-0 pb-0" : "flex flex-col gap-3 px-4"
           }
         >
           {hasProducts ? (
-            <ScrollArea className={variant === "sidebar" ? "h-[450px]" : "h-[500px]"}>
-              <div className="space-y-4 pr-4">
+            <ScrollArea className={variant === "sidebar" ? "h-[400px]" : "h-[450px]"}>
+              <div className="space-y-3 pr-4">
                 {products.map((product) => (
                   <CartProductItem key={product.cartItemId} product={product} />
                 ))}
@@ -68,9 +68,9 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
               </div>
             </ScrollArea>
           ) : (
-            <div className="rounded-[32px] border border-dashed bg-slate-50/50 px-5 py-12 text-center">
-              <p className="font-semibold text-slate-900">Carrinho vazio</p>
-              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+            <div className="rounded-[32px] border border-dashed bg-slate-50/50 px-5 py-8 text-center">
+              <p className="text-sm font-semibold text-slate-900">Carrinho vazio</p>
+              <p className="mt-1.5 text-[10px] leading-relaxed text-muted-foreground">
                 Explore as categorias e monte seu pedido com calma.
               </p>
             </div>
@@ -80,18 +80,18 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
         <CardFooter
           className={
             variant === "sheet"
-              ? "mt-6 flex-col gap-3 px-0 pb-0"
-              : "mt-8 flex-col gap-4 border-t bg-slate-50/40 px-6 py-6"
+              ? "mt-4 flex-col gap-2.5 px-0 pb-0"
+              : "mt-6 flex-col gap-3 border-t bg-slate-50/40 px-4 py-4"
           }
         >
           <div className="flex w-full items-center justify-between">
-            <p className="text-sm font-medium text-muted-foreground">Subtotal</p>
-            <p className="text-xl font-bold text-slate-900" aria-live="polite">
+            <p className="text-xs font-medium text-muted-foreground">Subtotal</p>
+            <p className="text-lg font-bold text-slate-900" aria-live="polite">
               {formatCurrency(total)}
             </p>
           </div>
           <Button
-            className="h-12 w-full rounded-full text-base font-bold shadow-lg shadow-primary/20 transition hover:scale-[1.02] active:scale-[0.98]"
+            className="h-10 w-full rounded-full text-sm font-bold shadow-lg shadow-primary/20 transition hover:scale-[1.02] active:scale-[0.98]"
             disabled={!hasProducts}
             onClick={() => setFinishOrderSheetIsOpen(true)}
           >

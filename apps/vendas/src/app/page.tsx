@@ -59,34 +59,34 @@ const HomeContent = () => {
         <div className="absolute bottom-[-5%] right-[-5%] h-[50%] w-[50%] rounded-full bg-primary blur-[150px]" />
       </div>
 
-      <div className="z-10 w-full max-w-md space-y-10">
-        <div className="space-y-4 text-center">
-          <div className="mx-auto flex h-32 w-full items-center justify-center">
+      <div className="z-10 w-full max-w-md space-y-6">
+        <div className="space-y-3 text-center">
+          <div className="mx-auto flex h-24 w-full items-center justify-center">
             <Image
               src="/logocomtexto.png"
               alt="eeyFood Logo"
-              width={300}
-              height={120}
+              width={240}
+              height={100}
               className="object-contain"
               priority
             />
           </div>
         </div>
 
-        <Card className="overflow-hidden rounded-[40px] border-none bg-white/70 shadow-[0_32px_64px_-15px_rgba(0,0,0,0.1)] backdrop-blur-2xl">
-          <CardHeader className="pb-2 pt-10 text-center">
-            <CardTitle className="text-2xl font-bold text-slate-800">Acessar Cardápio</CardTitle>
-            <CardDescription className="px-6 text-base text-slate-500">
+        <Card className="overflow-hidden rounded-[32px] border-none bg-white/70 shadow-[0_32px_64px_-15px_rgba(0,0,0,0.1)] backdrop-blur-2xl">
+          <CardHeader className="pb-1 pt-8 text-center">
+            <CardTitle className="text-xl font-bold text-slate-800">Acessar Cardápio</CardTitle>
+            <CardDescription className="px-6 text-sm text-slate-500">
               Digite o nome do restaurante para visualizar as opções e fazer seu
               pedido.
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-10 pt-8">
-            <form onSubmit={handleSubmit} className="space-y-8">
-              <div className="space-y-3">
+          <CardContent className="p-8 pt-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2.5">
                 <Label
                   htmlFor="restaurantName"
-                  className="ml-2 text-sm font-bold uppercase tracking-wider text-slate-500"
+                  className="ml-2 text-[11px] font-bold uppercase tracking-wider text-slate-500"
                 >
                   Nome do Restaurante
                 </Label>
@@ -97,19 +97,19 @@ const HomeContent = () => {
                     value={restaurantName}
                     onChange={(e) => setRestaurantName(e.target.value)}
                     required
-                    className="h-16 rounded-[20px] border-slate-200/60 bg-white/50 px-6 text-lg shadow-sm transition-all duration-300 focus:border-primary/50 focus:bg-white focus:ring-[12px] focus:ring-primary/5"
+                    className="h-14 rounded-[16px] border-slate-200/60 bg-white/50 px-5 text-base shadow-sm transition-all duration-300 focus:border-primary/50 focus:bg-white focus:ring-[10px] focus:ring-primary/5"
                   />
                   <div className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 transition-colors group-focus-within:text-primary">
-                    <UtensilsIcon size={20} />
+                    <UtensilsIcon size={18} />
                   </div>
                 </div>
               </div>
               <Button
                 type="submit"
-                className="h-16 w-full rounded-[20px] bg-destructive text-lg font-bold shadow-lg shadow-destructive/20 transition-all duration-300 hover:scale-[1.02] hover:bg-destructive/95 active:scale-[0.98]"
+                className="h-14 w-full rounded-[16px] bg-destructive text-base font-bold shadow-lg shadow-destructive/20 transition-all duration-300 hover:scale-[1.02] hover:bg-destructive/95 active:scale-[0.98]"
               >
                 Explorar Cardápio
-                <ShoppingBagIcon className="ml-2 h-6 w-6" />
+                <ShoppingBagIcon className="ml-2 h-5 w-5" />
               </Button>
             </form>
           </CardContent>

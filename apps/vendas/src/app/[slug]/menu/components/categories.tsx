@@ -63,14 +63,14 @@ function Highlight({ text, query }: { text: string; query: string }) {
 function SearchEmptyState() {
   return (
     <div
-      className="rounded-[32px] border border-dashed bg-slate-50 px-6 py-16 text-center"
+      className="rounded-[32px] border border-dashed bg-slate-50 px-6 py-12 text-center"
       role="status"
       aria-live="polite"
     >
-      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
-        <SearchIcon size={28} className="text-slate-400" aria-hidden="true" />
+      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
+        <SearchIcon size={24} className="text-slate-400" aria-hidden="true" />
       </div>
-      <p className="text-lg font-medium text-slate-950">
+      <p className="text-base font-medium text-slate-950">
         Ops! Não encontramos nenhum item com esse nome.
       </p>
       <p className="mt-2 text-sm text-muted-foreground">
@@ -105,29 +105,29 @@ function SearchProductCard({
           src={product.imageUrl}
           alt=""
           fill
-          className="object-contain p-5 transition duration-300 group-hover:scale-[1.03]"
+          className="object-contain p-4 transition duration-300 group-hover:scale-[1.03]"
         />
       </div>
-      <div className="flex h-full flex-col gap-4 p-5">
-        <div className="space-y-2">
-          <h3 className="text-base font-semibold tracking-tight text-slate-950">
+      <div className="flex h-full flex-col gap-3 p-4">
+        <div className="space-y-1.5">
+          <h3 className="text-sm font-semibold tracking-tight text-slate-950">
             <Highlight text={product.name} query={query} />
           </h3>
-          <p className="line-clamp-3 text-sm leading-6 text-slate-600">
+          <p className="line-clamp-3 text-xs leading-5 text-slate-600">
             {product.description}
           </p>
         </div>
         <div className="mt-auto flex items-end justify-between gap-3">
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">
               A partir de
             </p>
-            <p className="text-lg font-semibold text-slate-950">
+            <p className="text-base font-semibold text-slate-950">
               {formatCurrency(product.price)}
             </p>
           </div>
           <span
-            className="rounded-full bg-slate-950 px-4 py-2 text-sm font-medium text-white transition group-hover:bg-primary"
+            className="rounded-full bg-slate-950 px-3 py-1.5 text-xs font-medium text-white transition group-hover:bg-primary"
             aria-hidden="true"
           >
             Ver produto
@@ -176,7 +176,7 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
   if (restaurant.menuCategories.length === 0) {
     return (
       <div className="relative z-20 mt-[-1.5rem] rounded-t-[2rem] bg-white">
-        <div className="mx-auto max-w-7xl px-5 py-10 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-5 py-8 sm:px-6 lg:px-8">
           <p className="text-center text-sm text-muted-foreground">
             Nenhuma categoria disponível no momento.
           </p>
@@ -187,38 +187,38 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
 
   return (
     <div className="relative z-20 mt-[-1.5rem] rounded-t-[2rem] bg-white">
-      <div className="mx-auto max-w-[1600px] px-5 py-6 pb-24 sm:px-6 lg:px-8 lg:py-8 lg:pb-8">
+      <div className="mx-auto max-w-[1600px] px-5 py-4 pb-20 sm:px-6 lg:px-8 lg:py-6 lg:pb-6">
         {/* Restaurant info card */}
-        <div className="flex flex-col gap-5 rounded-[32px] bg-slate-50 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-4 rounded-[32px] bg-slate-50 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-4">
             <Image
               src={restaurant.avatarImageUrl}
               alt={restaurant.name}
-              height={56}
-              width={56}
-              className="rounded-2xl"
+              height={48}
+              width={48}
+              className="rounded-xl"
             />
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <div>
                 <div className="flex items-center gap-3">
-                  <h2 className="text-2xl font-semibold tracking-tight text-slate-950">
+                  <h2 className="text-xl font-semibold tracking-tight text-slate-950">
                     {restaurant.name}
                   </h2>
                   {restaurant.ratingCount > 0 && (
                     <div className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-amber-700">
                       <StarIcon size={12} className="fill-amber-600" />
-                      <span className="text-[11px] font-bold">
+                      <span className="text-xs font-bold">
                         {restaurant.rating.toFixed(1)}
                       </span>
                     </div>
                   )}
                 </div>
-                <p className="max-w-2xl text-sm text-slate-600">
+                <p className="max-w-2xl text-xs text-slate-600">
                   {restaurant.description}
                 </p>
               </div>
               <div
-                className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium ${
+                className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-medium ${
                   isOpen
                     ? "bg-emerald-50 text-emerald-700"
                     : "bg-primary/10 text-primary"
@@ -248,24 +248,24 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
             </div>
           </div>
 
-          <div className="hidden lg:block lg:w-[340px]">
-            <div className="rounded-[28px] border bg-white px-5 py-4 shadow-sm">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+          <div className="hidden lg:block lg:w-[320px]">
+            <div className="rounded-[28px] border bg-white px-4 py-3 shadow-sm">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
                 Pedido atual
               </p>
-              <div className="mt-3 flex items-end justify-between gap-4">
+              <div className="mt-2 flex items-end justify-between gap-4">
                 <div>
-                  <p className="text-2xl font-semibold text-slate-950">
+                  <p className="text-xl font-semibold text-slate-950">
                     {formatCurrency(total)}
                   </p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     {totalQuantity === 0
                       ? "Nenhum item selecionado"
                       : `${String(totalQuantity)} ${totalQuantity === 1 ? "item" : "itens"} no pedido`}
                   </p>
                 </div>
                 <Button
-                  className="rounded-full"
+                  className="rounded-full h-9 text-sm"
                   disabled={products.length === 0}
                   onClick={toggleCart}
                 >
@@ -311,23 +311,23 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
         </div>
 
         {/* Main three-column layout */}
-        <div className="mt-6 grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)_340px] xl:grid-cols-[260px_minmax(0,1fr)_360px]">
+        <div className="mt-5 grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)_340px] xl:grid-cols-[260px_minmax(0,1fr)_360px]">
           {/* Desktop sidebar nav */}
           <aside className="hidden lg:block">
             <nav
-              className="sticky top-6 space-y-3 rounded-[32px] border bg-white p-4 shadow-sm"
+              className="sticky top-4 space-y-2 rounded-[32px] border bg-white p-3 shadow-sm"
               aria-label="Categorias do cardápio"
             >
               <div className="px-2">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
                   Categorias
                 </p>
-                <h3 className="mt-2 text-lg font-semibold text-slate-950">
+                <h3 className="mt-1.5 text-base font-semibold text-slate-950">
                   Navegue pelo cardápio
                 </h3>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {restaurant.menuCategories.map((category) => {
                   const isActive =
                     !isSearchActive && activeCategoryId === category.id;
@@ -337,7 +337,7 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
                       key={category.id}
                       type="button"
                       onClick={() => handleNavClick(category.id)}
-                      className={`flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left transition ${
+                      className={`flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-left transition ${
                         isActive
                           ? "bg-slate-950 text-white shadow-lg"
                           : "bg-slate-50 text-slate-800 hover:bg-slate-100"
@@ -345,9 +345,9 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
                       aria-current={isActive ? "page" : undefined}
                     >
                       <div>
-                        <p className="font-medium">{category.name}</p>
+                        <p className="text-sm font-medium">{category.name}</p>
                         <p
-                          className={`text-xs ${isActive ? "text-slate-300" : "text-slate-500"}`}
+                          className={`text-[10px] ${isActive ? "text-slate-300" : "text-slate-500"}`}
                         >
                           {String(category.products.length)}{" "}
                           {category.products.length === 1
@@ -356,7 +356,7 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
                         </p>
                       </div>
                       <span
-                        className={`h-2.5 w-2.5 rounded-full ${isActive ? "bg-emerald-400" : "bg-slate-300"}`}
+                        className={`h-2 w-2 rounded-full ${isActive ? "bg-emerald-400" : "bg-slate-300"}`}
                         aria-hidden="true"
                       />
                     </button>
@@ -367,17 +367,17 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
           </aside>
 
           {/* Main content */}
-          <section className="min-w-0 space-y-10">
+          <section className="min-w-0 space-y-8">
             {isSearchActive ? (
               <>
                 <div>
-                  <p className="text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
+                  <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-slate-500">
                     Resultados da busca
                   </p>
-                  <h3 className="mt-1 text-3xl font-semibold tracking-tight text-slate-950">
+                  <h3 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">
                     &ldquo;{searchQuery}&rdquo;
                   </h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     {searchResults.length === 0
                       ? "Nenhum resultado encontrado"
                       : `${String(searchResults.length)} ${searchResults.length === 1 ? "resultado" : "resultados"}`}
@@ -416,13 +416,13 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
                 <div
                   key={category.id}
                   id={`category-${category.id}`}
-                  className="scroll-mt-20 space-y-5"
+                  className="scroll-mt-16 space-y-4"
                 >
                   <div>
-                    <h3 className="text-3xl font-semibold tracking-tight text-slate-950">
+                    <h3 className="text-2xl font-semibold tracking-tight text-slate-950">
                       {category.name}
                     </h3>
-                    <p className="mt-0.5 text-sm text-muted-foreground">
+                    <p className="mt-0.5 text-xs text-muted-foreground">
                       {String(category.products.length)}{" "}
                       {category.products.length === 1
                         ? "opção disponível"
@@ -440,7 +440,7 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
 
           {/* Desktop cart panel */}
           <aside className="hidden lg:block">
-            <div className="sticky top-6">
+            <div className="sticky top-4">
               <CartPanel restaurant={restaurant} />
             </div>
           </aside>
@@ -449,19 +449,19 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
 
       {/* Mobile floating cart bar */}
       {products.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-between border-t bg-white px-5 py-3 shadow-[0_-8px_30px_rgba(15,23,42,0.08)] lg:hidden">
+        <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-between border-t bg-white px-5 py-2.5 shadow-[0_-8px_30px_rgba(15,23,42,0.08)] lg:hidden">
           <div>
-            <p className="text-xs text-muted-foreground">Total do pedido</p>
+            <p className="text-[10px] text-muted-foreground">Total do pedido</p>
             <p className="text-sm font-semibold">
               {formatCurrency(total)}
-              <span className="text-xs font-normal text-muted-foreground">
+              <span className="text-[10px] font-normal text-muted-foreground">
                 {" "}
                 / {String(totalQuantity)}{" "}
                 {totalQuantity > 1 ? "itens" : "item"}
               </span>
             </p>
           </div>
-          <Button className="rounded-full" onClick={toggleCart}>
+          <Button className="rounded-full h-9 text-sm" onClick={toggleCart}>
             Ver sacola
           </Button>
         </div>

@@ -68,21 +68,21 @@ const OrderList = ({ orders, isSidePanel, onBackClick }: OrderListProps) => {
 
   return (
     <div
-      className={`mx-auto w-full space-y-6 ${isSidePanel ? "py-4" : "max-w-4xl p-6"}`}
+      className={`mx-auto w-full space-y-5 ${isSidePanel ? "py-4" : "max-w-3xl p-4"}`}
     >
       {!isSidePanel && (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4">
           <Button
             size="icon"
             variant="secondary"
-            className="rounded-full shadow-sm"
+            className="rounded-full shadow-sm h-10 w-10"
             onClick={handleBackClick}
           >
-            <ChevronLeftIcon />
+            <ChevronLeftIcon size={18} />
           </Button>
-          <div className="flex items-center gap-3">
-            <ScrollTextIcon className="text-primary" />
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+          <div className="flex items-center gap-2.5">
+            <ScrollTextIcon size={20} className="text-primary" />
+            <h2 className="text-xl font-bold tracking-tight text-slate-900">
               Meus Pedidos
             </h2>
           </div>
@@ -92,33 +92,33 @@ const OrderList = ({ orders, isSidePanel, onBackClick }: OrderListProps) => {
         <Button
           variant="ghost"
           size="sm"
-          className="rounded-full -ml-2"
+          className="rounded-full -ml-2 text-xs"
           onClick={handleBackClick}
         >
-          <ChevronLeftIcon size={16} />
+          <ChevronLeftIcon size={14} />
           Trocar celular
         </Button>
       )}
       {orders.length === 0 ? (
-        <div className="rounded-[32px] border border-dashed bg-slate-50 px-6 py-12 text-center">
-          <p className="text-xl font-medium text-slate-950">
+        <div className="rounded-[32px] border border-dashed bg-slate-50 px-6 py-8 text-center">
+          <p className="text-lg font-medium text-slate-950">
             Nenhum pedido encontrado
           </p>
-          <p className="mt-2 text-muted-foreground">
+          <p className="mt-2 text-sm text-muted-foreground">
             Voce ainda nao realizou pedidos com este numero.
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-1">
+        <div className="grid gap-3.5 sm:grid-cols-1">
           {orders.map((order) => (
             <Card
               key={order.id}
-              className="overflow-hidden rounded-[24px] border-slate-200 shadow-sm transition hover:shadow-md"
+              className="overflow-hidden rounded-[20px] border-slate-200 shadow-sm transition hover:shadow-md"
             >
-              <CardContent className="space-y-4 p-6">
+              <CardContent className="space-y-3.5 p-4">
                 <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="relative h-10 w-10 overflow-hidden rounded-xl border">
+                  <div className="flex items-center gap-2.5">
+                    <div className="relative h-9 w-9 overflow-hidden rounded-xl border">
                       <Image
                         src={order.restaurant.avatarImageUrl}
                         alt={order.restaurant.name}
@@ -127,16 +127,16 @@ const OrderList = ({ orders, isSidePanel, onBackClick }: OrderListProps) => {
                       />
                     </div>
                     <div>
-                      <p className="font-bold text-slate-900">
+                      <p className="text-sm font-bold text-slate-900">
                         {order.restaurant.name}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-[10px] text-muted-foreground">
                         Realizado em {formatDateTime(order.createdAt)}
                       </p>
                     </div>
                   </div>
                   <div
-                    className={`rounded-full px-3 py-1 text-xs font-bold ${getStatusClassName(order.status)}`}
+                    className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${getStatusClassName(order.status)}`}
                   >
                     {getStatusLabel(order.status)}
                   </div>
@@ -144,21 +144,21 @@ const OrderList = ({ orders, isSidePanel, onBackClick }: OrderListProps) => {
 
                 <Separator className="bg-slate-100" />
 
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {order.orderProducts.map((orderProduct) => (
                     <div
                       key={orderProduct.id}
                       className="flex items-center justify-between gap-4"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600">
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-600">
                           {orderProduct.quantity}
                         </div>
-                        <p className="text-sm text-slate-700">
+                        <p className="text-xs text-slate-700">
                           {orderProduct.product.name}
                         </p>
                       </div>
-                      <p className="text-sm font-medium text-slate-900">
+                      <p className="text-xs font-medium text-slate-900">
                         {formatCurrency(
                           orderProduct.product.price * orderProduct.quantity,
                         )}
@@ -171,11 +171,11 @@ const OrderList = ({ orders, isSidePanel, onBackClick }: OrderListProps) => {
 
                 {(order.status === "OUT_FOR_DELIVERY" || order.status === "IN_PREPARATION") && (
                   <Button
-                    className="w-full rounded-2xl bg-blue-600 font-bold shadow-md shadow-blue-100"
+                    className="w-full rounded-xl h-10 bg-blue-600 font-bold shadow-md shadow-blue-100 text-xs"
                     asChild
                   >
                     <Link href={`/${slug}/orders/${order.id}/tracking`}>
-                      <MapPinIcon className="mr-2 h-4 w-4" />
+                      <MapPinIcon className="mr-2 h-3.5 w-3.5" />
                       Rastrear Entrega
                     </Link>
                   </Button>
@@ -191,16 +191,16 @@ const OrderList = ({ orders, isSidePanel, onBackClick }: OrderListProps) => {
                   />
                 )}
 
-                <div className="flex items-center justify-between bg-slate-50/50 -mx-6 -mb-6 p-6">
+                <div className="flex items-center justify-between bg-slate-50/50 -mx-4 -mb-4 p-4">
                   <div className="space-y-0.5">
-                    <p className="text-xs text-muted-foreground">Total pago</p>
-                    <p className="text-lg font-bold text-slate-950">
+                    <p className="text-[10px] text-muted-foreground">Total pago</p>
+                    <p className="text-base font-bold text-slate-950">
                       {formatCurrency(order.total)}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs text-muted-foreground">Agendamento</p>
-                    <p className="text-sm font-medium text-slate-700">
+                    <p className="text-[10px] text-muted-foreground">Agendamento</p>
+                    <p className="text-xs font-medium text-slate-700">
                       {order.scheduledFor
                         ? formatDateTime(order.scheduledFor)
                         : "Imediato"}
