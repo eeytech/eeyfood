@@ -126,7 +126,7 @@ const ProductDetailsContent = ({
   return (
     <div className="flex h-full flex-col overflow-hidden bg-white">
       {showImage && (
-        <div className="relative w-full shrink-0 bg-slate-100 h-[180px] sm:h-[220px] lg:h-[320px]">
+        <div className="relative w-full shrink-0 bg-slate-100 h-[180px] sm:h-[220px] lg:h-[240px]">
           {isImageLoading && (
             <div className="absolute inset-0 z-10 animate-pulse bg-slate-200" />
           )}
