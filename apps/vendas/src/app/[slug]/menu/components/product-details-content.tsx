@@ -34,7 +34,6 @@ const ProductDetailsContent = ({
   const [comment, setComment] = useState<string>("");
   const [isImageLoading, setIsImageLoading] = useState(true);
 
-  const handleDecreaseQuantity = () => {
   const optionGroups = useMemo(() => product.optionGroups || [], [product.optionGroups]);
 
   const isOpen = isRestaurantOpen(
