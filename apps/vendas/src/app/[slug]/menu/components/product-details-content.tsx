@@ -126,7 +126,7 @@ const ProductDetailsContent = ({
   return (
     <div className="flex h-full flex-col overflow-hidden bg-white">
       {showImage && (
-        <div className="relative w-full shrink-0 bg-slate-100 h-[180px] sm:h-[220px] lg:h-[240px]">
+        <div className="relative w-full shrink-0 bg-slate-100 h-[140px] sm:h-[180px] lg:h-[200px]">
           {isImageLoading && (
             <div className="absolute inset-0 z-10 animate-pulse bg-slate-200" />
           )}
@@ -143,75 +143,75 @@ const ProductDetailsContent = ({
         </div>
       )}
 
-      <div className="flex flex-auto flex-col overflow-hidden p-6 sm:p-8 lg:p-10">
+      <div className="flex flex-auto flex-col overflow-hidden p-4 sm:p-6 lg:p-8">
         <div className="flex-auto overflow-hidden">
           <div className="flex items-center gap-1.5 lg:gap-2">
             <Image
               src={product.restaurant.avatarImageUrl}
               alt={product.restaurant.name}
-              width={24}
-              height={24}
+              width={20}
+              height={20}
               className="rounded-full ring-2 ring-white"
             />
-            <p className="text-sm font-medium text-muted-foreground">
+            <p className="text-xs font-medium text-muted-foreground">
               {product.restaurant.name}
             </p>
           </div>
 
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+          <h2 className="mt-1.5 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
             {product.name}
           </h2>
 
-          <div className="mt-4 flex items-center justify-between sm:mt-6">
-            <h3 className="text-2xl font-bold text-slate-950 sm:text-3xl">
+          <div className="mt-3 flex items-center justify-between sm:mt-4">
+            <h3 className="text-xl font-bold text-slate-950 sm:text-2xl">
               {formatCurrency(unitPrice)}
             </h3>
-            <div className="flex items-center gap-4 text-center" role="group" aria-label="Seleção de quantidade">
+            <div className="flex items-center gap-3 text-center" role="group" aria-label="Seleção de quantidade">
               <Button
                 variant="outline"
-                className="h-11 w-11 rounded-[18px] border-slate-200 shadow-sm transition hover:bg-slate-50 active:scale-95"
+                className="h-9 w-9 rounded-[14px] border-slate-200 shadow-sm transition hover:bg-slate-50 active:scale-95"
                 onClick={handleDecreaseQuantity}
                 aria-label="Diminuir quantidade"
               >
-                <ChevronLeftIcon size={20} aria-hidden="true" />
+                <ChevronLeftIcon size={18} aria-hidden="true" />
               </Button>
-              <p className="w-8 text-xl font-semibold" aria-live="polite">{quantity}</p>
+              <p className="w-6 text-lg font-semibold" aria-live="polite">{quantity}</p>
               <Button
                 variant="destructive"
-                className="h-11 w-11 rounded-[18px] shadow-md shadow-destructive/10 transition hover:scale-105 active:scale-95"
+                className="h-9 w-9 rounded-[14px] shadow-md shadow-destructive/10 transition hover:scale-105 active:scale-95"
                 onClick={handleIncreaseQuantity}
                 aria-label="Aumentar quantidade"
               >
-                <ChevronRightIcon size={20} aria-hidden="true" />
+                <ChevronRightIcon size={18} aria-hidden="true" />
               </Button>
             </div>
           </div>
 
           <ScrollArea className="h-full pr-4">
             {/* 1. SOBRE */}
-            <div className="mt-8 space-y-3">
-              <h4 className="text-lg font-semibold text-slate-950">Sobre</h4>
-              <p className="text-base font-medium leading-relaxed text-slate-500">
+            <div className="mt-6 space-y-2">
+              <h4 className="text-base font-semibold text-slate-950">Sobre</h4>
+              <p className="text-sm font-medium leading-relaxed text-slate-500">
                 {product.description}
               </p>
             </div>
 
             {/* 2. INGREDIENTES */}
             {product.ingredients.length > 0 && (
-              <div className="mt-8 space-y-3">
+              <div className="mt-6 space-y-2">
                 <div className="flex items-center gap-2">
-                  <ChefHatIcon size={20} className="text-slate-800" />
-                  <h4 className="text-lg font-semibold text-slate-950">
+                  <ChefHatIcon size={18} className="text-slate-800" />
+                  <h4 className="text-base font-semibold text-slate-950">
                     Ingredientes
                   </h4>
                 </div>
-                <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
+                <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-1">
                   {product.ingredients.map((ingredient) => (
                     <li
                       key={ingredient}
-                      className="flex items-center gap-2 text-base font-medium text-slate-500"
+                      className="flex items-center gap-2 text-sm font-medium text-slate-500"
                     >
-                      <span className="h-1.5 w-1.5 rounded-full bg-slate-300" />
+                      <span className="h-1 w-1 rounded-full bg-slate-300" />
                       {ingredient}
                     </li>
                   ))}
@@ -221,10 +221,10 @@ const ProductDetailsContent = ({
 
             {/* 3. GRUPOS DE OPÇÕES */}
             {optionGroups.map((group) => (
-              <div key={group.id} className="mt-8 space-y-4">
+              <div key={group.id} className="mt-6 space-y-3">
                 <div className="flex flex-col gap-1">
-                  <h4 className="text-lg font-semibold text-slate-950">{group.name}</h4>
-                  <p className="text-sm text-slate-500">
+                  <h4 className="text-base font-semibold text-slate-950">{group.name}</h4>
+                  <p className="text-xs text-slate-500">
                     {group.minOptions > 0 ? `Obrigatório • ` : ""}
                     {group.maxOptions === 1 ? "Selecione 1 opção" : `Selecione até ${group.maxOptions} opções`}
                   </p>
@@ -238,7 +238,7 @@ const ProductDetailsContent = ({
                         key={option.id}
                         onClick={() => handleOptionToggle(group.id, option.id, group.maxOptions)}
                         aria-pressed={isSelected}
-                        className={`flex w-full items-center justify-between rounded-2xl border p-4 transition-all ${
+                        className={`flex w-full items-center justify-between rounded-xl border p-3 transition-all ${
                           isSelected
                             ? "border-destructive bg-destructive/5 ring-1 ring-destructive"
                             : "border-slate-100 hover:border-slate-200"
@@ -254,11 +254,11 @@ const ProductDetailsContent = ({
                         </div>
                         <div className="flex items-center gap-3">
                           {option.price > 0 && (
-                            <span className={`text-sm font-medium ${isSelected ? "text-destructive" : "text-slate-600"}`}>
+                            <span className={`text-xs font-medium ${isSelected ? "text-destructive" : "text-slate-600"}`}>
                               + {formatCurrency(option.price)}
                             </span>
                           )}
-                          {isSelected && <CircleCheckIcon size={20} className="text-destructive" />}
+                          {isSelected && <CircleCheckIcon size={18} className="text-destructive" />}
                         </div>
                       </button>
                     );
@@ -268,8 +268,8 @@ const ProductDetailsContent = ({
             ))}
 
             {/* 4. OBSERVAÇÕES */}
-            <div className="mt-8 space-y-3 pb-48">
-              <Label htmlFor="comment" className="text-lg font-semibold text-slate-950">
+            <div className="mt-6 space-y-2 pb-48">
+              <Label htmlFor="comment" className="text-base font-semibold text-slate-950">
                 Observações
               </Label>
               <Textarea
@@ -278,9 +278,9 @@ const ProductDetailsContent = ({
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 maxLength={200}
-                className="min-h-[100px] rounded-2xl border-slate-200 focus-visible:ring-destructive"
+                className="min-h-[80px] rounded-xl border-slate-200 focus-visible:ring-destructive text-sm"
               />
-              <p className="text-right text-xs text-slate-400">
+              <p className="text-right text-[10px] text-slate-400">
                 {comment.length}/200
               </p>
             </div>
@@ -288,22 +288,22 @@ const ProductDetailsContent = ({
         </div>
 
         {/* FOOTER */}
-        <div className="fixed bottom-0 left-0 w-full bg-white/95 backdrop-blur-sm border-t border-slate-200 p-6 z-50 lg:relative lg:p-0 lg:border-none lg:bg-transparent lg:mt-auto" style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}>
-          <div className="max-w-screen-xl mx-auto space-y-4">
+        <div className="fixed bottom-0 left-0 w-full bg-white/95 backdrop-blur-sm border-t border-slate-200 p-4 z-50 lg:relative lg:p-0 lg:border-none lg:bg-transparent lg:mt-auto" style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}>
+          <div className="max-w-screen-xl mx-auto space-y-3">
             {!isOpen && (
-              <p className="rounded-2xl bg-rose-50 p-4 text-center text-sm font-semibold text-rose-600 border border-rose-100">
+              <p className="rounded-xl bg-rose-50 p-3 text-center text-xs font-semibold text-rose-600 border border-rose-100">
                 O restaurante está fechado no momento.
               </p>
             )}
 
             {isOutOfStock && (
-              <p className="rounded-2xl bg-amber-50 p-4 text-center text-sm font-semibold text-amber-600 border border-amber-100">
+              <p className="rounded-xl bg-amber-50 p-3 text-center text-xs font-semibold text-amber-600 border border-amber-100">
                 Produto temporariamente esgotado.
               </p>
             )}
 
             <Button
-              className="h-14 w-full rounded-2xl text-lg font-bold shadow-lg shadow-destructive/20 transition hover:scale-[1.01] active:scale-[0.99]"
+              className="h-12 w-full rounded-xl text-base font-bold shadow-lg shadow-destructive/20 transition hover:scale-[1.01] active:scale-[0.99]"
               onClick={handleAddToCart}
               disabled={!isOpen || !canAddToCart || isOutOfStock}
             >
