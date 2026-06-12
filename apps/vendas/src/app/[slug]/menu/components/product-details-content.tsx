@@ -5,7 +5,9 @@ import Image from "next/image";
 import { useContext, useMemo,useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency } from "@/helpers/format-currency";
 import { isRestaurantOpen } from "@/helpers/restaurant-status";
 import type { ProductComRestaurante, ProductOption, ProductOptionGroup } from "@/lib/db";
@@ -21,7 +23,6 @@ interface ProductDetailsContentProps {
   onAddToCart?: () => void;
   showImage?: boolean;
 }
-
 const ProductDetailsContent = ({
   product,
   onAddToCart,
@@ -30,7 +31,10 @@ const ProductDetailsContent = ({
   const { toggleCart, addProduct } = useContext(CartContext);
   const [quantity, setQuantity] = useState<number>(1);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string[]>>({});
+  const [comment, setComment] = useState<string>("");
+  const [isImageLoading, setIsImageLoading] = useState(true);
 
+  const handleDecreaseQuantity = () => {
   const optionGroups = useMemo(() => product.optionGroups || [], [product.optionGroups]);
 
   const isOpen = isRestaurantOpen(
@@ -101,12 +105,14 @@ const ProductDetailsContent = ({
     if (!canAddToCart) return;
 
     const sortedOptionIds = selectedOptionsList.map((o) => o.id).sort();
-    const cartItemId = `${product.id}${sortedOptionIds.length > 0 ? `-${sortedOptionIds.join("-")}` : ""}`;
+    const commentHash = comment ? `-${Buffer.from(comment).toString("base64").slice(0, 8)}` : "";
+    const cartItemId = `${product.id}${sortedOptionIds.length > 0 ? `-${sortedOptionIds.join("-")}` : ""}${commentHash}`;
 
     addProduct({
       ...product,
       cartItemId,
       quantity,
+      notes: comment,
       selectedOptions: selectedOptionsList.map((o) => ({
         id: o.id,
         name: o.name,
@@ -122,12 +128,18 @@ const ProductDetailsContent = ({
     <div className="flex h-full flex-col overflow-hidden lg:bg-white">
       {showImage && (
         <div className="relative aspect-square w-full overflow-hidden bg-slate-100 sm:aspect-video lg:aspect-square">
+          {isImageLoading && (
+            <div className="absolute inset-0 z-10 animate-pulse bg-slate-200" />
+          )}
           <Image
             src={product.imageUrl}
             alt={product.name}
             fill
-            className="object-cover transition-transform duration-500 hover:scale-105"
+            className={`object-cover transition-all duration-500 hover:scale-105 ${
+              isImageLoading ? "opacity-0" : "opacity-100"
+            }`}
             priority
+            onLoad={() => setIsImageLoading(false)}
           />
         </div>
       )}
@@ -176,7 +188,7 @@ const ProductDetailsContent = ({
             </div>
           </div>
 
-          <ScrollArea className="h-full pr-4">
+          <ScrollArea className="h-full pr-4 pb-32 lg:pb-0">
             <div className="mt-8 space-y-3">
               <h4 className="text-lg font-semibold text-slate-950">Sobre</h4>
               <p className="text-base font-medium leading-relaxed text-slate-500">
@@ -232,6 +244,23 @@ const ProductDetailsContent = ({
               </div>
             ))}
 
+            <div className="mt-8 space-y-3">
+              <Label htmlFor="comment" className="text-lg font-semibold text-slate-950">
+                Observações
+              </Label>
+              <Textarea
+                id="comment"
+                placeholder="Ex: tirar cebola, ponto da carne, etc."
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                maxLength={200}
+                className="min-h-[100px] rounded-2xl border-slate-200 focus-visible:ring-destructive"
+              />
+              <p className="text-right text-xs text-slate-400">
+                {comment.length}/200
+              </p>
+            </div>
+
             {product.ingredients.length > 0 && (
               <div className="mt-8 space-y-3 pb-6">
                 <div className="flex items-center gap-2">
@@ -256,7 +285,7 @@ const ProductDetailsContent = ({
           </ScrollArea>
         </div>
 
-        <div className="mt-8 space-y-4 border-t pt-6 lg:mt-auto">
+        <div className="sticky bottom-0 left-0 w-full bg-white/80 backdrop-blur-md border-t p-6 pb-10 space-y-4 lg:static lg:p-0 lg:border-none lg:bg-transparent lg:mt-auto">
           {!isOpen && (
             <p className="rounded-2xl bg-rose-50 p-4 text-center text-sm font-semibold text-rose-600 border border-rose-100">
               O restaurante está fechado no momento e não aceita novos pedidos.

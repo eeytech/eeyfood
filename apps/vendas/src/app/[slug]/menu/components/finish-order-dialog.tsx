@@ -310,6 +310,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
           name: product.name,
           quantity: product.quantity,
           price: product.price,
+          notes: product.notes,
         })),
       }).catch((error: unknown) => {
         console.error("Falha ao salvar carrinho abandonado.", error);
@@ -375,6 +376,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
           id: product.id,
           quantity: product.quantity,
           selectedOptions: product.selectedOptions?.map((opt) => opt.id),
+          notes: product.notes,
         })),
       });
 
@@ -432,6 +434,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
           id: product.id,
           quantity: product.quantity,
           selectedOptions: product.selectedOptions?.map((opt) => opt.id),
+          notes: product.notes,
         })),
         slug,
       });

@@ -85,6 +85,13 @@
       "when": 1781150365364,
       "tag": "0011_burly_goblin_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1781271607412,
+      "tag": "0012_deep_quasar",
+      "breakpoints": true
     }
   ]
 }

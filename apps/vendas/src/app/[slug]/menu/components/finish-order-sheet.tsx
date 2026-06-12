@@ -338,6 +338,7 @@ const FinishOrderSheet = ({
           name: product.name,
           quantity: product.quantity,
           price: product.price,
+          notes: product.notes,
         })),
       }).catch((error: unknown) => {
         console.error("Falha ao salvar carrinho abandonado.", error);
@@ -403,8 +404,10 @@ const FinishOrderSheet = ({
           id: product.id,
           quantity: product.quantity,
           selectedOptions: product.selectedOptions?.map((opt) => opt.id),
+          notes: product.notes,
         })),
-      });
+        slug,
+        });
 
       setUseWalletBalance(nextUseWalletBalance);
       setBenefits(validatedBenefits);
@@ -460,6 +463,7 @@ const FinishOrderSheet = ({
           id: product.id,
           quantity: product.quantity,
           selectedOptions: product.selectedOptions?.map((opt) => opt.id),
+          notes: product.notes,
         })),
         slug,
       });

@@ -14,6 +14,7 @@ export interface CartProduct
   extends Pick<Product, "id" | "name" | "price" | "imageUrl"> {
   cartItemId: string; // ID único para diferenciar o mesmo produto com opções diferentes
   quantity: number;
+  notes?: string;
   selectedOptions?: CartProductOption[];
 }
 

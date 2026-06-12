@@ -151,6 +151,7 @@ export interface CriarPedidoInput {
     id: string;
     quantity: number;
     selectedOptions?: string[]; // IDs de ProductOption
+    notes?: string;
   }>;
   diningTableId?: string;
 }
@@ -164,6 +165,7 @@ export interface ValidarBeneficiosPedidoInput {
     id: string;
     quantity: number;
     selectedOptions?: string[];
+    notes?: string;
   }>;
 }
 
@@ -231,6 +233,7 @@ interface ItemPedidoCalculado {
   price: number;
   unitCost: number;
   lineTotal: number;
+  notes?: string;
   currentProduct: Product;
   selectedOptions?: Array<{
     id: string;
@@ -727,6 +730,7 @@ const carregarContextoPedidoCalculado = async (
       price: currentProduct.price,
       unitCost: currentProduct.costPrice,
       lineTotal,
+      notes: itemInput.notes,
       currentProduct,
       selectedOptions,
     };
@@ -1246,6 +1250,7 @@ export const criarPedido = async (input: CriarPedidoInput): Promise<Order> => {
         unitCost: item.unitCost,
         lineTotal: item.lineTotal,
         productNameSnapshot: item.productNameSnapshot,
+        notes: item.notes,
       })),
     );
 

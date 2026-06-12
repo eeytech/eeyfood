@@ -403,6 +403,7 @@ export const orderProductsTable = pgTable("OrderProduct", {
   unitCost: doublePrecision("unitCost").default(0).notNull(),
   lineTotal: doublePrecision("lineTotal").default(0).notNull(),
   productNameSnapshot: text("productNameSnapshot").notNull(),
+  notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });

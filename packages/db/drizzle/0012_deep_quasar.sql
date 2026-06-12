@@ -1,0 +1,1 @@
+ALTER TABLE "OrderProduct" ADD COLUMN "notes" text;
