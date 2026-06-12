@@ -406,8 +406,7 @@ const FinishOrderSheet = ({
           selectedOptions: product.selectedOptions?.map((opt) => opt.id),
           notes: product.notes,
         })),
-        slug,
-        });
+      });
 
       setUseWalletBalance(nextUseWalletBalance);
       setBenefits(validatedBenefits);
