@@ -2,7 +2,7 @@
 
 import { ChefHatIcon, ChevronLeftIcon, ChevronRightIcon, CircleCheckIcon } from "lucide-react";
 import Image from "next/image";
-import { useContext, useMemo,useState } from "react";
+import { useContext, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -104,7 +104,7 @@ const ProductDetailsContent = ({
     if (!canAddToCart) return;
 
     const sortedOptionIds = selectedOptionsList.map((o) => o.id).sort();
-    const commentHash = comment ? `-${Buffer.from(comment).toString("base64").slice(0, 8)}` : "";
+    const commentHash = comment ? `-${comment.length}-${comment.slice(0, 5).replace(/\s/g, "")}` : "";
     const cartItemId = `${product.id}${sortedOptionIds.length > 0 ? `-${sortedOptionIds.join("-")}` : ""}${commentHash}`;
 
     addProduct({
