@@ -126,7 +126,7 @@ const ProductDetailsContent = ({
   return (
     <div className="flex h-full flex-col overflow-hidden lg:bg-white">
       {showImage && (
-        <div className="relative aspect-square w-full overflow-hidden bg-slate-100 sm:aspect-video lg:aspect-square">
+        <div className="relative w-full overflow-hidden bg-slate-100 sm:aspect-video lg:max-h-[450px]">
           {isImageLoading && (
             <div className="absolute inset-0 z-10 animate-pulse bg-slate-200" />
           )}
@@ -187,13 +187,35 @@ const ProductDetailsContent = ({
             </div>
           </div>
 
-          <ScrollArea className="h-full pr-4 pb-32 lg:pb-0">
+          <ScrollArea className="h-full pr-4 pb-48 lg:pb-0">
             <div className="mt-8 space-y-3">
               <h4 className="text-lg font-semibold text-slate-950">Sobre</h4>
               <p className="text-base font-medium leading-relaxed text-slate-500">
                 {product.description}
               </p>
             </div>
+
+            {product.ingredients.length > 0 && (
+              <div className="mt-8 space-y-3">
+                <div className="flex items-center gap-2">
+                  <ChefHatIcon size={20} className="text-slate-800" />
+                  <h4 className="text-lg font-semibold text-slate-950">
+                    Ingredientes
+                  </h4>
+                </div>
+                <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
+                  {product.ingredients.map((ingredient) => (
+                    <li
+                      key={ingredient}
+                      className="flex items-center gap-2 text-base font-medium text-slate-500"
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-slate-300" />
+                      {ingredient}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {/* Renderização dos Grupos de Opções */}
             {optionGroups.map((group) => (
@@ -205,7 +227,7 @@ const ProductDetailsContent = ({
                     {group.maxOptions === 1 ? "Selecione 1 opção" : `Selecione até ${group.maxOptions} opções`}
                   </p>
                 </div>
-                
+
                 <div className="space-y-2">
                   {group.options.map((option: ProductOption) => {
                     const isSelected = (selectedOptions[group.id] || []).includes(option.id);
@@ -215,8 +237,8 @@ const ProductDetailsContent = ({
                         onClick={() => handleOptionToggle(group.id, option.id, group.maxOptions)}
                         aria-pressed={isSelected}
                         className={`flex w-full items-center justify-between rounded-2xl border p-4 transition-all ${
-                          isSelected 
-                            ? "border-destructive bg-destructive/5 ring-1 ring-destructive" 
+                          isSelected
+                            ? "border-destructive bg-destructive/5 ring-1 ring-destructive"
                             : "border-slate-100 hover:border-slate-200"
                         }`}
                       >
@@ -243,7 +265,7 @@ const ProductDetailsContent = ({
               </div>
             ))}
 
-            <div className="mt-8 space-y-3">
+            <div className="mt-8 space-y-3 pb-6">
               <Label htmlFor="comment" className="text-lg font-semibold text-slate-950">
                 Observações
               </Label>
@@ -259,32 +281,10 @@ const ProductDetailsContent = ({
                 {comment.length}/200
               </p>
             </div>
-
-            {product.ingredients.length > 0 && (
-              <div className="mt-8 space-y-3 pb-6">
-                <div className="flex items-center gap-2">
-                  <ChefHatIcon size={20} className="text-slate-800" />
-                  <h4 className="text-lg font-semibold text-slate-950">
-                    Ingredientes
-                  </h4>
-                </div>
-                <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
-                  {product.ingredients.map((ingredient) => (
-                    <li
-                      key={ingredient}
-                      className="flex items-center gap-2 text-base font-medium text-slate-500"
-                    >
-                      <span className="h-1.5 w-1.5 rounded-full bg-slate-300" />
-                      {ingredient}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
           </ScrollArea>
         </div>
 
-        <div className="sticky bottom-0 left-0 w-full bg-white/80 backdrop-blur-md border-t p-6 pb-10 space-y-4 lg:static lg:p-0 lg:border-none lg:bg-transparent lg:mt-auto">
+        <div className="sticky bottom-0 left-0 w-full bg-gradient-to-t from-white via-white/95 to-white/80 backdrop-blur-sm border-t border-slate-200 p-6 pt-8 space-y-4 z-40 lg:static lg:p-0 lg:border-none lg:bg-transparent lg:pt-0 lg:mt-auto" style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom))" }}>
           {!isOpen && (
             <p className="rounded-2xl bg-rose-50 p-4 text-center text-sm font-semibold text-rose-600 border border-rose-100">
               O restaurante está fechado no momento e não aceita novos pedidos.
