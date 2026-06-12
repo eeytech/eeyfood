@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "eeYfood - Cardápio Digital",
-    short_name: "eeYfood",
-    description: "Peça sua comida favorita de forma rápida e ganhe cashback!",
+    name: "eeyFood - Cardápio Digital",
+    short_name: "eeyFood",
+    description: "Experiência digital para pedidos!",
     start_url: "/",
     display: "standalone",
     background_color: "#ffffff",

@@ -14,12 +14,12 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "eeYfood - Cardápio Digital",
-  description: "Experiência digital para pedidos com fricção zero e muito cashback.",
+  title: "eeyFood - Cardápio Digital",
+  description: "Experiência digital para pedidos!",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "eeYfood",
+    title: "eeyFood",
   },
   formatDetection: {
     telephone: false,
