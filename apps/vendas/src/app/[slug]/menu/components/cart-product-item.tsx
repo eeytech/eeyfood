@@ -19,7 +19,7 @@ const CartProductItem = ({ product }: CartItemProps) => {
   const unitPrice = product.price + optionsTotal;
 
   return (
-    <div className="flex w-full items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm">
+    <div className="flex w-full items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm" style={{ display: 'flex !important', visibility: 'visible !important' }}>
       {/* Esquerda: Imagem e Nome */}
       <div className="flex min-w-0 flex-1 items-center gap-3">
         <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-slate-50 border border-slate-100">
@@ -52,21 +52,24 @@ const CartProductItem = ({ product }: CartItemProps) => {
       </div>
 
       {/* Direita: Ações (Sempre visíveis) */}
-      <div className="flex shrink-0 flex-col items-end gap-2 border-l border-slate-50 pl-3">
+      <div className="flex shrink-0 flex-col items-end gap-2 border-l border-slate-50 pl-3" style={{ display: 'flex !important' }}>
         {/* Botão Remover */}
         <button
+          type="button"
           onClick={() => removeProduct(product.cartItemId)}
           className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-rose-100 hover:text-rose-600"
-          aria-label="Remover item"
+          style={{ cursor: 'pointer', zIndex: 10 }}
         >
           <TrashIcon size={16} />
         </button>
 
         {/* Seletor de Quantidade */}
-        <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-1">
+        <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-1" style={{ display: 'flex !important' }}>
           <button
+            type="button"
             onClick={() => decreaseProductQuantity(product.cartItemId)}
             className="flex h-6 w-6 items-center justify-center rounded-lg bg-white shadow-sm border border-slate-200 text-slate-600 transition active:scale-90"
+            style={{ cursor: 'pointer', zIndex: 10 }}
           >
             <MinusIcon size={12} strokeWidth={3} />
           </button>
@@ -76,8 +79,10 @@ const CartProductItem = ({ product }: CartItemProps) => {
           </span>
 
           <button
+            type="button"
             onClick={() => increaseProductQuantity(product.cartItemId)}
             className="flex h-6 w-6 items-center justify-center rounded-lg bg-destructive text-white shadow-sm transition active:scale-90"
+            style={{ cursor: 'pointer', zIndex: 10 }}
           >
             <PlusIcon size={12} strokeWidth={3} />
           </button>

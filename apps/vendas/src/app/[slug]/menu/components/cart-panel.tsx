@@ -45,7 +45,11 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
       >
         {hasProducts ? (
           <ScrollArea className={variant === "sidebar" ? "h-[450px]" : "h-full"}>
-            <div className="space-y-4 pr-4 pb-6">
+            {/* 
+                IMPORTANTE: overflow-x-hidden no container pai para evitar que a ScrollArea 
+                tente gerenciar o scroll horizontal das recomendacoes, deixando isso para o componente nativo.
+            */}
+            <div className="space-y-4 pr-4 pb-6 overflow-x-hidden">
               {products.map((product) => (
                 <CartProductItem key={product.cartItemId} product={product} />
               ))}
