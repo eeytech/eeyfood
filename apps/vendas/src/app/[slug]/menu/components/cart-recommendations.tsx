@@ -50,20 +50,18 @@ const CartRecommendations = () => {
         </h4>
       </div>
 
-      {/* Container de rolagem corrigido para nao vazar da tela */}
-      <div className="relative -mx-2 overflow-hidden">
-        <div 
-          className="flex gap-3 overflow-x-auto px-2 pb-3" 
-          style={{ 
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none',
+      {/* Container de rolagem com scroll suave */}
+      <div className="overflow-x-auto px-0 pb-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 transparent' }}>
+        <div
+          className="flex gap-3 px-1"
+          style={{
             WebkitOverflowScrolling: 'touch'
           }}
         >
           {recommendations.map((product) => (
             <div
               key={product.id}
-              className="flex min-w-[130px] max-w-[130px] flex-col gap-2 rounded-xl border border-slate-100 bg-white p-2 shadow-sm"
+              className="flex shrink-0 min-w-[120px] max-w-[120px] flex-col gap-2 rounded-xl border border-slate-100 bg-white p-2 shadow-sm"
             >
               <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-slate-50">
                 <Image
@@ -98,7 +96,6 @@ const CartRecommendations = () => {
               </div>
             </div>
           ))}
-          <div className="min-w-[8px] shrink-0" />
         </div>
       </div>
     </div>

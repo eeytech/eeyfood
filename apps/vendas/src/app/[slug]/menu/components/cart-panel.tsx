@@ -40,16 +40,12 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
 
       <div
         className={
-          variant === "sheet" ? "flex-1 overflow-hidden px-6 pt-6" : "flex flex-col gap-4 px-6 pt-4"
+          variant === "sheet" ? "flex-1 overflow-hidden px-6 pt-4" : "flex flex-col gap-3 px-6 pt-3"
         }
       >
         {hasProducts ? (
           <ScrollArea className={variant === "sidebar" ? "h-[450px]" : "h-full"}>
-            {/* 
-                IMPORTANTE: overflow-x-hidden no container pai para evitar que a ScrollArea 
-                tente gerenciar o scroll horizontal das recomendacoes, deixando isso para o componente nativo.
-            */}
-            <div className="space-y-4 pr-4 pb-6 overflow-x-hidden">
+            <div className="space-y-3 pr-4 pb-6">
               {products.map((product) => (
                 <CartProductItem key={product.cartItemId} product={product} />
               ))}
