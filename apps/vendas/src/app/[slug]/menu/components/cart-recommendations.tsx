@@ -42,43 +42,43 @@ const CartRecommendations = () => {
   if (recommendations.length === 0 || isLoading) return null;
 
   return (
-    <div className="mt-8 space-y-4">
+    <div className="mt-6 space-y-3">
       <div className="flex items-center gap-2 px-1">
-        <SparklesIcon size={16} className="text-amber-500 fill-amber-500" />
-        <h4 className="text-sm font-bold text-slate-900 uppercase tracking-tight">
+        <SparklesIcon size={14} className="text-amber-500 fill-amber-500" />
+        <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
           Que tal acompanhar com?
         </h4>
       </div>
 
-      {/* Rolagem horizontal nativa forcada */}
-      <div className="relative -mx-6">
+      {/* Container de rolagem corrigido para nao vazar da tela */}
+      <div className="relative -mx-2 overflow-hidden">
         <div 
-          className="flex gap-4 overflow-x-auto px-6 pb-4 outline-none" 
+          className="flex gap-3 overflow-x-auto px-2 pb-3" 
           style={{ 
-            WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'none',
             msOverflowStyle: 'none',
-            scrollbarWidth: 'none'
+            WebkitOverflowScrolling: 'touch'
           }}
         >
           {recommendations.map((product) => (
             <div
               key={product.id}
-              className="flex min-w-[140px] max-w-[140px] flex-col gap-2 rounded-2xl border border-slate-100 bg-white p-2.5 shadow-sm transition active:scale-95"
+              className="flex min-w-[130px] max-w-[130px] flex-col gap-2 rounded-xl border border-slate-100 bg-white p-2 shadow-sm"
             >
-              <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-slate-50">
+              <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-slate-50">
                 <Image
                   src={product.imageUrl}
                   alt={product.name}
                   fill
-                  className="object-contain p-2"
+                  className="object-contain p-1.5"
                 />
               </div>
-              <div className="flex flex-col gap-1.5">
-                <p className="line-clamp-2 min-h-[30px] text-[10px] font-bold leading-tight text-slate-800">
+              <div className="flex flex-col gap-1">
+                <p className="line-clamp-2 min-h-[28px] text-[10px] font-bold leading-tight text-slate-800">
                   {product.name}
                 </p>
                 <div className="flex items-center justify-between gap-1">
-                  <span className="text-xs font-black text-primary">
+                  <span className="text-[11px] font-black text-primary">
                     {formatCurrency(product.price)}
                   </span>
                   <button
@@ -90,16 +90,15 @@ const CartRecommendations = () => {
                         selectedOptions: [],
                       })
                     }
-                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-900 text-white shadow-md active:scale-90"
+                    className="flex h-6 w-6 items-center justify-center rounded-md bg-slate-900 text-white shadow active:scale-90"
                   >
-                    <PlusIcon size={14} />
+                    <PlusIcon size={12} />
                   </button>
                 </div>
               </div>
             </div>
           ))}
-          {/* Espaçador final */}
-          <div className="min-w-[24px] shrink-0" />
+          <div className="min-w-[8px] shrink-0" />
         </div>
       </div>
     </div>
