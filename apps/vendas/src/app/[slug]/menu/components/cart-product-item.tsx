@@ -20,10 +20,10 @@ const CartProductItem = ({ product }: CartItemProps) => {
   const unitPrice = product.price + optionsTotal;
 
   return (
-    <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm transition hover:shadow-md">
-      {/* Esquerda: Imagem e Informações */}
+    <div className="flex w-full items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm">
+      {/* Esquerda: Imagem e Nome */}
       <div className="flex min-w-0 flex-1 items-center gap-3">
-        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-slate-50">
+        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-slate-50 border border-slate-100">
           <Image
             src={product.imageUrl}
             alt={product.name}
@@ -32,67 +32,56 @@ const CartProductItem = ({ product }: CartItemProps) => {
           />
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col justify-center">
+        <div className="flex min-w-0 flex-1 flex-col">
           <p className="truncate text-sm font-bold text-slate-900">
             {product.name}
           </p>
           
-          {/* Opções e Observações */}
+          {/* Opções */}
           {((product.selectedOptions && product.selectedOptions.length > 0) || product.notes) && (
-            <div className="mt-0.5 flex flex-wrap gap-x-1.5 gap-y-0 text-[10px] text-slate-400">
+            <div className="mt-0.5 flex flex-wrap gap-x-1 text-[10px] text-slate-400">
               {product.selectedOptions?.map((opt) => (
-                <span key={opt.id}>• {opt.name}</span>
+                <span key={opt.id} className="whitespace-nowrap">• {opt.name}</span>
               ))}
-              {product.notes && (
-                <span className="font-medium text-destructive truncate max-w-full">
-                  Obs: {product.notes}
-                </span>
-              )}
             </div>
           )}
 
-          <p className="mt-1 text-sm font-extrabold text-primary">
+          <p className="mt-1 text-sm font-black text-primary">
             {formatCurrency(unitPrice * product.quantity)}
           </p>
         </div>
       </div>
 
-      {/* Direita: Controles de Quantidade e Lixeira */}
-      <div className="flex flex-col items-end gap-2 shrink-0">
-        <Button
-          className="h-7 w-7 rounded-full text-slate-400 hover:bg-rose-50 hover:text-rose-500"
-          variant="ghost"
-          size="icon"
+      {/* Direita: Ações (Sempre visíveis) */}
+      <div className="flex shrink-0 flex-col items-end gap-2 border-l border-slate-50 pl-3">
+        {/* Botão Remover */}
+        <button
           onClick={() => removeProduct(product.cartItemId)}
-          aria-label={`Remover ${product.name} do carrinho`}
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-rose-100 hover:text-rose-600"
+          aria-label="Remover item"
         >
           <TrashIcon size={16} />
-        </Button>
+        </button>
 
-        <div className="flex items-center gap-2 bg-slate-50 rounded-lg p-1 border border-slate-100">
-          <Button
-            className="h-6 w-6 rounded-md border-slate-200 bg-white shadow-sm transition active:scale-95"
-            variant="outline"
-            size="icon"
+        {/* Seletor de Quantidade */}
+        <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-1">
+          <button
             onClick={() => decreaseProductQuantity(product.cartItemId)}
-            aria-label="Diminuir quantidade"
+            className="flex h-6 w-6 items-center justify-center rounded-lg bg-white shadow-sm border border-slate-200 text-slate-600 transition active:scale-90"
           >
-            <MinusIcon size={10} />
-          </Button>
+            <MinusIcon size={12} strokeWidth={3} />
+          </button>
           
-          <span className="w-5 text-center text-xs font-bold text-slate-900">
+          <span className="min-w-[1.25rem] text-center text-xs font-black text-slate-900">
             {product.quantity}
           </span>
 
-          <Button
-            className="h-6 w-6 rounded-md bg-destructive text-white shadow-sm transition active:scale-95 hover:bg-destructive/90"
-            variant="destructive"
-            size="icon"
+          <button
             onClick={() => increaseProductQuantity(product.cartItemId)}
-            aria-label="Aumentar quantidade"
+            className="flex h-6 w-6 items-center justify-center rounded-lg bg-destructive text-white shadow-sm transition active:scale-90"
           >
-            <PlusIcon size={10} />
-          </Button>
+            <PlusIcon size={12} strokeWidth={3} />
+          </button>
         </div>
       </div>
     </div>
