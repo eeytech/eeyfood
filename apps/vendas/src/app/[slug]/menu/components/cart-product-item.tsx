@@ -19,7 +19,7 @@ const CartProductItem = ({ product }: CartItemProps) => {
   const unitPrice = product.price + optionsTotal;
 
   return (
-    <div className="flex w-full items-center justify-between gap-2 rounded-2xl border border-slate-100 bg-white p-2.5 shadow-sm overflow-hidden">
+    <div className="flex w-full items-center gap-3 rounded-2xl border border-slate-100 bg-white p-2 shadow-sm overflow-hidden">
       {/* Esquerda: Imagem e Informações */}
       <div className="flex min-w-0 flex-1 items-center gap-2.5">
         <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-slate-50 border border-slate-100">
@@ -40,7 +40,7 @@ const CartProductItem = ({ product }: CartItemProps) => {
           {((product.selectedOptions && product.selectedOptions.length > 0) || product.notes) && (
             <div className="mt-0.5 flex flex-wrap gap-x-1 text-[9px] text-slate-400">
               {product.selectedOptions?.slice(0, 2).map((opt) => (
-                <span key={opt.id} className="whitespace-nowrap">• {opt.name}</span>
+                <span key={opt.id} className="line-clamp-1 break-all">• {opt.name}</span>
               ))}
               {(product.selectedOptions?.length ?? 0) > 2 && <span>...</span>}
             </div>
@@ -53,7 +53,7 @@ const CartProductItem = ({ product }: CartItemProps) => {
       </div>
 
       {/* Direita: Ações (Garantindo que fiquem dentro da tela) */}
-      <div className="flex shrink-0 flex-col items-end gap-1.5 border-l border-slate-50 pl-2">
+      <div className="flex shrink-0 flex-col items-end gap-1.5 pl-2">
         <button
           type="button"
           onClick={() => removeProduct(product.cartItemId)}
