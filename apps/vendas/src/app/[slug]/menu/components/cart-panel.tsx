@@ -4,14 +4,7 @@ import { ShoppingBagIcon } from "lucide-react";
 import { useContext, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatCurrency } from "@/helpers/format-currency";
 import type { RestaurantComCategoriasEProdutos } from "@/lib/db";
