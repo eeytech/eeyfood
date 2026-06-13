@@ -54,12 +54,12 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
 
         <CardContent
           className={
-            variant === "sheet" ? "flex flex-col gap-3 px-0 pb-0" : "flex flex-col gap-3 px-4"
+            variant === "sheet" ? "flex flex-col gap-4 px-4 pb-0" : "flex flex-col gap-4 px-6"
           }
         >
           {hasProducts ? (
-            <ScrollArea className={variant === "sidebar" ? "h-[400px]" : "h-[450px]"}>
-              <div className="space-y-3 pr-4">
+            <ScrollArea className={variant === "sidebar" ? "h-[450px]" : "h-[550px]"}>
+              <div className="space-y-4 pr-4 pb-4">
                 {products.map((product) => (
                   <CartProductItem key={product.cartItemId} product={product} />
                 ))}
@@ -68,10 +68,13 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
               </div>
             </ScrollArea>
           ) : (
-            <div className="rounded-[32px] border border-dashed bg-slate-50/50 px-5 py-8 text-center">
-              <p className="text-sm font-semibold text-slate-900">Carrinho vazio</p>
-              <p className="mt-1.5 text-[10px] leading-relaxed text-muted-foreground">
-                Explore as categorias e monte seu pedido com calma.
+            <div className="rounded-[32px] border border-dashed border-slate-200 bg-slate-50/50 px-5 py-12 text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm">
+                <ShoppingBagIcon size={24} className="text-slate-300" />
+              </div>
+              <p className="text-base font-bold text-slate-900">Seu carrinho está vazio</p>
+              <p className="mt-2 text-xs leading-relaxed text-slate-500">
+                Que tal dar uma olhada no cardápio e escolher algo gostoso?
               </p>
             </div>
           )}
@@ -80,18 +83,18 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
         <CardFooter
           className={
             variant === "sheet"
-              ? "mt-4 flex-col gap-2.5 px-0 pb-0"
-              : "mt-6 flex-col gap-3 border-t bg-slate-50/40 px-4 py-4"
+              ? "mt-auto flex-col gap-4 border-t bg-white p-6 shadow-[0_-8px_30px_rgba(0,0,0,0.04)]"
+              : "mt-6 flex-col gap-4 border-t bg-slate-50/40 px-6 py-6"
           }
         >
           <div className="flex w-full items-center justify-between">
-            <p className="text-xs font-medium text-muted-foreground">Subtotal</p>
-            <p className="text-lg font-bold text-slate-900" aria-live="polite">
+            <p className="text-sm font-semibold text-slate-500">Total do pedido</p>
+            <p className="text-2xl font-extrabold text-slate-900" aria-live="polite">
               {formatCurrency(total)}
             </p>
           </div>
           <Button
-            className="h-10 w-full rounded-full text-sm font-bold shadow-lg shadow-primary/20 transition hover:scale-[1.02] active:scale-[0.98]"
+            className="h-12 w-full rounded-2xl bg-destructive text-base font-bold shadow-lg shadow-destructive/20 transition-all hover:scale-[1.01] active:scale-[0.99]"
             disabled={!hasProducts}
             onClick={() => setFinishOrderSheetIsOpen(true)}
           >
