@@ -50,8 +50,15 @@ const CartRecommendations = () => {
         </h4>
       </div>
 
-      {/* Container de carrossel com scroll horizontal */}
-      <div className="overflow-x-auto pb-2 pl-6" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 transparent' }}>
+      {/* Container de carrossel com scroll horizontal invisível */}
+      <div
+        className="overflow-x-auto pb-2 pl-6 [&::-webkit-scrollbar]:hidden"
+        style={{
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          WebkitOverflowScrolling: 'touch'
+        }}
+      >
         <div
           className="flex gap-3 pr-6"
           style={{
