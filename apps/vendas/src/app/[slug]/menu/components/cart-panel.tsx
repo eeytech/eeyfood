@@ -38,22 +38,26 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
         </p>
       </div>
 
-      <div
-        className={
-          variant === "sheet" ? "flex-1 overflow-hidden px-6 pt-4" : "flex flex-col gap-3 px-6 pt-3"
-        }
-      >
-        {hasProducts ? (
+      {hasProducts && (
+        <div className={variant === "sheet" ? "flex-1 overflow-hidden px-6 pt-4" : "flex flex-col gap-3 px-6 pt-3"}>
           <ScrollArea className={variant === "sidebar" ? "h-[450px]" : "h-full"}>
             <div className="space-y-3 pr-4 pb-6">
               {products.map((product) => (
                 <CartProductItem key={product.cartItemId} product={product} />
               ))}
-              
-              <CartRecommendations />
             </div>
           </ScrollArea>
-        ) : (
+        </div>
+      )}
+
+      {hasProducts && (
+        <div className={variant === "sheet" ? "px-6 pt-2 pb-4 border-t" : "px-0 pt-0"}>
+          <CartRecommendations />
+        </div>
+      )}
+
+      {!hasProducts && (
+        <div className={variant === "sheet" ? "flex-1 overflow-hidden px-6 pt-4 flex items-center justify-center" : "flex flex-col gap-3 px-6 pt-3"}>
           <div className="rounded-[32px] border border-dashed border-slate-200 bg-slate-50/50 px-5 py-16 text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm">
               <ShoppingBagIcon size={24} className="text-slate-200" />
@@ -63,8 +67,8 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
               Que tal dar uma olhada no cardápio e escolher algo gostoso?
             </p>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       <div
         className={

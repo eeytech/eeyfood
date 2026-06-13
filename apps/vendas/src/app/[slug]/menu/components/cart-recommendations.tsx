@@ -42,18 +42,18 @@ const CartRecommendations = () => {
   if (recommendations.length === 0 || isLoading) return null;
 
   return (
-    <div className="mt-6 space-y-3">
-      <div className="flex items-center gap-2 px-1">
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 px-6">
         <SparklesIcon size={14} className="text-amber-500 fill-amber-500" />
         <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
           Que tal acompanhar com?
         </h4>
       </div>
 
-      {/* Container de rolagem com scroll suave */}
-      <div className="overflow-x-auto px-0 pb-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 transparent' }}>
+      {/* Container de carrossel com scroll horizontal */}
+      <div className="overflow-x-auto pb-2 pl-6" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 transparent' }}>
         <div
-          className="flex gap-3 px-1"
+          className="flex gap-3 pr-6"
           style={{
             WebkitOverflowScrolling: 'touch'
           }}
