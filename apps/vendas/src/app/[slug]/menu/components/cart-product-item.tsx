@@ -19,7 +19,7 @@ const CartProductItem = ({ product }: CartItemProps) => {
   const unitPrice = product.price + optionsTotal;
 
   return (
-    <div className="flex w-full flex-col gap-2 rounded-2xl border border-slate-100 bg-white p-2.5 shadow-sm sm:flex-row sm:items-center sm:gap-3">
+    <div className="flex w-full flex-col gap-2 rounded-xl border border-slate-100 bg-white p-2 shadow-sm sm:flex-row sm:items-center sm:gap-3 max-w-full">
       {/* Esquerda: Imagem e Informações */}
       <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
         <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-slate-50 border border-slate-100 sm:h-14 sm:w-14">
@@ -36,14 +36,21 @@ const CartProductItem = ({ product }: CartItemProps) => {
             {product.name}
           </p>
 
-          {/* Opções (simplificadas para economizar espaço) */}
-          {((product.selectedOptions && product.selectedOptions.length > 0) || product.notes) && (
+          {/* Opções */}
+          {(product.selectedOptions && product.selectedOptions.length > 0) && (
             <div className="flex flex-wrap gap-x-1 text-[8px] text-slate-400 sm:text-[9px]">
               {product.selectedOptions?.slice(0, 1).map((opt) => (
                 <span key={opt.id} className="line-clamp-1 break-all">• {opt.name}</span>
               ))}
               {(product.selectedOptions?.length ?? 0) > 1 && <span>...</span>}
             </div>
+          )}
+
+          {/* Observações/Notas */}
+          {product.notes && (
+            <p className="text-[7px] text-slate-500 italic line-clamp-2 break-words sm:text-[8px]">
+              {product.notes}
+            </p>
           )}
 
           <p className="text-xs font-black text-primary">
