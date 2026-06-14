@@ -86,7 +86,7 @@ const HomeContent = () => {
               <div className="space-y-2.5">
                 <Label
                   htmlFor="restaurantName"
-                  className="ml-2 text-[11px] font-bold uppercase tracking-wider text-slate-500"
+                  className="ml-2 text-xs font-bold uppercase tracking-wider text-slate-500"
                 >
                   Nome do Restaurante
                 </Label>

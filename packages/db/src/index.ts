@@ -11,6 +11,7 @@ export {
   buscarPedidosPorTelefone,
   buscarProdutoDoRestaurante,
   buscarRestauranteComCardapioPorSlug,
+  buscarProximaRegraFidelidade,
   buscarRestaurantePorSlug,
   criarPedido,
   criarTransacaoFinanceira,

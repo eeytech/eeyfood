@@ -1122,6 +1122,41 @@ export const validarBeneficiosPedido = async (
   };
 };
 
+export const buscarProximaRegraFidelidade = async (
+  slug: string,
+  subtotal: number,
+): Promise<{
+  minOrderValue: number;
+  cashbackPercent: number;
+  remainingAmount: number;
+} | null> => {
+  const restaurant = await buscarRestaurantePorSlug(slug);
+  if (!restaurant) return null;
+
+  const loyaltyRules = await db
+    .select()
+    .from(loyaltyRulesTable)
+    .where(
+      and(
+        eq(loyaltyRulesTable.restaurantId, restaurant.id),
+        eq(loyaltyRulesTable.isActive, true),
+      ),
+    )
+    .orderBy(desc(loyaltyRulesTable.minOrderValue));
+
+  const nextRule = [...loyaltyRules]
+    .reverse()
+    .find((rule) => rule.minOrderValue > subtotal);
+
+  if (!nextRule) return null;
+
+  return {
+    minOrderValue: nextRule.minOrderValue,
+    cashbackPercent: nextRule.cashbackPercent,
+    remainingAmount: arredondarMoeda(nextRule.minOrderValue - subtotal),
+  };
+};
+
 export const criarPedido = async (input: CriarPedidoInput): Promise<Order> => {
   const contexto = await carregarContextoPedidoCalculado(input);
   const scheduledFor = validarAgendamentoPedido({

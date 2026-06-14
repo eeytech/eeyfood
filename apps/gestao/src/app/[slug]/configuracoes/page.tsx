@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { buscarConfiguracoesRestaurante } from "@/lib/admin-queries";
 
+import { RestaurantFeaturesForm } from "./restaurant-features-form";
+
 interface ConfiguracoesPageProps {
   params: Promise<{ slug: string }>;
 }
@@ -44,6 +46,15 @@ const ConfiguracoesPage = async ({ params }: ConfiguracoesPageProps) => {
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
+        <RestaurantFeaturesForm
+          slug={slug}
+          initialValues={{
+            acceptMercadoPago: restaurant.acceptMercadoPago,
+            isCouponsEnabled: restaurant.isCouponsEnabled,
+            isCashbackEnabled: restaurant.isCashbackEnabled,
+          }}
+        />
+
         {/* Status Override */}
         <Card className="border-white/80 bg-white/90">
           <CardHeader>

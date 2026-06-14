@@ -57,7 +57,7 @@ const RestaurantHeader = ({ restaurant, onOrdersClick }: RestaurantHeaderProps) 
 
       <div className="absolute inset-x-0 bottom-10 z-10 mx-auto max-w-[1600px] px-5 sm:px-6 lg:px-8">
         <div className="max-w-3xl">
-          <p className="text-sm font-medium uppercase tracking-[0.28em] text-white/80">
+          <p className="text-base font-medium uppercase tracking-[0.28em] text-white/80">
             Cardápio digital
           </p>
           <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white drop-shadow-sm sm:text-5xl">

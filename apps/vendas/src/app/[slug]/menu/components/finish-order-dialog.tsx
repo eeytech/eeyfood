@@ -497,19 +497,19 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                       <CheckCircle2Icon className="text-green-600" size={20} />
                       Pedido recebido
                     </SheetTitle>
-                    <SheetDescription className="text-sm">
+                    <SheetDescription className="text-base">
                       Seu pedido ja foi salvo e a equipe do restaurante foi
                       avisada.
                     </SheetDescription>
                   </SheetHeader>
                   <div className="space-y-3 py-4">
-                    <div className="rounded-2xl border border-green-100 bg-green-50 p-3 text-xs text-green-900">
+                    <div className="rounded-2xl border border-green-100 bg-green-50 p-3 text-sm text-green-900">
                       {pedidoOfflineConcluido.paymentMethod === "DINHEIRO"
                         ? "O pagamento sera feito em dinheiro no balcao ou na entrega."
                         : "O pagamento sera concluido na maquininha no balcao ou na entrega."}
                     </div>
 
-                    <div className="rounded-2xl border bg-muted p-3 text-xs">
+                    <div className="rounded-2xl border bg-muted p-3 text-sm">
                       Total registrado:{" "}
                       <strong>
                         {formatCurrency(pedidoOfflineConcluido.total)}
@@ -517,7 +517,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                     </div>
 
                     {pedidoOfflineConcluido.scheduledFor ? (
-                      <div className="rounded-2xl border bg-muted p-3 text-xs">
+                      <div className="rounded-2xl border bg-muted p-3 text-sm">
                         Pedido agendado para{" "}
                         <strong>
                           {formatScheduledDate(
@@ -529,7 +529,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                     ) : null}
 
                     {pedidoOfflineConcluido.changeFor ? (
-                      <div className="rounded-2xl border bg-muted p-3 text-xs">
+                      <div className="rounded-2xl border bg-muted p-3 text-sm">
                         Troco solicitado para{" "}
                         <strong>
                           {formatCurrency(pedidoOfflineConcluido.changeFor)}
@@ -542,7 +542,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
               </ScrollArea>
             </div>
             <div className="flex flex-col gap-2.5 p-4 border-t bg-background">
-              <Button className="rounded-full h-10 text-sm" onClick={handleViewOrders}>
+              <Button className="rounded-full h-10 text-base" onClick={handleViewOrders}>
                 Ver meus pedidos
               </Button>
               <Button
@@ -572,7 +572,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                       <SheetTitle className="text-left text-lg">
                         Finalizar pedido
                       </SheetTitle>
-                      <SheetDescription className="text-xs">
+                      <SheetDescription className="text-sm">
                         Informe seus dados, valide os beneficios e escolha como
                         prefere pagar.
                       </SheetDescription>
@@ -583,15 +583,15 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                         name="name"
                         render={({ field }) => (
                           <FormItem className="space-y-1">
-                            <FormLabel className="text-xs">Seu nome</FormLabel>
+                            <FormLabel className="text-sm">Seu nome</FormLabel>
                             <FormControl>
                               <Input
                                 placeholder="Digite seu nome..."
-                                className="h-9 text-sm rounded-xl"
+                                className="h-9 text-base rounded-xl"
                                 {...field}
                               />
                             </FormControl>
-                            <FormMessage className="text-[10px]" />
+                            <FormMessage className="text-xs" />
                           </FormItem>
                         )}
                       />
@@ -601,17 +601,17 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                         name="phone"
                         render={({ field }) => (
                           <FormItem className="space-y-1">
-                            <FormLabel className="text-xs">Seu celular</FormLabel>
+                            <FormLabel className="text-sm">Seu celular</FormLabel>
                             <FormControl>
                               <PatternFormat
                                 placeholder="Digite seu celular..."
                                 format="(##) #####-####"
                                 customInput={Input}
-                                className="h-9 text-sm rounded-xl"
+                                className="h-9 text-base rounded-xl"
                                 {...field}
                               />
                             </FormControl>
-                            <FormMessage className="text-[10px]" />
+                            <FormMessage className="text-xs" />
                           </FormItem>
                         )}
                       />
@@ -621,17 +621,17 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                         name="couponCode"
                         render={({ field }) => (
                           <FormItem className="space-y-1">
-                            <FormLabel className="text-xs">Cupom de desconto</FormLabel>
+                            <FormLabel className="text-sm">Cupom de desconto</FormLabel>
                             <FormControl>
                               <Input
                                 placeholder="Ex.: BEMVINDO10"
                                 autoCapitalize="characters"
-                                className="h-9 text-sm rounded-xl uppercase"
+                                className="h-9 text-base rounded-xl uppercase"
                                 {...field}
                                 value={field.value ?? ""}
                               />
                             </FormControl>
-                            <FormMessage className="text-[10px]" />
+                            <FormMessage className="text-xs" />
                           </FormItem>
                         )}
                       />
@@ -639,10 +639,10 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                       {allowsScheduling ? (
                         <div className="rounded-[24px] border bg-slate-50/80 p-3.5">
                           <div className="space-y-1">
-                            <p className="text-xs font-semibold">
+                            <p className="text-sm font-semibold">
                               Horario da {schedulingLabel}
                             </p>
-                            <p className="text-[10px] text-muted-foreground leading-tight">
+                            <p className="text-xs text-muted-foreground leading-tight">
                               Escolha se deseja receber o pedido o quanto antes
                               ou em um horario agendado.
                             </p>
@@ -685,17 +685,17 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                                             : "border-border bg-background"
                                         }`}
                                       >
-                                        <p className="text-xs font-bold">
+                                        <p className="text-sm font-bold">
                                           {option.title}
                                         </p>
-                                        <p className="text-[10px] text-muted-foreground">
+                                        <p className="text-xs text-muted-foreground">
                                           {option.description}
                                         </p>
                                       </button>
                                     ))}
                                   </div>
                                 </FormControl>
-                                <FormMessage className="text-[10px]" />
+                                <FormMessage className="text-xs" />
                               </FormItem>
                             )}
                           />
@@ -706,14 +706,14 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                               name="scheduledFor"
                               render={({ field }) => (
                                 <FormItem className="mt-3 animate-in fade-in slide-in-from-top-2 duration-300 space-y-1">
-                                  <FormLabel className="text-[10px] font-bold uppercase text-slate-400">Data e hora</FormLabel>
+                                  <FormLabel className="text-xs font-bold uppercase text-slate-400">Data e hora</FormLabel>
                                   <Select
                                     onValueChange={field.onChange}
                                     defaultValue={field.value}
                                     value={field.value}
                                   >
                                     <FormControl>
-                                      <SelectTrigger className="h-9 rounded-xl text-xs">
+                                      <SelectTrigger className="h-9 rounded-xl text-sm">
                                         <SelectValue placeholder="Escolha um horário..." />
                                       </SelectTrigger>
                                     </FormControl>
@@ -721,12 +721,12 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                                       {schedulingSlots.length > 0 ? (
                                         schedulingSlots.map((group) => (
                                           <SelectGroup key={group.date}>
-                                            <SelectLabel className="text-primary font-bold text-xs">{group.label}</SelectLabel>
+                                            <SelectLabel className="text-primary font-bold text-sm">{group.label}</SelectLabel>
                                             {group.items.map((slot) => (
-                                              <SelectItem 
-                                                key={slot.value} 
+                                              <SelectItem
+                                                key={slot.value}
                                                 value={slot.value}
-                                                className="rounded-lg text-xs"
+                                                className="rounded-lg text-sm"
                                               >
                                                 {slot.label}
                                               </SelectItem>
@@ -734,13 +734,13 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                                           </SelectGroup>
                                         ))
                                       ) : (
-                                        <div className="p-3 text-center text-xs text-muted-foreground">
+                                        <div className="p-3 text-center text-sm text-muted-foreground">
                                           {isLoading ? "Carregando horários..." : "Nenhum horário disponível."}
                                         </div>
                                       )}
                                     </SelectContent>
                                   </Select>
-                                  <FormMessage className="text-[10px]" />
+                                  <FormMessage className="text-xs" />
                                 </FormItem>
                               )}
                             />
@@ -751,11 +751,11 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                       <div className="rounded-[24px] border bg-slate-50/80 p-3.5">
                         <div className="flex items-start justify-between gap-3">
                           <div className="space-y-1">
-                            <p className="flex items-center gap-1.5 text-xs font-semibold">
+                            <p className="flex items-center gap-1.5 text-sm font-semibold">
                               <TicketPercentIcon size={14} />
                               Cupons e cashback
                             </p>
-                            <p className="text-[10px] text-muted-foreground leading-tight">
+                            <p className="text-xs text-muted-foreground leading-tight">
                               Validamos o cupom e o saldo pelo celular
                               informado.
                             </p>
@@ -763,7 +763,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                           <Button
                             type="button"
                             variant="outline"
-                            className="rounded-full h-8 text-[10px] px-3"
+                            className="rounded-full h-8 text-xs px-3"
                             disabled={
                               isValidatingBenefits || products.length === 0
                             }
@@ -778,30 +778,30 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
 
                         {benefits ? (
                           <div className="mt-3 space-y-2.5">
-                            <div className="rounded-xl border bg-background p-3 text-xs">
+                            <div className="rounded-xl border bg-background p-3 text-sm">
                               {benefits.appliedCoupon ? (
                                 <p className="font-medium text-slate-900">
                                   Cupom aplicado: {benefits.appliedCoupon.code}
                                 </p>
                               ) : (
-                                <p className="font-medium text-slate-900 text-[11px]">
+                                <p className="font-medium text-slate-900 text-xs">
                                   Nenhum cupom aplicado.
                                 </p>
                               )}
-                              <p className="mt-0.5 text-[10px] text-muted-foreground leading-tight">
+                              <p className="mt-0.5 text-xs text-muted-foreground leading-tight">
                                 {benefits.appliedCoupon?.description ??
                                   "Voce pode seguir sem desconto promocional."}
                               </p>
                             </div>
 
-                            <div className="rounded-xl border bg-background p-3 text-xs">
+                            <div className="rounded-xl border bg-background p-3 text-sm">
                               <div className="flex items-center justify-between gap-3">
                                 <div>
-                                  <p className="flex items-center gap-1.5 font-medium text-slate-900 text-[11px]">
+                                  <p className="flex items-center gap-1.5 font-medium text-slate-900 text-xs">
                                     <WalletCardsIcon size={14} />
                                     Saldo de cashback
                                   </p>
-                                  <p className="mt-0.5 text-[10px] text-muted-foreground">
+                                  <p className="mt-0.5 text-xs text-muted-foreground">
                                     Saldo: <strong>{formatCurrency(benefits.wallet?.currentBalance ?? 0)}</strong>
                                   </p>
                                 </div>
@@ -812,7 +812,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                                     variant={
                                       useWalletBalance ? "default" : "outline"
                                     }
-                                    className="rounded-full h-7 text-[10px] px-3"
+                                    className="rounded-full h-7 text-xs px-3"
                                     disabled={isValidatingBenefits}
                                     onClick={handleToggleWalletBalance}
                                   >
@@ -825,14 +825,14 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
 
                               {useWalletBalance &&
                               benefits.wallet?.availableToRedeem ? (
-                                <p className="mt-2 text-[10px] text-emerald-700 font-semibold bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-lg inline-block">
+                                <p className="mt-2 text-xs text-emerald-700 font-semibold bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-lg inline-block">
                                   Resgate aplicado: <strong>{formatCurrency(benefits.wallet.availableToRedeem)}</strong>
                                 </p>
                               ) : null}
                             </div>
                           </div>
                         ) : (
-                          <p className="mt-3 text-[10px] text-muted-foreground italic">
+                          <p className="mt-3 text-xs text-muted-foreground italic">
                             O total final sera revalidado no momento da confirmacao.
                           </p>
                         )}
@@ -843,7 +843,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                         name="paymentMethod"
                         render={({ field }) => (
                           <FormItem className="space-y-2">
-                            <FormLabel className="text-xs">Forma de pagamento</FormLabel>
+                            <FormLabel className="text-sm">Forma de pagamento</FormLabel>
                             <FormControl>
                               <div className="grid gap-2.5">
                                 {paymentOptions.map((option) => (
@@ -857,17 +857,17 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                                         : "border-border bg-background"
                                     }`}
                                   >
-                                    <p className="text-xs font-bold">
+                                    <p className="text-sm font-bold">
                                       {option.titulo}
                                     </p>
-                                    <p className="text-[10px] text-muted-foreground leading-tight">
+                                    <p className="text-xs text-muted-foreground leading-tight">
                                       {option.descricao}
                                     </p>
                                   </button>
                                 ))}
                               </div>
                             </FormControl>
-                            <FormMessage className="text-[10px]" />
+                            <FormMessage className="text-xs" />
                           </FormItem>
                         )}
                       />
@@ -878,24 +878,24 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                           name="changeFor"
                           render={({ field }) => (
                             <FormItem className="space-y-1">
-                              <FormLabel className="text-xs">
+                              <FormLabel className="text-sm">
                                 Troco para quanto?
                               </FormLabel>
                               <FormControl>
                                 <Input
                                   placeholder="Ex.: 50,00"
                                   inputMode="decimal"
-                                  className="h-9 text-sm rounded-xl"
+                                  className="h-9 text-base rounded-xl"
                                   {...field}
                                 />
                               </FormControl>
-                              <FormMessage className="text-[10px]" />
+                              <FormMessage className="text-xs" />
                             </FormItem>
                           )}
                         />
                       ) : null}
 
-                      <div className="rounded-[24px] border bg-muted/50 p-3.5 text-xs">
+                      <div className="rounded-[24px] border bg-muted/50 p-3.5 text-sm">
                         <div className="flex items-center justify-between">
                           <span className="text-slate-500">Subtotal</span>
                           <span className="font-semibold">
@@ -923,13 +923,13 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
 
                         <div className="mt-2.5 flex items-center justify-between border-t pt-2.5">
                           <span className="font-bold text-slate-800">Total Final</span>
-                          <span className="text-lg font-extrabold text-primary">
+                          <span className="text-xl font-extrabold text-primary">
                             {formatCurrency(checkoutSummary.total)}
                           </span>
                         </div>
 
                         {checkoutSummary.cashbackEarnedAmount > 0 ? (
-                          <p className="mt-2.5 text-[10px] text-muted-foreground italic leading-tight">
+                          <p className="mt-2.5 text-xs text-muted-foreground italic leading-tight">
                             Este pedido gera{" "}
                             <strong>
                               {formatCurrency(
@@ -944,11 +944,11 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                           <div className="mt-3 flex flex-col gap-1 rounded-xl bg-blue-50 px-3 py-2 border border-blue-100 animate-pulse">
                             <div className="flex items-center gap-1.5">
                               <TrendingUpIcon size={14} className="text-blue-600" />
-                              <p className="text-[10px] font-bold text-blue-700">
+                              <p className="text-xs font-bold text-blue-700">
                                 Dica: Peça mais {formatCurrency(checkoutSummary.nextLoyaltyRule.remainingAmount)}!
                               </p>
                             </div>
-                            <p className="text-[10px] text-blue-600 leading-tight">
+                            <p className="text-xs text-blue-600 leading-tight">
                               Ganhe <strong>{checkoutSummary.nextLoyaltyRule.cashbackPercent}%</strong> de cashback em vez de {((checkoutSummary.cashbackEarnedAmount / checkoutSummary.total) * 100).toFixed(0)}%!
                             </p>
                           </div>
@@ -974,7 +974,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                     : "Confirmar pedido"}
                 </Button>
                 <Button
-                  className="w-full h-10 rounded-full text-slate-500 font-medium text-xs"
+                  className="w-full h-10 rounded-full text-slate-500 font-medium text-sm"
                   variant="outline"
                   type="button"
                   onClick={() => handleSheetOpenChange(false)}

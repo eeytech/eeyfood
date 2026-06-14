@@ -28,10 +28,10 @@ const Products = ({ products, restaurant }: ProductsProps) => {
   if (products.length === 0) {
     return (
       <div className="rounded-[32px] border border-dashed bg-slate-50 px-6 py-8 text-center" role="status">
-        <p className="text-base font-medium text-slate-950">
+        <p className="text-lg font-medium text-slate-950">
           Nenhum produto disponível nesta categoria
         </p>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="mt-2 text-base text-muted-foreground">
           Tente navegar para outra categoria do cardápio.
         </p>
       </div>
@@ -58,7 +58,7 @@ const Products = ({ products, restaurant }: ProductsProps) => {
               />
               {product.isBestseller && (
                 <div 
-                  className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-widest text-white shadow-xl shadow-secondary/30"
+                  className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-xs font-extrabold uppercase tracking-widest text-white shadow-xl shadow-secondary/30"
                   aria-label="Item muito popular"
                 >
                   <FlameIcon size={10} className="fill-white" aria-hidden="true" />
@@ -69,24 +69,24 @@ const Products = ({ products, restaurant }: ProductsProps) => {
 
             <div className="flex h-full flex-col gap-3 p-4">
               <div className="space-y-1">
-                <h3 className="text-sm font-bold tracking-tight text-slate-950">
+                <h3 className="text-base font-bold tracking-tight text-slate-950">
                   {product.name}
                 </h3>
-                <p className="line-clamp-2 text-[11px] leading-4 text-slate-500">
+                <p className="line-clamp-2 text-xs leading-4 text-slate-500">
                   {product.description}
                 </p>
               </div>
 
               <div className="mt-auto flex items-center justify-between gap-2">
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
                     A partir de
                   </span>
-                  <span className="text-base font-extrabold text-slate-950">
+                  <span className="text-lg font-extrabold text-slate-950">
                     {formatCurrency(product.price)}
                   </span>
                 </div>
-                <span className="shrink-0 rounded-full bg-slate-950 px-3 py-1.5 text-xs font-bold text-white transition group-hover:bg-primary" aria-hidden="true">
+                <span className="shrink-0 rounded-full bg-slate-950 px-3 py-1.5 text-sm font-bold text-white transition group-hover:bg-primary" aria-hidden="true">
                   Ver produto
                 </span>
               </div>

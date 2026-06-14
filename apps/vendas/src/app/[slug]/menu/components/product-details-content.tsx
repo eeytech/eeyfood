@@ -153,7 +153,7 @@ const ProductDetailsContent = ({
               height={20}
               className="rounded-full ring-2 ring-white"
             />
-            <p className="text-xs font-medium text-muted-foreground">
+            <p className="text-sm font-medium text-muted-foreground">
               {product.restaurant.name}
             </p>
           </div>
@@ -190,8 +190,8 @@ const ProductDetailsContent = ({
           <ScrollArea className="h-full pr-4">
             {/* 1. SOBRE */}
             <div className="mt-6 space-y-2">
-              <h4 className="text-base font-semibold text-slate-950">Sobre</h4>
-              <p className="text-sm font-medium leading-relaxed text-slate-500">
+              <h4 className="text-lg font-semibold text-slate-950">Sobre</h4>
+              <p className="text-base font-medium leading-relaxed text-slate-500">
                 {product.description}
               </p>
             </div>
@@ -201,7 +201,7 @@ const ProductDetailsContent = ({
               <div className="mt-6 space-y-2">
                 <div className="flex items-center gap-2">
                   <ChefHatIcon size={18} className="text-slate-800" />
-                  <h4 className="text-base font-semibold text-slate-950">
+                  <h4 className="text-lg font-semibold text-slate-950">
                     Ingredientes
                   </h4>
                 </div>
@@ -209,7 +209,7 @@ const ProductDetailsContent = ({
                   {product.ingredients.map((ingredient) => (
                     <li
                       key={ingredient}
-                      className="flex items-center gap-2 text-sm font-medium text-slate-500"
+                      className="flex items-center gap-2 text-base font-medium text-slate-500"
                     >
                       <span className="h-1 w-1 rounded-full bg-slate-300" />
                       {ingredient}
@@ -223,8 +223,8 @@ const ProductDetailsContent = ({
             {optionGroups.map((group) => (
               <div key={group.id} className="mt-6 space-y-3">
                 <div className="flex flex-col gap-1">
-                  <h4 className="text-base font-semibold text-slate-950">{group.name}</h4>
-                  <p className="text-xs text-slate-500">
+                  <h4 className="text-lg font-semibold text-slate-950">{group.name}</h4>
+                  <p className="text-sm text-slate-500">
                     {group.minOptions > 0 ? `Obrigatório • ` : ""}
                     {group.maxOptions === 1 ? "Selecione 1 opção" : `Selecione até ${group.maxOptions} opções`}
                   </p>
@@ -245,16 +245,16 @@ const ProductDetailsContent = ({
                         }`}
                       >
                         <div className="flex flex-col items-start text-left">
-                          <span className={`text-sm font-semibold ${isSelected ? "text-destructive" : "text-slate-900"}`}>
+                          <span className={`text-base font-semibold ${isSelected ? "text-destructive" : "text-slate-900"}`}>
                             {option.name}
                           </span>
                           {option.description && (
-                            <span className="text-xs text-slate-500">{option.description}</span>
+                            <span className="text-sm text-slate-500">{option.description}</span>
                           )}
                         </div>
                         <div className="flex items-center gap-3">
                           {option.price > 0 && (
-                            <span className={`text-xs font-medium ${isSelected ? "text-destructive" : "text-slate-600"}`}>
+                            <span className={`text-sm font-medium ${isSelected ? "text-destructive" : "text-slate-600"}`}>
                               + {formatCurrency(option.price)}
                             </span>
                           )}
@@ -269,7 +269,7 @@ const ProductDetailsContent = ({
 
             {/* 4. OBSERVAÇÕES */}
             <div className="mt-6 space-y-2 pb-48">
-              <Label htmlFor="comment" className="text-base font-semibold text-slate-950">
+              <Label htmlFor="comment" className="text-lg font-semibold text-slate-950">
                 Observações
               </Label>
               <Textarea
@@ -278,9 +278,9 @@ const ProductDetailsContent = ({
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 maxLength={200}
-                className="min-h-[80px] rounded-xl border-slate-200 focus-visible:ring-destructive text-sm"
+                className="min-h-[80px] rounded-xl border-slate-200 focus-visible:ring-destructive text-base"
               />
-              <p className="text-right text-xs text-slate-400">
+              <p className="text-right text-sm text-slate-400">
                 {comment.length}/200
               </p>
             </div>
@@ -291,13 +291,13 @@ const ProductDetailsContent = ({
         <div className="fixed bottom-0 left-0 w-full bg-white/95 backdrop-blur-sm border-t border-slate-200 p-4 z-50 lg:relative lg:p-0 lg:border-none lg:bg-transparent lg:mt-auto" style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}>
           <div className="max-w-screen-xl mx-auto space-y-3">
             {!isOpen && (
-              <p className="rounded-xl bg-rose-50 p-3 text-center text-xs font-semibold text-rose-600 border border-rose-100">
+              <p className="rounded-xl bg-rose-50 p-3 text-center text-sm font-semibold text-rose-600 border border-rose-100">
                 O restaurante está fechado no momento.
               </p>
             )}
 
             {isOutOfStock && (
-              <p className="rounded-xl bg-amber-50 p-3 text-center text-xs font-semibold text-amber-600 border border-amber-100">
+              <p className="rounded-xl bg-amber-50 p-3 text-center text-sm font-semibold text-amber-600 border border-amber-100">
                 Produto temporariamente esgotado.
               </p>
             )}

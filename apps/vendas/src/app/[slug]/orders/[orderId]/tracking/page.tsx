@@ -64,7 +64,7 @@ const TrackingPage = () => {
         </Button>
         <div>
           <h1 className="text-base font-bold">Rastrear Pedido #{orderId}</h1>
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {order.restaurant.name}
           </p>
         </div>
@@ -79,12 +79,12 @@ const TrackingPage = () => {
           <Card className="rounded-[24px] border-none shadow-2xl ring-1 ring-black/5">
             <CardHeader className="pb-1.5 pt-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-bold">
+                <CardTitle className="text-base font-bold">
                   {order.status === "OUT_FOR_DELIVERY"
                     ? "🚀 A caminho da sua casa!"
                     : "👨‍🍳 Preparando seu pedido..."}
                 </CardTitle>
-                <div className="flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700">
+                <div className="flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-700">
                   <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-600" />
                   AO VIVO
                 </div>
@@ -96,10 +96,10 @@ const TrackingPage = () => {
                   <BikeIcon className="text-slate-600" size={20} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">
+                  <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
                     Entregador
                   </p>
-                  <p className="text-sm font-bold text-slate-900">
+                  <p className="text-base font-bold text-slate-900">
                     {order.courier?.name || "Aguardando entregador..."}
                   </p>
                 </div>
@@ -108,13 +108,13 @@ const TrackingPage = () => {
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5">
                   <ClockIcon size={14} className="text-muted-foreground" />
-                  <span className="text-xs font-medium">
+                  <span className="text-sm font-medium">
                     Previsão: 15-25 min
                   </span>
                 </div>
                 <Button
                   size="sm"
-                  className="rounded-full h-8 px-4 bg-blue-600 font-bold text-xs"
+                  className="rounded-full h-8 px-4 bg-blue-600 font-bold text-sm"
                   asChild
                 >
                   <a href={`tel:${order.courier?.phone}`}>Ligar</a>

@@ -45,7 +45,7 @@ const CartRecommendations = () => {
     <div className="space-y-3">
       <div className="flex items-center gap-2 px-6">
         <SparklesIcon size={14} className="text-amber-500 fill-amber-500" />
-        <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
           Que tal acompanhar com?
         </h4>
       </div>
@@ -79,11 +79,11 @@ const CartRecommendations = () => {
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <p className="line-clamp-2 min-h-[28px] text-[10px] font-bold leading-tight text-slate-800">
+                <p className="line-clamp-2 min-h-[28px] text-xs font-bold leading-tight text-slate-800">
                   {product.name}
                 </p>
                 <div className="flex items-center justify-between gap-1">
-                  <span className="text-[11px] font-black text-primary">
+                  <span className="text-xs font-black text-primary">
                     {formatCurrency(product.price)}
                   </span>
                   <button

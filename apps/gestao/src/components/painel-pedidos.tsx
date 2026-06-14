@@ -444,6 +444,7 @@ const PainelPedidos = ({
                 <span>${item.product.name}</span>
                 <span>${item.quantity}x</span>
               </div>
+              ${item.notes ? `<div style="font-size: 10px; font-style: italic; margin-bottom: 4px;">- Obs: ${item.notes}</div>` : ""}
             `).join('')}
           </div>
 
@@ -778,6 +779,11 @@ const PainelPedidos = ({
                                       <p className="text-sm text-muted-foreground">
                                         Quantidade: {String(orderProduct.quantity)}
                                       </p>
+                                      {orderProduct.notes && (
+                                        <p className="mt-1 text-xs italic text-amber-600">
+                                          Obs: {orderProduct.notes}
+                                        </p>
+                                      )}
                                     </div>
                                     <ReceiptTextIcon
                                       className="text-primary"

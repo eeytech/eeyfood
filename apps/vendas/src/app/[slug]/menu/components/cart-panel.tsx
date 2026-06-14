@@ -31,7 +31,7 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
           <ShoppingBagIcon size={18} className="text-primary" aria-hidden="true" />
           <h3 className="text-lg font-bold tracking-tight text-slate-900">Seu pedido</h3>
         </div>
-        <p className="text-xs text-muted-foreground" aria-live="polite">
+        <p className="text-sm text-muted-foreground" aria-live="polite">
           {hasProducts
             ? `${String(totalQuantity)} ${totalQuantity === 1 ? "item selecionado" : "itens selecionados"}`
             : "Adicione produtos para começar seu pedido."}
@@ -63,7 +63,7 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
               <ShoppingBagIcon size={24} className="text-slate-200" />
             </div>
             <p className="text-base font-bold text-slate-900">Seu carrinho está vazio</p>
-            <p className="mt-2 text-xs leading-relaxed text-slate-500">
+            <p className="mt-2 text-sm leading-relaxed text-slate-500">
               Que tal dar uma olhada no cardápio e escolher algo gostoso?
             </p>
           </div>
@@ -78,7 +78,7 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
         }
       >
         <div className="flex w-full items-center justify-between">
-          <p className="text-sm font-semibold text-slate-500">Total do pedido</p>
+          <p className="text-base font-semibold text-slate-500">Total do pedido</p>
           <p className="text-2xl font-extrabold text-slate-900" aria-live="polite">
             {formatCurrency(total)}
           </p>

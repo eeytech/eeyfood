@@ -363,6 +363,7 @@ const carregarContextoPedidoCalculado = async (input) => {
             price: currentProduct.price,
             unitCost: currentProduct.costPrice,
             lineTotal,
+            notes: itemInput.notes,
             currentProduct,
             selectedOptions,
         };
@@ -449,19 +450,43 @@ export const buscarRestauranteComCardapioPorSlug = async (slug) => {
         .where(and(eq(orderRatingsTable.restaurantId, restaurant.id), eq(orderRatingsTable.isActive, true)));
     const rating = Number(ratings[0]?.avgStars || 0);
     const ratingCount = Number(ratings[0]?.count || 0);
-    // Buscar IDs dos produtos mais vendidos para a tag Bestseller
-    const topSellers = await db
+    // Contar produtos ativos por categoria
+    const categoryProductCounts = await db
+        .select({
+        categoryId: menuCategoriesTable.id,
+        activeCount: sql `count(case when ${productsTable.isActive} = true then 1 end)`.as('activeCount'),
+    })
+        .from(menuCategoriesTable)
+        .leftJoin(productsTable, eq(productsTable.menuCategoryId, menuCategoriesTable.id))
+        .where(and(eq(menuCategoriesTable.restaurantId, restaurant.id), eq(menuCategoriesTable.isActive, true)))
+        .groupBy(menuCategoriesTable.id);
+    const categoryCountMap = new Map(categoryProductCounts.map((cc) => [cc.categoryId, cc.activeCount]));
+    // Buscar bestsellers por categoria usando window function
+    // A consulta agrupa produtos por categoria, soma as vendas,
+    // e ordena por quantidade vendida dentro de cada categoria
+    const bestsellersRaw = await db
         .select({
         productId: orderProductsTable.productId,
-        totalQuantity: sql `sum(${orderProductsTable.quantity})`,
+        categoryId: productsTable.menuCategoryId,
+        totalQuantity: sql `sum(${orderProductsTable.quantity})`.as('totalQuantity'),
+        rowNumber: sql `row_number() over (partition by ${productsTable.menuCategoryId} order by sum(${orderProductsTable.quantity}) desc, ${productsTable.id})`.as('rowNumber'),
     })
         .from(orderProductsTable)
         .innerJoin(ordersTable, eq(ordersTable.id, orderProductsTable.orderId))
+        .innerJoin(productsTable, eq(productsTable.id, orderProductsTable.productId))
         .where(eq(ordersTable.restaurantId, restaurant.id))
-        .groupBy(orderProductsTable.productId)
-        .orderBy(desc(sql `sum(${orderProductsTable.quantity})`))
-        .limit(10);
-    const topSellerIds = new Set(topSellers.map((s) => s.productId));
+        .groupBy(orderProductsTable.productId, productsTable.menuCategoryId, productsTable.id);
+    // Determinar bestsellers baseado nas regras de negócio:
+    // - Categorias com ≤5 produtos: TOP 1
+    // - Categorias com >5 produtos: TOP 3
+    const topSellerIds = new Set();
+    for (const product of bestsellersRaw) {
+        const activeCount = categoryCountMap.get(product.categoryId) || 0;
+        const limit = activeCount <= 5 ? 1 : 3;
+        if (product.rowNumber <= limit) {
+            topSellerIds.add(product.productId);
+        }
+    }
     const operatingHours = await db
         .select()
         .from(operatingHoursTable)
@@ -610,6 +635,26 @@ export const validarBeneficiosPedido = async (input) => {
             : null,
     };
 };
+export const buscarProximaRegraFidelidade = async (slug, subtotal) => {
+    const restaurant = await buscarRestaurantePorSlug(slug);
+    if (!restaurant)
+        return null;
+    const loyaltyRules = await db
+        .select()
+        .from(loyaltyRulesTable)
+        .where(and(eq(loyaltyRulesTable.restaurantId, restaurant.id), eq(loyaltyRulesTable.isActive, true)))
+        .orderBy(desc(loyaltyRulesTable.minOrderValue));
+    const nextRule = [...loyaltyRules]
+        .reverse()
+        .find((rule) => rule.minOrderValue > subtotal);
+    if (!nextRule)
+        return null;
+    return {
+        minOrderValue: nextRule.minOrderValue,
+        cashbackPercent: nextRule.cashbackPercent,
+        remainingAmount: arredondarMoeda(nextRule.minOrderValue - subtotal),
+    };
+};
 export const criarPedido = async (input) => {
     const contexto = await carregarContextoPedidoCalculado(input);
     const scheduledFor = validarAgendamentoPedido({
@@ -704,6 +749,7 @@ export const criarPedido = async (input) => {
             unitCost: item.unitCost,
             lineTotal: item.lineTotal,
             productNameSnapshot: item.productNameSnapshot,
+            notes: item.notes,
         })));
         for (const item of contexto.itens) {
             if (!item.currentProduct.trackInventory) {

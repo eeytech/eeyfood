@@ -70,10 +70,10 @@ function SearchEmptyState() {
       <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
         <SearchIcon size={24} className="text-slate-400" aria-hidden="true" />
       </div>
-      <p className="text-base font-medium text-slate-950">
+      <p className="text-lg font-medium text-slate-950">
         Ops! Não encontramos nenhum item com esse nome.
       </p>
-      <p className="mt-2 text-sm text-muted-foreground">
+      <p className="mt-2 text-base text-muted-foreground">
         Tente outro termo ou navegue pelas categorias do cardápio.
       </p>
     </div>
@@ -110,24 +110,24 @@ function SearchProductCard({
       </div>
       <div className="flex h-full flex-col gap-3 p-4">
         <div className="space-y-1.5">
-          <h3 className="text-sm font-semibold tracking-tight text-slate-950">
+          <h3 className="text-base font-semibold tracking-tight text-slate-950">
             <Highlight text={product.name} query={query} />
           </h3>
-          <p className="line-clamp-3 text-xs leading-5 text-slate-600">
+          <p className="line-clamp-3 text-sm leading-5 text-slate-600">
             {product.description}
           </p>
         </div>
         <div className="mt-auto flex items-end justify-between gap-3">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
               A partir de
             </p>
-            <p className="text-base font-semibold text-slate-950">
+            <p className="text-lg font-semibold text-slate-950">
               {formatCurrency(product.price)}
             </p>
           </div>
           <span
-            className="rounded-full bg-slate-950 px-3 py-1.5 text-xs font-medium text-white transition group-hover:bg-primary"
+            className="rounded-full bg-slate-950 px-3 py-1.5 text-sm font-medium text-white transition group-hover:bg-primary"
             aria-hidden="true"
           >
             Ver produto
@@ -177,7 +177,7 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
     return (
       <div className="relative z-20 mt-[-1.5rem] rounded-t-[2rem] bg-white">
         <div className="mx-auto max-w-7xl px-5 py-8 sm:px-6 lg:px-8">
-          <p className="text-center text-sm text-muted-foreground">
+          <p className="text-center text-base text-muted-foreground">
             Nenhuma categoria disponível no momento.
           </p>
         </div>
@@ -207,18 +207,18 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
                   {restaurant.ratingCount > 0 && (
                     <div className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-amber-700">
                       <StarIcon size={12} className="fill-amber-600" />
-                      <span className="text-xs font-bold">
+                      <span className="text-sm font-bold">
                         {restaurant.rating.toFixed(1)}
                       </span>
                     </div>
                   )}
                 </div>
-                <p className="max-w-2xl text-xs text-slate-600">
+                <p className="max-w-2xl text-sm text-slate-600">
                   {restaurant.description}
                 </p>
               </div>
               <div
-                className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-medium ${
+                className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium ${
                   isOpen
                     ? "bg-emerald-50 text-emerald-700"
                     : "bg-primary/10 text-primary"
@@ -250,7 +250,7 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
 
           <div className="hidden lg:block lg:w-[320px]">
             <div className="rounded-[28px] border bg-white px-4 py-3 shadow-sm">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
                 Pedido atual
               </p>
               <div className="mt-2 flex items-end justify-between gap-4">
@@ -258,14 +258,14 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
                   <p className="text-xl font-semibold text-slate-950">
                     {formatCurrency(total)}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     {totalQuantity === 0
                       ? "Nenhum item selecionado"
                       : `${String(totalQuantity)} ${totalQuantity === 1 ? "item" : "itens"} no pedido`}
                   </p>
                 </div>
                 <Button
-                  className="rounded-full h-9 text-sm"
+                  className="rounded-full h-9 text-base"
                   disabled={products.length === 0}
                   onClick={toggleCart}
                 >
@@ -319,10 +319,10 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
               aria-label="Categorias do cardápio"
             >
               <div className="px-2">
-                <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
                   Categorias
                 </p>
-                <h3 className="mt-1.5 text-base font-semibold text-slate-950">
+                <h3 className="mt-1.5 text-lg font-semibold text-slate-950">
                   Navegue pelo cardápio
                 </h3>
               </div>
@@ -345,9 +345,9 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
                       aria-current={isActive ? "page" : undefined}
                     >
                       <div>
-                        <p className="text-sm font-medium">{category.name}</p>
+                        <p className="text-base font-medium">{category.name}</p>
                         <p
-                          className={`text-[10px] ${isActive ? "text-slate-300" : "text-slate-500"}`}
+                          className={`text-xs ${isActive ? "text-slate-300" : "text-slate-500"}`}
                         >
                           {String(category.products.length)}{" "}
                           {category.products.length === 1
@@ -371,13 +371,13 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
             {isSearchActive ? (
               <>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-slate-500">
+                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
                     Resultados da busca
                   </p>
                   <h3 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">
                     &ldquo;{searchQuery}&rdquo;
                   </h3>
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     {searchResults.length === 0
                       ? "Nenhum resultado encontrado"
                       : `${String(searchResults.length)} ${searchResults.length === 1 ? "resultado" : "resultados"}`}
@@ -422,7 +422,7 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
                     <h3 className="text-2xl font-semibold tracking-tight text-slate-950">
                       {category.name}
                     </h3>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
+                    <p className="mt-0.5 text-sm text-muted-foreground">
                       {String(category.products.length)}{" "}
                       {category.products.length === 1
                         ? "opção disponível"
@@ -451,17 +451,17 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
       {products.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-between border-t bg-white px-5 py-2.5 shadow-[0_-8px_30px_rgba(15,23,42,0.08)] lg:hidden">
           <div>
-            <p className="text-[10px] text-muted-foreground">Total do pedido</p>
-            <p className="text-sm font-semibold">
+            <p className="text-xs text-muted-foreground">Total do pedido</p>
+            <p className="text-base font-semibold">
               {formatCurrency(total)}
-              <span className="text-[10px] font-normal text-muted-foreground">
+              <span className="text-xs font-normal text-muted-foreground">
                 {" "}
                 / {String(totalQuantity)}{" "}
                 {totalQuantity > 1 ? "itens" : "item"}
               </span>
             </p>
           </div>
-          <Button className="rounded-full h-9 text-sm" onClick={toggleCart}>
+          <Button className="rounded-full h-9 text-base" onClick={toggleCart}>
             Ver sacola
           </Button>
         </div>

@@ -19,6 +19,7 @@ export {
   atualizarStatusPagamentoPedido,
   atualizarStatusPedido,
   buscarPedidosPorTelefone,
+  buscarProximaRegraFidelidade,
   buscarProdutoDoRestaurante,
   buscarRestauranteComCardapioPorSlug,
   buscarRestaurantePorSlug,

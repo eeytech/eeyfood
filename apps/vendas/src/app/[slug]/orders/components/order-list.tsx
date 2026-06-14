@@ -92,7 +92,7 @@ const OrderList = ({ orders, isSidePanel, onBackClick }: OrderListProps) => {
         <Button
           variant="ghost"
           size="sm"
-          className="rounded-full -ml-2 text-xs"
+          className="rounded-full -ml-2 text-sm"
           onClick={handleBackClick}
         >
           <ChevronLeftIcon size={14} />
@@ -104,7 +104,7 @@ const OrderList = ({ orders, isSidePanel, onBackClick }: OrderListProps) => {
           <p className="text-lg font-medium text-slate-950">
             Nenhum pedido encontrado
           </p>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="mt-2 text-base text-muted-foreground">
             Voce ainda nao realizou pedidos com este numero.
           </p>
         </div>
@@ -127,16 +127,16 @@ const OrderList = ({ orders, isSidePanel, onBackClick }: OrderListProps) => {
                       />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-slate-900">
+                      <p className="text-base font-bold text-slate-900">
                         {order.restaurant.name}
                       </p>
-                      <p className="text-[10px] text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         Realizado em {formatDateTime(order.createdAt)}
                       </p>
                     </div>
                   </div>
                   <div
-                    className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${getStatusClassName(order.status)}`}
+                    className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${getStatusClassName(order.status)}`}
                   >
                     {getStatusLabel(order.status)}
                   </div>
@@ -151,14 +151,14 @@ const OrderList = ({ orders, isSidePanel, onBackClick }: OrderListProps) => {
                       className="flex items-center justify-between gap-4"
                     >
                       <div className="flex items-center gap-2.5">
-                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-600">
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600">
                           {orderProduct.quantity}
                         </div>
-                        <p className="text-xs text-slate-700">
+                        <p className="text-sm text-slate-700">
                           {orderProduct.product.name}
                         </p>
                       </div>
-                      <p className="text-xs font-medium text-slate-900">
+                      <p className="text-sm font-medium text-slate-900">
                         {formatCurrency(
                           orderProduct.product.price * orderProduct.quantity,
                         )}
@@ -171,7 +171,7 @@ const OrderList = ({ orders, isSidePanel, onBackClick }: OrderListProps) => {
 
                 {(order.status === "OUT_FOR_DELIVERY" || order.status === "IN_PREPARATION") && (
                   <Button
-                    className="w-full rounded-xl h-10 bg-blue-600 font-bold shadow-md shadow-blue-100 text-xs"
+                    className="w-full rounded-xl h-10 bg-blue-600 font-bold shadow-md shadow-blue-100 text-sm"
                     asChild
                   >
                     <Link href={`/${slug}/orders/${order.id}/tracking`}>
@@ -193,14 +193,14 @@ const OrderList = ({ orders, isSidePanel, onBackClick }: OrderListProps) => {
 
                 <div className="flex items-center justify-between bg-slate-50/50 -mx-4 -mb-4 p-4">
                   <div className="space-y-0.5">
-                    <p className="text-[10px] text-muted-foreground">Total pago</p>
-                    <p className="text-base font-bold text-slate-950">
+                    <p className="text-xs text-muted-foreground">Total pago</p>
+                    <p className="text-lg font-bold text-slate-950">
                       {formatCurrency(order.total)}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-[10px] text-muted-foreground">Agendamento</p>
-                    <p className="text-xs font-medium text-slate-700">
+                    <p className="text-xs text-muted-foreground">Agendamento</p>
+                    <p className="text-sm font-medium text-slate-700">
                       {order.scheduledFor
                         ? formatDateTime(order.scheduledFor)
                         : "Imediato"}

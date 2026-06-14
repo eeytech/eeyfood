@@ -593,6 +593,11 @@ const ComandaDigital = ({
                                     <p className="mt-1 text-sm text-muted-foreground">
                                       {String(item.quantity)} x {formatCurrency(item.price)}
                                     </p>
+                                    {item.notes && (
+                                      <p className="mt-1 text-xs italic text-amber-600">
+                                        Obs: {item.notes}
+                                      </p>
+                                    )}
                                   </div>
                                   <p className="font-semibold text-slate-950">
                                     {formatCurrency(item.lineTotal)}

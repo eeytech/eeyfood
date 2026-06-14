@@ -57,8 +57,8 @@ export const PWAInstallPrompt = () => {
             <DownloadIcon size={24} />
           </div>
           <div>
-            <p className="text-sm font-bold text-slate-900">Instalar eeYfood</p>
-            <p className="text-xs text-slate-500">Acesse mais rápido e ganhe cashback!</p>
+            <p className="text-base font-bold text-slate-900">Instalar eeYfood</p>
+            <p className="text-sm text-slate-500">Acesse mais rápido e ganhe cashback!</p>
           </div>
         </div>
         <div className="flex items-center gap-2">

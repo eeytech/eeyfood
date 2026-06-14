@@ -2,6 +2,7 @@ import "./globals.css";
 
 import type { Metadata } from "next";
 import { Manrope, Space_Grotesk } from "next/font/google";
+import { Toaster } from "sonner";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -29,6 +30,7 @@ export default function RootLayout({
         className={`${manrope.variable} ${spaceGrotesk.variable} font-sans`}
       >
         {children}
+        <Toaster richColors position="top-right" />
       </body>
     </html>
   );

@@ -32,13 +32,13 @@ const CartProductItem = ({ product }: CartItemProps) => {
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <p className="truncate text-xs font-bold text-slate-900 leading-tight sm:text-xs">
+          <p className="truncate text-sm font-bold text-slate-900 leading-tight sm:text-sm">
             {product.name}
           </p>
 
           {/* Opções */}
           {(product.selectedOptions && product.selectedOptions.length > 0) && (
-            <div className="flex flex-wrap gap-x-1 text-[8px] text-slate-400 sm:text-[9px]">
+            <div className="flex flex-wrap gap-x-1 text-xs text-slate-400 sm:text-xs">
               {product.selectedOptions?.slice(0, 1).map((opt) => (
                 <span key={opt.id} className="line-clamp-1 break-all">• {opt.name}</span>
               ))}
@@ -48,12 +48,12 @@ const CartProductItem = ({ product }: CartItemProps) => {
 
           {/* Observações/Notas */}
           {product.notes && (
-            <p className="text-[7px] text-slate-500 italic line-clamp-2 break-words sm:text-[8px]">
+            <p className="text-xs text-slate-500 italic line-clamp-2 break-words sm:text-xs">
               {product.notes}
             </p>
           )}
 
-          <p className="text-xs font-black text-primary">
+          <p className="text-sm font-black text-primary">
             {formatCurrency(unitPrice * product.quantity)}
           </p>
         </div>
@@ -82,7 +82,7 @@ const CartProductItem = ({ product }: CartItemProps) => {
             <MinusIcon size={10} strokeWidth={3} className="sm:block hidden" />
           </button>
 
-          <span className="min-w-[1rem] text-center text-[10px] font-black text-slate-900 sm:min-w-[1.5rem] sm:text-xs">
+          <span className="min-w-[1rem] text-center text-xs font-black text-slate-900 sm:min-w-[1.5rem] sm:text-sm">
             {product.quantity}
           </span>
 

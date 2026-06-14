@@ -95,10 +95,15 @@ export const ThermalPrintLayout = React.forwardRef<
           <span>QTD</span>
         </div>
         {order.orderProducts.map((item) => (
-          <div key={item.id} className="flex justify-between mb-1">
-            <span className="max-w-[70%]">{item.product.name}</span>
-            <span>{item.quantity}x</span>
-          </div>
+          <React.Fragment key={item.id}>
+            <div className="flex justify-between mb-1">
+              <span className="max-w-[70%]">{item.product.name}</span>
+              <span>{item.quantity}x</span>
+            </div>
+            {item.notes && (
+              <div className="text-[10px] italic mb-2">- Obs: {item.notes}</div>
+            )}
+          </React.Fragment>
         ))}
       </div>
 

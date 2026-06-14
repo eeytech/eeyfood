@@ -23,6 +23,7 @@ export interface CriarPedidoInput {
         id: string;
         quantity: number;
         selectedOptions?: string[];
+        notes?: string;
     }>;
     diningTableId?: string;
 }
@@ -35,6 +36,7 @@ export interface ValidarBeneficiosPedidoInput {
         id: string;
         quantity: number;
         selectedOptions?: string[];
+        notes?: string;
     }>;
 }
 export interface SalvarCarrinhoAbandonadoInput {
@@ -102,6 +104,11 @@ export declare const buscarProdutoDoRestaurante: ({ slug, productId, }: {
 }) | null>;
 export declare const buscarPedidosPorTelefone: (customerPhone: string) => Promise<OrderComItens[]>;
 export declare const validarBeneficiosPedido: (input: ValidarBeneficiosPedidoInput) => Promise<PedidoBeneficiosValidado>;
+export declare const buscarProximaRegraFidelidade: (slug: string, subtotal: number) => Promise<{
+    minOrderValue: number;
+    cashbackPercent: number;
+    remainingAmount: number;
+} | null>;
 export declare const criarPedido: (input: CriarPedidoInput) => Promise<Order>;
 export declare const listarMesasComandasPorSlug: (slug: string) => Promise<MesaComanda[]>;
 export declare const abrirComandaMesa: ({ slug, diningTableId, customerName, }: AbrirComandaMesaInput) => Promise<PedidoRecebimento>;
@@ -118,10 +125,10 @@ export declare const listarPedidosRecebimentoPorSlug: (slug: string) => Promise<
 export declare const listarCouriersPorSlug: (slug: string) => Promise<Courier[]>;
 export declare const buscarPedidoParaRastreamento: (orderId: number) => Promise<{
     id: number;
-    restaurantId: string;
-    status: "PENDING" | "CANCELLED" | "IN_PREPARATION" | "READY_FOR_PICKUP" | "OUT_FOR_DELIVERY" | "FINISHED";
+    status: "PENDING" | "IN_PREPARATION" | "READY_FOR_PICKUP" | "OUT_FOR_DELIVERY" | "FINISHED" | "CANCELLED";
     createdAt: Date;
     updatedAt: Date;
+    restaurantId: string;
     paidAt: Date | null;
     subtotal: number;
     discountAmount: number;
@@ -132,7 +139,7 @@ export declare const buscarPedidoParaRastreamento: (orderId: number) => Promise<
     total: number;
     estimatedCost: number;
     estimatedProfit: number;
-    paymentStatus: "PENDING" | "PAID" | "CANCELLED" | "FAILED" | "REFUNDED";
+    paymentStatus: "PENDING" | "CANCELLED" | "PAID" | "FAILED" | "REFUNDED";
     consumptionMethod: "TAKEAWAY" | "DINE_IN" | "DELIVERY";
     paymentMethod: "MERCADO_PAGO" | "DINHEIRO" | "CARTAO_PRESENCIAL";
     changeFor: number | null;
@@ -171,11 +178,11 @@ export declare const buscarPedidoParaRastreamento: (orderId: number) => Promise<
     courier: {
         id: string;
         name: string;
-        restaurantId: string;
         latitude: number | null;
         longitude: number | null;
         createdAt: Date;
         updatedAt: Date;
+        restaurantId: string;
         isActive: boolean;
         phone: string;
         vehicleType: string | null;

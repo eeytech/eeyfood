@@ -384,6 +384,25 @@ export const updateStockAction = async (slug: string, formData: FormData) => {
   revalidateRestaurantPaths(slug);
 };
 
+export const updateRestaurantFeaturesAction = async (
+  slug: string,
+  formData: FormData,
+) => {
+  const restaurant = await getRestaurantOrThrow(slug);
+
+  await db
+    .update(restaurantsTable)
+    .set({
+      acceptMercadoPago: getBooleanValue(formData.get("acceptMercadoPago")),
+      isCouponsEnabled: getBooleanValue(formData.get("isCouponsEnabled")),
+      isCashbackEnabled: getBooleanValue(formData.get("isCashbackEnabled")),
+      updatedAt: new Date(),
+    })
+    .where(eq(restaurantsTable.id, restaurant.id));
+
+  revalidateRestaurantPaths(slug);
+};
+
 export const updateRestaurantStatusAction = async (
   slug: string,
   formData: FormData,

@@ -1,45 +1,15 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  CheckCircle2Icon,
-  CreditCardIcon,
-  HandCoinsIcon,
-  Loader2Icon,
-  MapPinIcon,
-  ShoppingBagIcon,
-  TicketPercentIcon,
-  TrendingUpIcon,
-  UserIcon,
-  WalletCardsIcon,
-} from "lucide-react";
+import { CheckCircle2Icon, Loader2Icon } from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useContext, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
-import { PatternFormat } from "react-number-format";
 import { toast } from "sonner";
-import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { Form } from "@/components/ui/form";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
@@ -59,88 +29,17 @@ import type {
 import { createOrder } from "../actions/create-order";
 import { criarPreferenciaMercadoPago } from "../actions/criar-preferencia-mercado-pago";
 import { getAvailableSchedulingSlots } from "../actions/get-scheduling-slots";
+import { getLoyaltyUpsell, type LoyaltyUpsell } from "../actions/get-loyalty-upsell";
 import { saveAbandonedCart } from "../actions/save-abandoned-cart";
 import { validateOrderBenefits } from "../actions/validate-order-benefits";
 import { CartContext } from "../contexts/cart";
 import { isValidPhoneNumber, normalizePhoneNumber } from "../helpers/phone";
-
-const formSchema = z
-  .object({
-    name: z.string().trim().min(1, {
-      message: "O nome é obrigatório.",
-    }),
-    phone: z
-      .string()
-      .trim()
-      .min(1, {
-        message: "O celular é obrigatório.",
-      })
-      .refine((value) => isValidPhoneNumber(value), {
-        message: "Celular inválido.",
-      }),
-    couponCode: z
-      .string()
-      .trim()
-      .max(40, {
-        message: "O cupom deve ter no máximo 40 caracteres.",
-      })
-      .optional(),
-    fulfillmentTiming: z.enum(["ASAP", "SCHEDULED"]),
-    scheduledFor: z.string().trim().optional(),
-    paymentMethod: z.enum([
-      "MERCADO_PAGO",
-      "DINHEIRO",
-      "CARTAO_PRESENCIAL",
-    ]),
-    changeFor: z.string().trim().optional(),
-  })
-  .superRefine((values, context) => {
-    if (values.paymentMethod === "DINHEIRO" && values.changeFor) {
-      const parsedValue = Number(values.changeFor.replace(",", "."));
-
-      if (Number.isNaN(parsedValue) || parsedValue <= 0) {
-        context.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["changeFor"],
-          message: "Informe um valor de troco válido.",
-        });
-      }
-    }
-
-    if (values.fulfillmentTiming !== "SCHEDULED") {
-      return;
-    }
-
-    if (!values.scheduledFor) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["scheduledFor"],
-        message: "Selecione a data e hora do agendamento.",
-      });
-      return;
-    }
-
-    const scheduledFor = new Date(values.scheduledFor);
-
-    if (Number.isNaN(scheduledFor.getTime())) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["scheduledFor"],
-        message: "Data e hora de agendamento inválidas.",
-      });
-      return;
-    }
-
-    if (scheduledFor.getTime() < Date.now() + 15 * 60 * 1000) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["scheduledFor"],
-        message: "Agende com pelo menos 15 minutos de antecedência.",
-      });
-    }
-  });
-
-type FormSchema = z.infer<typeof formSchema>;
+import { formSchema, type FormSchema } from "./finish-order-schema";
+import { BenefitsSection } from "./sections/benefits-section";
+import { FulfillmentSection, type SchedulingSlotGroup } from "./sections/fulfillment-section";
+import { IdentificationSection } from "./sections/identification-section";
+import { OrderSummarySection } from "./sections/order-summary-section";
+import { PaymentSection } from "./sections/payment-section";
 
 interface FinishOrderSheetProps {
   open: boolean;
@@ -156,70 +55,23 @@ interface PedidoOfflineConcluido {
   changeFor?: number;
 }
 
-interface SchedulingSlotGroup {
-  label: string;
-  date: string;
-  items: Array<{
-    value: string;
-    label: string;
-  }>;
-}
-
-const formatScheduledDate = (value: string) => {
-  return new Intl.DateTimeFormat("pt-BR", {
+const formatScheduledDate = (value: string) =>
+  new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
-};
 
-const getSchedulingLabel = (consumptionMethod: ConsumptionMethod) => {
-  return consumptionMethod === "DELIVERY" ? "entrega" : "retirada";
-};
+const getSchedulingLabel = (consumptionMethod: ConsumptionMethod) =>
+  consumptionMethod === "DELIVERY" ? "entrega" : "retirada";
 
 const createAbandonedCartSessionId = () => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
   }
-
-  return `abandoned-cart-${Date.now().toString()}-${Math.random()
-    .toString(36)
-    .slice(2, 10)}`;
+  return `abandoned-cart-${Date.now().toString()}-${Math.random().toString(36).slice(2, 10)}`;
 };
-
-const paymentOptions: Array<{
-  value: PaymentMethod;
-  titulo: string;
-  descricao: string;
-  icon: React.ReactNode;
-}> = [
-  {
-    value: "MERCADO_PAGO",
-    titulo: "Mercado Pago",
-    descricao: "Pagamento online seguro e rápido.",
-    icon: <CreditCardIcon size={20} className="text-blue-600" />,
-  },
-  {
-    value: "DINHEIRO",
-    titulo: "Dinheiro",
-    descricao: "Pagamento presencial com troco opcional.",
-    icon: <HandCoinsIcon size={20} className="text-emerald-600" />,
-  },
-  {
-    value: "CARTAO_PRESENCIAL",
-    titulo: "Cartão (Presencial)",
-    descricao: "Maquininha no balcão ou entrega.",
-    icon: <CreditCardIcon size={20} className="text-slate-600" />,
-  },
-];
-
-const SectionHeader = ({ icon, title }: { icon: React.ReactNode; title: string }) => (
-  <div className="flex items-center gap-2 border-b pb-2 mb-4">
-    <div className="text-primary">{icon}</div>
-    <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">{title}</h3>
-  </div>
-);
 
 const FinishOrderSheet = ({
   open,
@@ -230,14 +82,18 @@ const FinishOrderSheet = ({
   const { slug } = useParams<{ slug: string }>();
   const { products, total, clearCart } = useContext(CartContext);
   const searchParams = useSearchParams();
+
   const [isLoading, setIsLoading] = useState(false);
   const [isValidatingBenefits, setIsValidatingBenefits] = useState(false);
   const [useWalletBalance, setUseWalletBalance] = useState(false);
   const [benefits, setBenefits] = useState<PedidoBeneficiosValidado | null>(null);
+  const [loyaltyUpsell, setLoyaltyUpsell] = useState<LoyaltyUpsell | null>(null);
   const [pedidoOfflineConcluido, setPedidoOfflineConcluido] =
     useState<PedidoOfflineConcluido | null>(null);
   const [schedulingSlots, setSchedulingSlots] = useState<SchedulingSlotGroup[]>([]);
   const abandonedCartSessionIdRef = useRef(createAbandonedCartSessionId());
+  // Used by the debounce auto-validate to always call the latest closure
+  const validateBenefitsRef = useRef<(() => Promise<void>) | null>(null);
 
   const form = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
@@ -247,7 +103,7 @@ const FinishOrderSheet = ({
       couponCode: "",
       fulfillmentTiming: "ASAP",
       scheduledFor: "",
-      paymentMethod: "MERCADO_PAGO",
+      paymentMethod: restaurant.acceptMercadoPago ? "MERCADO_PAGO" : "DINHEIRO",
       changeFor: "",
     },
   });
@@ -268,11 +124,11 @@ const FinishOrderSheet = ({
         : "TAKEAWAY";
   const allowsScheduling = consumptionMethod !== "DINE_IN";
   const schedulingLabel = getSchedulingLabel(consumptionMethod);
-  const isOpen = isRestaurantOpen(
-    restaurant.status,
-    restaurant.operatingHours,
-  );
+  const isOpen = isRestaurantOpen(restaurant.status, restaurant.operatingHours);
+  const isActionDisabled = !isOpen && fulfillmentTiming !== "SCHEDULED";
 
+  // When benefits are available (phone validated), use them fully.
+  // Otherwise show the raw cart total + proactively fetched upsell rule.
   const checkoutSummary = benefits ?? {
     subtotal: total,
     deliveryFee: 0,
@@ -283,6 +139,7 @@ const FinishOrderSheet = ({
     cashbackEarnedAmount: 0,
     appliedCoupon: null,
     wallet: null,
+    nextLoyaltyRule: loyaltyUpsell,
   };
 
   useEffect(() => {
@@ -290,8 +147,7 @@ const FinishOrderSheet = ({
       if (fulfillmentTiming === "SCHEDULED" && schedulingSlots.length === 0) {
         const slots = await getAvailableSchedulingSlots(slug);
         setSchedulingSlots(slots);
-        
-        // Se houver slots, selecionar o primeiro por padrão se nenhum estiver selecionado
+
         if (slots.length > 0 && slots[0].items.length > 0 && !form.getValues("scheduledFor")) {
           form.setValue("scheduledFor", slots[0].items[0].value);
         }
@@ -301,23 +157,62 @@ const FinishOrderSheet = ({
     void fetchSlots();
   }, [fulfillmentTiming, slug, schedulingSlots.length, form]);
 
+  // Fetch the proactive upsell rule whenever the sheet opens or cart total changes
+  useEffect(() => {
+    if (!open) return;
+    void getLoyaltyUpsell(slug, total).then(setLoyaltyUpsell).catch(() => null);
+  }, [open, slug, total]);
+
+  // Cart change always invalidates benefits (subtotal and products changed)
   useEffect(() => {
     setBenefits(null);
     setUseWalletBalance(false);
-  }, [products, watchedPhone, watchedCouponCode]);
+  }, [products]);
+
+  // Reset only when phone becomes invalid — not on every keystroke while valid
+  useEffect(() => {
+    if (!isValidPhoneNumber(watchedPhone)) {
+      setBenefits(null);
+      setUseWalletBalance(false);
+    }
+  }, [watchedPhone]);
+
+  // Reset only when the coupon is explicitly cleared
+  const prevCouponCodeRef = useRef(watchedCouponCode);
+  useEffect(() => {
+    const prevWasNonEmpty = (prevCouponCodeRef.current?.length ?? 0) > 0;
+    const nowEmpty = !watchedCouponCode;
+    prevCouponCodeRef.current = watchedCouponCode;
+    if (prevWasNonEmpty && nowEmpty) {
+      setBenefits(null);
+      setUseWalletBalance(false);
+    }
+  }, [watchedCouponCode]);
+
+  // Keep ref to latest validate fn so the debounce always calls fresh closure
+  // silent=true: auto-trigger failures don't show invasive toasts
+  validateBenefitsRef.current = () => handleValidateBenefits(useWalletBalance, true);
+
+  // Auto-validate when phone reaches a valid 11-digit number (silent on error)
+  useEffect(() => {
+    const digits = watchedPhone.replace(/\D/g, "");
+    if (digits.length !== 11 || !isValidPhoneNumber(watchedPhone)) return;
+
+    const timeoutId = window.setTimeout(() => {
+      void validateBenefitsRef.current?.();
+    }, 700);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [watchedPhone]);
 
   useEffect(() => {
-    if (!open || products.length === 0) {
-      return;
-    }
+    if (!open || products.length === 0) return;
 
     const hasCustomerData =
       (watchedName?.trim()?.length ?? 0) > 0 ||
       (watchedPhone?.replace(/\D/g, "").length ?? 0) > 0;
 
-    if (!hasCustomerData) {
-      return;
-    }
+    if (!hasCustomerData) return;
 
     const timeoutId = window.setTimeout(() => {
       void saveAbandonedCart({
@@ -369,26 +264,27 @@ const FinishOrderSheet = ({
       setUseWalletBalance(false);
       form.reset();
     }
-
     onOpenChange(nextOpen);
   };
 
   const handleViewOrders = () => {
-    if (!pedidoOfflineConcluido) {
-      return;
-    }
-
+    if (!pedidoOfflineConcluido) return;
     handleSheetOpenChange(false);
     router.push(
       `/${slug}/orders?phone=${normalizePhoneNumber(pedidoOfflineConcluido.phone)}`,
     );
   };
 
-  const handleValidateBenefits = async (nextUseWalletBalance = useWalletBalance) => {
+  const handleValidateBenefits = async (
+    nextUseWalletBalance = useWalletBalance,
+    silent = false,
+  ) => {
     if (!isValidPhoneNumber(watchedPhone)) {
-      form.setError("phone", {
-        message: "Informe um celular válido para consultar benefícios.",
-      });
+      if (!silent) {
+        form.setError("phone", {
+          message: "Informe um celular válido para consultar benefícios.",
+        });
+      }
       return;
     }
 
@@ -415,13 +311,14 @@ const FinishOrderSheet = ({
       if (nextUseWalletBalance !== useWalletBalance) {
         setUseWalletBalance(false);
       }
-
-      toast.error("Não foi possível validar cupom e cashback.", {
-        description:
-          error instanceof Error
-            ? error.message
-            : "Revise os dados informados e tente novamente.",
-      });
+      if (!silent) {
+        toast.error("Não foi possível validar cupom e cashback.", {
+          description:
+            error instanceof Error
+              ? error.message
+              : "Revise os dados informados e tente novamente.",
+        });
+      }
     } finally {
       setIsValidatingBenefits(false);
     }
@@ -514,81 +411,24 @@ const FinishOrderSheet = ({
 
   return (
     <Sheet open={open} onOpenChange={handleSheetOpenChange}>
-      <SheetContent side="right" className="flex h-full flex-col gap-0 p-0 w-full sm:max-w-[450px]">
+      <SheetContent
+        side="right"
+        className="flex h-full flex-col gap-0 p-0 w-full sm:max-w-[450px]"
+      >
         {pedidoOfflineConcluido ? (
-          <div className="flex flex-1 flex-col overflow-hidden">
-            <div className="flex-1 overflow-hidden">
-              <ScrollArea className="h-full">
-                <div className="p-4">
-                  <SheetHeader className="pb-3">
-                    <SheetTitle className="flex items-center gap-2 text-left text-lg">
-                      <CheckCircle2Icon className="text-green-600" size={20} />
-                      Pedido recebido
-                    </SheetTitle>
-                    <SheetDescription className="text-sm">
-                      Seu pedido já foi salvo e a equipe do restaurante foi
-                      avisada.
-                    </SheetDescription>
-                  </SheetHeader>
-                  <div className="space-y-3 py-4">
-                    <div className="rounded-2xl border border-green-100 bg-green-50 p-3 text-xs text-green-900">
-                      {pedidoOfflineConcluido.paymentMethod === "DINHEIRO"
-                        ? "O pagamento será feito em dinheiro no balcão ou na entrega."
-                        : "O pagamento será concluído na maquininha no balcão ou na entrega."}
-                    </div>
-
-                    <div className="rounded-2xl border bg-muted p-3 text-xs">
-                      Total registrado:{" "}
-                      <strong>
-                        {formatCurrency(pedidoOfflineConcluido.total)}
-                      </strong>
-                    </div>
-
-                    {pedidoOfflineConcluido.scheduledFor ? (
-                      <div className="rounded-2xl border bg-muted p-3 text-xs">
-                        Pedido agendado para{" "}
-                        <strong>
-                          {formatScheduledDate(
-                            pedidoOfflineConcluido.scheduledFor,
-                          )}
-                        </strong>
-                        .
-                      </div>
-                    ) : null}
-
-                    {pedidoOfflineConcluido.changeFor ? (
-                      <div className="rounded-2xl border bg-muted p-3 text-xs">
-                        Troco solicitado para{" "}
-                        <strong>
-                          {formatCurrency(pedidoOfflineConcluido.changeFor)}
-                        </strong>
-                        .
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-              </ScrollArea>
-            </div>
-            <div className="flex flex-col gap-2.5 p-4 border-t bg-background">
-              <Button className="rounded-full h-10 text-sm" onClick={handleViewOrders}>
-                Ver meus pedidos
-              </Button>
-              <Button
-                className="rounded-full h-10 text-sm"
-                variant="outline"
-                onClick={() => handleSheetOpenChange(false)}
-              >
-                Fechar
-              </Button>
-            </div>
-          </div>
+          <OrderSuccessView
+            pedidoOfflineConcluido={pedidoOfflineConcluido}
+            onViewOrders={handleViewOrders}
+            onClose={() => handleSheetOpenChange(false)}
+          />
         ) : (
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(onSubmit, (errors) => {
                 console.error("Erro de validação no checkout:", errors);
                 toast.error("Por favor, verifique os campos do formulário.", {
-                  description: "Alguns dados obrigatórios estão ausentes ou inválidos.",
+                  description:
+                    "Alguns dados obrigatórios estão ausentes ou inválidos.",
                 });
               })}
               className="flex flex-1 flex-col overflow-hidden"
@@ -597,404 +437,76 @@ const FinishOrderSheet = ({
                 <ScrollArea className="h-full">
                   <div className="p-4">
                     <SheetHeader className="pb-3">
-                      <SheetTitle className="text-left text-lg">
-                        Finalizar pedido
-                      </SheetTitle>
-                      <SheetDescription className="text-xs">
-                        Informe seus dados, valide os benefícios e escolha como
-                        prefere pagar.
+                      <SheetTitle className="text-left text-lg">Finalizar pedido</SheetTitle>
+                      <SheetDescription className="text-sm">
+                        Informe seus dados, valide os benefícios e escolha como prefere pagar.
                       </SheetDescription>
                     </SheetHeader>
-                    
+
                     <div className="space-y-8 py-6">
-                      {/* Identificação */}
-                      <section>
-                        <SectionHeader icon={<UserIcon size={16} />} title="Identificação" />
-                        <div className="space-y-3">
-                          <FormField
-                            control={form.control}
-                            name="name"
-                            render={({ field }) => (
-                              <FormItem className="space-y-1">
-                                <FormLabel className="text-xs">Seu nome</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    placeholder="Digite seu nome..."
-                                    className="rounded-xl h-9 text-sm"
-                                    {...field}
-                                  />
-                                </FormControl>
-                                <FormMessage className="text-[10px]" />
-                              </FormItem>
-                            )}
-                          />
+                      <IdentificationSection form={form} />
 
-                          <FormField
-                            control={form.control}
-                            name="phone"
-                            render={({ field }) => (
-                              <FormItem className="space-y-1">
-                                <FormLabel className="text-xs">Seu celular</FormLabel>
-                                <FormControl>
-                                  <PatternFormat
-                                    placeholder="Digite seu celular..."
-                                    format="(##) #####-####"
-                                    customInput={Input}
-                                    className="rounded-xl h-9 text-sm"
-                                    {...field}
-                                  />
-                                </FormControl>
-                                <FormMessage className="text-[10px]" />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                      </section>
-
-                      {/* Entrega / Agendamento */}
                       {allowsScheduling && (
-                        <section>
-                          <SectionHeader icon={<MapPinIcon size={16} />} title="Entrega / Retirada" />
-                          <div className="rounded-[24px] border bg-slate-50/50 p-4 space-y-3">
-                            <div className="space-y-1">
-                              <p className="text-xs font-semibold">
-                                Horário da {schedulingLabel}
-                              </p>
-                              <p className="text-[10px] text-muted-foreground leading-relaxed">
-                                Escolha se deseja receber o pedido o quanto antes
-                                ou em um horário agendado.
-                              </p>
-                            </div>
-
-                            <FormField
-                              control={form.control}
-                              name="fulfillmentTiming"
-                              render={({ field }) => (
-                                <FormItem className="space-y-2">
-                                  <FormControl>
-                                    <div className="grid gap-2.5">
-                                      {[
-                                        {
-                                          value: "ASAP" as const,
-                                          title: "O quanto antes",
-                                          description:
-                                            consumptionMethod === "DELIVERY"
-                                              ? "Preparo e despacho imediato."
-                                              : "Preparo imediato para retirada.",
-                                        },
-                                        {
-                                          value: "SCHEDULED" as const,
-                                          title: "Agendar horário",
-                                          description: "Escolha uma data e hora futura.",
-                                        },
-                                      ].map((option) => (
-                                        <button
-                                          key={option.value}
-                                          type="button"
-                                          onClick={() => field.onChange(option.value)}
-                                          className={`rounded-xl border px-3 py-2 text-left transition-all ${
-                                            field.value === option.value
-                                              ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                                              : "border-border bg-background hover:bg-slate-50"
-                                          }`}
-                                        >
-                                          <p className="text-xs font-bold">
-                                            {option.title}
-                                          </p>
-                                          <p className="text-[10px] text-muted-foreground">
-                                            {option.description}
-                                          </p>
-                                        </button>
-                                      ))}
-                                    </div>
-                                  </FormControl>
-                                  <FormMessage className="text-[10px]" />
-                                </FormItem>
-                              )}
-                            />
-
-                            {fulfillmentTiming === "SCHEDULED" && (
-                              <FormField
-                                control={form.control}
-                                name="scheduledFor"
-                                render={({ field }) => (
-                                  <FormItem className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-1.5">
-                                    <FormLabel className="text-[10px] font-bold uppercase text-slate-400">Data e hora</FormLabel>
-                                    <Select
-                                      onValueChange={field.onChange}
-                                      defaultValue={field.value}
-                                      value={field.value}
-                                    >
-                                      <FormControl>
-                                        <SelectTrigger className="h-10 rounded-xl text-sm">
-                                          <SelectValue placeholder="Escolha um horário..." />
-                                        </SelectTrigger>
-                                      </FormControl>
-                                      <SelectContent className="rounded-xl">
-                                        {schedulingSlots.length > 0 ? (
-                                          schedulingSlots.map((group) => (
-                                            <SelectGroup key={group.date}>
-                                              <SelectLabel className="text-primary font-bold text-xs">{group.label}</SelectLabel>
-                                              {group.items.map((slot) => (
-                                                <SelectItem 
-                                                  key={slot.value} 
-                                                  value={slot.value}
-                                                  className="rounded-lg text-sm"
-                                                >
-                                                  {slot.label}
-                                                </SelectItem>
-                                              ))}
-                                            </SelectGroup>
-                                          ))
-                                        ) : (
-                                          <div className="p-3 text-center text-xs text-muted-foreground">
-                                            {isLoading ? "Carregando horários..." : "Nenhum horário disponível."}
-                                          </div>
-                                        )}
-                                      </SelectContent>
-                                    </Select>
-                                    <FormMessage className="text-[10px]" />
-                                  </FormItem>
-                                )}
-                              />
-                            )}
-                          </div>
-                        </section>
+                        <FulfillmentSection
+                          form={form}
+                          consumptionMethod={consumptionMethod}
+                          schedulingLabel={schedulingLabel}
+                          schedulingSlots={schedulingSlots}
+                          fulfillmentTiming={fulfillmentTiming}
+                          isLoading={isLoading}
+                        />
                       )}
 
-                      {/* Benefícios */}
-                      <section>
-                        <SectionHeader icon={<TicketPercentIcon size={16} />} title="Benefícios" />
-                        <div className="rounded-[24px] border bg-slate-50/50 p-4 space-y-4">
-                          <FormField
-                            control={form.control}
-                            name="couponCode"
-                            render={({ field }) => (
-                              <FormItem className="space-y-1.5">
-                                <FormLabel className="text-xs">Cupom de desconto</FormLabel>
-                                <div className="flex gap-2">
-                                  <FormControl>
-                                    <Input
-                                      placeholder="Ex.: BEMVINDO10"
-                                      autoCapitalize="characters"
-                                      className="rounded-xl uppercase h-9 text-sm"
-                                      {...field}
-                                      value={field.value ?? ""}
-                                    />
-                                  </FormControl>
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    className="rounded-xl h-9 px-3 text-xs"
-                                    disabled={isValidatingBenefits || !watchedPhone}
-                                    onClick={() => handleValidateBenefits()}
-                                  >
-                                    {isValidatingBenefits ? (
-                                      <Loader2Icon className="animate-spin h-3.5 w-3.5" />
-                                    ) : (
-                                      "Aplicar"
-                                    )}
-                                  </Button>
-                                </div>
-                                <FormMessage className="text-[10px]" />
-                                {!watchedPhone && (
-                                  <p className="text-[10px] text-muted-foreground mt-1 italic">
-                                    * Informe seu celular para aplicar cupons.
-                                  </p>
-                                )}
-                              </FormItem>
-                            )}
-                          />
+                      <BenefitsSection
+                        form={form}
+                        benefits={benefits}
+                        watchedPhone={watchedPhone}
+                        useWalletBalance={useWalletBalance}
+                        isValidatingBenefits={isValidatingBenefits}
+                        isActionDisabled={isActionDisabled}
+                        isCouponsEnabled={restaurant.isCouponsEnabled}
+                        isCashbackEnabled={restaurant.isCashbackEnabled}
+                        onValidateBenefits={() => void handleValidateBenefits()}
+                        onToggleWalletBalance={() => void handleToggleWalletBalance()}
+                      />
 
-                          {benefits ? (
-                            <div className="space-y-2.5 animate-in fade-in duration-500">
-                              <div className="rounded-xl border bg-white p-3 text-sm shadow-sm">
-                                <div className="flex items-center justify-between gap-3">
-                                  <div className="flex items-center gap-2.5">
-                                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-                                      <WalletCardsIcon size={18} />
-                                    </div>
-                                    <div>
-                                      <p className="font-bold text-slate-800 text-xs">Seu Cashback</p>
-                                      <p className="text-[10px] text-muted-foreground">
-                                        Saldo: <strong>{formatCurrency(benefits.wallet?.currentBalance ?? 0)}</strong>
-                                      </p>
-                                    </div>
-                                  </div>
+                      <PaymentSection
+                        form={form}
+                        needsChangeField={needsChangeField}
+                        isActionDisabled={isActionDisabled}
+                        acceptMercadoPago={restaurant.acceptMercadoPago}
+                      />
 
-                                  {(benefits.wallet?.currentBalance ?? 0) > 0 && (
-                                    <Button
-                                      type="button"
-                                      variant={useWalletBalance ? "default" : "outline"}
-                                      className="h-7 rounded-full text-[10px] px-3"
-                                      disabled={isValidatingBenefits}
-                                      onClick={handleToggleWalletBalance}
-                                    >
-                                      {useWalletBalance ? "Remover" : "Usar"}
-                                    </Button>
-                                  )}
-                                </div>
-
-                                {useWalletBalance && benefits.wallet?.availableToRedeem ? (
-                                  <p className="mt-2 text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 inline-block">
-                                    Resgate de {formatCurrency(benefits.wallet.availableToRedeem)} aplicado!
-                                  </p>
-                                ) : null}
-                              </div>
-                            </div>
-                          ) : null}
-                        </div>
-                      </section>
-
-                      {/* Pagamento */}
-                      <section>
-                        <SectionHeader icon={<HandCoinsIcon size={16} />} title="Pagamento" />
-                        <div className="space-y-3">
-                          <FormField
-                            control={form.control}
-                            name="paymentMethod"
-                            render={({ field }) => (
-                              <FormItem className="space-y-2.5">
-                                <FormControl>
-                                  <div className="grid gap-2.5">
-                                    {paymentOptions.map((option) => (
-                                      <button
-                                        key={option.value}
-                                        type="button"
-                                        onClick={() => field.onChange(option.value)}
-                                        className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-left transition-all ${
-                                          field.value === option.value
-                                            ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                                            : "border-border bg-background hover:bg-slate-50"
-                                        }`}
-                                      >
-                                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted">
-                                          {option.icon}
-                                        </div>
-                                        <div className="flex-1">
-                                          <p className="text-xs font-bold">
-                                            {option.titulo}
-                                          </p>
-                                          <p className="text-[10px] text-muted-foreground leading-tight">
-                                            {option.descricao}
-                                          </p>
-                                        </div>
-                                        <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${
-                                          field.value === option.value ? "border-primary" : "border-slate-300"
-                                        }`}>
-                                          {field.value === option.value && <div className="h-2 w-2 rounded-full bg-primary" />}
-                                        </div>
-                                      </button>
-                                    ))}
-                                  </div>
-                                </FormControl>
-                                <FormMessage className="text-[10px]" />
-                              </FormItem>
-                            )}
-                          />
-
-                          {needsChangeField && (
-                            <FormField
-                              control={form.control}
-                              name="changeFor"
-                              render={({ field }) => (
-                                <FormItem className="animate-in fade-in slide-in-from-top-2 space-y-1">
-                                  <FormLabel className="text-xs">Troco para quanto?</FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      placeholder="Ex.: 50,00"
-                                      inputMode="decimal"
-                                      className="rounded-xl h-9 text-sm"
-                                      {...field}
-                                    />
-                                  </FormControl>
-                                  <FormMessage className="text-[10px]" />
-                                </FormItem>
-                              )}
-                            />
-                          )}
-                        </div>
-                      </section>
-
-                      {/* Resumo */}
-                      <section>
-                        <SectionHeader icon={<ShoppingBagIcon size={16} />} title="Resumo do Pedido" />
-                        <div className="rounded-[24px] border bg-slate-50/80 p-4 space-y-2.5">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-slate-500">Subtotal</span>
-                            <span className="font-semibold">{formatCurrency(checkoutSummary.subtotal)}</span>
-                          </div>
-
-                          {checkoutSummary.couponDiscountAmount > 0 && (
-                            <div className="flex items-center justify-between text-xs text-emerald-600 font-medium">
-                              <span>Cupom de Desconto</span>
-                              <span>-{formatCurrency(checkoutSummary.couponDiscountAmount)}</span>
-                            </div>
-                          )}
-
-                          {checkoutSummary.cashbackRedeemedAmount > 0 && (
-                            <div className="flex items-center justify-between text-xs text-emerald-600 font-medium">
-                              <span>Cashback Resgatado</span>
-                              <span>-{formatCurrency(checkoutSummary.cashbackRedeemedAmount)}</span>
-                            </div>
-                          )}
-
-                          <div className="flex items-center justify-between pt-3 border-t border-slate-200 mt-1.5">
-                            <span className="font-bold text-slate-800 text-sm">Total Final</span>
-                            <span className="text-lg font-extrabold text-primary">
-                              {formatCurrency(checkoutSummary.total)}
-                            </span>
-                          </div>
-
-                          {checkoutSummary.cashbackEarnedAmount > 0 && (
-                            <div className="mt-3 flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 border border-emerald-100">
-                              <WalletCardsIcon size={14} className="text-emerald-600" />
-                              <p className="text-[10px] font-medium text-emerald-700 leading-tight">
-                                Este pedido vai te render <strong>{formatCurrency(checkoutSummary.cashbackEarnedAmount)}</strong> de cashback!
-                              </p>
-                            </div>
-                          )}
-
-                          {checkoutSummary.nextLoyaltyRule && (
-                            <div className="mt-2 flex flex-col gap-1 rounded-xl bg-blue-50 px-3 py-2 border border-blue-100 animate-pulse">
-                              <div className="flex items-center gap-2">
-                                <TrendingUpIcon size={14} className="text-blue-600" />
-                                <p className="text-[10px] font-bold text-blue-700">
-                                  Dica de Ouro!
-                                </p>
-                              </div>
-                              <p className="text-[10px] text-blue-600 leading-tight">
-                                Adicione mais <strong>{formatCurrency(checkoutSummary.nextLoyaltyRule.remainingAmount)}</strong> e ganhe <strong>{checkoutSummary.nextLoyaltyRule.cashbackPercent}%</strong> de cashback em vez de {((checkoutSummary.cashbackEarnedAmount / checkoutSummary.total) * 100).toFixed(0)}%!
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </section>
+                      <OrderSummarySection
+                        checkoutSummary={checkoutSummary}
+                        isCashbackEnabled={restaurant.isCashbackEnabled}
+                      />
                     </div>
                   </div>
                 </ScrollArea>
               </div>
 
               <div className="flex flex-col gap-2.5 p-4 border-t bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.04)]">
-                {!isOpen && fulfillmentTiming !== "SCHEDULED" && (
-                  <p className="rounded-xl bg-rose-50 p-2 text-center text-[10px] font-semibold text-rose-600 border border-rose-100 mb-1">
-                    O restaurante está fechado e não aceita pedidos imediatos.
+                {isActionDisabled && (
+                  <p
+                    role="alert"
+                    className="rounded-xl bg-rose-50 p-2 text-center text-xs font-semibold text-rose-600 border border-rose-100 mb-1"
+                  >
+                    O restaurante está fechado e não aceita pedidos imediatos. Agende para continuar.
                   </p>
                 )}
                 <Button
                   type="submit"
                   className="h-11 w-full rounded-2xl bg-destructive text-base font-bold shadow-lg shadow-destructive/20 transition-all hover:scale-[1.01] active:scale-[0.99]"
-                  disabled={isLoading || (!isOpen && fulfillmentTiming !== "SCHEDULED")}
+                  disabled={isLoading || isActionDisabled}
                 >
                   {isLoading ? (
                     <Loader2Icon className="animate-spin mr-2 h-4 w-4" />
                   ) : null}
-                  {paymentMethod === "MERCADO_PAGO"
-                    ? "Ir para Pagamento"
-                    : "Confirmar Pedido"}
+                  {paymentMethod === "MERCADO_PAGO" ? "Ir para Pagamento" : "Confirmar Pedido"}
                 </Button>
                 <Button
-                  className="w-full h-10 rounded-2xl text-slate-500 font-medium text-xs"
+                  className="w-full h-10 rounded-2xl text-slate-500 font-medium text-sm"
                   variant="ghost"
                   type="button"
                   onClick={() => handleSheetOpenChange(false)}
@@ -1009,5 +521,73 @@ const FinishOrderSheet = ({
     </Sheet>
   );
 };
+
+interface OrderSuccessViewProps {
+  pedidoOfflineConcluido: PedidoOfflineConcluido;
+  onViewOrders: () => void;
+  onClose: () => void;
+}
+
+const OrderSuccessView = ({
+  pedidoOfflineConcluido,
+  onViewOrders,
+  onClose,
+}: OrderSuccessViewProps) => (
+  <div className="flex flex-1 flex-col overflow-hidden">
+    <div className="flex-1 overflow-hidden">
+      <ScrollArea className="h-full">
+        <div className="p-4">
+          <SheetHeader className="pb-3">
+            <SheetTitle className="flex items-center gap-2 text-left text-lg">
+              <CheckCircle2Icon className="text-green-600" size={20} />
+              Pedido recebido
+            </SheetTitle>
+            <SheetDescription className="text-base">
+              Seu pedido já foi salvo e a equipe do restaurante foi avisada.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="space-y-3 py-4">
+            <div className="rounded-2xl border border-green-100 bg-green-50 p-3 text-sm text-green-900">
+              {pedidoOfflineConcluido.paymentMethod === "DINHEIRO"
+                ? "O pagamento será feito em dinheiro no balcão ou na entrega."
+                : "O pagamento será concluído na maquininha no balcão ou na entrega."}
+            </div>
+
+            <div className="rounded-2xl border bg-muted p-3 text-sm">
+              Total registrado:{" "}
+              <strong>{formatCurrency(pedidoOfflineConcluido.total)}</strong>
+            </div>
+
+            {pedidoOfflineConcluido.scheduledFor ? (
+              <div className="rounded-2xl border bg-muted p-3 text-sm">
+                Pedido agendado para{" "}
+                <strong>{formatScheduledDate(pedidoOfflineConcluido.scheduledFor)}</strong>.
+              </div>
+            ) : null}
+
+            {pedidoOfflineConcluido.changeFor ? (
+              <div className="rounded-2xl border bg-muted p-3 text-sm">
+                Troco solicitado para{" "}
+                <strong>{formatCurrency(pedidoOfflineConcluido.changeFor)}</strong>.
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </ScrollArea>
+    </div>
+    <div className="flex flex-col gap-2.5 p-4 border-t bg-background">
+      <Button className="rounded-full h-10 text-sm" onClick={onViewOrders}>
+        Ver meus pedidos
+      </Button>
+      <Button
+        className="rounded-full h-10 text-sm"
+        variant="outline"
+        onClick={onClose}
+      >
+        Fechar
+      </Button>
+    </div>
+  </div>
+);
 
 export default FinishOrderSheet;
