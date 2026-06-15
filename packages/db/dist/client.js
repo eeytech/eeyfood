@@ -2,43 +2,26 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import * as schema from "./schema.js";
 const globalForDb = globalThis;
-const criarConexao = () => {
-    const connectionString = process.env.DATABASE_URL;
-    if (!connectionString) {
-        throw new Error("A variável DATABASE_URL não foi configurada.");
-    }
-    const pool = globalForDb.fswPool ??
-        new Pool({
-            connectionString,
-        });
-    const currentDb = globalForDb.fswDb ?? drizzle(pool, { schema });
-    if (process.env.NODE_ENV !== "production") {
-        globalForDb.fswPool = pool;
-        globalForDb.fswDb = currentDb;
-    }
-    return {
-        pool,
-        db: currentDb,
-    };
-};
-const getDb = () => {
-    return criarConexao().db;
-};
-const getPool = () => {
-    return criarConexao().pool;
-};
-const db = new Proxy({}, {
-    get(_target, property, receiver) {
-        const currentDb = getDb();
-        const value = Reflect.get(currentDb, property, receiver);
-        return typeof value === "function" ? value.bind(currentDb) : value;
-    },
-});
-const pool = new Proxy({}, {
-    get(_target, property, receiver) {
-        const currentPool = getPool();
-        const value = Reflect.get(currentPool, property, receiver);
-        return typeof value === "function" ? value.bind(currentPool) : value;
-    },
-});
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+    throw new Error("A variável DATABASE_URL não foi configurada.");
+}
+const pool = globalForDb.fswPool ??
+    new Pool({
+        connectionString,
+        max: 20, // Aumentando um pouco o limite padrão
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 2000,
+    });
+const db = globalForDb.fswDb ?? drizzle(pool, { schema });
+if (process.env.NODE_ENV !== "production") {
+    globalForDb.fswPool = pool;
+    globalForDb.fswDb = db;
+}
+else {
+    // Em produção também é importante manter a referência global se o módulo for recarregado
+    // ou se houver múltiplas entradas que importam este arquivo em um ambiente que não isola globais perfeitamente
+    globalForDb.fswPool = pool;
+    globalForDb.fswDb = db;
+}
 export { db, pool };
