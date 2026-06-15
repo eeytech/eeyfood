@@ -1,4 +1,5 @@
-export const normalizePhoneNumber = (phone: string) => {
+export const normalizePhoneNumber = (phone: string | undefined | null) => {
+  if (!phone) return "";
   return phone.replace(/\D/g, "");
 };
 
