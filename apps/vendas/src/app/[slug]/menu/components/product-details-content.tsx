@@ -36,7 +36,7 @@ const ProductDetailsContent = ({
 
   const optionGroups = useMemo(() => product.optionGroups || [], [product.optionGroups]);
 
-  const isOpen = isRestaurantOpen(
+  const { isOpen } = isRestaurantOpen(
     product.restaurant.status,
     product.restaurant.operatingHours,
   );

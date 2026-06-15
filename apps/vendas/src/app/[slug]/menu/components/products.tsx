@@ -67,26 +67,26 @@ const Products = ({ products, restaurant }: ProductsProps) => {
               )}
             </div>
 
-            <div className="flex h-full flex-col gap-3 p-4">
+            <div className="flex h-full flex-col gap-4 p-5">
               <div className="space-y-1">
-                <h3 className="text-base font-bold tracking-tight text-slate-950">
+                <h3 className="text-lg font-bold tracking-tight text-slate-950">
                   {product.name}
                 </h3>
-                <p className="line-clamp-2 text-xs leading-4 text-slate-500">
+                <p className="line-clamp-2 text-sm leading-relaxed text-slate-500">
                   {product.description}
                 </p>
               </div>
 
-              <div className="mt-auto flex items-center justify-between gap-2">
+              <div className="mt-auto flex items-center justify-between gap-2 pt-2">
                 <div className="flex flex-col">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                     A partir de
                   </span>
-                  <span className="text-lg font-extrabold text-slate-950">
+                  <span className="text-xl font-extrabold text-slate-950">
                     {formatCurrency(product.price)}
                   </span>
                 </div>
-                <span className="shrink-0 rounded-full bg-slate-950 px-3 py-1.5 text-sm font-bold text-white transition group-hover:bg-primary" aria-hidden="true">
+                <span className="shrink-0 rounded-full bg-slate-950 px-4 py-2 text-sm font-bold text-white transition group-hover:bg-primary" aria-hidden="true">
                   Ver produto
                 </span>
               </div>

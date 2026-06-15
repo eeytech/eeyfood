@@ -108,26 +108,26 @@ function SearchProductCard({
           className="object-contain p-4 transition duration-300 group-hover:scale-[1.03]"
         />
       </div>
-      <div className="flex h-full flex-col gap-3 p-4">
-        <div className="space-y-1.5">
-          <h3 className="text-base font-semibold tracking-tight text-slate-950">
+      <div className="flex h-full flex-col gap-4 p-5">
+        <div className="space-y-1">
+          <h3 className="text-lg font-bold tracking-tight text-slate-950">
             <Highlight text={product.name} query={query} />
           </h3>
-          <p className="line-clamp-3 text-sm leading-5 text-slate-600">
+          <p className="line-clamp-2 text-sm leading-relaxed text-slate-600">
             {product.description}
           </p>
         </div>
-        <div className="mt-auto flex items-end justify-between gap-3">
+        <div className="mt-auto flex items-end justify-between gap-3 pt-2">
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
               A partir de
             </p>
-            <p className="text-lg font-semibold text-slate-950">
+            <p className="text-xl font-extrabold text-slate-950">
               {formatCurrency(product.price)}
             </p>
           </div>
           <span
-            className="rounded-full bg-slate-950 px-3 py-1.5 text-sm font-medium text-white transition group-hover:bg-primary"
+            className="shrink-0 rounded-full bg-slate-950 px-4 py-2 text-sm font-bold text-white transition group-hover:bg-primary"
             aria-hidden="true"
           >
             Ver produto

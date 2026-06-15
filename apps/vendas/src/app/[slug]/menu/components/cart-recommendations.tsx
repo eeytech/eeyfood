@@ -42,7 +42,7 @@ const CartRecommendations = () => {
   if (recommendations.length === 0 || isLoading) return null;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="flex items-center gap-2 px-6">
         <SparklesIcon size={14} className="text-amber-500 fill-amber-500" />
         <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
@@ -68,22 +68,22 @@ const CartRecommendations = () => {
           {recommendations.map((product) => (
             <div
               key={product.id}
-              className="flex shrink-0 min-w-[120px] max-w-[120px] flex-col gap-2 rounded-xl border border-slate-100 bg-white p-2 shadow-sm"
+              className="flex shrink-0 min-w-[100px] max-w-[100px] flex-col gap-1 rounded-xl border border-slate-100 bg-white p-1.5 shadow-sm"
             >
               <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-slate-50">
                 <Image
                   src={product.imageUrl}
                   alt={product.name}
                   fill
-                  className="object-contain p-1.5"
+                  className="object-contain p-1"
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <p className="line-clamp-2 min-h-[28px] text-xs font-bold leading-tight text-slate-800">
+                <p className="line-clamp-2 min-h-[24px] text-[10px] font-bold leading-tight text-slate-800">
                   {product.name}
                 </p>
                 <div className="flex items-center justify-between gap-1">
-                  <span className="text-xs font-black text-primary">
+                  <span className="text-[10px] font-black text-primary">
                     {formatCurrency(product.price)}
                   </span>
                   <button
@@ -95,9 +95,9 @@ const CartRecommendations = () => {
                         selectedOptions: [],
                       })
                     }
-                    className="flex h-6 w-6 items-center justify-center rounded-md bg-slate-900 text-white shadow active:scale-90"
+                    className="flex h-5 w-5 items-center justify-center rounded-md bg-slate-900 text-white shadow active:scale-90"
                   >
-                    <PlusIcon size={12} />
+                    <PlusIcon size={10} />
                   </button>
                 </div>
               </div>
