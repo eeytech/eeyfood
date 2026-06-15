@@ -21,6 +21,7 @@ import { formatCurrency } from "@/helpers/format-currency";
 import { isRestaurantOpen } from "@/helpers/restaurant-status";
 import type {
   ConsumptionMethod,
+  DiningTable,
   PaymentMethod,
   PedidoBeneficiosValidado,
   RestaurantComCategoriasEProdutos,
@@ -30,6 +31,7 @@ import { createOrder } from "../actions/create-order";
 import { criarPreferenciaMercadoPago } from "../actions/criar-preferencia-mercado-pago";
 import { getAvailableSchedulingSlots } from "../actions/get-scheduling-slots";
 import { getLoyaltyUpsell, type LoyaltyUpsell } from "../actions/get-loyalty-upsell";
+import { getTables } from "../actions/get-tables";
 import { saveAbandonedCart } from "../actions/save-abandoned-cart";
 import { validateOrderBenefits } from "../actions/validate-order-benefits";
 import { CartContext } from "../contexts/cart";
@@ -40,6 +42,7 @@ import { FulfillmentSection, type SchedulingSlotGroup } from "./sections/fulfill
 import { IdentificationSection } from "./sections/identification-section";
 import { OrderSummarySection } from "./sections/order-summary-section";
 import { PaymentSection } from "./sections/payment-section";
+import { TableSection } from "./sections/table-section";
 
 interface FinishOrderSheetProps {
   open: boolean;
@@ -91,6 +94,15 @@ const FinishOrderSheet = ({
   const [pedidoOfflineConcluido, setPedidoOfflineConcluido] =
     useState<PedidoOfflineConcluido | null>(null);
   const [schedulingSlots, setSchedulingSlots] = useState<SchedulingSlotGroup[]>([]);
+  const [tables, setTables] = useState<DiningTable[]>([]);
+  const [isLoadingTables, setIsLoadingTables] = useState(false);
+  const consumptionMethod: ConsumptionMethod =
+    searchParams.get("consumptionMethod") === "DINE_IN"
+      ? "DINE_IN"
+      : searchParams.get("consumptionMethod") === "DELIVERY"
+        ? "DELIVERY"
+        : "TAKEAWAY";
+
   const abandonedCartSessionIdRef = useRef(createAbandonedCartSessionId());
   // Used by the debounce auto-validate to always call the latest closure
   const validateBenefitsRef = useRef<(() => Promise<void>) | null>(null);
@@ -105,6 +117,8 @@ const FinishOrderSheet = ({
       scheduledFor: "",
       paymentMethod: restaurant.acceptMercadoPago ? "MERCADO_PAGO" : "DINHEIRO",
       changeFor: "",
+      consumptionMethod,
+      diningTableId: undefined,
     },
   });
 
@@ -115,13 +129,6 @@ const FinishOrderSheet = ({
   const fulfillmentTiming = form.watch("fulfillmentTiming");
   const watchedScheduledFor = form.watch("scheduledFor");
   const needsChangeField = paymentMethod === "DINHEIRO";
-
-  const consumptionMethod: ConsumptionMethod =
-    searchParams.get("consumptionMethod") === "DINE_IN"
-      ? "DINE_IN"
-      : searchParams.get("consumptionMethod") === "DELIVERY"
-        ? "DELIVERY"
-        : "TAKEAWAY";
   const allowsScheduling = consumptionMethod !== "DINE_IN";
   const schedulingLabel = getSchedulingLabel(consumptionMethod);
   const isOpen = isRestaurantOpen(restaurant.status, restaurant.operatingHours);
@@ -156,6 +163,16 @@ const FinishOrderSheet = ({
 
     void fetchSlots();
   }, [fulfillmentTiming, slug, schedulingSlots.length, form]);
+
+  // Fetch dining tables when sheet opens for DINE_IN orders
+  useEffect(() => {
+    if (!open || consumptionMethod !== "DINE_IN" || tables.length > 0) return;
+    setIsLoadingTables(true);
+    void getTables(slug)
+      .then(setTables)
+      .catch(() => setTables([]))
+      .finally(() => setIsLoadingTables(false));
+  }, [open, consumptionMethod, slug, tables.length]);
 
   // Fetch the proactive upsell rule whenever the sheet opens or cart total changes
   useEffect(() => {
@@ -262,7 +279,8 @@ const FinishOrderSheet = ({
       setPedidoOfflineConcluido(null);
       setBenefits(null);
       setUseWalletBalance(false);
-      form.reset();
+      setTables([]);
+      form.reset({ consumptionMethod });
     }
     onOpenChange(nextOpen);
   };
@@ -355,6 +373,7 @@ const FinishOrderSheet = ({
         abandonedCartSessionId: abandonedCartSessionIdRef.current,
         couponCode: data.couponCode,
         useWalletBalance,
+        diningTableId: data.diningTableId,
         products: products.map((product) => ({
           id: product.id,
           quantity: product.quantity,
@@ -454,6 +473,14 @@ const FinishOrderSheet = ({
                           schedulingSlots={schedulingSlots}
                           fulfillmentTiming={fulfillmentTiming}
                           isLoading={isLoading}
+                        />
+                      )}
+
+                      {consumptionMethod === "DINE_IN" && (
+                        <TableSection
+                          form={form}
+                          tables={tables}
+                          isLoading={isLoadingTables}
                         />
                       )}
 

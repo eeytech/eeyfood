@@ -96,11 +96,11 @@ function SearchProductCard({
   return (
     <button
       onClick={() => onSelect({ ...product, restaurant })}
-      className="group flex flex-col overflow-hidden rounded-[30px] border border-slate-200 bg-white text-left shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200/80"
+      className="group flex h-full flex-col rounded-[30px] border border-slate-200 bg-white text-left shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200/80"
       aria-label={`Ver detalhes de ${product.name}`}
       role="listitem"
     >
-      <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-100">
+      <div className="relative aspect-[16/10] w-full overflow-hidden rounded-t-[30px] bg-slate-100">
         <Image
           src={product.imageUrl}
           alt=""
@@ -108,7 +108,7 @@ function SearchProductCard({
           className="object-contain p-4 transition duration-300 group-hover:scale-[1.03]"
         />
       </div>
-      <div className="flex h-full flex-col gap-4 p-5">
+      <div className="flex flex-1 flex-col gap-4 p-5">
         <div className="space-y-1">
           <h3 className="text-lg font-bold tracking-tight text-slate-950">
             <Highlight text={product.name} query={query} />

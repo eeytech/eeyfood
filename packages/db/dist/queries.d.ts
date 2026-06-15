@@ -169,6 +169,9 @@ export declare const buscarPedidoParaRastreamento: (orderId: number) => Promise<
         coverImageUrl: string;
         status: "AUTO" | "ALWAYS_OPEN" | "ALWAYS_CLOSED";
         cashbackPercent: number;
+        acceptMercadoPago: boolean;
+        isCouponsEnabled: boolean;
+        isCashbackEnabled: boolean;
         address: string | null;
         latitude: number | null;
         longitude: number | null;

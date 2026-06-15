@@ -1273,6 +1273,7 @@ export const criarPedido = async (input: CriarPedidoInput): Promise<Order> => {
         customerName: input.customerName,
         customerPhone: input.customerPhone,
         scheduledFor,
+        diningTableId: input.diningTableId,
       })
       .returning();
 

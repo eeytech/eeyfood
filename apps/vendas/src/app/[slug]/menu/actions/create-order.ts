@@ -23,6 +23,7 @@ interface CreateOrderInput {
   abandonedCartSessionId?: string;
   couponCode?: string;
   useWalletBalance?: boolean;
+  diningTableId?: string;
   slug: string;
 }
 
@@ -56,6 +57,7 @@ export const createOrder = async (input: CreateOrderInput) => {
     abandonedCartSessionId: input.abandonedCartSessionId,
     couponCode: input.couponCode?.trim().toUpperCase(),
     useWalletBalance: input.useWalletBalance,
+    diningTableId: input.diningTableId,
   });
 
   revalidatePath(`/${input.slug}/orders`);

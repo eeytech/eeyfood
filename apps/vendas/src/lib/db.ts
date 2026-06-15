@@ -2,6 +2,7 @@ export type {
   AbandonedCart,
   ConsumptionMethod,
   CriarPedidoInput,
+  DiningTable,
   OrderComItens,
   OrderStatus,
   PaymentMethod,
@@ -25,6 +26,7 @@ export {
   buscarRestaurantePorSlug,
   criarPedido,
   db,
+  listarMesasComandasPorSlug,
   salvarCarrinhoAbandonado,
   validarBeneficiosPedido,
 } from "@fsw/db";

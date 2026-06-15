@@ -739,6 +739,7 @@ export const criarPedido = async (input) => {
             customerName: input.customerName,
             customerPhone: input.customerPhone,
             scheduledFor,
+            diningTableId: input.diningTableId,
         })
             .returning();
         await tx.insert(orderProductsTable).values(contexto.itens.map((item) => ({

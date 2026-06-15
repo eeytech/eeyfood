@@ -31,8 +31,18 @@ export const formSchema = z
       "CARTAO_PRESENCIAL",
     ]),
     changeFor: z.string().trim().optional(),
+    consumptionMethod: z.enum(["DINE_IN", "DELIVERY", "TAKEAWAY"]),
+    diningTableId: z.string().uuid().optional(),
   })
   .superRefine((values, context) => {
+    if (values.consumptionMethod === "DINE_IN" && !values.diningTableId) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["diningTableId"],
+        message: "Selecione a mesa para o seu pedido.",
+      });
+    }
+
     if (values.paymentMethod === "DINHEIRO" && values.changeFor) {
       const parsedValue = Number(values.changeFor.replace(",", "."));
 

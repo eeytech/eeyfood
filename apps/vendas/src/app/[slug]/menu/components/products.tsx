@@ -45,11 +45,11 @@ const Products = ({ products, restaurant }: ProductsProps) => {
           <button
             key={product.id}
             onClick={() => handleProductClick(product)}
-            className="group flex flex-col overflow-hidden rounded-[24px] border border-slate-200 bg-white text-left shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200/80"
+            className="group flex h-full flex-col rounded-[24px] border border-slate-200 bg-white text-left shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200/80"
             aria-label={`Ver detalhes de ${product.name}`}
             role="listitem"
           >
-            <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-100">
+            <div className="relative aspect-[16/10] w-full overflow-hidden rounded-t-[24px] bg-slate-100">
               <Image
                 src={product.imageUrl}
                 alt="" 
@@ -67,7 +67,7 @@ const Products = ({ products, restaurant }: ProductsProps) => {
               )}
             </div>
 
-            <div className="flex h-full flex-col gap-4 p-5">
+            <div className="flex flex-1 flex-col gap-4 p-5">
               <div className="space-y-1">
                 <h3 className="text-lg font-bold tracking-tight text-slate-950">
                   {product.name}

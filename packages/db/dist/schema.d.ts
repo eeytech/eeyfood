@@ -148,6 +148,57 @@ export declare const restaurantsTable: import("drizzle-orm/pg-core").PgTableWith
             identity: undefined;
             generated: undefined;
         }, {}, {}>;
+        acceptMercadoPago: import("drizzle-orm/pg-core").PgColumn<{
+            name: "acceptMercadoPago";
+            tableName: "Restaurant";
+            dataType: "boolean";
+            columnType: "PgBoolean";
+            data: boolean;
+            driverParam: boolean;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        isCouponsEnabled: import("drizzle-orm/pg-core").PgColumn<{
+            name: "isCouponsEnabled";
+            tableName: "Restaurant";
+            dataType: "boolean";
+            columnType: "PgBoolean";
+            data: boolean;
+            driverParam: boolean;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        isCashbackEnabled: import("drizzle-orm/pg-core").PgColumn<{
+            name: "isCashbackEnabled";
+            tableName: "Restaurant";
+            dataType: "boolean";
+            columnType: "PgBoolean";
+            data: boolean;
+            driverParam: boolean;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
         address: import("drizzle-orm/pg-core").PgColumn<{
             name: "address";
             tableName: "Restaurant";
