@@ -1,4 +1,5 @@
 import type {
+  DiningTable,
   MenuCategory,
   Product,
   Restaurant,
@@ -9,6 +10,7 @@ import {
   buscarRestaurantePorSlug,
   db,
   desc,
+  diningTablesTable,
   eq,
   financialCategoriesTable,
   financialTransactionsTable,
@@ -53,6 +55,17 @@ export interface RelatorioBasico {
 
 export const listarMesasComandasGestao = async (slug: string) => {
   return listarMesasComandasPorSlug(slug);
+};
+
+export const listarMesasGestao = async (slug: string): Promise<DiningTable[]> => {
+  const restaurant = await buscarRestaurantePorSlug(slug);
+  if (!restaurant) return [];
+
+  return db
+    .select()
+    .from(diningTablesTable)
+    .where(eq(diningTablesTable.restaurantId, restaurant.id))
+    .orderBy(asc(diningTablesTable.displayOrder), asc(diningTablesTable.name));
 };
 
 export const buscarRestauranteParaGestao = async (

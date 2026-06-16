@@ -31,6 +31,7 @@ const navigationGroups = [
     items: [
       { href: "pdv", label: "PDV", icon: MonitorSmartphoneIcon },
       { href: "comandas", label: "Comandas", icon: UsersRoundIcon },
+      { href: "mesas", label: "Mesas", icon: LayoutGridIcon },
       { href: "pedidos", label: "Pedidos", icon: ClipboardListIcon },
     ],
   },

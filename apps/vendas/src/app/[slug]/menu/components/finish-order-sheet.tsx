@@ -212,7 +212,7 @@ const FinishOrderSheet = ({
 
   // Auto-validate when phone reaches a valid 11-digit number (silent on error)
   useEffect(() => {
-    const digits = watchedPhone.replace(/\D/g, "");
+    const digits = watchedPhone?.replace(/\D/g, "") ?? "";
     if (digits.length !== 11 || !isValidPhoneNumber(watchedPhone)) return;
 
     const timeoutId = window.setTimeout(() => {
@@ -280,7 +280,17 @@ const FinishOrderSheet = ({
       setBenefits(null);
       setUseWalletBalance(false);
       setTables([]);
-      form.reset({ consumptionMethod });
+      form.reset({
+        name: "",
+        phone: "",
+        couponCode: "",
+        fulfillmentTiming: "ASAP",
+        scheduledFor: "",
+        paymentMethod: restaurant.acceptMercadoPago ? "MERCADO_PAGO" : "DINHEIRO",
+        changeFor: "",
+        consumptionMethod,
+        diningTableId: undefined,
+      });
     }
     onOpenChange(nextOpen);
   };

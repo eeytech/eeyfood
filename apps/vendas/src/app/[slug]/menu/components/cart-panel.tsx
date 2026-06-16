@@ -39,7 +39,7 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
       </div>
 
       {hasProducts && (
-        <div className={variant === "sheet" ? "flex-1 overflow-hidden px-6 pt-4" : "flex-1 overflow-hidden px-0 pt-3"}>
+        <div className={variant === "sheet" ? "flex-1 overflow-hidden px-6 pt-4" : "min-h-0 flex-1 overflow-hidden px-0 pt-3"}>
           <ScrollArea className={variant === "sidebar" ? "h-full" : "h-full"}>
             <div className={variant === "sidebar" ? "space-y-2 px-6 pb-4" : "space-y-3 pr-4 pb-6"}>
               {products.map((product) => (
@@ -97,7 +97,7 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
   return (
     <>
       {variant === "sidebar" ? (
-        <Card className="overflow-hidden border-white/70 bg-white/90 shadow-xl shadow-slate-200/60 flex flex-col">
+        <Card className="flex h-full flex-col overflow-hidden border-white/70 bg-white/90 shadow-xl shadow-slate-200/60">
           {content}
         </Card>
       ) : (
