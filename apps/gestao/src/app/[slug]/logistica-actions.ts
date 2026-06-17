@@ -54,7 +54,7 @@ export const createCourierAction = async (slug: string, formData: FormData) => {
     restaurantId: restaurant.id,
   });
 
-  revalidatePath(`/${slug}/couriers`);
+  revalidatePath(`/${slug}/logistica`);
 };
 
 export const updateCourierAction = async (slug: string, formData: FormData) => {
@@ -81,7 +81,7 @@ export const updateCourierAction = async (slug: string, formData: FormData) => {
     })
     .where(eq(couriersTable.id, courierId));
 
-  revalidatePath(`/${slug}/couriers`);
+  revalidatePath(`/${slug}/logistica`);
 };
 
 export const deleteCourierAction = async (slug: string, formData: FormData) => {
@@ -89,7 +89,7 @@ export const deleteCourierAction = async (slug: string, formData: FormData) => {
 
   await db.delete(couriersTable).where(eq(couriersTable.id, courierId));
 
-  revalidatePath(`/${slug}/couriers`);
+  revalidatePath(`/${slug}/logistica`);
 };
 
 export const dispatchOrderAction = async (orderId: number, courierId: string) => {

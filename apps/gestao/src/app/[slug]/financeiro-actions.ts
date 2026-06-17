@@ -8,6 +8,7 @@ import {
   financialCategoriesTable,
   financialTransactionsTable,
 } from "@fsw/db";
+
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -75,6 +76,47 @@ export const updateTransactionStatusAction = async (
       paidAt: status === "PAID" ? new Date() : null,
       updatedAt: new Date(),
     })
+    .where(eq(financialTransactionsTable.id, transactionId));
+
+  revalidatePath(`/${slug}/financeiro`);
+};
+
+export const updateTransactionAction = async (slug: string, formData: FormData) => {
+  const transactionId = getStringValue(formData.get("transactionId"));
+
+  const parsedData = transactionSchema.safeParse({
+    description: getStringValue(formData.get("description")),
+    amount: getNumberValue(formData.get("amount")),
+    type: formData.get("type"),
+    status: formData.get("status"),
+    dueDate: formData.get("dueDate"),
+    categoryId: getStringValue(formData.get("categoryId")) || undefined,
+  });
+
+  if (!parsedData.success) {
+    throw new Error("Dados inválidos: " + JSON.stringify(parsedData.error.flatten()));
+  }
+
+  await db
+    .update(financialTransactionsTable)
+    .set({
+      description: parsedData.data.description,
+      amount: parsedData.data.amount,
+      type: parsedData.data.type,
+      status: parsedData.data.status,
+      dueDate: parsedData.data.dueDate,
+      categoryId: parsedData.data.categoryId ?? null,
+      paidAt: parsedData.data.status === "PAID" ? new Date() : null,
+      updatedAt: new Date(),
+    })
+    .where(eq(financialTransactionsTable.id, transactionId));
+
+  revalidatePath(`/${slug}/financeiro`);
+};
+
+export const deleteTransactionAction = async (slug: string, transactionId: string) => {
+  await db
+    .delete(financialTransactionsTable)
     .where(eq(financialTransactionsTable.id, transactionId));
 
   revalidatePath(`/${slug}/financeiro`);

@@ -548,7 +548,10 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
               <Button
                 className="rounded-full h-10 text-sm"
                 variant="outline"
-                onClick={() => handleSheetOpenChange(false)}
+                onClick={() => {
+                  handleSheetOpenChange(false);
+                  router.push(`/${slug}/menu?consumptionMethod=${consumptionMethod}`);
+                }}
               >
                 Fechar
               </Button>

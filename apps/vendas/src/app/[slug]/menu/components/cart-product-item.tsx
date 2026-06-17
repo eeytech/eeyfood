@@ -60,17 +60,7 @@ const CartProductItem = ({ product }: CartItemProps) => {
       </div>
 
       {/* Direita: Ações */}
-      <div className="flex shrink-0 items-center justify-between gap-1.5 sm:flex-col sm:gap-1.5">
-        <button
-          type="button"
-          onClick={() => removeProduct(product.cartItemId)}
-          className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 active:bg-rose-50 active:text-rose-600 transition-colors sm:h-7 sm:w-7"
-          title="Remover"
-        >
-          <TrashIcon size={12} className="sm:block hidden" />
-          <TrashIcon size={14} className="sm:hidden" />
-        </button>
-
+      <div className="flex shrink-0 items-center justify-between gap-1.5">
         <div className="flex items-center gap-0.5 rounded-lg border border-slate-200 bg-slate-50 p-0.5 sm:gap-1 sm:p-1">
           <button
             type="button"
@@ -78,8 +68,7 @@ const CartProductItem = ({ product }: CartItemProps) => {
             className="flex h-5 w-5 items-center justify-center rounded bg-white text-slate-600 hover:bg-slate-100 active:scale-90 transition-colors border border-slate-100 sm:h-6 sm:w-6"
             title="Diminuir quantidade"
           >
-            <MinusIcon size={8} strokeWidth={3} className="sm:hidden" />
-            <MinusIcon size={10} strokeWidth={3} className="sm:block hidden" />
+            <MinusIcon size={10} strokeWidth={3} />
           </button>
 
           <span className="min-w-[1rem] text-center text-xs font-black text-slate-900 sm:min-w-[1.5rem] sm:text-sm">
@@ -92,10 +81,18 @@ const CartProductItem = ({ product }: CartItemProps) => {
             className="flex h-5 w-5 items-center justify-center rounded bg-destructive text-white hover:bg-destructive/90 active:scale-90 transition-colors sm:h-6 sm:w-6"
             title="Aumentar quantidade"
           >
-            <PlusIcon size={8} strokeWidth={3} className="sm:hidden" />
-            <PlusIcon size={10} strokeWidth={3} className="sm:block hidden" />
+            <PlusIcon size={10} strokeWidth={3} />
           </button>
         </div>
+
+        <button
+          type="button"
+          onClick={() => removeProduct(product.cartItemId)}
+          className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 active:bg-rose-50 active:text-rose-600 transition-colors sm:h-7 sm:w-7"
+          title="Remover"
+        >
+          <TrashIcon size={14} />
+        </button>
       </div>
     </div>
   );
