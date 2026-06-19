@@ -298,6 +298,8 @@ export const loyaltyRulesTable = pgTable("LoyaltyRule", {
   isActive: boolean("isActive").default(true).notNull(),
   menuCategoryId: uuid("menuCategoryId").references(() => menuCategoriesTable.id, { onDelete: "cascade" }),
   productId: uuid("productId").references(() => productsTable.id, { onDelete: "cascade" }),
+  startsAt: timestamp("startsAt"),
+  endsAt: timestamp("endsAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });

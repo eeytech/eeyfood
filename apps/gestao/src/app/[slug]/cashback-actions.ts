@@ -16,6 +16,13 @@ import {
   getStringValue,
 } from "@/lib/admin-form-utils";
 
+const getOptionalDateValue = (value: FormDataEntryValue | null): Date | undefined => {
+  const str = typeof value === "string" ? value.trim() : "";
+  if (!str) return undefined;
+  const d = new Date(str);
+  return isNaN(d.getTime()) ? undefined : d;
+};
+
 const loyaltyRuleSchema = z.object({
   name: z.string().trim().min(1, "Informe o nome da regra."),
   cashbackPercent: z
@@ -27,6 +34,8 @@ const loyaltyRuleSchema = z.object({
   menuCategoryId: z.string().uuid().optional(),
   productId: z.string().uuid().optional(),
   isActive: z.boolean().default(true),
+  startsAt: z.date().optional(),
+  endsAt: z.date().optional(),
 });
 
 const getRestaurantOrThrow = async (slug: string) => {
@@ -55,6 +64,8 @@ const parseFormData = (formData: FormData) => {
     menuCategoryId: criterionType === "category" ? categoryIdRaw : undefined,
     productId: criterionType === "product" ? productIdRaw : undefined,
     isActive: getBooleanValue(formData.get("isActive")),
+    startsAt: getOptionalDateValue(formData.get("startsAt")),
+    endsAt: getOptionalDateValue(formData.get("endsAt")),
   });
 };
 
@@ -66,7 +77,7 @@ export const createLoyaltyRuleAction = async (slug: string, formData: FormData) 
     throw new Error(parsedData.error.issues[0]?.message ?? "Dados inválidos.");
   }
 
-  const { criterionType, minOrderValue, menuCategoryId, productId, ...rest } = parsedData.data;
+  const { criterionType, minOrderValue, menuCategoryId, productId, startsAt, endsAt, ...rest } = parsedData.data;
 
   await db.insert(loyaltyRulesTable).values({
     ...rest,
@@ -74,6 +85,8 @@ export const createLoyaltyRuleAction = async (slug: string, formData: FormData) 
     minOrderValue: criterionType === "minOrderValue" ? (minOrderValue ?? 0) : 0,
     menuCategoryId: criterionType === "category" ? menuCategoryId : undefined,
     productId: criterionType === "product" ? productId : undefined,
+    startsAt: startsAt ?? null,
+    endsAt: endsAt ?? null,
   });
 
   revalidatePath(`/${slug}/cashback`);
@@ -91,7 +104,7 @@ export const updateLoyaltyRuleAction = async (slug: string, formData: FormData) 
     throw new Error(parsedData.error.issues[0]?.message ?? "Dados inválidos.");
   }
 
-  const { criterionType, minOrderValue, menuCategoryId, productId, ...rest } = parsedData.data;
+  const { criterionType, minOrderValue, menuCategoryId, productId, startsAt, endsAt, ...rest } = parsedData.data;
 
   await db
     .update(loyaltyRulesTable)
@@ -100,6 +113,8 @@ export const updateLoyaltyRuleAction = async (slug: string, formData: FormData) 
       minOrderValue: criterionType === "minOrderValue" ? (minOrderValue ?? 0) : 0,
       menuCategoryId: criterionType === "category" ? menuCategoryId : null,
       productId: criterionType === "product" ? productId : null,
+      startsAt: startsAt ?? null,
+      endsAt: endsAt ?? null,
       updatedAt: new Date(),
     })
     .where(eq(loyaltyRulesTable.id, ruleId));

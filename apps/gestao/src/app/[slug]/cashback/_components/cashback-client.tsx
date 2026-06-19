@@ -64,6 +64,13 @@ function ruleCriterionType(rule: RegraLoyaltyComDetalhes): CriterionType {
   return "minOrderValue";
 }
 
+function toDatetimeLocal(date: Date | null | undefined) {
+  if (!date) return "";
+  const d = new Date(date);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 const EMPTY_FORM = {
   name: "",
   cashbackPercent: "",
@@ -71,6 +78,8 @@ const EMPTY_FORM = {
   minOrderValue: "0",
   menuCategoryId: "",
   productId: "",
+  startsAt: "",
+  endsAt: "",
   isActive: true,
 };
 
@@ -101,6 +110,8 @@ export function CashbackClient({ slug, regras, categorias, produtos }: CashbackC
       minOrderValue: String(rule.minOrderValue),
       menuCategoryId: rule.menuCategoryId ?? "",
       productId: rule.productId ?? "",
+      startsAt: toDatetimeLocal(rule.startsAt),
+      endsAt: toDatetimeLocal(rule.endsAt),
       isActive: rule.isActive,
     });
     setError(null);
@@ -357,6 +368,29 @@ export function CashbackClient({ slug, regras, categorias, produtos }: CashbackC
                 </Select>
               </div>
             )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="startsAt">Início da Validade</Label>
+                <Input
+                  id="startsAt"
+                  name="startsAt"
+                  type="datetime-local"
+                  value={form.startsAt}
+                  onChange={(e) => setForm((f) => ({ ...f, startsAt: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="endsAt">Fim da Validade</Label>
+                <Input
+                  id="endsAt"
+                  name="endsAt"
+                  type="datetime-local"
+                  value={form.endsAt}
+                  onChange={(e) => setForm((f) => ({ ...f, endsAt: e.target.value }))}
+                />
+              </div>
+            </div>
 
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>

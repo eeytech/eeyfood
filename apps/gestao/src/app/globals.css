@@ -22,6 +22,10 @@
     --input: 210 20% 90%;
     --ring: 356 83% 52%;
     --success: 142 71% 45%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 18%;
+    --accent: 210 20% 96%;
+    --accent-foreground: 0 0% 18%;
   }
 
   * {
