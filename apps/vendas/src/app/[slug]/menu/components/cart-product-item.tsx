@@ -19,7 +19,7 @@ const CartProductItem = ({ product }: CartItemProps) => {
   const unitPrice = product.price + optionsTotal;
 
   return (
-    <div className="flex w-full flex-col gap-2 rounded-xl border border-slate-100 bg-white p-2 shadow-sm sm:flex-row sm:items-center sm:gap-3 max-w-full">
+    <div className="flex w-full flex-col gap-2 rounded-xl border border-slate-100 bg-white p-2 shadow-sm max-w-full">
       {/* Esquerda: Imagem e Informações */}
       <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
         <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-slate-50 border border-slate-100 sm:h-14 sm:w-14">
@@ -60,7 +60,7 @@ const CartProductItem = ({ product }: CartItemProps) => {
       </div>
 
       {/* Direita: Ações */}
-      <div className="flex shrink-0 items-center justify-between gap-1.5">
+      <div className="flex w-full items-center justify-between gap-1.5">
         <div className="flex items-center gap-0.5 rounded-lg border border-slate-200 bg-slate-50 p-0.5 sm:gap-1 sm:p-1">
           <button
             type="button"

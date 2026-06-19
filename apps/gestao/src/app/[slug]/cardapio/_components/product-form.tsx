@@ -1,5 +1,6 @@
 "use client";
 
+import { InfoIcon } from "lucide-react";
 import { useTransition } from "react";
 
 import {
@@ -137,6 +138,17 @@ function ProductFields({
           defaultValue={defaultValues?.ingredients.join(", ") ?? ""}
         />
       </div>
+
+      {!defaultValues && (
+        <div className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <InfoIcon size={16} className="mt-0.5 shrink-0 text-amber-600" />
+          <p>
+            Para adicionar ingredientes extras, tamanhos ou opcionais com cobrança de
+            valores, crie e salve o produto primeiro. Após salvar, edite o produto e
+            acesse a aba <strong>Adicionais</strong> que ficará disponível no topo.
+          </p>
+        </div>
+      )}
 
       {defaultValues?.imageUrl && (
         <div className="flex items-center gap-3 rounded-md border bg-slate-50 p-3">

@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { buscarConfiguracoesRestaurante } from "@/lib/admin-queries";
+import { buscarAiSettingsPorSlug, buscarConfiguracoesRestaurante } from "@/lib/admin-queries";
 
 import { RestaurantDetailsForm } from "./restaurant-details-form";
 import { RestaurantFeaturesForm } from "./restaurant-features-form";
@@ -27,7 +27,10 @@ const daysOfWeek = [
 
 const ConfiguracoesPage = async ({ params }: ConfiguracoesPageProps) => {
   const { slug } = await params;
-  const config = await buscarConfiguracoesRestaurante(slug);
+  const [config, aiSettings] = await Promise.all([
+    buscarConfiguracoesRestaurante(slug),
+    buscarAiSettingsPorSlug(slug),
+  ]);
 
   if (!config) {
     return notFound();
@@ -51,13 +54,9 @@ const ConfiguracoesPage = async ({ params }: ConfiguracoesPageProps) => {
         <TabsList>
           <TabsTrigger value="estabelecimento">Estabelecimento</TabsTrigger>
           <TabsTrigger value="modulos">Módulos</TabsTrigger>
-          <TabsTrigger value="status">
+          <TabsTrigger value="funcionamento">
             <Settings2Icon size={13} />
-            Status
-          </TabsTrigger>
-          <TabsTrigger value="horarios">
-            <ClockIcon size={13} />
-            Horários
+            Funcionamento
           </TabsTrigger>
         </TabsList>
 
@@ -84,11 +83,15 @@ const ConfiguracoesPage = async ({ params }: ConfiguracoesPageProps) => {
               isCouponsEnabled: restaurant.isCouponsEnabled,
               isCashbackEnabled: restaurant.isCashbackEnabled,
               showOptionImages: restaurant.showOptionImages,
+              isDeliveryEnabled: restaurant.isDeliveryEnabled,
+              isTakeawayEnabled: restaurant.isTakeawayEnabled,
+              isDineInEnabled: restaurant.isDineInEnabled,
+              isBotActive: aiSettings?.isBotActive ?? false,
             }}
           />
         </TabsContent>
 
-        <TabsContent value="status" className="mt-4">
+        <TabsContent value="funcionamento" className="mt-4 space-y-4">
           <Card className="border-white/80 bg-white/90">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -155,9 +158,7 @@ const ConfiguracoesPage = async ({ params }: ConfiguracoesPageProps) => {
               </form>
             </CardContent>
           </Card>
-        </TabsContent>
 
-        <TabsContent value="horarios" className="mt-4">
           <Card className="border-white/80 bg-white/90">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

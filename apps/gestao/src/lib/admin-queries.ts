@@ -1,30 +1,42 @@
 import type {
+  CompanyVehicle,
+  Coupon,
+  Courier,
   DiningTable,
+  LoyaltyRule,
   MenuCategory,
   Product,
   ProductOption,
   ProductOptionGroup,
   Restaurant,
+  VehicleStatus,
 } from "@fsw/db";
 import {
   aiSettingsTable,
   and,
   asc,
   buscarRestaurantePorSlug,
+  companyVehiclesTable,
+  couponsTable,
+  couriersTable,
   db,
   desc,
   diningTablesTable,
   eq,
   financialCategoriesTable,
   financialTransactionsTable,
+  ilike,
   listarCouriersPorSlug,
   listarMesasComandasPorSlug,
   listarPedidosRecebimentoPorSlug,
+  loyaltyRulesTable,
   menuCategoriesTable,
   operatingHoursTable,
+  or,
   productOptionGroupsTable,
   productOptionsTable,
   productsTable,
+  sql,
 } from "@fsw/db";
 
 export interface CategoriaComProdutos extends MenuCategory {
@@ -231,6 +243,141 @@ export const listarCouriersGestao = async (slug: string) => {
   return listarCouriersPorSlug(slug);
 };
 
+const COURIERS_PER_PAGE = 10;
+
+export interface ListarCouriersFiltradoParams {
+  slug: string;
+  page?: number;
+  search?: string;
+  vehicleType?: string;
+  availability?: string;
+  status?: string;
+  workDay?: string;
+}
+
+export interface ListarCouriersFiltradoResult {
+  couriers: Courier[];
+  total: number;
+  totalPages: number;
+  currentPage: number;
+}
+
+export const listarCouriersGestaoFiltrado = async (
+  params: ListarCouriersFiltradoParams,
+): Promise<ListarCouriersFiltradoResult> => {
+  const { slug, page = 1, search, vehicleType, availability, status, workDay } = params;
+
+  const restaurant = await buscarRestaurantePorSlug(slug);
+  if (!restaurant) {
+    return { couriers: [], total: 0, totalPages: 0, currentPage: 1 };
+  }
+
+  const conditions = and(
+    eq(couriersTable.restaurantId, restaurant.id),
+    search
+      ? or(
+          ilike(couriersTable.name, `%${search}%`),
+          ilike(couriersTable.phone, `%${search}%`),
+        )
+      : undefined,
+    vehicleType && vehicleType !== "all"
+      ? eq(couriersTable.vehicleType, vehicleType)
+      : undefined,
+    availability === "available"
+      ? eq(couriersTable.isAvailable, true)
+      : availability === "unavailable"
+        ? eq(couriersTable.isAvailable, false)
+        : undefined,
+    status === "active"
+      ? eq(couriersTable.isActive, true)
+      : status === "inactive"
+        ? eq(couriersTable.isActive, false)
+        : undefined,
+    workDay && workDay !== "all"
+      ? sql`${couriersTable.workDays} @> ARRAY[${workDay}]::text[]`
+      : undefined,
+  );
+
+  const [{ total }] = await db
+    .select({ total: sql<number>`cast(count(*) as int)` })
+    .from(couriersTable)
+    .where(conditions);
+
+  const totalCount = total ?? 0;
+  const totalPages = Math.ceil(totalCount / COURIERS_PER_PAGE);
+  const currentPage = Math.max(1, Math.min(page, totalPages || 1));
+
+  const couriers = await db
+    .select()
+    .from(couriersTable)
+    .where(conditions)
+    .orderBy(asc(couriersTable.name))
+    .limit(COURIERS_PER_PAGE)
+    .offset((currentPage - 1) * COURIERS_PER_PAGE);
+
+  return { couriers, total: totalCount, totalPages, currentPage };
+};
+
+const VEHICLES_PER_PAGE = 10;
+
+export interface ListarVeiculosFiltradoParams {
+  slug: string;
+  page?: number;
+  search?: string;
+  status?: string;
+}
+
+export interface ListarVeiculosFiltradoResult {
+  vehicles: CompanyVehicle[];
+  total: number;
+  totalPages: number;
+  currentPage: number;
+}
+
+export const listarVeiculosGestao = async (
+  params: ListarVeiculosFiltradoParams,
+): Promise<ListarVeiculosFiltradoResult> => {
+  const { slug, page = 1, search, status } = params;
+
+  const restaurant = await buscarRestaurantePorSlug(slug);
+  if (!restaurant) {
+    return { vehicles: [], total: 0, totalPages: 0, currentPage: 1 };
+  }
+
+  const conditions = and(
+    eq(companyVehiclesTable.restaurantId, restaurant.id),
+    search
+      ? or(
+          ilike(companyVehiclesTable.brand, `%${search}%`),
+          ilike(companyVehiclesTable.model, `%${search}%`),
+          ilike(companyVehiclesTable.licensePlate, `%${search}%`),
+        )
+      : undefined,
+    status && status !== "all"
+      ? eq(companyVehiclesTable.status, status as VehicleStatus)
+      : undefined,
+  );
+
+  const [{ total }] = await db
+    .select({ total: sql<number>`cast(count(*) as int)` })
+    .from(companyVehiclesTable)
+    .where(conditions);
+
+  const totalCount = total ?? 0;
+  const totalPages = Math.ceil(totalCount / VEHICLES_PER_PAGE);
+  const currentPage = Math.max(1, Math.min(page, totalPages || 1));
+
+  const vehicles = await db
+    .select()
+    .from(companyVehiclesTable)
+    .where(conditions)
+    .orderBy(asc(companyVehiclesTable.brand), asc(companyVehiclesTable.model))
+    .limit(VEHICLES_PER_PAGE)
+    .offset((currentPage - 1) * VEHICLES_PER_PAGE);
+
+  return { vehicles, total: totalCount, totalPages, currentPage };
+};
+
 export const listarTransacoesFinanceirasPorSlug = async (slug: string) => {
   const restaurant = await buscarRestaurantePorSlug(slug);
   if (!restaurant) return [];
@@ -335,4 +482,51 @@ export const buscarConfiguracoesRestaurante = async (slug: string) => {
     restaurant,
     operatingHours,
   };
+};
+
+export const listarCuponsGestao = async (slug: string): Promise<Coupon[]> => {
+  const restaurant = await buscarRestaurantePorSlug(slug);
+  if (!restaurant) return [];
+
+  return db
+    .select()
+    .from(couponsTable)
+    .where(eq(couponsTable.restaurantId, restaurant.id))
+    .orderBy(asc(couponsTable.code));
+};
+
+export type RegraLoyaltyComDetalhes = LoyaltyRule & {
+  menuCategory: Pick<MenuCategory, "id" | "name"> | null;
+  product: Pick<Product, "id" | "name"> | null;
+};
+
+export const listarRegrasLoyaltyGestao = async (
+  slug: string,
+): Promise<RegraLoyaltyComDetalhes[]> => {
+  const restaurant = await buscarRestaurantePorSlug(slug);
+  if (!restaurant) return [];
+
+  const rows = await db
+    .select({
+      rule: loyaltyRulesTable,
+      menuCategory: {
+        id: menuCategoriesTable.id,
+        name: menuCategoriesTable.name,
+      },
+      product: {
+        id: productsTable.id,
+        name: productsTable.name,
+      },
+    })
+    .from(loyaltyRulesTable)
+    .leftJoin(menuCategoriesTable, eq(menuCategoriesTable.id, loyaltyRulesTable.menuCategoryId))
+    .leftJoin(productsTable, eq(productsTable.id, loyaltyRulesTable.productId))
+    .where(eq(loyaltyRulesTable.restaurantId, restaurant.id))
+    .orderBy(asc(loyaltyRulesTable.name));
+
+  return rows.map((row) => ({
+    ...row.rule,
+    menuCategory: row.menuCategory?.id ? row.menuCategory : null,
+    product: row.product?.id ? row.product : null,
+  }));
 };

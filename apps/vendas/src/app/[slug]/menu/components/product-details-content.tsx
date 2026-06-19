@@ -162,11 +162,11 @@ const ProductDetailsContent = ({
   };
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-white lg:flex-row">
+    <div className="flex h-full flex-col overflow-hidden bg-white">
       {/* LEFT COLUMN — product image (desktop only: sticky) */}
       {showImage && (
-        <div className="relative shrink-0 bg-slate-100 lg:sticky lg:top-0 lg:h-screen lg:w-[380px]">
-          <div className="relative h-[160px] w-full sm:h-[200px] lg:h-full">
+        <div className="relative shrink-0 bg-slate-100">
+          <div className="relative h-[160px] w-full sm:h-[200px]">
             {isImageLoading && (
               <div className="absolute inset-0 z-10 animate-pulse bg-slate-200" />
             )}

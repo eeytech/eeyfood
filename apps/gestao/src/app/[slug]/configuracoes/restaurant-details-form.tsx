@@ -1,7 +1,8 @@
 "use client";
 
-import { StoreIcon } from "lucide-react";
-import { useTransition } from "react";
+import { StoreIcon, UploadIcon } from "lucide-react";
+import Image from "next/image";
+import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { updateRestaurantDetailsAction } from "@/app/[slug]/actions";
@@ -29,6 +30,20 @@ export const RestaurantDetailsForm = ({
   initialValues,
 }: RestaurantDetailsFormProps) => {
   const [isPending, startTransition] = useTransition();
+  const [avatarPreview, setAvatarPreview] = useState<string>(initialValues.avatarImageUrl);
+  const [coverPreview, setCoverPreview] = useState<string>(initialValues.coverImageUrl);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    setPreview: (url: string) => void,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const objectUrl = URL.createObjectURL(file);
+    setPreview(objectUrl);
+  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -38,8 +53,9 @@ export const RestaurantDetailsForm = ({
       try {
         await updateRestaurantDetailsAction(slug, formData);
         toast.success("Dados do estabelecimento atualizados!");
-      } catch {
-        toast.error("Erro ao salvar os dados. Verifique os campos obrigatórios.");
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Erro ao salvar os dados.";
+        toast.error(message);
       }
     });
   };
@@ -56,7 +72,7 @@ export const RestaurantDetailsForm = ({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} encType="multipart/form-data" className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="name">
@@ -123,30 +139,74 @@ export const RestaurantDetailsForm = ({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="avatarImageUrl">
-                URL do Logo <span className="text-destructive">*</span>
+              <Label>
+                Logo do Restaurante <span className="text-destructive">*</span>
               </Label>
-              <Input
-                id="avatarImageUrl"
-                name="avatarImageUrl"
-                defaultValue={initialValues.avatarImageUrl}
-                placeholder="https://..."
+              <div
+                className="relative flex aspect-square w-32 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 transition hover:border-slate-400 hover:bg-slate-100"
+                onClick={() => avatarInputRef.current?.click()}
+              >
+                {avatarPreview ? (
+                  <Image
+                    src={avatarPreview}
+                    alt="Preview do logo"
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                ) : (
+                  <UploadIcon size={20} className="text-slate-400" />
+                )}
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition hover:opacity-100">
+                  <UploadIcon size={20} className="text-white" />
+                </div>
+              </div>
+              <p className="text-xs text-slate-500">Clique para trocar. Máx. 2 MB.</p>
+              <input
+                ref={avatarInputRef}
+                id="avatarFile"
+                name="avatarFile"
+                type="file"
+                accept="image/*"
+                className="hidden"
                 disabled={isPending}
-                required
+                onChange={(e) => handleImageChange(e, setAvatarPreview)}
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="coverImageUrl">
-                URL da Capa <span className="text-destructive">*</span>
+              <Label>
+                Capa do Restaurante <span className="text-destructive">*</span>
               </Label>
-              <Input
-                id="coverImageUrl"
-                name="coverImageUrl"
-                defaultValue={initialValues.coverImageUrl}
-                placeholder="https://..."
+              <div
+                className="relative flex h-32 w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 transition hover:border-slate-400 hover:bg-slate-100"
+                onClick={() => coverInputRef.current?.click()}
+              >
+                {coverPreview ? (
+                  <Image
+                    src={coverPreview}
+                    alt="Preview da capa"
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                ) : (
+                  <UploadIcon size={20} className="text-slate-400" />
+                )}
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition hover:opacity-100">
+                  <UploadIcon size={20} className="text-white" />
+                </div>
+              </div>
+              <p className="text-xs text-slate-500">Clique para trocar. Máx. 2 MB.</p>
+              <input
+                ref={coverInputRef}
+                id="coverFile"
+                name="coverFile"
+                type="file"
+                accept="image/*"
+                className="hidden"
                 disabled={isPending}
-                required
+                onChange={(e) => handleImageChange(e, setCoverPreview)}
               />
             </div>
           </div>

@@ -1,4 +1,4 @@
-export { and, asc, desc, eq, gte, inArray, sql } from "drizzle-orm";
+export { and, asc, desc, eq, gte, ilike, inArray, or, sql } from "drizzle-orm";
 
 export { db, pool } from "./client.js";
 export {
@@ -40,11 +40,14 @@ export {
   abandonedCartStatusEnum,
   abandonedCartsRelations,
   abandonedCartsTable,
+  companyVehiclesRelations,
+  companyVehiclesTable,
   couponDiscountTypeEnum,
   couponsRelations,
   couponsTable,
   couriersRelations,
   couriersTable,
+  vehicleStatusEnum,
   diningTablesRelations,
   diningTablesTable,
   financialCategoriesRelations,
@@ -81,12 +84,15 @@ export {
   stockMovementsTable,
   transactionStatusEnum,
   transactionTypeEnum,
+  loyaltyRulesRelations,
+  loyaltyRulesTable,
   walletsRelations,
   walletsTable,
 } from "./schema.js";
 export type {
   AbandonedCart,
   AbandonedCartStatus,
+  CompanyVehicle,
   Coupon,
   CouponDiscountType,
   ConsumptionMethod,
@@ -100,6 +106,7 @@ export type {
   MesaComanda,
   NewAbandonedCart,
   NewAiSettings,
+  NewCompanyVehicle,
   NewCoupon,
   NewCourier,
   NewDiningTable,
@@ -134,5 +141,8 @@ export type {
   StockMovementType,
   TransactionStatus,
   TransactionType,
+  VehicleStatus,
   Wallet,
+  LoyaltyRule,
+  NewLoyaltyRule,
 } from "./types.js";

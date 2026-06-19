@@ -52,6 +52,11 @@ export const restaurantStatusEnum = pgEnum("RestaurantStatus", [
     "ALWAYS_OPEN",
     "ALWAYS_CLOSED",
 ]);
+export const vehicleStatusEnum = pgEnum("VehicleStatus", [
+    "ACTIVE",
+    "MAINTENANCE",
+    "INACTIVE",
+]);
 export const restaurantsTable = pgTable("Restaurant", {
     id: uuid("id").defaultRandom().primaryKey(),
     name: text("name").notNull(),
@@ -65,11 +70,18 @@ export const restaurantsTable = pgTable("Restaurant", {
     isCouponsEnabled: boolean("isCouponsEnabled").default(true).notNull(),
     isCashbackEnabled: boolean("isCashbackEnabled").default(true).notNull(),
     showOptionImages: boolean("showOptionImages").default(true).notNull(),
+    isDeliveryEnabled: boolean("isDeliveryEnabled").default(true).notNull(),
+    isTakeawayEnabled: boolean("isTakeawayEnabled").default(true).notNull(),
+    isDineInEnabled: boolean("isDineInEnabled").default(true).notNull(),
     cnpj: text("cnpj"),
     phone: text("phone"),
     address: text("address"),
     latitude: doublePrecision("latitude"),
     longitude: doublePrecision("longitude"),
+    deliveryFee: doublePrecision("deliveryFee").default(0).notNull(),
+    minimumOrderValue: doublePrecision("minimumOrderValue").default(0).notNull(),
+    freeDeliveryThreshold: doublePrecision("freeDeliveryThreshold"),
+    estimatedDeliveryTime: text("estimatedDeliveryTime"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
@@ -228,6 +240,8 @@ export const loyaltyRulesTable = pgTable("LoyaltyRule", {
     minOrderValue: doublePrecision("minOrderValue").default(0).notNull(),
     cashbackPercent: doublePrecision("cashbackPercent").notNull(),
     isActive: boolean("isActive").default(true).notNull(),
+    menuCategoryId: uuid("menuCategoryId").references(() => menuCategoriesTable.id, { onDelete: "cascade" }),
+    productId: uuid("productId").references(() => productsTable.id, { onDelete: "cascade" }),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
@@ -266,12 +280,45 @@ export const couriersTable = pgTable("Courier", {
     phone: text("phone").notNull(),
     vehicleType: text("vehicleType"),
     licensePlate: text("licensePlate"),
+    cpf: text("cpf"),
+    rg: text("rg"),
+    cep: text("cep"),
+    logradouro: text("logradouro"),
+    numero: text("numero"),
+    complemento: text("complemento"),
+    bairro: text("bairro"),
+    cidade: text("cidade"),
+    estado: text("estado"),
+    cnhNumero: text("cnhNumero"),
+    cnhCategoria: text("cnhCategoria"),
+    cnhVencimento: date("cnhVencimento"),
+    usesOwnVehicle: boolean("usesOwnVehicle").default(true),
+    workDays: text("workDays").array(),
+    shiftStart: text("shiftStart"),
+    shiftEnd: text("shiftEnd"),
+    isAvailable: boolean("isAvailable").default(false).notNull(),
     latitude: doublePrecision("latitude"),
     longitude: doublePrecision("longitude"),
     isActive: boolean("isActive").default(true).notNull(),
     restaurantId: uuid("restaurantId")
         .notNull()
         .references(() => restaurantsTable.id, { onDelete: "cascade" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+export const companyVehiclesTable = pgTable("CompanyVehicle", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    restaurantId: uuid("restaurantId")
+        .notNull()
+        .references(() => restaurantsTable.id, { onDelete: "cascade" }),
+    brand: text("brand").notNull(),
+    model: text("model").notNull(),
+    year: integer("year"),
+    color: text("color"),
+    licensePlate: text("licensePlate").notNull(),
+    renavam: text("renavam"),
+    chassi: text("chassi"),
+    status: vehicleStatusEnum("status").default("ACTIVE").notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
@@ -439,6 +486,7 @@ export const restaurantsRelations = relations(restaurantsTable, ({ one, many }) 
     wallets: many(walletsTable),
     financialClosings: many(financialClosingsTable),
     couriers: many(couriersTable),
+    companyVehicles: many(companyVehiclesTable),
     financialCategories: many(financialCategoriesTable),
     financialTransactions: many(financialTransactionsTable),
     aiSettings: one(aiSettingsTable),
@@ -546,6 +594,14 @@ export const loyaltyRulesRelations = relations(loyaltyRulesTable, ({ one }) => (
         fields: [loyaltyRulesTable.restaurantId],
         references: [restaurantsTable.id],
     }),
+    menuCategory: one(menuCategoriesTable, {
+        fields: [loyaltyRulesTable.menuCategoryId],
+        references: [menuCategoriesTable.id],
+    }),
+    product: one(productsTable, {
+        fields: [loyaltyRulesTable.productId],
+        references: [productsTable.id],
+    }),
 }));
 export const walletsRelations = relations(walletsTable, ({ one }) => ({
     restaurant: one(restaurantsTable, {
@@ -621,6 +677,12 @@ export const stockMovementsRelations = relations(stockMovementsTable, ({ one }) 
 export const financialClosingsRelations = relations(financialClosingsTable, ({ one }) => ({
     restaurant: one(restaurantsTable, {
         fields: [financialClosingsTable.restaurantId],
+        references: [restaurantsTable.id],
+    }),
+}));
+export const companyVehiclesRelations = relations(companyVehiclesTable, ({ one }) => ({
+    restaurant: one(restaurantsTable, {
+        fields: [companyVehiclesTable.restaurantId],
         references: [restaurantsTable.id],
     }),
 }));

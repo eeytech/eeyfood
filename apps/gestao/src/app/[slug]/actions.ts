@@ -3,6 +3,7 @@
 import type { RestaurantStatus } from "@fsw/db";
 import { buscarProdutoComOpcionaisGestao } from "@/lib/admin-queries";
 import {
+  aiSettingsTable,
   and,
   buscarRestaurantePorSlug,
   db,
@@ -562,15 +563,24 @@ export const updateRestaurantDetailsAction = async (
 
   const name = getStringValue(formData.get("name"));
   const description = getStringValue(formData.get("description"));
-  const avatarImageUrl = getStringValue(formData.get("avatarImageUrl"));
-  const coverImageUrl = getStringValue(formData.get("coverImageUrl"));
   const cnpj = getOptionalStringValue(formData.get("cnpj"));
   const phone = getOptionalStringValue(formData.get("phone"));
   const address = getOptionalStringValue(formData.get("address"));
 
-  if (!name || !description || !avatarImageUrl || !coverImageUrl) {
+  if (!name || !description) {
     throw new Error("Preencha todos os campos obrigatórios.");
   }
+
+  const avatarFile = getFileValue(formData.get("avatarFile"));
+  const coverFile = getFileValue(formData.get("coverFile"));
+
+  const avatarImageUrl = avatarFile
+    ? await convertImageFileToDataUrl(avatarFile)
+    : restaurant.avatarImageUrl;
+
+  const coverImageUrl = coverFile
+    ? await convertImageFileToDataUrl(coverFile)
+    : restaurant.coverImageUrl;
 
   await db
     .update(restaurantsTable)
@@ -586,6 +596,15 @@ export const updateRestaurantFeaturesAction = async (
 ) => {
   const restaurant = await getRestaurantOrThrow(slug);
 
+  const isDeliveryEnabled = getBooleanValue(formData.get("isDeliveryEnabled"));
+  const isTakeawayEnabled = getBooleanValue(formData.get("isTakeawayEnabled"));
+  const isDineInEnabled = getBooleanValue(formData.get("isDineInEnabled"));
+  const isBotActive = getBooleanValue(formData.get("isBotActive"));
+
+  if (!isDeliveryEnabled && !isTakeawayEnabled && !isDineInEnabled) {
+    throw new Error("O estabelecimento deve manter pelo menos um método de consumo ativo.");
+  }
+
   await db
     .update(restaurantsTable)
     .set({
@@ -593,9 +612,20 @@ export const updateRestaurantFeaturesAction = async (
       isCouponsEnabled: getBooleanValue(formData.get("isCouponsEnabled")),
       isCashbackEnabled: getBooleanValue(formData.get("isCashbackEnabled")),
       showOptionImages: getBooleanValue(formData.get("showOptionImages")),
+      isDeliveryEnabled,
+      isTakeawayEnabled,
+      isDineInEnabled,
       updatedAt: new Date(),
     })
     .where(eq(restaurantsTable.id, restaurant.id));
+
+  await db
+    .insert(aiSettingsTable)
+    .values({ restaurantId: restaurant.id, isBotActive })
+    .onConflictDoUpdate({
+      target: aiSettingsTable.restaurantId,
+      set: { isBotActive, updatedAt: new Date() },
+    });
 
   revalidateRestaurantPaths(slug);
 };

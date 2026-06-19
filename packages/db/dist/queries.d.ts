@@ -126,6 +126,7 @@ export declare const listarCouriersPorSlug: (slug: string) => Promise<Courier[]>
 export declare const buscarPedidoParaRastreamento: (orderId: number) => Promise<{
     id: number;
     status: "PENDING" | "IN_PREPARATION" | "READY_FOR_PICKUP" | "OUT_FOR_DELIVERY" | "FINISHED" | "CANCELLED";
+    deliveryFee: number;
     createdAt: Date;
     updatedAt: Date;
     restaurantId: string;
@@ -135,7 +136,6 @@ export declare const buscarPedidoParaRastreamento: (orderId: number) => Promise<
     couponDiscountAmount: number;
     cashbackRedeemedAmount: number;
     cashbackEarnedAmount: number;
-    deliveryFee: number;
     total: number;
     estimatedCost: number;
     estimatedProfit: number;
@@ -173,11 +173,18 @@ export declare const buscarPedidoParaRastreamento: (orderId: number) => Promise<
         isCouponsEnabled: boolean;
         isCashbackEnabled: boolean;
         showOptionImages: boolean;
+        isDeliveryEnabled: boolean;
+        isTakeawayEnabled: boolean;
+        isDineInEnabled: boolean;
         cnpj: string | null;
         phone: string | null;
         address: string | null;
         latitude: number | null;
         longitude: number | null;
+        deliveryFee: number;
+        minimumOrderValue: number;
+        freeDeliveryThreshold: number | null;
+        estimatedDeliveryTime: string | null;
         createdAt: Date;
         updatedAt: Date;
     };
@@ -193,6 +200,23 @@ export declare const buscarPedidoParaRastreamento: (orderId: number) => Promise<
         isActive: boolean;
         vehicleType: string | null;
         licensePlate: string | null;
+        cpf: string | null;
+        rg: string | null;
+        cep: string | null;
+        logradouro: string | null;
+        numero: string | null;
+        complemento: string | null;
+        bairro: string | null;
+        cidade: string | null;
+        estado: string | null;
+        cnhNumero: string | null;
+        cnhCategoria: string | null;
+        cnhVencimento: string | null;
+        usesOwnVehicle: boolean | null;
+        workDays: string[] | null;
+        shiftStart: string | null;
+        shiftEnd: string | null;
+        isAvailable: boolean;
     } | null;
 } | undefined>;
 export declare const despacharPedido: ({ orderId, courierId, }: DespacharPedidoInput) => Promise<(AtualizacaoPedidoBase & {

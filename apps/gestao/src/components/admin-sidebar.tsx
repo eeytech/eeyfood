@@ -5,11 +5,13 @@ import {
   BoxesIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  CircleDollarSignIcon,
   ClipboardListIcon,
   LayoutGridIcon,
   MonitorSmartphoneIcon,
   SparklesIcon,
   StoreIcon,
+  TagIcon,
   TruckIcon,
   UsersRoundIcon,
 } from "lucide-react";
@@ -48,6 +50,13 @@ const navigationGroups = [
       { href: "financeiro", label: "Financeiro", icon: BarChart3Icon },
       { href: "relatorios", label: "Relatórios", icon: BarChart3Icon },
       { href: "ai", label: "IA Bot", icon: SparklesIcon },
+    ],
+  },
+  {
+    label: "Fidelização",
+    items: [
+      { href: "cupons", label: "Cupons", icon: TagIcon },
+      { href: "cashback", label: "Cashback", icon: CircleDollarSignIcon },
     ],
   },
   {

@@ -1,5 +1,5 @@
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
-import { abandonedCartsTable, abandonedCartStatusEnum, consumptionMethodEnum, couponDiscountTypeEnum, couponsTable, couriersTable, diningTablesTable, financialCategoriesTable, financialClosingsTable, financialTransactionsTable, menuCategoriesTable, orderProductsTable, ordersTable, orderStatusEnum, paymentMethodEnum, paymentStatusEnum, productsTable, restaurantsTable, restaurantStatusEnum, operatingHoursTable, productOptionGroupsTable, productOptionsTable, orderProductOptionsTable, orderRatingsTable, stockMovementsTable, stockMovementTypeEnum, transactionStatusEnum, transactionTypeEnum, walletsTable, loyaltyRulesTable, aiSettingsTable } from "./schema.js";
+import { abandonedCartsTable, abandonedCartStatusEnum, companyVehiclesTable, consumptionMethodEnum, couponDiscountTypeEnum, couponsTable, couriersTable, diningTablesTable, financialCategoriesTable, financialClosingsTable, financialTransactionsTable, menuCategoriesTable, orderProductsTable, ordersTable, orderStatusEnum, paymentMethodEnum, paymentStatusEnum, productsTable, restaurantsTable, restaurantStatusEnum, operatingHoursTable, productOptionGroupsTable, productOptionsTable, orderProductOptionsTable, orderRatingsTable, stockMovementsTable, stockMovementTypeEnum, transactionStatusEnum, transactionTypeEnum, vehicleStatusEnum, walletsTable, loyaltyRulesTable, aiSettingsTable } from "./schema.js";
 export type ProductOptionGroup = InferSelectModel<typeof productOptionGroupsTable>;
 export type NewProductOptionGroup = InferInsertModel<typeof productOptionGroupsTable>;
 export type ProductOption = InferSelectModel<typeof productOptionsTable>;
@@ -26,6 +26,9 @@ export type Product = InferSelectModel<typeof productsTable>;
 export type NewProduct = InferInsertModel<typeof productsTable>;
 export type Courier = InferSelectModel<typeof couriersTable>;
 export type NewCourier = InferInsertModel<typeof couriersTable>;
+export type CompanyVehicle = InferSelectModel<typeof companyVehiclesTable>;
+export type NewCompanyVehicle = InferInsertModel<typeof companyVehiclesTable>;
+export type VehicleStatus = (typeof vehicleStatusEnum.enumValues)[number];
 export type Coupon = InferSelectModel<typeof couponsTable>;
 export type NewCoupon = InferInsertModel<typeof couponsTable>;
 export type Wallet = InferSelectModel<typeof walletsTable>;

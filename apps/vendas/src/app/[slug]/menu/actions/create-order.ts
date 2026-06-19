@@ -46,6 +46,15 @@ export const createOrder = async (input: CreateOrderInput) => {
     throw new Error("Este restaurante não aceita pagamento via Mercado Pago no momento.");
   }
 
+  const consumptionMethodAllowed =
+    (input.consumptionMethod === "DELIVERY" && restaurant.isDeliveryEnabled) ||
+    (input.consumptionMethod === "TAKEAWAY" && restaurant.isTakeawayEnabled) ||
+    (input.consumptionMethod === "DINE_IN" && restaurant.isDineInEnabled);
+
+  if (!consumptionMethodAllowed) {
+    throw new Error("Este método de consumo não está disponível neste restaurante no momento.");
+  }
+
   const order = await criarPedido({
     ...input,
     customerPhone: normalizePhoneNumber(input.customerPhone),

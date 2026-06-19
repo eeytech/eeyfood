@@ -3,6 +3,7 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import {
   abandonedCartsTable,
   abandonedCartStatusEnum,
+  companyVehiclesTable,
   consumptionMethodEnum,
   couponDiscountTypeEnum,
   couponsTable,
@@ -29,6 +30,7 @@ import {
   stockMovementTypeEnum,
   transactionStatusEnum,
   transactionTypeEnum,
+  vehicleStatusEnum,
   walletsTable,
   loyaltyRulesTable,
   aiSettingsTable,
@@ -80,6 +82,10 @@ export type NewProduct = InferInsertModel<typeof productsTable>;
 
 export type Courier = InferSelectModel<typeof couriersTable>;
 export type NewCourier = InferInsertModel<typeof couriersTable>;
+
+export type CompanyVehicle = InferSelectModel<typeof companyVehiclesTable>;
+export type NewCompanyVehicle = InferInsertModel<typeof companyVehiclesTable>;
+export type VehicleStatus = (typeof vehicleStatusEnum.enumValues)[number];
 
 export type Coupon = InferSelectModel<typeof couponsTable>;
 export type NewCoupon = InferInsertModel<typeof couponsTable>;

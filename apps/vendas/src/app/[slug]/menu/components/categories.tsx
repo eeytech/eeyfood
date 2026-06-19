@@ -18,6 +18,7 @@ import {
 } from "@/helpers/restaurant-status";
 import type { ProductComRestaurante } from "@/lib/db";
 
+import { fetchProductWithOptions } from "../actions";
 import { CartContext } from "../contexts/cart";
 import { useIntersectionObserver } from "../hooks/use-intersection-observer";
 import CartPanel from "./cart-panel";
@@ -82,20 +83,18 @@ function SearchEmptyState() {
 
 interface SearchProductCardProps {
   product: Product & { isBestseller?: boolean };
-  restaurant: RestaurantComCategoriasEProdutos;
   query: string;
-  onSelect: (product: ProductComRestaurante) => void;
+  onSelect: (product: Product) => void;
 }
 
 function SearchProductCard({
   product,
-  restaurant,
   query,
   onSelect,
 }: SearchProductCardProps) {
   return (
     <button
-      onClick={() => onSelect({ ...product, restaurant })}
+      onClick={() => onSelect(product)}
       className="group flex h-full flex-col rounded-[30px] border border-slate-200 bg-white text-left shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200/80"
       aria-label={`Ver detalhes de ${product.name}`}
       role="listitem"
@@ -142,6 +141,8 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSearchProduct, setSelectedSearchProduct] =
     useState<ProductComRestaurante | null>(null);
+  const [isSearchSheetOpen, setIsSearchSheetOpen] = useState(false);
+  const [isLoadingSearchProduct, setIsLoadingSearchProduct] = useState(false);
   const { products, total, toggleCart, totalQuantity } =
     useContext(CartContext);
 
@@ -166,6 +167,16 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
       cat.products.filter((p) => p.name.toLowerCase().includes(q)),
     );
   }, [searchQuery, isSearchActive, restaurant.menuCategories]);
+
+  const handleSearchProductSelect = async (product: Product) => {
+    setIsSearchSheetOpen(true);
+    setIsLoadingSearchProduct(true);
+    setSelectedSearchProduct(null);
+
+    const full = await fetchProductWithOptions(restaurant.slug, product.id);
+    setSelectedSearchProduct(full ?? { ...product, restaurant } as ProductComRestaurante);
+    setIsLoadingSearchProduct(false);
+  };
 
   const handleNavClick = (categoryId: string) => {
     document
@@ -395,9 +406,8 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
                       <SearchProductCard
                         key={product.id}
                         product={product}
-                        restaurant={restaurant}
                         query={searchQuery}
-                        onSelect={setSelectedSearchProduct}
+                        onSelect={handleSearchProductSelect}
                       />
                     ))}
                   </div>
@@ -405,10 +415,12 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
 
                 <ProductSheet
                   product={selectedSearchProduct}
-                  isOpen={!!selectedSearchProduct}
-                  onOpenChange={(open) =>
-                    !open && setSelectedSearchProduct(null)
-                  }
+                  isOpen={isSearchSheetOpen}
+                  isLoading={isLoadingSearchProduct}
+                  onOpenChange={(open) => {
+                    setIsSearchSheetOpen(open);
+                    if (!open) setSelectedSearchProduct(null);
+                  }}
                 />
               </>
             ) : (

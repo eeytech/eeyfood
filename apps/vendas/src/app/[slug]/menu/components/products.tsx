@@ -7,6 +7,7 @@ import { useState } from "react";
 import { formatCurrency } from "@/helpers/format-currency";
 import type { Product, ProductComRestaurante, RestaurantComCategoriasEProdutos } from "@/lib/db";
 
+import { fetchProductWithOptions } from "../actions";
 import ProductSheet from "./product-sheet";
 
 interface ProductsProps {
@@ -17,12 +18,17 @@ interface ProductsProps {
 const Products = ({ products, restaurant }: ProductsProps) => {
   const [selectedProduct, setSelectedProduct] =
     useState<ProductComRestaurante | null>(null);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isLoadingProduct, setIsLoadingProduct] = useState(false);
 
-  const handleProductClick = (product: Product) => {
-    setSelectedProduct({
-      ...product,
-      restaurant,
-    });
+  const handleProductClick = async (product: Product) => {
+    setIsSheetOpen(true);
+    setIsLoadingProduct(true);
+    setSelectedProduct(null);
+
+    const full = await fetchProductWithOptions(restaurant.slug, product.id);
+    setSelectedProduct(full ?? { ...product, restaurant } as ProductComRestaurante);
+    setIsLoadingProduct(false);
   };
 
   if (products.length === 0) {
@@ -52,12 +58,12 @@ const Products = ({ products, restaurant }: ProductsProps) => {
             <div className="relative aspect-[16/10] w-full overflow-hidden rounded-t-[24px] bg-slate-100">
               <Image
                 src={product.imageUrl}
-                alt="" 
+                alt=""
                 fill
                 className="object-contain p-4 transition duration-300 group-hover:scale-[1.03]"
               />
               {product.isBestseller && (
-                <div 
+                <div
                   className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-xs font-extrabold uppercase tracking-widest text-white shadow-xl shadow-secondary/30"
                   aria-label="Item muito popular"
                 >
@@ -97,8 +103,12 @@ const Products = ({ products, restaurant }: ProductsProps) => {
 
       <ProductSheet
         product={selectedProduct}
-        isOpen={!!selectedProduct}
-        onOpenChange={(open) => !open && setSelectedProduct(null)}
+        isOpen={isSheetOpen}
+        isLoading={isLoadingProduct}
+        onOpenChange={(open) => {
+          setIsSheetOpen(open);
+          if (!open) setSelectedProduct(null);
+        }}
       />
     </div>
   );
