@@ -9,6 +9,8 @@ export declare const transactionTypeEnum: import("drizzle-orm/pg-core").PgEnum<[
 export declare const transactionStatusEnum: import("drizzle-orm/pg-core").PgEnum<["PENDING", "PAID", "CANCELLED"]>;
 export declare const restaurantStatusEnum: import("drizzle-orm/pg-core").PgEnum<["AUTO", "ALWAYS_OPEN", "ALWAYS_CLOSED"]>;
 export declare const vehicleStatusEnum: import("drizzle-orm/pg-core").PgEnum<["ACTIVE", "MAINTENANCE", "INACTIVE"]>;
+export declare const inventoryItemTypeEnum: import("drizzle-orm/pg-core").PgEnum<["INSUMO", "EMBALAGEM", "EQUIPAMENTO", "LIMPEZA", "OUTROS"]>;
+export declare const unitOfMeasureEnum: import("drizzle-orm/pg-core").PgEnum<["UN", "KG", "G", "L", "ML", "CX", "PCT", "M"]>;
 export declare const restaurantsTable: import("drizzle-orm/pg-core").PgTableWithColumns<{
     name: "Restaurant";
     schema: undefined;
@@ -2309,6 +2311,40 @@ export declare const loyaltyRulesTable: import("drizzle-orm/pg-core").PgTableWit
             identity: undefined;
             generated: undefined;
         }, {}, {}>;
+        startsAt: import("drizzle-orm/pg-core").PgColumn<{
+            name: "startsAt";
+            tableName: "LoyaltyRule";
+            dataType: "date";
+            columnType: "PgTimestamp";
+            data: Date;
+            driverParam: string;
+            notNull: false;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        endsAt: import("drizzle-orm/pg-core").PgColumn<{
+            name: "endsAt";
+            tableName: "LoyaltyRule";
+            dataType: "date";
+            columnType: "PgTimestamp";
+            data: Date;
+            driverParam: string;
+            notNull: false;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
         createdAt: import("drizzle-orm/pg-core").PgColumn<{
             name: "createdAt";
             tableName: "LoyaltyRule";
@@ -4294,6 +4330,23 @@ export declare const productOptionGroupsTable: import("drizzle-orm/pg-core").PgT
             identity: undefined;
             generated: undefined;
         }, {}, {}>;
+        restaurantId: import("drizzle-orm/pg-core").PgColumn<{
+            name: "restaurantId";
+            tableName: "ProductOptionGroup";
+            dataType: "string";
+            columnType: "PgUUID";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
         productId: import("drizzle-orm/pg-core").PgColumn<{
             name: "productId";
             tableName: "ProductOptionGroup";
@@ -4301,7 +4354,7 @@ export declare const productOptionGroupsTable: import("drizzle-orm/pg-core").PgT
             columnType: "PgUUID";
             data: string;
             driverParam: string;
-            notNull: true;
+            notNull: false;
             hasDefault: false;
             isPrimaryKey: false;
             isAutoincrement: false;
@@ -4331,6 +4384,81 @@ export declare const productOptionGroupsTable: import("drizzle-orm/pg-core").PgT
         updatedAt: import("drizzle-orm/pg-core").PgColumn<{
             name: "updatedAt";
             tableName: "ProductOptionGroup";
+            dataType: "date";
+            columnType: "PgTimestamp";
+            data: Date;
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+    };
+    dialect: "pg";
+}>;
+export declare const productToOptionGroupsTable: import("drizzle-orm/pg-core").PgTableWithColumns<{
+    name: "ProductToOptionGroup";
+    schema: undefined;
+    columns: {
+        id: import("drizzle-orm/pg-core").PgColumn<{
+            name: "id";
+            tableName: "ProductToOptionGroup";
+            dataType: "string";
+            columnType: "PgUUID";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: true;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        productId: import("drizzle-orm/pg-core").PgColumn<{
+            name: "productId";
+            tableName: "ProductToOptionGroup";
+            dataType: "string";
+            columnType: "PgUUID";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        productOptionGroupId: import("drizzle-orm/pg-core").PgColumn<{
+            name: "productOptionGroupId";
+            tableName: "ProductToOptionGroup";
+            dataType: "string";
+            columnType: "PgUUID";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        createdAt: import("drizzle-orm/pg-core").PgColumn<{
+            name: "createdAt";
+            tableName: "ProductToOptionGroup";
             dataType: "date";
             columnType: "PgTimestamp";
             data: Date;
@@ -4811,6 +4939,217 @@ export declare const orderRatingsTable: import("drizzle-orm/pg-core").PgTableWit
     };
     dialect: "pg";
 }>;
+export declare const inventoryItemsTable: import("drizzle-orm/pg-core").PgTableWithColumns<{
+    name: "InventoryItem";
+    schema: undefined;
+    columns: {
+        id: import("drizzle-orm/pg-core").PgColumn<{
+            name: "id";
+            tableName: "InventoryItem";
+            dataType: "string";
+            columnType: "PgUUID";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: true;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        restaurantId: import("drizzle-orm/pg-core").PgColumn<{
+            name: "restaurantId";
+            tableName: "InventoryItem";
+            dataType: "string";
+            columnType: "PgUUID";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        name: import("drizzle-orm/pg-core").PgColumn<{
+            name: "name";
+            tableName: "InventoryItem";
+            dataType: "string";
+            columnType: "PgText";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        description: import("drizzle-orm/pg-core").PgColumn<{
+            name: "description";
+            tableName: "InventoryItem";
+            dataType: "string";
+            columnType: "PgText";
+            data: string;
+            driverParam: string;
+            notNull: false;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        type: import("drizzle-orm/pg-core").PgColumn<{
+            name: "type";
+            tableName: "InventoryItem";
+            dataType: "string";
+            columnType: "PgEnumColumn";
+            data: "INSUMO" | "EMBALAGEM" | "EQUIPAMENTO" | "LIMPEZA" | "OUTROS";
+            driverParam: string;
+            notNull: true;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: ["INSUMO", "EMBALAGEM", "EQUIPAMENTO", "LIMPEZA", "OUTROS"];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        sku: import("drizzle-orm/pg-core").PgColumn<{
+            name: "sku";
+            tableName: "InventoryItem";
+            dataType: "string";
+            columnType: "PgText";
+            data: string;
+            driverParam: string;
+            notNull: false;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        unitOfMeasure: import("drizzle-orm/pg-core").PgColumn<{
+            name: "unitOfMeasure";
+            tableName: "InventoryItem";
+            dataType: "string";
+            columnType: "PgEnumColumn";
+            data: "UN" | "KG" | "G" | "L" | "ML" | "CX" | "PCT" | "M";
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: ["UN", "KG", "G", "L", "ML", "CX", "PCT", "M"];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        currentQuantity: import("drizzle-orm/pg-core").PgColumn<{
+            name: "currentQuantity";
+            tableName: "InventoryItem";
+            dataType: "number";
+            columnType: "PgDoublePrecision";
+            data: number;
+            driverParam: string | number;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        lowStockThreshold: import("drizzle-orm/pg-core").PgColumn<{
+            name: "lowStockThreshold";
+            tableName: "InventoryItem";
+            dataType: "number";
+            columnType: "PgDoublePrecision";
+            data: number;
+            driverParam: string | number;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        unitCost: import("drizzle-orm/pg-core").PgColumn<{
+            name: "unitCost";
+            tableName: "InventoryItem";
+            dataType: "number";
+            columnType: "PgDoublePrecision";
+            data: number;
+            driverParam: string | number;
+            notNull: false;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        createdAt: import("drizzle-orm/pg-core").PgColumn<{
+            name: "createdAt";
+            tableName: "InventoryItem";
+            dataType: "date";
+            columnType: "PgTimestamp";
+            data: Date;
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        updatedAt: import("drizzle-orm/pg-core").PgColumn<{
+            name: "updatedAt";
+            tableName: "InventoryItem";
+            dataType: "date";
+            columnType: "PgTimestamp";
+            data: Date;
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+    };
+    dialect: "pg";
+}>;
 export declare const stockMovementsTable: import("drizzle-orm/pg-core").PgTableWithColumns<{
     name: "StockMovement";
     schema: undefined;
@@ -4856,7 +5195,24 @@ export declare const stockMovementsTable: import("drizzle-orm/pg-core").PgTableW
             columnType: "PgUUID";
             data: string;
             driverParam: string;
-            notNull: true;
+            notNull: false;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        inventoryItemId: import("drizzle-orm/pg-core").PgColumn<{
+            name: "inventoryItemId";
+            tableName: "StockMovement";
+            dataType: "string";
+            columnType: "PgUUID";
+            data: string;
+            driverParam: string;
+            notNull: false;
             hasDefault: false;
             isPrimaryKey: false;
             isAutoincrement: false;
@@ -4904,7 +5260,7 @@ export declare const stockMovementsTable: import("drizzle-orm/pg-core").PgTableW
             name: "quantityDelta";
             tableName: "StockMovement";
             dataType: "number";
-            columnType: "PgInteger";
+            columnType: "PgDoublePrecision";
             data: number;
             driverParam: string | number;
             notNull: true;
@@ -4921,7 +5277,7 @@ export declare const stockMovementsTable: import("drizzle-orm/pg-core").PgTableW
             name: "previousQuantity";
             tableName: "StockMovement";
             dataType: "number";
-            columnType: "PgInteger";
+            columnType: "PgDoublePrecision";
             data: number;
             driverParam: string | number;
             notNull: true;
@@ -4938,7 +5294,7 @@ export declare const stockMovementsTable: import("drizzle-orm/pg-core").PgTableW
             name: "currentQuantity";
             tableName: "StockMovement";
             dataType: "number";
-            columnType: "PgInteger";
+            columnType: "PgDoublePrecision";
             data: number;
             driverParam: string | number;
             notNull: true;
@@ -5236,11 +5592,16 @@ export declare const productsRelations: import("drizzle-orm").Relations<"Product
     menuCategory: import("drizzle-orm").One<"MenuCategory", true>;
     orderProducts: import("drizzle-orm").Many<"OrderProduct">;
     stockMovements: import("drizzle-orm").Many<"StockMovement">;
-    optionGroups: import("drizzle-orm").Many<"ProductOptionGroup">;
+    optionGroupLinks: import("drizzle-orm").Many<"ProductToOptionGroup">;
 }>;
 export declare const productOptionGroupsRelations: import("drizzle-orm").Relations<"ProductOptionGroup", {
-    product: import("drizzle-orm").One<"Product", true>;
+    restaurant: import("drizzle-orm").One<"Restaurant", true>;
     options: import("drizzle-orm").Many<"ProductOption">;
+    productLinks: import("drizzle-orm").Many<"ProductToOptionGroup">;
+}>;
+export declare const productToOptionGroupsRelations: import("drizzle-orm").Relations<"ProductToOptionGroup", {
+    product: import("drizzle-orm").One<"Product", true>;
+    optionGroup: import("drizzle-orm").One<"ProductOptionGroup", true>;
 }>;
 export declare const productOptionsRelations: import("drizzle-orm").Relations<"ProductOption", {
     group: import("drizzle-orm").One<"ProductOptionGroup", true>;
@@ -5278,9 +5639,14 @@ export declare const orderProductOptionsRelations: import("drizzle-orm").Relatio
     orderProduct: import("drizzle-orm").One<"OrderProduct", true>;
     productOption: import("drizzle-orm").One<"ProductOption", true>;
 }>;
+export declare const inventoryItemsRelations: import("drizzle-orm").Relations<"InventoryItem", {
+    restaurant: import("drizzle-orm").One<"Restaurant", true>;
+    stockMovements: import("drizzle-orm").Many<"StockMovement">;
+}>;
 export declare const stockMovementsRelations: import("drizzle-orm").Relations<"StockMovement", {
     restaurant: import("drizzle-orm").One<"Restaurant", true>;
-    product: import("drizzle-orm").One<"Product", true>;
+    product: import("drizzle-orm").One<"Product", false>;
+    inventoryItem: import("drizzle-orm").One<"InventoryItem", false>;
     order: import("drizzle-orm").One<"Order", false>;
 }>;
 export declare const financialClosingsRelations: import("drizzle-orm").Relations<"FinancialClosing", {

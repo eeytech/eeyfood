@@ -1,4 +1,4 @@
-export { and, asc, desc, eq, gte, ilike, inArray, or, sql } from "drizzle-orm";
+export { and, asc, desc, eq, gte, ilike, inArray, isNotNull, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 
 export { db, pool } from "./client.js";
 export {
@@ -64,8 +64,14 @@ export {
   consumptionMethodEnum,
   menuCategoriesRelations,
   menuCategoriesTable,
+  inventoryItemsRelations,
+  inventoryItemsTable,
+  inventoryItemTypeEnum,
+  orderProductOptionsRelations,
+  orderProductOptionsTable,
   orderProductsRelations,
   orderProductsTable,
+  unitOfMeasureEnum,
   orderRatingsRelations,
   orderRatingsTable,
   ordersRelations,
@@ -77,6 +83,8 @@ export {
   productsTable,
   productOptionGroupsTable,
   productOptionsTable,
+  productToOptionGroupsTable,
+  productToOptionGroupsRelations,
   restaurantsRelations,
   restaurantsTable,
   stockMovementTypeEnum,
@@ -102,6 +110,10 @@ export type {
   FinancialClosing,
   FinancialTransaction,
   AiSettings,
+  InventoryItem,
+  NewInventoryItem,
+  InventoryItemType,
+  UnitOfMeasure,
   MenuCategory,
   MesaComanda,
   NewAbandonedCart,
@@ -134,6 +146,7 @@ export type {
   ProductComRestaurante,
   ProductOption,
   ProductOptionGroup,
+  ProductToOptionGroup,
   Restaurant,
   RestaurantStatus,
   RestaurantComCategoriasEProdutos,

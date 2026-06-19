@@ -57,6 +57,23 @@ export const vehicleStatusEnum = pgEnum("VehicleStatus", [
     "MAINTENANCE",
     "INACTIVE",
 ]);
+export const inventoryItemTypeEnum = pgEnum("InventoryItemType", [
+    "INSUMO",
+    "EMBALAGEM",
+    "EQUIPAMENTO",
+    "LIMPEZA",
+    "OUTROS",
+]);
+export const unitOfMeasureEnum = pgEnum("UnitOfMeasure", [
+    "UN",
+    "KG",
+    "G",
+    "L",
+    "ML",
+    "CX",
+    "PCT",
+    "M",
+]);
 export const restaurantsTable = pgTable("Restaurant", {
     id: uuid("id").defaultRandom().primaryKey(),
     name: text("name").notNull(),
@@ -242,6 +259,8 @@ export const loyaltyRulesTable = pgTable("LoyaltyRule", {
     isActive: boolean("isActive").default(true).notNull(),
     menuCategoryId: uuid("menuCategoryId").references(() => menuCategoriesTable.id, { onDelete: "cascade" }),
     productId: uuid("productId").references(() => productsTable.id, { onDelete: "cascade" }),
+    startsAt: timestamp("startsAt"),
+    endsAt: timestamp("endsAt"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
@@ -393,12 +412,26 @@ export const productOptionGroupsTable = pgTable("ProductOptionGroup", {
     minOptions: integer("minOptions").default(0).notNull(),
     maxOptions: integer("maxOptions").default(1).notNull(),
     displayOrder: integer("displayOrder").default(0).notNull(),
-    productId: uuid("productId")
+    restaurantId: uuid("restaurantId")
         .notNull()
-        .references(() => productsTable.id, { onDelete: "cascade" }),
+        .references(() => restaurantsTable.id, { onDelete: "cascade" }),
+    productId: uuid("productId")
+        .references(() => productsTable.id, { onDelete: "set null" }),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
+export const productToOptionGroupsTable = pgTable("ProductToOptionGroup", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    productId: uuid("productId")
+        .notNull()
+        .references(() => productsTable.id, { onDelete: "cascade" }),
+    productOptionGroupId: uuid("productOptionGroupId")
+        .notNull()
+        .references(() => productOptionGroupsTable.id, { onDelete: "cascade" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (t) => ({
+    uniqueProductGroup: uniqueIndex("ProductToOptionGroup_productId_groupId_idx").on(t.productId, t.productOptionGroupId),
+}));
 export const productOptionsTable = pgTable("ProductOption", {
     id: uuid("id").defaultRandom().primaryKey(),
     name: text("name").notNull(),
@@ -441,21 +474,38 @@ export const orderRatingsTable = pgTable("OrderRating", {
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
+export const inventoryItemsTable = pgTable("InventoryItem", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    restaurantId: uuid("restaurantId")
+        .notNull()
+        .references(() => restaurantsTable.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    type: inventoryItemTypeEnum("type").notNull(),
+    sku: text("sku"),
+    unitOfMeasure: unitOfMeasureEnum("unitOfMeasure").notNull().default("UN"),
+    currentQuantity: doublePrecision("currentQuantity").default(0).notNull(),
+    lowStockThreshold: doublePrecision("lowStockThreshold").default(0).notNull(),
+    unitCost: doublePrecision("unitCost"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
 export const stockMovementsTable = pgTable("StockMovement", {
     id: uuid("id").defaultRandom().primaryKey(),
     restaurantId: uuid("restaurantId")
         .notNull()
         .references(() => restaurantsTable.id, { onDelete: "cascade" }),
-    productId: uuid("productId")
-        .notNull()
-        .references(() => productsTable.id, { onDelete: "cascade" }),
+    productId: uuid("productId").references(() => productsTable.id, { onDelete: "cascade" }),
+    inventoryItemId: uuid("inventoryItemId").references(() => inventoryItemsTable.id, {
+        onDelete: "cascade",
+    }),
     orderId: integer("orderId").references(() => ordersTable.id, {
         onDelete: "set null",
     }),
     type: stockMovementTypeEnum("type").notNull(),
-    quantityDelta: integer("quantityDelta").notNull(),
-    previousQuantity: integer("previousQuantity").notNull(),
-    currentQuantity: integer("currentQuantity").notNull(),
+    quantityDelta: doublePrecision("quantityDelta").notNull(),
+    previousQuantity: doublePrecision("previousQuantity").notNull(),
+    currentQuantity: doublePrecision("currentQuantity").notNull(),
     reason: text("reason").notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
@@ -567,14 +617,25 @@ export const productsRelations = relations(productsTable, ({ one, many }) => ({
     }),
     orderProducts: many(orderProductsTable),
     stockMovements: many(stockMovementsTable),
-    optionGroups: many(productOptionGroupsTable),
+    optionGroupLinks: many(productToOptionGroupsTable),
 }));
 export const productOptionGroupsRelations = relations(productOptionGroupsTable, ({ one, many }) => ({
-    product: one(productsTable, {
-        fields: [productOptionGroupsTable.productId],
-        references: [productsTable.id],
+    restaurant: one(restaurantsTable, {
+        fields: [productOptionGroupsTable.restaurantId],
+        references: [restaurantsTable.id],
     }),
     options: many(productOptionsTable),
+    productLinks: many(productToOptionGroupsTable),
+}));
+export const productToOptionGroupsRelations = relations(productToOptionGroupsTable, ({ one }) => ({
+    product: one(productsTable, {
+        fields: [productToOptionGroupsTable.productId],
+        references: [productsTable.id],
+    }),
+    optionGroup: one(productOptionGroupsTable, {
+        fields: [productToOptionGroupsTable.productOptionGroupId],
+        references: [productOptionGroupsTable.id],
+    }),
 }));
 export const productOptionsRelations = relations(productOptionsTable, ({ one }) => ({
     group: one(productOptionGroupsTable, {
@@ -660,6 +721,13 @@ export const orderProductOptionsRelations = relations(orderProductOptionsTable, 
         references: [productOptionsTable.id],
     }),
 }));
+export const inventoryItemsRelations = relations(inventoryItemsTable, ({ one, many }) => ({
+    restaurant: one(restaurantsTable, {
+        fields: [inventoryItemsTable.restaurantId],
+        references: [restaurantsTable.id],
+    }),
+    stockMovements: many(stockMovementsTable),
+}));
 export const stockMovementsRelations = relations(stockMovementsTable, ({ one }) => ({
     restaurant: one(restaurantsTable, {
         fields: [stockMovementsTable.restaurantId],
@@ -668,6 +736,10 @@ export const stockMovementsRelations = relations(stockMovementsTable, ({ one }) 
     product: one(productsTable, {
         fields: [stockMovementsTable.productId],
         references: [productsTable.id],
+    }),
+    inventoryItem: one(inventoryItemsTable, {
+        fields: [stockMovementsTable.inventoryItemId],
+        references: [inventoryItemsTable.id],
     }),
     order: one(ordersTable, {
         fields: [stockMovementsTable.orderId],

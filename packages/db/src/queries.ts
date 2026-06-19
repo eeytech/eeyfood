@@ -21,6 +21,7 @@ import {
   loyaltyRulesTable,
   productOptionsTable,
   productOptionGroupsTable,
+  productToOptionGroupsTable,
   orderProductOptionsTable,
 } from "./schema.js";
 import type {
@@ -992,14 +993,6 @@ export const buscarProdutoDoRestaurante = async ({
           operatingHours: true,
         },
       },
-      optionGroups: {
-        with: {
-          options: {
-            orderBy: asc(productOptionsTable.displayOrder),
-          },
-        },
-        orderBy: asc(productOptionGroupsTable.displayOrder),
-      },
     },
   });
 
@@ -1007,7 +1000,34 @@ export const buscarProdutoDoRestaurante = async ({
     return null;
   }
 
-  return product as any;
+  const groupRows = await db
+    .select({
+      group: productOptionGroupsTable,
+      option: productOptionsTable,
+    })
+    .from(productToOptionGroupsTable)
+    .innerJoin(
+      productOptionGroupsTable,
+      eq(productOptionGroupsTable.id, productToOptionGroupsTable.productOptionGroupId),
+    )
+    .leftJoin(
+      productOptionsTable,
+      eq(productOptionsTable.productOptionGroupId, productOptionGroupsTable.id),
+    )
+    .where(eq(productToOptionGroupsTable.productId, productId))
+    .orderBy(
+      asc(productOptionGroupsTable.displayOrder),
+      asc(productOptionsTable.displayOrder),
+    );
+
+  const groupMap = new Map<string, ProductOptionGroup & { options: ProductOption[] }>();
+  for (const row of groupRows) {
+    const g = groupMap.get(row.group.id) ?? { ...row.group, options: [] };
+    if (row.option) g.options.push(row.option);
+    groupMap.set(row.group.id, g);
+  }
+
+  return { ...product, optionGroups: Array.from(groupMap.values()) } as any;
 };
 
 export const buscarPedidosPorTelefone = async (

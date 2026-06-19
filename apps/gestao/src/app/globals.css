@@ -48,13 +48,50 @@
 
 @media print {
   @page {
-    margin: 0;
-    size: 80mm auto;
+    margin: 1.5cm;
+    size: A4 portrait;
   }
-  
+
   body {
     background: white !important;
     background-image: none !important;
+    font-size: 12px;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+
+  nav,
+  aside,
+  header,
+  [data-sidebar],
+  [role="navigation"] {
+    display: none !important;
+  }
+
+  table {
+    width: 100% !important;
+    border-collapse: collapse;
+    page-break-inside: auto;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tfoot {
+    display: table-footer-group;
+  }
+
+  .recharts-wrapper,
+  canvas {
+    display: none !important;
   }
 }
 

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { buscarCardapioGestao } from "@/lib/admin-queries";
+import { buscarCardapioGestao, listarInventarioGestao } from "@/lib/admin-queries";
 
 import { EstoqueClient } from "./_components/estoque-client";
 
@@ -10,7 +10,10 @@ interface EstoquePageProps {
 
 const EstoquePage = async ({ params }: EstoquePageProps) => {
   const { slug } = await params;
-  const cardapio = await buscarCardapioGestao(slug);
+  const [cardapio, inventoryItems] = await Promise.all([
+    buscarCardapioGestao(slug),
+    listarInventarioGestao(slug),
+  ]);
 
   if (!cardapio) {
     return notFound();
@@ -18,7 +21,7 @@ const EstoquePage = async ({ params }: EstoquePageProps) => {
 
   return (
     <main className="space-y-4">
-      <EstoqueClient slug={slug} products={cardapio.products} />
+      <EstoqueClient slug={slug} products={cardapio.products} inventoryItems={inventoryItems} />
     </main>
   );
 };

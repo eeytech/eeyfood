@@ -3,41 +3,33 @@
 import {
   ChevronDownIcon,
   ChevronUpIcon,
-  LinkIcon,
   PencilIcon,
   PlusIcon,
   Trash2Icon,
-  UnlinkIcon,
   XIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import {
-  createProductOptionAction,
   createProductOptionGroupAction,
-  deleteProductOptionAction,
+  createProductOptionAction,
   deleteProductOptionGroupAction,
-  fetchProductOptionsAction,
+  deleteProductOptionAction,
   fetchRestaurantOptionGroupsAction,
-  linkOptionGroupToProductAction,
-  unlinkOptionGroupFromProductAction,
-  updateProductOptionAction,
   updateProductOptionGroupAction,
+  updateProductOptionAction,
 } from "@/app/[slug]/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { GrupoAdicionalComOpcoes } from "@/lib/admin-queries";
-import type { ProductOption, ProductOptionGroup } from "@fsw/db";
+import type { ProductOption } from "@fsw/db";
 
-interface ProductOptionsManagerProps {
+interface GlobalOptionGroupsManagerProps {
   slug: string;
-  productId: string;
 }
-
-type GroupWithOptions = ProductOptionGroup & { options: ProductOption[] };
 
 interface GroupFormState {
   name: string;
@@ -351,21 +343,18 @@ function OptionRow({
   );
 }
 
-function GroupCard({
+function GlobalGroupCard({
   group,
   slug,
-  productId,
   onRefresh,
 }: {
-  group: GroupWithOptions;
+  group: GrupoAdicionalComOpcoes;
   slug: string;
-  productId: string;
   onRefresh: () => void;
 }) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [editingGroup, setEditingGroup] = useState(false);
   const [addingOption, setAddingOption] = useState(false);
-  const [confirmUnlink, setConfirmUnlink] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isPendingGroup, startGroupTransition] = useTransition();
   const [isPendingOption, startOptionTransition] = useTransition();
@@ -373,7 +362,6 @@ function GroupCard({
   const handleUpdateGroup = (data: GroupFormState) => {
     const fd = new FormData();
     fd.set("groupId", group.id);
-    fd.set("productId", productId);
     fd.set("name", data.name);
     fd.set("minOptions", data.minOptions);
     fd.set("maxOptions", data.maxOptions);
@@ -386,24 +374,13 @@ function GroupCard({
     });
   };
 
-  const handleUnlink = () => {
-    const fd = new FormData();
-    fd.set("productId", productId);
-    fd.set("groupId", group.id);
-    startGroupTransition(async () => {
-      await unlinkOptionGroupFromProductAction(slug, fd);
-      onRefresh();
-      toast.success("Grupo desvinculado deste produto.");
-    });
-  };
-
   const handleDeleteGroup = () => {
     const fd = new FormData();
     fd.set("groupId", group.id);
     startGroupTransition(async () => {
       await deleteProductOptionGroupAction(slug, fd);
       onRefresh();
-      toast.success("Grupo excluído permanentemente.");
+      toast.success("Grupo excluído.");
     });
   };
 
@@ -473,7 +450,6 @@ function GroupCard({
             className="h-7 w-7"
             onClick={() => setEditingGroup(true)}
             disabled={isPendingGroup}
-            title="Editar grupo"
           >
             <PencilIcon size={12} />
           </Button>
@@ -481,60 +457,20 @@ function GroupCard({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-7 w-7 text-amber-600 hover:bg-amber-50"
-            onClick={() => { setConfirmUnlink(true); setConfirmDelete(false); }}
-            disabled={isPendingGroup}
-            title="Desvincular deste produto"
-          >
-            <UnlinkIcon size={12} />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
             className="h-7 w-7 text-rose-500 hover:bg-rose-50"
-            onClick={() => { setConfirmDelete(true); setConfirmUnlink(false); }}
+            onClick={() => setConfirmDelete(true)}
             disabled={isPendingGroup}
-            title="Excluir permanentemente"
           >
             <Trash2Icon size={12} />
           </Button>
         </div>
       </div>
 
-      {confirmUnlink && (
-        <div className="border-t bg-amber-50 px-4 py-3 text-sm">
-          <p className="font-medium text-amber-800">Desvincular grupo deste produto?</p>
-          <p className="mt-0.5 text-amber-700">
-            O grupo e seus itens continuarão existindo e vinculados a outros produtos.
-            Apenas este produto deixará de exibi-lo.
-          </p>
-          <div className="mt-2 flex gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setConfirmUnlink(false)}
-              disabled={isPendingGroup}
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              className="bg-amber-600 hover:bg-amber-700"
-              onClick={handleUnlink}
-              disabled={isPendingGroup}
-            >
-              {isPendingGroup ? "Desvinculando..." : "Desvincular"}
-            </Button>
-          </div>
-        </div>
-      )}
-
       {confirmDelete && (
         <div className="border-t bg-rose-50 px-4 py-3 text-sm">
-          <p className="font-medium text-rose-800">Excluir grupo permanentemente?</p>
+          <p className="font-medium text-rose-800">
+            Excluir grupo permanentemente?
+          </p>
           <p className="mt-0.5 text-rose-700">
             Este grupo será removido de <strong>todos os produtos</strong> que o
             utilizam. Essa ação não pode ser desfeita.
@@ -562,7 +498,7 @@ function GroupCard({
         </div>
       )}
 
-      {expanded && !confirmUnlink && !confirmDelete && (
+      {expanded && !confirmDelete && (
         <div className="space-y-2 border-t bg-slate-50/50 p-3">
           {group.options.map((option) => (
             <OptionRow
@@ -599,122 +535,22 @@ function GroupCard({
   );
 }
 
-function LinkGroupSelector({
+export function GlobalOptionGroupsManager({
   slug,
-  productId,
-  linkedGroupIds: linkedGroupIds,
-  onLink,
-  onCancel,
-}: {
-  slug: string;
-  productId: string;
-  linkedGroupIds: Set<string>;
-  onLink: () => void;
-  onCancel: () => void;
-}) {
-  const [allGroups, setAllGroups] = useState<GrupoAdicionalComOpcoes[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedId, setSelectedId] = useState("");
-  const [isPending, startTransition] = useTransition();
-
-  useEffect(() => {
-    fetchRestaurantOptionGroupsAction(slug).then((groups) => {
-      setAllGroups(groups);
-      setLoading(false);
-    });
-  }, [slug]);
-
-  const available = allGroups.filter((g) => !linkedGroupIds.has(g.id));
-
-  const handleLink = () => {
-    if (!selectedId) return;
-    const fd = new FormData();
-    fd.set("productId", productId);
-    fd.set("groupId", selectedId);
-    startTransition(async () => {
-      await linkOptionGroupToProductAction(slug, fd);
-      onLink();
-      toast.success("Grupo vinculado ao produto.");
-    });
-  };
-
-  if (loading) {
-    return (
-      <div className="rounded-xl border bg-slate-50 p-4 text-center text-sm text-muted-foreground">
-        Carregando grupos...
-      </div>
-    );
-  }
-
-  if (available.length === 0) {
-    return (
-      <div className="space-y-2 rounded-xl border bg-slate-50 p-4">
-        <p className="text-sm text-muted-foreground">
-          Todos os grupos globais já estão vinculados a este produto.
-        </p>
-        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-          Fechar
-        </Button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3 rounded-xl border bg-slate-50 p-4">
-      <p className="text-sm font-medium">Vincular grupo existente</p>
-      <select
-        value={selectedId}
-        onChange={(e) => setSelectedId(e.target.value)}
-        className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-      >
-        <option value="">Selecione um grupo...</option>
-        {available.map((g) => (
-          <option key={g.id} value={g.id}>
-            {g.name} ({g.options.length} itens)
-          </option>
-        ))}
-      </select>
-      <div className="flex justify-end gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={onCancel}
-          disabled={isPending}
-        >
-          Cancelar
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          onClick={handleLink}
-          disabled={isPending || !selectedId}
-        >
-          {isPending ? "Vinculando..." : "Vincular"}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-export function ProductOptionsManager({
-  slug,
-  productId,
-}: ProductOptionsManagerProps) {
-  const [groups, setGroups] = useState<GroupWithOptions[]>([]);
+}: GlobalOptionGroupsManagerProps) {
+  const [groups, setGroups] = useState<GrupoAdicionalComOpcoes[]>([]);
   const [loading, setLoading] = useState(true);
   const [addingGroup, setAddingGroup] = useState(false);
-  const [linkingGroup, setLinkingGroup] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [refreshTick, setRefreshTick] = useState(0);
 
   const load = useCallback(() => {
     setLoading(true);
-    fetchProductOptionsAction(slug, productId).then((result) => {
-      setGroups(result?.optionGroups ?? []);
+    fetchRestaurantOptionGroupsAction(slug).then((result) => {
+      setGroups(result);
       setLoading(false);
     });
-  }, [slug, productId]);
+  }, [slug]);
 
   useEffect(() => {
     load();
@@ -724,7 +560,6 @@ export function ProductOptionsManager({
 
   const handleAddGroup = (data: GroupFormState) => {
     const fd = new FormData();
-    fd.set("productId", productId);
     fd.set("name", data.name);
     fd.set("minOptions", data.minOptions);
     fd.set("maxOptions", data.maxOptions);
@@ -737,12 +572,10 @@ export function ProductOptionsManager({
     });
   };
 
-  const linkedGroupIds = new Set(groups.map((g) => g.id));
-
   if (loading) {
     return (
       <div className="space-y-3">
-        {[1, 2].map((i) => (
+        {[1, 2, 3].map((i) => (
           <div key={i} className="h-14 animate-pulse rounded-xl bg-slate-100" />
         ))}
       </div>
@@ -751,31 +584,23 @@ export function ProductOptionsManager({
 
   return (
     <div className="space-y-3">
-      {groups.length === 0 && !addingGroup && !linkingGroup && (
-        <p className="py-6 text-center text-sm text-muted-foreground">
-          Nenhum grupo de adicionais vinculado.
-        </p>
+      {groups.length === 0 && !addingGroup && (
+        <div className="rounded-xl border border-dashed py-10 text-center text-sm text-muted-foreground">
+          <p className="font-medium">Nenhum grupo de adicionais cadastrado.</p>
+          <p className="mt-1 text-xs">
+            Crie grupos globais para reutilizá-los em vários produtos.
+          </p>
+        </div>
       )}
 
       {groups.map((group) => (
-        <GroupCard
+        <GlobalGroupCard
           key={group.id}
           group={group}
           slug={slug}
-          productId={productId}
           onRefresh={handleRefresh}
         />
       ))}
-
-      {linkingGroup && (
-        <LinkGroupSelector
-          slug={slug}
-          productId={productId}
-          linkedGroupIds={linkedGroupIds}
-          onLink={() => { setLinkingGroup(false); handleRefresh(); }}
-          onCancel={() => setLinkingGroup(false)}
-        />
-      )}
 
       {addingGroup ? (
         <GroupForm
@@ -786,28 +611,15 @@ export function ProductOptionsManager({
           submitLabel="Criar grupo"
         />
       ) : (
-        !linkingGroup && (
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1 gap-2 border-dashed"
-              onClick={() => setAddingGroup(true)}
-            >
-              <PlusIcon size={14} />
-              Novo grupo
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1 gap-2 border-dashed"
-              onClick={() => setLinkingGroup(true)}
-            >
-              <LinkIcon size={14} />
-              Vincular grupo existente
-            </Button>
-          </div>
-        )
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full gap-2 border-dashed"
+          onClick={() => setAddingGroup(true)}
+        >
+          <PlusIcon size={14} />
+          Novo grupo de adicionais global
+        </Button>
       )}
     </div>
   );

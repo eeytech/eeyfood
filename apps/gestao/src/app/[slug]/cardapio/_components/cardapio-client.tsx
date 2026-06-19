@@ -2,6 +2,7 @@
 
 import {
   Layers3Icon,
+  ListPlusIcon,
   PackageIcon,
   PencilIcon,
   PlusIcon,
@@ -37,6 +38,7 @@ import type { CardapioGestao, CategoriaComProdutos } from "@/lib/admin-queries";
 import type { Product } from "@fsw/db";
 
 import { CategoryForm } from "./category-form";
+import { GlobalOptionGroupsManager } from "./global-option-groups-manager";
 import { ProductForm } from "./product-form";
 
 type ProductWithCategory = Product & { categoryId: string; categoryName: string };
@@ -189,6 +191,10 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
               ({cardapio.categories.length})
             </span>
           </TabsTrigger>
+          <TabsTrigger value="additionals">
+            <ListPlusIcon size={14} />
+            Adicionais
+          </TabsTrigger>
         </TabsList>
 
         {/* Products Tab */}
@@ -323,6 +329,23 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                 )}
               </TableBody>
             </Table>
+          </div>
+        </TabsContent>
+
+        {/* Additionals Tab */}
+        <TabsContent value="additionals" className="mt-4">
+          <div className="overflow-hidden rounded-lg border bg-white/90 shadow-sm">
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <div>
+                <p className="text-sm font-medium">Grupos de adicionais globais</p>
+                <p className="text-xs text-muted-foreground">
+                  Crie grupos reutilizáveis e vincule-os a vários produtos.
+                </p>
+              </div>
+            </div>
+            <div className="p-4">
+              <GlobalOptionGroupsManager slug={slug} />
+            </div>
           </div>
         </TabsContent>
 

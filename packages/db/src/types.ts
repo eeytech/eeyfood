@@ -12,6 +12,8 @@ import {
   financialCategoriesTable,
   financialClosingsTable,
   financialTransactionsTable,
+  inventoryItemsTable,
+  inventoryItemTypeEnum,
   menuCategoriesTable,
   orderProductsTable,
   ordersTable,
@@ -24,17 +26,19 @@ import {
   operatingHoursTable,
   productOptionGroupsTable,
   productOptionsTable,
+  productToOptionGroupsTable,
   orderProductOptionsTable,
   orderRatingsTable,
   stockMovementsTable,
   stockMovementTypeEnum,
   transactionStatusEnum,
   transactionTypeEnum,
+  unitOfMeasureEnum,
   vehicleStatusEnum,
   walletsTable,
   loyaltyRulesTable,
   aiSettingsTable,
-  } from "./schema.js";
+} from "./schema.js";
 
   // ...
 
@@ -43,6 +47,9 @@ import {
 
   export type ProductOption = InferSelectModel<typeof productOptionsTable>;
   export type NewProductOption = InferInsertModel<typeof productOptionsTable>;
+
+export type ProductToOptionGroup = InferSelectModel<typeof productToOptionGroupsTable>;
+export type NewProductToOptionGroup = InferInsertModel<typeof productToOptionGroupsTable>;
 
   export type OrderProductOption = InferSelectModel<typeof orderProductOptionsTable>;
   export type NewOrderProductOption = InferInsertModel<typeof orderProductOptionsTable>;
@@ -107,6 +114,11 @@ export type NewOrderProduct = InferInsertModel<typeof orderProductsTable>;
 
 export type StockMovement = InferSelectModel<typeof stockMovementsTable>;
 export type NewStockMovement = InferInsertModel<typeof stockMovementsTable>;
+
+export type InventoryItem = InferSelectModel<typeof inventoryItemsTable>;
+export type NewInventoryItem = InferInsertModel<typeof inventoryItemsTable>;
+export type InventoryItemType = (typeof inventoryItemTypeEnum.enumValues)[number];
+export type UnitOfMeasure = (typeof unitOfMeasureEnum.enumValues)[number];
 
 export type FinancialClosing = InferSelectModel<typeof financialClosingsTable>;
 export type NewFinancialClosing = InferInsertModel<typeof financialClosingsTable>;

@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { db } from "./client.js";
 import { isRestaurantOpen } from "./restaurant-utils.js";
-import { abandonedCartsTable, couponsTable, couriersTable, diningTablesTable, financialCategoriesTable, financialTransactionsTable, menuCategoriesTable, operatingHoursTable, orderProductsTable, orderRatingsTable, ordersTable, productsTable, restaurantsTable, stockMovementsTable, walletsTable, loyaltyRulesTable, productOptionsTable, productOptionGroupsTable, orderProductOptionsTable, } from "./schema.js";
+import { abandonedCartsTable, couponsTable, couriersTable, diningTablesTable, financialCategoriesTable, financialTransactionsTable, menuCategoriesTable, operatingHoursTable, orderProductsTable, orderRatingsTable, ordersTable, productsTable, restaurantsTable, stockMovementsTable, walletsTable, loyaltyRulesTable, productOptionsTable, productOptionGroupsTable, productToOptionGroupsTable, orderProductOptionsTable, } from "./schema.js";
 // ... (rest of queries)
 export const listarCategoriasFinanceirasPorSlug = async (slug) => {
     const restaurant = await buscarRestaurantePorSlug(slug);
@@ -532,20 +532,29 @@ export const buscarProdutoDoRestaurante = async ({ slug, productId, }) => {
                     operatingHours: true,
                 },
             },
-            optionGroups: {
-                with: {
-                    options: {
-                        orderBy: asc(productOptionsTable.displayOrder),
-                    },
-                },
-                orderBy: asc(productOptionGroupsTable.displayOrder),
-            },
         },
     });
     if (!product || product.restaurant.slug !== slug) {
         return null;
     }
-    return product;
+    const groupRows = await db
+        .select({
+        group: productOptionGroupsTable,
+        option: productOptionsTable,
+    })
+        .from(productToOptionGroupsTable)
+        .innerJoin(productOptionGroupsTable, eq(productOptionGroupsTable.id, productToOptionGroupsTable.productOptionGroupId))
+        .leftJoin(productOptionsTable, eq(productOptionsTable.productOptionGroupId, productOptionGroupsTable.id))
+        .where(eq(productToOptionGroupsTable.productId, productId))
+        .orderBy(asc(productOptionGroupsTable.displayOrder), asc(productOptionsTable.displayOrder));
+    const groupMap = new Map();
+    for (const row of groupRows) {
+        const g = groupMap.get(row.group.id) ?? { ...row.group, options: [] };
+        if (row.option)
+            g.options.push(row.option);
+        groupMap.set(row.group.id, g);
+    }
+    return { ...product, optionGroups: Array.from(groupMap.values()) };
 };
 export const buscarPedidosPorTelefone = async (customerPhone) => {
     const pedidos = await db

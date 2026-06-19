@@ -1,17 +1,20 @@
 "use server";
 
 import type { RestaurantStatus } from "@fsw/db";
-import { buscarProdutoComOpcionaisGestao } from "@/lib/admin-queries";
+import { buscarGruposAdicionaisDoRestaurante, buscarProdutoComOpcionaisGestao } from "@/lib/admin-queries";
+import type { InventoryItemType, UnitOfMeasure } from "@fsw/db";
 import {
   aiSettingsTable,
   and,
   buscarRestaurantePorSlug,
   db,
   eq,
+  inventoryItemsTable,
   menuCategoriesTable,
   operatingHoursTable,
   productOptionGroupsTable,
   productOptionsTable,
+  productToOptionGroupsTable,
   productsTable,
   restaurantsTable,
   stockMovementsTable,
@@ -410,7 +413,7 @@ export const fetchProductOptionsAction = async (slug: string, productId: string)
 
 export const createProductOptionGroupAction = async (slug: string, formData: FormData) => {
   const restaurant = await getRestaurantOrThrow(slug);
-  const productId = getStringValue(formData.get("productId"));
+  const productId = getOptionalStringValue(formData.get("productId"));
 
   const parsedData = optionGroupSchema.safeParse({
     name: getStringValue(formData.get("name")),
@@ -424,21 +427,31 @@ export const createProductOptionGroupAction = async (slug: string, formData: For
     return;
   }
 
-  const [product] = await db
-    .select({ id: productsTable.id })
-    .from(productsTable)
-    .where(and(eq(productsTable.id, productId), eq(productsTable.restaurantId, restaurant.id)))
-    .limit(1);
+  const [group] = await db
+    .insert(productOptionGroupsTable)
+    .values({
+      name: parsedData.data.name,
+      minOptions: parsedData.data.minOptions,
+      maxOptions: parsedData.data.maxOptions,
+      displayOrder: parsedData.data.displayOrder,
+      restaurantId: restaurant.id,
+    })
+    .returning({ id: productOptionGroupsTable.id });
 
-  if (!product) return;
+  if (productId && group) {
+    const [product] = await db
+      .select({ id: productsTable.id })
+      .from(productsTable)
+      .where(and(eq(productsTable.id, productId), eq(productsTable.restaurantId, restaurant.id)))
+      .limit(1);
 
-  await db.insert(productOptionGroupsTable).values({
-    name: parsedData.data.name,
-    minOptions: parsedData.data.minOptions,
-    maxOptions: parsedData.data.maxOptions,
-    displayOrder: parsedData.data.displayOrder,
-    productId: product.id,
-  });
+    if (product) {
+      await db.insert(productToOptionGroupsTable).values({
+        productId: product.id,
+        productOptionGroupId: group.id,
+      });
+    }
+  }
 
   revalidateRestaurantPaths(slug);
 };
@@ -465,14 +478,7 @@ export const updateProductOptionGroupAction = async (slug: string, formData: For
     .where(
       and(
         eq(productOptionGroupsTable.id, groupId),
-        eq(
-          productOptionGroupsTable.productId,
-          db
-            .select({ id: productsTable.id })
-            .from(productsTable)
-            .where(eq(productsTable.restaurantId, restaurant.id))
-            .limit(1),
-        ),
+        eq(productOptionGroupsTable.restaurantId, restaurant.id),
       ),
     );
 
@@ -480,12 +486,17 @@ export const updateProductOptionGroupAction = async (slug: string, formData: For
 };
 
 export const deleteProductOptionGroupAction = async (slug: string, formData: FormData) => {
-  await getRestaurantOrThrow(slug);
+  const restaurant = await getRestaurantOrThrow(slug);
   const groupId = getStringValue(formData.get("groupId"));
 
   await db
     .delete(productOptionGroupsTable)
-    .where(eq(productOptionGroupsTable.id, groupId));
+    .where(
+      and(
+        eq(productOptionGroupsTable.id, groupId),
+        eq(productOptionGroupsTable.restaurantId, restaurant.id),
+      ),
+    );
 
   revalidateRestaurantPaths(slug);
 };
@@ -551,6 +562,73 @@ export const deleteProductOptionAction = async (slug: string, formData: FormData
   await db
     .delete(productOptionsTable)
     .where(eq(productOptionsTable.id, optionId));
+
+  revalidateRestaurantPaths(slug);
+};
+
+export const fetchRestaurantOptionGroupsAction = async (slug: string) => {
+  const restaurant = await getRestaurantOrThrow(slug);
+  return buscarGruposAdicionaisDoRestaurante(restaurant.id);
+};
+
+export const linkOptionGroupToProductAction = async (slug: string, formData: FormData) => {
+  const restaurant = await getRestaurantOrThrow(slug);
+  const productId = getStringValue(formData.get("productId"));
+  const groupId = getStringValue(formData.get("groupId"));
+
+  const [product] = await db
+    .select({ id: productsTable.id })
+    .from(productsTable)
+    .where(and(eq(productsTable.id, productId), eq(productsTable.restaurantId, restaurant.id)))
+    .limit(1);
+
+  const [group] = await db
+    .select({ id: productOptionGroupsTable.id })
+    .from(productOptionGroupsTable)
+    .where(
+      and(
+        eq(productOptionGroupsTable.id, groupId),
+        eq(productOptionGroupsTable.restaurantId, restaurant.id),
+      ),
+    )
+    .limit(1);
+
+  if (!product || !group) return;
+
+  await db
+    .insert(productToOptionGroupsTable)
+    .values({ productId: product.id, productOptionGroupId: group.id })
+    .onConflictDoNothing();
+
+  revalidateRestaurantPaths(slug);
+};
+
+export const unlinkOptionGroupFromProductAction = async (slug: string, formData: FormData) => {
+  const restaurant = await getRestaurantOrThrow(slug);
+  const productId = getStringValue(formData.get("productId"));
+  const groupId = getStringValue(formData.get("groupId"));
+
+  const [group] = await db
+    .select({ id: productOptionGroupsTable.id })
+    .from(productOptionGroupsTable)
+    .where(
+      and(
+        eq(productOptionGroupsTable.id, groupId),
+        eq(productOptionGroupsTable.restaurantId, restaurant.id),
+      ),
+    )
+    .limit(1);
+
+  if (!group) return;
+
+  await db
+    .delete(productToOptionGroupsTable)
+    .where(
+      and(
+        eq(productToOptionGroupsTable.productId, productId),
+        eq(productToOptionGroupsTable.productOptionGroupId, groupId),
+      ),
+    );
 
   revalidateRestaurantPaths(slug);
 };
@@ -692,4 +770,164 @@ export const updateOperatingHoursAction = async (
   });
 
   revalidateRestaurantPaths(slug);
+};
+
+// ─── Inventário Geral ─────────────────────────────────────────────────────────
+
+const inventoryItemSchema = z.object({
+  name: z.string().trim().min(1, "O nome do item é obrigatório."),
+  description: z.string().trim().optional(),
+  type: z.enum(["INSUMO", "EMBALAGEM", "EQUIPAMENTO", "LIMPEZA", "OUTROS"]),
+  sku: z.string().trim().optional(),
+  unitOfMeasure: z.enum(["UN", "KG", "G", "L", "ML", "CX", "PCT", "M"]),
+  currentQuantity: z.number().min(0, "A quantidade não pode ser negativa."),
+  lowStockThreshold: z.number().min(0, "O alerta não pode ser negativo."),
+  unitCost: z.number().min(0).optional(),
+});
+
+export interface InventoryActionResult {
+  success: boolean;
+  error?: string;
+}
+
+export const createInventoryItemAction = async (
+  slug: string,
+  formData: FormData,
+): Promise<InventoryActionResult> => {
+  const restaurant = await getRestaurantOrThrow(slug);
+
+  const rawUnitCost = formData.get("unitCost");
+  const parsed = inventoryItemSchema.safeParse({
+    name: getStringValue(formData.get("name")),
+    description: getOptionalStringValue(formData.get("description")),
+    type: getStringValue(formData.get("type")) as InventoryItemType,
+    sku: getOptionalStringValue(formData.get("sku")),
+    unitOfMeasure: getStringValue(formData.get("unitOfMeasure")) as UnitOfMeasure,
+    currentQuantity: getNumberValue(formData.get("currentQuantity")),
+    lowStockThreshold: getNumberValue(formData.get("lowStockThreshold")),
+    unitCost: rawUnitCost && String(rawUnitCost).trim() !== "" ? getNumberValue(rawUnitCost) : undefined,
+  });
+
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+
+  const [item] = await db
+    .insert(inventoryItemsTable)
+    .values({
+      restaurantId: restaurant.id,
+      name: parsed.data.name,
+      description: parsed.data.description,
+      type: parsed.data.type,
+      sku: parsed.data.sku,
+      unitOfMeasure: parsed.data.unitOfMeasure,
+      currentQuantity: parsed.data.currentQuantity,
+      lowStockThreshold: parsed.data.lowStockThreshold,
+      unitCost: parsed.data.unitCost,
+    })
+    .returning({ id: inventoryItemsTable.id });
+
+  if (parsed.data.currentQuantity > 0 && item) {
+    await db.insert(stockMovementsTable).values({
+      restaurantId: restaurant.id,
+      inventoryItemId: item.id,
+      type: "IN",
+      quantityDelta: parsed.data.currentQuantity,
+      previousQuantity: 0,
+      currentQuantity: parsed.data.currentQuantity,
+      reason: "Estoque inicial no cadastro.",
+    });
+  }
+
+  revalidateRestaurantPaths(slug);
+  return { success: true };
+};
+
+export const updateInventoryItemAction = async (
+  slug: string,
+  formData: FormData,
+): Promise<InventoryActionResult> => {
+  const restaurant = await getRestaurantOrThrow(slug);
+  const itemId = getStringValue(formData.get("itemId"));
+
+  const rawUnitCost = formData.get("unitCost");
+  const parsed = inventoryItemSchema.safeParse({
+    name: getStringValue(formData.get("name")),
+    description: getOptionalStringValue(formData.get("description")),
+    type: getStringValue(formData.get("type")) as InventoryItemType,
+    sku: getOptionalStringValue(formData.get("sku")),
+    unitOfMeasure: getStringValue(formData.get("unitOfMeasure")) as UnitOfMeasure,
+    currentQuantity: getNumberValue(formData.get("currentQuantity")),
+    lowStockThreshold: getNumberValue(formData.get("lowStockThreshold")),
+    unitCost: rawUnitCost && String(rawUnitCost).trim() !== "" ? getNumberValue(rawUnitCost) : undefined,
+  });
+
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+
+  const [current] = await db
+    .select({ currentQuantity: inventoryItemsTable.currentQuantity })
+    .from(inventoryItemsTable)
+    .where(
+      and(
+        eq(inventoryItemsTable.id, itemId),
+        eq(inventoryItemsTable.restaurantId, restaurant.id),
+      ),
+    )
+    .limit(1);
+
+  if (!current) return { success: false, error: "Item não encontrado." };
+
+  const reason = getOptionalStringValue(formData.get("reason")) ?? "Edição cadastral.";
+  const quantityDelta = parsed.data.currentQuantity - current.currentQuantity;
+
+  await db
+    .update(inventoryItemsTable)
+    .set({
+      name: parsed.data.name,
+      description: parsed.data.description,
+      type: parsed.data.type,
+      sku: parsed.data.sku,
+      unitOfMeasure: parsed.data.unitOfMeasure,
+      currentQuantity: parsed.data.currentQuantity,
+      lowStockThreshold: parsed.data.lowStockThreshold,
+      unitCost: parsed.data.unitCost,
+      updatedAt: new Date(),
+    })
+    .where(eq(inventoryItemsTable.id, itemId));
+
+  if (quantityDelta !== 0) {
+    await db.insert(stockMovementsTable).values({
+      restaurantId: restaurant.id,
+      inventoryItemId: itemId,
+      type: quantityDelta > 0 ? "IN" : "OUT",
+      quantityDelta,
+      previousQuantity: current.currentQuantity,
+      currentQuantity: parsed.data.currentQuantity,
+      reason,
+    });
+  }
+
+  revalidateRestaurantPaths(slug);
+  return { success: true };
+};
+
+export const deleteInventoryItemAction = async (
+  slug: string,
+  itemId: string,
+): Promise<InventoryActionResult> => {
+  const restaurant = await getRestaurantOrThrow(slug);
+
+  await db
+    .delete(inventoryItemsTable)
+    .where(
+      and(
+        eq(inventoryItemsTable.id, itemId),
+        eq(inventoryItemsTable.restaurantId, restaurant.id),
+      ),
+    );
+
+  revalidateRestaurantPaths(slug);
+  return { success: true };
 };
