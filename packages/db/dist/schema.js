@@ -64,6 +64,9 @@ export const restaurantsTable = pgTable("Restaurant", {
     acceptMercadoPago: boolean("acceptMercadoPago").default(true).notNull(),
     isCouponsEnabled: boolean("isCouponsEnabled").default(true).notNull(),
     isCashbackEnabled: boolean("isCashbackEnabled").default(true).notNull(),
+    showOptionImages: boolean("showOptionImages").default(true).notNull(),
+    cnpj: text("cnpj"),
+    phone: text("phone"),
     address: text("address"),
     latitude: doublePrecision("latitude"),
     longitude: doublePrecision("longitude"),
@@ -353,6 +356,7 @@ export const productOptionsTable = pgTable("ProductOption", {
     id: uuid("id").defaultRandom().primaryKey(),
     name: text("name").notNull(),
     description: text("description"),
+    imageUrl: text("imageUrl"),
     price: doublePrecision("price").default(0).notNull(),
     displayOrder: integer("displayOrder").default(0).notNull(),
     productOptionGroupId: uuid("productOptionGroupId")

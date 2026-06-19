@@ -233,7 +233,7 @@ const PdvFrenteCaixa = ({
             <Badge className="w-fit" variant="secondary">
               Frente de caixa
             </Badge>
-            <CardTitle className="mt-3 font-display text-3xl">
+            <CardTitle className="mt-2 font-display text-xl">
               PDV de {restaurantName}
             </CardTitle>
             <CardDescription>
@@ -242,31 +242,31 @@ const PdvFrenteCaixa = ({
             </CardDescription>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-2 sm:grid-cols-3">
             <Card className="bg-slate-950 text-white">
-              <CardContent className="p-5">
+              <CardContent className="p-3">
                 <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
                   Itens
                 </p>
-                <p className="mt-2 font-display text-3xl">{String(totalItems)}</p>
+                <p className="mt-1 font-display text-xl">{String(totalItems)}</p>
               </CardContent>
             </Card>
             <Card className="bg-white">
-              <CardContent className="p-5">
+              <CardContent className="p-3">
                 <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
                   Total
                 </p>
-                <p className="mt-2 font-display text-3xl">
+                <p className="mt-1 font-display text-xl">
                   {formatCurrency(total)}
                 </p>
               </CardContent>
             </Card>
             <Card className="bg-emerald-50">
-              <CardContent className="p-5">
+              <CardContent className="p-3">
                 <p className="text-xs uppercase tracking-[0.18em] text-emerald-700">
                   Fluxo
                 </p>
-                <p className="mt-2 text-sm font-medium text-emerald-900">
+                <p className="mt-1 text-xs font-medium text-emerald-900">
                   Pedido pago e finalizado na hora
                 </p>
               </CardContent>
@@ -275,8 +275,8 @@ const PdvFrenteCaixa = ({
         </CardHeader>
       </Card>
 
-      <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_420px]">
-        <div className="space-y-4">
+      <div className="grid gap-3 2xl:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="space-y-3">
           <Card>
             <CardHeader>
               <CardTitle>Buscar produtos</CardTitle>
@@ -300,27 +300,27 @@ const PdvFrenteCaixa = ({
             </CardContent>
           </Card>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {filteredProducts.map((product) => (
               <Card
                 key={product.id}
                 className="border-white/80 bg-white/95 transition hover:-translate-y-0.5 hover:shadow-xl"
               >
-                <CardHeader className="space-y-3">
-                  <div className="flex items-start justify-between gap-3">
+                <CardHeader className="space-y-2">
+                  <div className="flex items-start justify-between gap-2">
                     <div>
                       <Badge variant="secondary">{product.categoryName}</Badge>
-                      <CardTitle className="mt-3 text-xl">{product.name}</CardTitle>
+                      <CardTitle className="mt-2">{product.name}</CardTitle>
                     </div>
-                    <SparklesIcon className="text-primary" size={18} />
+                    <SparklesIcon className="text-primary" size={14} />
                   </div>
-                  <CardDescription className="line-clamp-3 min-h-[60px] leading-6">
+                  <CardDescription className="line-clamp-2 min-h-[36px] leading-5">
                     {product.description}
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <p className="font-display text-2xl font-semibold">
+                    <p className="font-display text-base font-semibold">
                       {formatCurrency(product.price)}
                     </p>
                     <Badge variant={getAvailableStockVariant(product)}>
@@ -329,6 +329,7 @@ const PdvFrenteCaixa = ({
                   </div>
 
                   <Button
+                    size="sm"
                     className="w-full"
                     disabled={product.trackInventory && product.stockQuantity <= 0}
                     onClick={() => addProduct(product)}
@@ -342,8 +343,8 @@ const PdvFrenteCaixa = ({
 
           {filteredProducts.length === 0 ? (
             <Card className="border-dashed">
-              <CardContent className="flex min-h-[220px] flex-col items-center justify-center gap-3 p-6 text-center">
-                <SearchIcon className="text-slate-400" size={28} />
+              <CardContent className="flex min-h-[140px] flex-col items-center justify-center gap-2 p-4 text-center">
+                <SearchIcon className="text-slate-400" size={20} />
                 <p className="font-medium text-slate-900">
                   Nenhum produto encontrado
                 </p>
@@ -355,18 +356,18 @@ const PdvFrenteCaixa = ({
           ) : null}
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           <Card className="border-white/80 bg-slate-950 text-white">
             <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10">
-                  <ShoppingCartIcon size={18} />
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10">
+                  <ShoppingCartIcon size={14} />
                 </div>
                 <div>
-                  <CardTitle className="font-display text-2xl">
+                  <CardTitle className="font-display text-lg">
                     Resumo da venda
                   </CardTitle>
-                  <CardDescription className="text-slate-300">
+                  <CardDescription className="text-slate-300 text-xs">
                     Operacao pensada para caixa rapido e sem friccao.
                   </CardDescription>
                 </div>
@@ -403,7 +404,7 @@ const PdvFrenteCaixa = ({
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("DINHEIRO")}
-                  className={`rounded-[24px] border px-4 py-4 text-left transition ${
+                  className={`rounded-xl border px-3 py-3 text-left transition ${
                     paymentMethod === "DINHEIRO"
                       ? "border-white bg-white text-slate-950"
                       : "border-white/10 bg-white/5 text-white"
@@ -421,7 +422,7 @@ const PdvFrenteCaixa = ({
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("CARTAO_PRESENCIAL")}
-                  className={`rounded-[24px] border px-4 py-4 text-left transition ${
+                  className={`rounded-xl border px-3 py-3 text-left transition ${
                     paymentMethod === "CARTAO_PRESENCIAL"
                       ? "border-white bg-white text-slate-950"
                       : "border-white/10 bg-white/5 text-white"
@@ -448,9 +449,9 @@ const PdvFrenteCaixa = ({
             </CardHeader>
             <CardContent className="space-y-3">
               {cartItems.length === 0 ? (
-                <div className="rounded-[24px] border border-dashed bg-slate-50 px-5 py-10 text-center">
-                  <p className="font-medium text-slate-900">Carrinho vazio</p>
-                  <p className="mt-2 text-sm text-muted-foreground">
+                <div className="rounded-xl border border-dashed bg-slate-50 px-4 py-6 text-center">
+                  <p className="text-sm font-medium text-slate-900">Carrinho vazio</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
                     Adicione produtos para liberar o fechamento.
                   </p>
                 </div>
@@ -458,48 +459,50 @@ const PdvFrenteCaixa = ({
                 cartItems.map((item) => (
                   <div
                     key={item.id}
-                    className="rounded-[24px] border bg-slate-50/80 p-4"
+                    className="rounded-xl border bg-slate-50/80 p-3"
                   >
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start justify-between gap-2">
                       <div>
-                        <p className="font-medium text-slate-950">{item.name}</p>
-                        <p className="mt-1 text-sm text-muted-foreground">
+                        <p className="text-sm font-medium text-slate-950">{item.name}</p>
+                        <p className="text-xs text-muted-foreground">
                           {formatCurrency(item.price)} por unidade
                         </p>
                       </div>
                       <button
                         type="button"
                         onClick={() => removeProduct(item.id)}
-                        className="text-sm font-medium text-rose-600"
+                        className="text-xs font-medium text-rose-600"
                       >
                         Remover
                       </button>
                     </div>
 
-                    <div className="mt-4 flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2">
+                    <div className="mt-2 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
                         <Button
                           type="button"
                           variant="outline"
                           size="icon"
+                          className="h-7 w-7"
                           onClick={() => decreaseProduct(item.id)}
                         >
-                          <MinusIcon size={16} />
+                          <MinusIcon size={12} />
                         </Button>
-                        <div className="flex h-11 min-w-14 items-center justify-center rounded-2xl border bg-white px-4 font-semibold">
+                        <div className="flex h-7 min-w-10 items-center justify-center rounded-lg border bg-white px-2 text-sm font-semibold">
                           {String(item.quantity)}
                         </div>
                         <Button
                           type="button"
                           variant="outline"
                           size="icon"
+                          className="h-7 w-7 text-sm"
                           onClick={() => increaseProduct(item.id)}
                         >
                           +
                         </Button>
                       </div>
 
-                      <p className="font-display text-xl font-semibold">
+                      <p className="font-display text-sm font-semibold">
                         {formatCurrency(item.price * item.quantity)}
                       </p>
                     </div>
@@ -507,14 +510,14 @@ const PdvFrenteCaixa = ({
                 ))
               )}
 
-              <div className="rounded-[24px] border bg-slate-950 p-5 text-white">
-                <div className="flex items-center justify-between text-sm text-slate-300">
+              <div className="rounded-xl border bg-slate-950 p-3 text-white">
+                <div className="flex items-center justify-between text-xs text-slate-300">
                   <span>Quantidade total</span>
                   <span>{String(totalItems)} itens</span>
                 </div>
-                <div className="mt-3 flex items-center justify-between">
-                  <span className="font-medium">Total da venda</span>
-                  <span className="font-display text-3xl font-semibold">
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-sm font-medium">Total da venda</span>
+                  <span className="font-display text-xl font-semibold">
                     {formatCurrency(total)}
                   </span>
                 </div>
@@ -522,7 +525,7 @@ const PdvFrenteCaixa = ({
 
               {feedback ? (
                 <div
-                  className={`rounded-[24px] border px-4 py-3 text-sm ${
+                  className={`rounded-xl border px-3 py-2 text-sm ${
                     feedback.type === "success"
                       ? "border-emerald-200 bg-emerald-50 text-emerald-900"
                       : "border-rose-200 bg-rose-50 text-rose-900"

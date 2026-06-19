@@ -63,7 +63,7 @@ export interface MesaComanda {
     currentOrder: PedidoRecebimento | null;
 }
 export interface ProductComRestaurante extends Product {
-    restaurant: Pick<Restaurant, "name" | "avatarImageUrl" | "slug" | "status"> & {
+    restaurant: Pick<Restaurant, "name" | "avatarImageUrl" | "slug" | "status" | "showOptionImages"> & {
         operatingHours: OperatingHours[];
     };
 }

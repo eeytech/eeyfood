@@ -16,6 +16,7 @@ interface RestaurantFeaturesFormProps {
     acceptMercadoPago: boolean;
     isCouponsEnabled: boolean;
     isCashbackEnabled: boolean;
+    showOptionImages: boolean;
   };
 }
 
@@ -32,6 +33,9 @@ export const RestaurantFeaturesForm = ({
   const [isCashbackEnabled, setIsCashbackEnabled] = useState(
     initialValues.isCashbackEnabled,
   );
+  const [showOptionImages, setShowOptionImages] = useState(
+    initialValues.showOptionImages,
+  );
   const [isPending, startTransition] = useTransition();
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -40,6 +44,7 @@ export const RestaurantFeaturesForm = ({
     if (acceptMercadoPago) formData.append("acceptMercadoPago", "on");
     if (isCouponsEnabled) formData.append("isCouponsEnabled", "on");
     if (isCashbackEnabled) formData.append("isCashbackEnabled", "on");
+    if (showOptionImages) formData.append("showOptionImages", "on");
 
     startTransition(async () => {
       try {
@@ -75,13 +80,21 @@ export const RestaurantFeaturesForm = ({
       checked: isCashbackEnabled,
       onChange: setIsCashbackEnabled,
     },
+    {
+      id: "showOptionImages",
+      label: "Imagens nos adicionais",
+      description:
+        "Exibe miniaturas de imagens ao lado de cada adicional no app do cliente.",
+      checked: showOptionImages,
+      onChange: setShowOptionImages,
+    },
   ];
 
   return (
     <Card className="border-white/80 bg-white/90">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-2xl">
-          <ToggleRightIcon size={20} />
+        <CardTitle className="flex items-center gap-2">
+          <ToggleRightIcon size={16} />
           Módulos do Restaurante
         </CardTitle>
         <CardDescription>
@@ -89,12 +102,12 @@ export const RestaurantFeaturesForm = ({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-3">
             {features.map((feature) => (
               <div
                 key={feature.id}
-                className="flex items-start justify-between gap-4 rounded-2xl border bg-white p-4"
+                className="flex items-start justify-between gap-3 rounded-xl border bg-white p-3"
               >
                 <div className="space-y-0.5">
                   <Label

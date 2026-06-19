@@ -98,21 +98,22 @@ export function LogisticaClient({ slug, couriers }: LogisticaClientProps) {
         </DialogContent>
       </Dialog>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="font-display text-3xl font-semibold">
+          <h1 className="font-display text-xl font-semibold">
             Logística e Motoboys
           </h1>
-          <p className="mt-1 text-base text-muted-foreground">
+          <p className="mt-0.5 text-sm text-muted-foreground">
             Gerencie sua equipe de entrega, cadastre motoboys e acompanhe a
             frota disponível para despacho.
           </p>
         </div>
         <Button
+          size="sm"
           className="shrink-0 gap-1.5"
           onClick={() => setCreateOpen(true)}
         >
-          <PlusIcon size={16} />
+          <PlusIcon size={14} />
           Adicionar motoboy
         </Button>
       </div>

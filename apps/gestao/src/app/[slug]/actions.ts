@@ -1,6 +1,7 @@
 "use server";
 
 import type { RestaurantStatus } from "@fsw/db";
+import { buscarProdutoComOpcionaisGestao } from "@/lib/admin-queries";
 import {
   and,
   buscarRestaurantePorSlug,
@@ -8,6 +9,8 @@ import {
   eq,
   menuCategoriesTable,
   operatingHoursTable,
+  productOptionGroupsTable,
+  productOptionsTable,
   productsTable,
   restaurantsTable,
   stockMovementsTable,
@@ -52,6 +55,21 @@ const productSchema = z.object({
   csosn: z.string().trim().max(3, "CSOSN deve ter 3 dígitos.").optional(),
 });
 
+
+const optionGroupSchema = z.object({
+  name: z.string().trim().min(1, "Informe um nome para o grupo."),
+  minOptions: z.number().int().min(0),
+  maxOptions: z.number().int().min(1),
+  displayOrder: z.number().int().min(0),
+});
+
+const optionSchema = z.object({
+  name: z.string().trim().min(1, "Informe um nome para o adicional."),
+  description: z.string().trim().optional(),
+  imageUrl: z.string().trim().optional(),
+  price: z.number().min(0),
+  displayOrder: z.number().int().min(0),
+});
 
 const stockAdjustmentSchema = z.object({
   productId: z.string().uuid(),
@@ -384,6 +402,184 @@ export const updateStockAction = async (slug: string, formData: FormData) => {
   revalidateRestaurantPaths(slug);
 };
 
+export const fetchProductOptionsAction = async (slug: string, productId: string) => {
+  const restaurant = await getRestaurantOrThrow(slug);
+  return buscarProdutoComOpcionaisGestao(productId, restaurant.id);
+};
+
+export const createProductOptionGroupAction = async (slug: string, formData: FormData) => {
+  const restaurant = await getRestaurantOrThrow(slug);
+  const productId = getStringValue(formData.get("productId"));
+
+  const parsedData = optionGroupSchema.safeParse({
+    name: getStringValue(formData.get("name")),
+    minOptions: getNumberValue(formData.get("minOptions")),
+    maxOptions: getNumberValue(formData.get("maxOptions")),
+    displayOrder: getNumberValue(formData.get("displayOrder")),
+  });
+
+  if (!parsedData.success) {
+    console.error("Falha ao validar grupo de opcionais.", parsedData.error.flatten());
+    return;
+  }
+
+  const [product] = await db
+    .select({ id: productsTable.id })
+    .from(productsTable)
+    .where(and(eq(productsTable.id, productId), eq(productsTable.restaurantId, restaurant.id)))
+    .limit(1);
+
+  if (!product) return;
+
+  await db.insert(productOptionGroupsTable).values({
+    name: parsedData.data.name,
+    minOptions: parsedData.data.minOptions,
+    maxOptions: parsedData.data.maxOptions,
+    displayOrder: parsedData.data.displayOrder,
+    productId: product.id,
+  });
+
+  revalidateRestaurantPaths(slug);
+};
+
+export const updateProductOptionGroupAction = async (slug: string, formData: FormData) => {
+  const restaurant = await getRestaurantOrThrow(slug);
+  const groupId = getStringValue(formData.get("groupId"));
+
+  const parsedData = optionGroupSchema.safeParse({
+    name: getStringValue(formData.get("name")),
+    minOptions: getNumberValue(formData.get("minOptions")),
+    maxOptions: getNumberValue(formData.get("maxOptions")),
+    displayOrder: getNumberValue(formData.get("displayOrder")),
+  });
+
+  if (!parsedData.success) {
+    console.error("Falha ao validar atualização de grupo.", parsedData.error.flatten());
+    return;
+  }
+
+  await db
+    .update(productOptionGroupsTable)
+    .set({ ...parsedData.data, updatedAt: new Date() })
+    .where(
+      and(
+        eq(productOptionGroupsTable.id, groupId),
+        eq(
+          productOptionGroupsTable.productId,
+          db
+            .select({ id: productsTable.id })
+            .from(productsTable)
+            .where(eq(productsTable.restaurantId, restaurant.id))
+            .limit(1),
+        ),
+      ),
+    );
+
+  revalidateRestaurantPaths(slug);
+};
+
+export const deleteProductOptionGroupAction = async (slug: string, formData: FormData) => {
+  await getRestaurantOrThrow(slug);
+  const groupId = getStringValue(formData.get("groupId"));
+
+  await db
+    .delete(productOptionGroupsTable)
+    .where(eq(productOptionGroupsTable.id, groupId));
+
+  revalidateRestaurantPaths(slug);
+};
+
+export const createProductOptionAction = async (slug: string, formData: FormData) => {
+  await getRestaurantOrThrow(slug);
+  const groupId = getStringValue(formData.get("groupId"));
+
+  const parsedData = optionSchema.safeParse({
+    name: getStringValue(formData.get("name")),
+    description: getOptionalStringValue(formData.get("description")),
+    imageUrl: getOptionalStringValue(formData.get("imageUrl")),
+    price: getNumberValue(formData.get("price")),
+    displayOrder: getNumberValue(formData.get("displayOrder")),
+  });
+
+  if (!parsedData.success) {
+    console.error("Falha ao validar adicional.", parsedData.error.flatten());
+    return;
+  }
+
+  await db.insert(productOptionsTable).values({
+    name: parsedData.data.name,
+    description: parsedData.data.description,
+    imageUrl: parsedData.data.imageUrl,
+    price: parsedData.data.price,
+    displayOrder: parsedData.data.displayOrder,
+    productOptionGroupId: groupId,
+  });
+
+  revalidateRestaurantPaths(slug);
+};
+
+export const updateProductOptionAction = async (slug: string, formData: FormData) => {
+  await getRestaurantOrThrow(slug);
+  const optionId = getStringValue(formData.get("optionId"));
+
+  const parsedData = optionSchema.safeParse({
+    name: getStringValue(formData.get("name")),
+    description: getOptionalStringValue(formData.get("description")),
+    imageUrl: getOptionalStringValue(formData.get("imageUrl")),
+    price: getNumberValue(formData.get("price")),
+    displayOrder: getNumberValue(formData.get("displayOrder")),
+  });
+
+  if (!parsedData.success) {
+    console.error("Falha ao validar atualização de adicional.", parsedData.error.flatten());
+    return;
+  }
+
+  await db
+    .update(productOptionsTable)
+    .set({ ...parsedData.data, updatedAt: new Date() })
+    .where(eq(productOptionsTable.id, optionId));
+
+  revalidateRestaurantPaths(slug);
+};
+
+export const deleteProductOptionAction = async (slug: string, formData: FormData) => {
+  await getRestaurantOrThrow(slug);
+  const optionId = getStringValue(formData.get("optionId"));
+
+  await db
+    .delete(productOptionsTable)
+    .where(eq(productOptionsTable.id, optionId));
+
+  revalidateRestaurantPaths(slug);
+};
+
+export const updateRestaurantDetailsAction = async (
+  slug: string,
+  formData: FormData,
+) => {
+  const restaurant = await getRestaurantOrThrow(slug);
+
+  const name = getStringValue(formData.get("name"));
+  const description = getStringValue(formData.get("description"));
+  const avatarImageUrl = getStringValue(formData.get("avatarImageUrl"));
+  const coverImageUrl = getStringValue(formData.get("coverImageUrl"));
+  const cnpj = getOptionalStringValue(formData.get("cnpj"));
+  const phone = getOptionalStringValue(formData.get("phone"));
+  const address = getOptionalStringValue(formData.get("address"));
+
+  if (!name || !description || !avatarImageUrl || !coverImageUrl) {
+    throw new Error("Preencha todos os campos obrigatórios.");
+  }
+
+  await db
+    .update(restaurantsTable)
+    .set({ name, description, avatarImageUrl, coverImageUrl, cnpj, phone, address, updatedAt: new Date() })
+    .where(eq(restaurantsTable.id, restaurant.id));
+
+  revalidateRestaurantPaths(slug);
+};
+
 export const updateRestaurantFeaturesAction = async (
   slug: string,
   formData: FormData,
@@ -396,6 +592,7 @@ export const updateRestaurantFeaturesAction = async (
       acceptMercadoPago: getBooleanValue(formData.get("acceptMercadoPago")),
       isCouponsEnabled: getBooleanValue(formData.get("isCouponsEnabled")),
       isCashbackEnabled: getBooleanValue(formData.get("isCashbackEnabled")),
+      showOptionImages: getBooleanValue(formData.get("showOptionImages")),
       updatedAt: new Date(),
     })
     .where(eq(restaurantsTable.id, restaurant.id));

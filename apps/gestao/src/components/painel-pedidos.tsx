@@ -525,7 +525,7 @@ const PainelPedidos = ({
   ).length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Modal de Despacho */}
       <Dialog open={!!orderToDispatch} onOpenChange={(open) => !open && setOrderToDispatch(null)}>
         <DialogContent>
@@ -561,43 +561,43 @@ const PainelPedidos = ({
         </DialogContent>
       </Dialog>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-3">
         <Card>
-          <CardContent className="flex items-center justify-between p-6">
+          <CardContent className="flex items-center justify-between p-4">
             <div>
-              <p className="text-sm text-muted-foreground uppercase tracking-wider font-semibold">Solicitados</p>
-              <p className="font-display text-4xl font-bold mt-1">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Solicitados</p>
+              <p className="font-display text-2xl font-bold mt-0.5">
                 {pendingOrdersCount}
               </p>
             </div>
-            <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <Clock3Icon className="text-primary" />
+            <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Clock3Icon className="text-primary" size={16} />
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="flex items-center justify-between p-6">
+          <CardContent className="flex items-center justify-between p-4">
             <div>
-              <p className="text-sm text-muted-foreground uppercase tracking-wider font-semibold">Pagos</p>
-              <p className="font-display text-4xl font-bold mt-1">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Pagos</p>
+              <p className="font-display text-2xl font-bold mt-0.5">
                 {paidOrdersCount}
               </p>
             </div>
-            <div className="h-12 w-12 rounded-2xl bg-emerald-100 flex items-center justify-center">
-              <BadgeDollarSignIcon className="text-emerald-600" />
+            <div className="h-9 w-9 rounded-xl bg-emerald-100 flex items-center justify-center">
+              <BadgeDollarSignIcon className="text-emerald-600" size={16} />
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="flex items-center justify-between p-6">
+          <CardContent className="flex items-center justify-between p-4">
             <div>
-              <p className="text-sm text-muted-foreground uppercase tracking-wider font-semibold">Em operação</p>
-              <p className="font-display text-4xl font-bold mt-1">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Em operação</p>
+              <p className="font-display text-2xl font-bold mt-0.5">
                 {activeOrdersCount}
               </p>
             </div>
-            <div className="h-12 w-12 rounded-2xl bg-blue-100 flex items-center justify-center">
-              <UtensilsCrossedIcon className="text-blue-600" />
+            <div className="h-9 w-9 rounded-xl bg-blue-100 flex items-center justify-center">
+              <UtensilsCrossedIcon className="text-blue-600" size={16} />
             </div>
           </CardContent>
         </Card>
@@ -607,7 +607,7 @@ const PainelPedidos = ({
         <Card className="border-white/80 bg-white/85">
           <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <CardTitle className="font-display text-3xl">
+              <CardTitle className="font-display text-xl">
                 Fluxo de pedidos
               </CardTitle>
               <CardDescription>
@@ -637,9 +637,9 @@ const PainelPedidos = ({
                   .sort((left, right) => getOrderReferenceDate(left) - getOrderReferenceDate(right));
 
                 return (
-                  <div key={column.status} className="flex h-full flex-col gap-4">
+                  <div key={column.status} className="flex h-full flex-col gap-3">
                     <Card className="border-white/80 bg-slate-50/90">
-                      <CardHeader className="space-y-3">
+                      <CardHeader className="space-y-1.5">
                         <div className="flex items-center justify-between gap-3">
                           <CardTitle className="text-xl">{column.title}</CardTitle>
                           <Badge variant="secondary">{String(ordersByColumn.length)}</Badge>
@@ -650,8 +650,8 @@ const PainelPedidos = ({
 
                     {ordersByColumn.length === 0 ? (
                       <Card className="border-dashed bg-white/60">
-                        <CardContent className="flex min-h-[220px] flex-col items-center justify-center gap-3 p-6 text-center">
-                          <PackageCheckIcon className="text-slate-400" size={28} />
+                        <CardContent className="flex min-h-[140px] flex-col items-center justify-center gap-2 p-4 text-center">
+                          <PackageCheckIcon className="text-slate-400" size={20} />
                           <p className="font-medium text-slate-900">
                             Nenhum pedido nesta etapa
                           </p>
@@ -674,10 +674,10 @@ const PainelPedidos = ({
                             key={order.id}
                             className="border-white/70 bg-white/95 backdrop-blur"
                           >
-                            <CardHeader className="space-y-4">
-                              <div className="flex flex-wrap items-start justify-between gap-3">
+                            <CardHeader className="space-y-2">
+                              <div className="flex flex-wrap items-start justify-between gap-2">
                                 <div>
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-1.5">
                                     <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
                                       Pedido #{String(order.id)}
                                     </p>
@@ -700,7 +700,7 @@ const PainelPedidos = ({
                                       <ReceiptTextIcon size={12} />
                                     </Button>
                                   </div>
-                                  <CardTitle className="font-display text-2xl">
+                                  <CardTitle className="font-display text-base">
                                     {order.customerName}
                                   </CardTitle>
                                 </div>
@@ -726,7 +726,7 @@ const PainelPedidos = ({
                                 </div>
                               </div>
 
-                              <div className="grid gap-3 rounded-[24px] bg-secondary/55 p-4">
+                              <div className="grid gap-2 rounded-xl bg-secondary/55 p-3">
                                 <div className="flex items-center justify-between gap-3">
                                   <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
                                     Criado às
@@ -765,12 +765,12 @@ const PainelPedidos = ({
                               </div>
                             </CardHeader>
 
-                            <CardContent className="space-y-5">
-                              <div className="space-y-3">
+                            <CardContent className="space-y-3">
+                              <div className="space-y-2">
                                 {order.orderProducts.map((orderProduct) => (
                                   <div
                                     key={orderProduct.id}
-                                    className="flex items-center justify-between rounded-2xl border bg-background/70 px-4 py-3"
+                                    className="flex items-center justify-between rounded-xl border bg-background/70 px-3 py-2"
                                   >
                                     <div>
                                       <p className="font-medium">
@@ -795,9 +795,9 @@ const PainelPedidos = ({
 
                               {order.paymentMethod === "DINHEIRO" &&
                               order.changeFor ? (
-                                <div className="rounded-[24px] border border-amber-200 bg-amber-50 p-4">
+                                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
                                   <div className="flex items-center gap-2 text-amber-900">
-                                    <BadgeDollarSignIcon size={18} />
+                                    <BadgeDollarSignIcon size={14} />
                                     <p className="font-medium">
                                       Troco para {formatCurrency(order.changeFor)}
                                     </p>
@@ -805,7 +805,7 @@ const PainelPedidos = ({
                                 </div>
                               ) : null}
 
-                              <div className="space-y-3 rounded-[24px] border bg-slate-50 p-4">
+                              <div className="space-y-2 rounded-xl border bg-slate-50 p-3">
                                 <div className="grid gap-2">
                                   {isOfflinePayment &&
                                   order.paymentStatus !== "PAID" ? (

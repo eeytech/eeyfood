@@ -9,9 +9,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import type { CategoriaComProdutos } from "@/lib/admin-queries";
 import type { Product } from "@fsw/db";
+
+import { ProductOptionsManager } from "./product-options-manager";
 
 interface ProductFormProps {
   slug: string;
@@ -20,7 +23,12 @@ interface ProductFormProps {
   onSuccess?: () => void;
 }
 
-export function ProductForm({ slug, categories, defaultValues, onSuccess }: ProductFormProps) {
+function ProductFields({
+  slug,
+  categories,
+  defaultValues,
+  onSuccess,
+}: ProductFormProps) {
   const [isPending, startTransition] = useTransition();
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -249,5 +257,39 @@ export function ProductForm({ slug, categories, defaultValues, onSuccess }: Prod
             : "Criar produto"}
       </Button>
     </form>
+  );
+}
+
+export function ProductForm({ slug, categories, defaultValues, onSuccess }: ProductFormProps) {
+  if (!defaultValues) {
+    return (
+      <ProductFields
+        slug={slug}
+        categories={categories}
+        onSuccess={onSuccess}
+      />
+    );
+  }
+
+  return (
+    <Tabs defaultValue="details">
+      <TabsList className="mb-4 w-full">
+        <TabsTrigger value="details" className="flex-1">Detalhes</TabsTrigger>
+        <TabsTrigger value="options" className="flex-1">Adicionais</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="details">
+        <ProductFields
+          slug={slug}
+          categories={categories}
+          defaultValues={defaultValues}
+          onSuccess={onSuccess}
+        />
+      </TabsContent>
+
+      <TabsContent value="options">
+        <ProductOptionsManager slug={slug} productId={defaultValues.id} />
+      </TabsContent>
+    </Tabs>
   );
 }

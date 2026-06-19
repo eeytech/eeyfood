@@ -72,6 +72,8 @@ export {
   paymentMethodEnum,
   productsRelations,
   productsTable,
+  productOptionGroupsTable,
+  productOptionsTable,
   restaurantsRelations,
   restaurantsTable,
   stockMovementTypeEnum,

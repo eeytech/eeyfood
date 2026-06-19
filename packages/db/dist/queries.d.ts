@@ -172,6 +172,9 @@ export declare const buscarPedidoParaRastreamento: (orderId: number) => Promise<
         acceptMercadoPago: boolean;
         isCouponsEnabled: boolean;
         isCashbackEnabled: boolean;
+        showOptionImages: boolean;
+        cnpj: string | null;
+        phone: string | null;
         address: string | null;
         latitude: number | null;
         longitude: number | null;
@@ -181,13 +184,13 @@ export declare const buscarPedidoParaRastreamento: (orderId: number) => Promise<
     courier: {
         id: string;
         name: string;
+        phone: string;
         latitude: number | null;
         longitude: number | null;
         createdAt: Date;
         updatedAt: Date;
         restaurantId: string;
         isActive: boolean;
-        phone: string;
         vehicleType: string | null;
         licensePlate: string | null;
     } | null;

@@ -2,10 +2,13 @@ import type {
   DiningTable,
   MenuCategory,
   Product,
+  ProductOption,
+  ProductOptionGroup,
   Restaurant,
 } from "@fsw/db";
 import {
   aiSettingsTable,
+  and,
   asc,
   buscarRestaurantePorSlug,
   db,
@@ -19,6 +22,8 @@ import {
   listarPedidosRecebimentoPorSlug,
   menuCategoriesTable,
   operatingHoursTable,
+  productOptionGroupsTable,
+  productOptionsTable,
   productsTable,
 } from "@fsw/db";
 
@@ -270,6 +275,50 @@ export const buscarAiSettingsPorSlug = async (slug: string) => {
     .limit(1);
 
   return settings ?? null;
+};
+
+export type ProdutoComOpcionais = Product & {
+  optionGroups: (ProductOptionGroup & { options: ProductOption[] })[];
+};
+
+export const buscarProdutoComOpcionaisGestao = async (
+  productId: string,
+  restaurantId: string,
+): Promise<ProdutoComOpcionais | null> => {
+  const rows = await db
+    .select({
+      group: productOptionGroupsTable,
+      option: productOptionsTable,
+    })
+    .from(productOptionGroupsTable)
+    .leftJoin(
+      productOptionsTable,
+      eq(productOptionsTable.productOptionGroupId, productOptionGroupsTable.id),
+    )
+    .where(eq(productOptionGroupsTable.productId, productId))
+    .orderBy(
+      asc(productOptionGroupsTable.displayOrder),
+      asc(productOptionGroupsTable.name),
+      asc(productOptionsTable.displayOrder),
+      asc(productOptionsTable.name),
+    );
+
+  const [product] = await db
+    .select()
+    .from(productsTable)
+    .where(and(eq(productsTable.id, productId), eq(productsTable.restaurantId, restaurantId)))
+    .limit(1);
+
+  if (!product) return null;
+
+  const groupMap = new Map<string, ProductOptionGroup & { options: ProductOption[] }>();
+  for (const row of rows) {
+    const g = groupMap.get(row.group.id) ?? { ...row.group, options: [] };
+    if (row.option) g.options.push(row.option);
+    groupMap.set(row.group.id, g);
+  }
+
+  return { ...product, optionGroups: Array.from(groupMap.values()) };
 };
 
 export const buscarConfiguracoesRestaurante = async (slug: string) => {
