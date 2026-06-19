@@ -150,21 +150,6 @@ const getPaymentStatusVariant = (
   return "secondary" as const;
 };
 
-const getStatusLabel = (status: PedidoRecebimento["status"]) => {
-  if (status === "IN_PREPARATION") return "Em produção";
-  if (status === "READY_FOR_PICKUP") return "Pronto";
-  if (status === "OUT_FOR_DELIVERY") return "Em entrega";
-  if (status === "FINISHED") return "Finalizado";
-  if (status === "CANCELLED") return "Cancelado";
-  return "Solicitado";
-};
-
-const getStatusVariant = (status: PedidoRecebimento["status"]) => {
-  if (status === "FINISHED") return "success" as const;
-  if (status === "CANCELLED") return "danger" as const;
-  if (status === "READY_FOR_PICKUP") return "warning" as const;
-  return "secondary" as const;
-};
 
 const getConsumptionLabel = (
   consumptionMethod: PedidoRecebimento["consumptionMethod"],
