@@ -14,17 +14,6 @@ interface DeliveryParamsTabProps {
   restaurant: Restaurant;
 }
 
-const formatCurrency = (v: string) => {
-  const digits = v.replace(/\D/g, "");
-  if (!digits) return "";
-  return (parseInt(digits, 10) / 100).toFixed(2).replace(".", ",");
-};
-
-const parseCurrency = (v: string): number => {
-  const normalized = v.replace(/\./g, "").replace(",", ".");
-  return parseFloat(normalized) || 0;
-};
-
 function CurrencyInput({
   id,
   name,
