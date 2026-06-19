@@ -1,8 +1,9 @@
-node_modules
-.next
+**/node_modules
+**/.next
 dist
 .git
 .vscode
 out
 build
 *.log
+**/*.tsbuildinfo

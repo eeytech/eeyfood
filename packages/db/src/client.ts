@@ -10,31 +10,39 @@ const globalForDb = globalThis as typeof globalThis & {
   fswDb?: Database;
 };
 
-const connectionString = process.env.DATABASE_URL;
+function getOrCreateDb(): { db: Database; pool: Pool } {
+  if (globalForDb.fswDb && globalForDb.fswPool) {
+    return { db: globalForDb.fswDb, pool: globalForDb.fswPool };
+  }
 
-if (!connectionString) {
-  throw new Error("A variável DATABASE_URL não foi configurada.");
-}
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error("A variável DATABASE_URL não foi configurada.");
+  }
 
-const pool =
-  globalForDb.fswPool ??
-  new Pool({
+  const pool = new Pool({
     connectionString,
-    max: 20, // Aumentando um pouco o limite padrão
+    max: 20,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 2000,
   });
 
-const db = globalForDb.fswDb ?? drizzle(pool, { schema });
+  const db = drizzle(pool, { schema });
 
-if (process.env.NODE_ENV !== "production") {
   globalForDb.fswPool = pool;
   globalForDb.fswDb = db;
-} else {
-  // Em produção também é importante manter a referência global se o módulo for recarregado
-  // ou se houver múltiplas entradas que importam este arquivo em um ambiente que não isola globais perfeitamente
-  globalForDb.fswPool = pool;
-  globalForDb.fswDb = db;
+
+  return { db, pool };
 }
 
-export { db, pool };
+export const db = new Proxy({} as Database, {
+  get(_, prop) {
+    return getOrCreateDb().db[prop as keyof Database];
+  },
+});
+
+export const pool = new Proxy({} as Pool, {
+  get(_, prop) {
+    return getOrCreateDb().pool[prop as keyof Pool];
+  },
+});
