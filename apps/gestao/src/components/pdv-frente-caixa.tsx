@@ -3,12 +3,13 @@
 import {
   BanknoteIcon,
   CreditCardIcon,
+  InfoIcon,
   MinusIcon,
+  PlusIcon,
   SearchIcon,
   ShoppingCartIcon,
-  SparklesIcon,
 } from "lucide-react";
-import { useDeferredValue, useState, useTransition } from "react";
+import { useDeferredValue, useMemo, useState, useTransition } from "react";
 
 import { finalizarVendaPdv } from "@/app/[slug]/pdv/actions";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +22,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface PdvProduct {
   id: string;
@@ -67,6 +69,7 @@ const PdvFrenteCaixa = ({
 }: PdvFrenteCaixaProps) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [searchValue, setSearchValue] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("TODOS");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [paymentMethod, setPaymentMethod] =
@@ -77,15 +80,21 @@ const PdvFrenteCaixa = ({
   const deferredSearchValue = useDeferredValue(searchValue);
   const normalizedSearchValue = deferredSearchValue.trim().toLowerCase();
 
+  const categories = useMemo(() => {
+    const cats = Array.from(
+      new Set(products.filter((p) => p.isActive).map((p) => p.categoryName)),
+    ).sort();
+    return ["TODOS", ...cats];
+  }, [products]);
+
   const filteredProducts = products.filter((product) => {
-    if (!product.isActive) {
+    if (!product.isActive) return false;
+    if (
+      selectedCategory !== "TODOS" &&
+      product.categoryName !== selectedCategory
+    )
       return false;
-    }
-
-    if (!normalizedSearchValue) {
-      return true;
-    }
-
+    if (!normalizedSearchValue) return true;
     return (
       product.name.toLowerCase().includes(normalizedSearchValue) ||
       product.categoryName.toLowerCase().includes(normalizedSearchValue) ||
@@ -118,17 +127,15 @@ const PdvFrenteCaixa = ({
         ];
       }
 
-      if (product.trackInventory && existingItem.quantity >= product.stockQuantity) {
+      if (
+        product.trackInventory &&
+        existingItem.quantity >= product.stockQuantity
+      ) {
         return currentItems;
       }
 
       return currentItems.map((item) =>
-        item.id === product.id
-          ? {
-              ...item,
-              quantity: item.quantity + 1,
-            }
-          : item,
+        item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item,
       );
     });
   };
@@ -138,10 +145,7 @@ const PdvFrenteCaixa = ({
       currentItems
         .map((item) =>
           item.id === productId
-            ? {
-                ...item,
-                quantity: item.quantity - 1,
-              }
+            ? { ...item, quantity: item.quantity - 1 }
             : item,
         )
         .filter((item) => item.quantity > 0),
@@ -149,35 +153,28 @@ const PdvFrenteCaixa = ({
   };
 
   const increaseProduct = (productId: string) => {
-    const product = products.find((currentProduct) => currentProduct.id === productId);
+    const product = products.find(
+      (currentProduct) => currentProduct.id === productId,
+    );
 
     setCartItems((currentItems) =>
       currentItems.map((item) =>
         item.id === productId
           ? product?.trackInventory && item.quantity >= product.stockQuantity
             ? item
-            : {
-                ...item,
-                quantity: item.quantity + 1,
-              }
+            : { ...item, quantity: item.quantity + 1 }
           : item,
       ),
     );
   };
 
   const getAvailableStockLabel = (product: PdvProduct) => {
-    if (!product.trackInventory) {
-      return "Sem controle";
-    }
-
+    if (!product.trackInventory) return "Sem controle";
     return `Estoque ${String(product.stockQuantity)}`;
   };
 
   const getAvailableStockVariant = (product: PdvProduct) => {
-    if (!product.trackInventory) {
-      return "secondary" as const;
-    }
-
+    if (!product.trackInventory) return "secondary" as const;
     return product.stockQuantity > 0 ? ("success" as const) : ("danger" as const);
   };
 
@@ -210,10 +207,7 @@ const PdvFrenteCaixa = ({
       });
 
       if (!result.success) {
-        setFeedback({
-          type: "error",
-          message: result.message,
-        });
+        setFeedback({ type: "error", message: result.message });
         return;
       }
 
@@ -278,7 +272,7 @@ const PdvFrenteCaixa = ({
       <div className="grid gap-3 2xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="space-y-3">
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-3">
               <CardTitle>Buscar produtos</CardTitle>
               <CardDescription>
                 Procure por nome, categoria ou descricao e adicione ao carrinho.
@@ -300,83 +294,97 @@ const PdvFrenteCaixa = ({
             </CardContent>
           </Card>
 
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {filteredProducts.map((product) => (
-              <Card
-                key={product.id}
-                className="border-white/80 bg-white/95 transition hover:-translate-y-0.5 hover:shadow-xl"
-              >
-                <CardHeader className="space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <Badge variant="secondary">{product.categoryName}</Badge>
-                      <CardTitle className="mt-2">{product.name}</CardTitle>
-                    </div>
-                    <SparklesIcon className="text-primary" size={14} />
-                  </div>
-                  <CardDescription className="line-clamp-2 min-h-[36px] leading-5">
-                    {product.description}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="font-display text-base font-semibold">
-                      {formatCurrency(product.price)}
-                    </p>
-                    <Badge variant={getAvailableStockVariant(product)}>
-                      {getAvailableStockLabel(product)}
-                    </Badge>
-                  </div>
-
-                  <Button
-                    size="sm"
-                    className="w-full"
-                    disabled={product.trackInventory && product.stockQuantity <= 0}
-                    onClick={() => addProduct(product)}
-                  >
-                    Adicionar ao carrinho
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <Tabs value={selectedCategory} onValueChange={setSelectedCategory}>
+            <TabsList className="h-auto flex-wrap gap-1 bg-muted/60 p-1">
+              {categories.map((cat) => (
+                <TabsTrigger key={cat} value={cat} className="text-xs">
+                  {cat}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
 
           {filteredProducts.length === 0 ? (
             <Card className="border-dashed">
-              <CardContent className="flex min-h-[140px] flex-col items-center justify-center gap-2 p-4 text-center">
+              <CardContent className="flex min-h-[120px] flex-col items-center justify-center gap-2 p-4 text-center">
                 <SearchIcon className="text-slate-400" size={20} />
                 <p className="font-medium text-slate-900">
                   Nenhum produto encontrado
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Ajuste a busca para localizar itens do cardapio.
+                  Ajuste a busca ou a categoria para localizar itens.
                 </p>
               </CardContent>
             </Card>
-          ) : null}
+          ) : (
+            <Card className="overflow-hidden">
+              <div className="divide-y">
+                {filteredProducts.map((product) => (
+                  <div
+                    key={product.id}
+                    className="flex items-center gap-3 px-4 py-2.5 transition hover:bg-slate-50/80"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1">
+                        <p className="truncate text-sm font-medium text-slate-900">
+                          {product.name}
+                        </p>
+                        <button
+                          type="button"
+                          title={product.description}
+                          className="shrink-0 text-muted-foreground transition hover:text-slate-700"
+                        >
+                          <InfoIcon size={12} />
+                        </button>
+                      </div>
+                    </div>
+                    <Badge
+                      variant={getAvailableStockVariant(product)}
+                      className="shrink-0 text-xs"
+                    >
+                      {getAvailableStockLabel(product)}
+                    </Badge>
+                    <p className="w-20 shrink-0 text-right font-display text-sm font-semibold">
+                      {formatCurrency(product.price)}
+                    </p>
+                    <Button
+                      size="icon"
+                      className="h-7 w-7 shrink-0"
+                      disabled={
+                        product.trackInventory && product.stockQuantity <= 0
+                      }
+                      onClick={() => addProduct(product)}
+                    >
+                      <PlusIcon size={14} />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
         </div>
 
         <div className="space-y-3">
           <Card className="border-white/80 bg-slate-950 text-white">
-            <CardHeader>
+            <CardHeader className="pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10">
-                  <ShoppingCartIcon size={14} />
+                <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-white/10">
+                  <ShoppingCartIcon size={13} />
                 </div>
                 <div>
-                  <CardTitle className="font-display text-lg">
+                  <CardTitle className="font-display text-base">
                     Resumo da venda
                   </CardTitle>
-                  <CardDescription className="text-slate-300 text-xs">
+                  <CardDescription className="text-xs text-slate-300">
                     Operacao pensada para caixa rapido e sem friccao.
                   </CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-3">
+            <CardContent className="space-y-3">
+              <div className="grid gap-2">
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-200">
+                  <label className="mb-1.5 block text-xs font-medium text-slate-200">
                     Nome do cliente
                   </label>
                   <Input
@@ -388,7 +396,7 @@ const PdvFrenteCaixa = ({
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-200">
+                  <label className="mb-1.5 block text-xs font-medium text-slate-200">
                     Celular do cliente
                   </label>
                   <Input
@@ -400,58 +408,56 @@ const PdvFrenteCaixa = ({
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-2 sm:grid-cols-2">
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("DINHEIRO")}
-                  className={`rounded-xl border px-3 py-3 text-left transition ${
+                  className={`rounded-xl border px-3 py-2.5 text-left transition ${
                     paymentMethod === "DINHEIRO"
                       ? "border-white bg-white text-slate-950"
                       : "border-white/10 bg-white/5 text-white"
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <BanknoteIcon size={16} />
-                    <span className="font-medium">Dinheiro</span>
+                    <BanknoteIcon size={14} />
+                    <span className="text-sm font-medium">Dinheiro</span>
                   </div>
-                  <p className="mt-2 text-sm opacity-80">
-                    Fechamento imediato com recebimento em especie.
-                  </p>
+                  <p className="mt-1 text-xs opacity-80">Recebimento em especie.</p>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("CARTAO_PRESENCIAL")}
-                  className={`rounded-xl border px-3 py-3 text-left transition ${
+                  className={`rounded-xl border px-3 py-2.5 text-left transition ${
                     paymentMethod === "CARTAO_PRESENCIAL"
                       ? "border-white bg-white text-slate-950"
                       : "border-white/10 bg-white/5 text-white"
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <CreditCardIcon size={16} />
-                    <span className="font-medium">Cartao presencial</span>
+                    <CreditCardIcon size={14} />
+                    <span className="text-sm font-medium">Cartao presencial</span>
                   </div>
-                  <p className="mt-2 text-sm opacity-80">
-                    Ideal para maquininha no caixa.
-                  </p>
+                  <p className="mt-1 text-xs opacity-80">Maquininha no caixa.</p>
                 </button>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-3">
               <CardTitle>Itens selecionados</CardTitle>
               <CardDescription>
                 Ajuste as quantidades antes de concluir a venda.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-2">
               {cartItems.length === 0 ? (
-                <div className="rounded-xl border border-dashed bg-slate-50 px-4 py-6 text-center">
-                  <p className="text-sm font-medium text-slate-900">Carrinho vazio</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
+                <div className="rounded-xl border border-dashed bg-slate-50 px-4 py-5 text-center">
+                  <p className="text-sm font-medium text-slate-900">
+                    Carrinho vazio
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
                     Adicione produtos para liberar o fechamento.
                   </p>
                 </div>
@@ -459,13 +465,15 @@ const PdvFrenteCaixa = ({
                 cartItems.map((item) => (
                   <div
                     key={item.id}
-                    className="rounded-xl border bg-slate-50/80 p-3"
+                    className="rounded-xl border bg-slate-50/80 p-2.5"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <p className="text-sm font-medium text-slate-950">{item.name}</p>
+                        <p className="text-sm font-medium text-slate-950">
+                          {item.name}
+                        </p>
                         <p className="text-xs text-muted-foreground">
-                          {formatCurrency(item.price)} por unidade
+                          {formatCurrency(item.price)} / un.
                         </p>
                       </div>
                       <button
@@ -478,7 +486,7 @@ const PdvFrenteCaixa = ({
                     </div>
 
                     <div className="mt-2 flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1">
                         <Button
                           type="button"
                           variant="outline"
@@ -488,17 +496,17 @@ const PdvFrenteCaixa = ({
                         >
                           <MinusIcon size={12} />
                         </Button>
-                        <div className="flex h-7 min-w-10 items-center justify-center rounded-lg border bg-white px-2 text-sm font-semibold">
+                        <div className="flex h-7 min-w-9 items-center justify-center rounded-lg border bg-white px-2 text-sm font-semibold">
                           {String(item.quantity)}
                         </div>
                         <Button
                           type="button"
                           variant="outline"
                           size="icon"
-                          className="h-7 w-7 text-sm"
+                          className="h-7 w-7"
                           onClick={() => increaseProduct(item.id)}
                         >
-                          +
+                          <PlusIcon size={12} />
                         </Button>
                       </div>
 
@@ -515,7 +523,7 @@ const PdvFrenteCaixa = ({
                   <span>Quantidade total</span>
                   <span>{String(totalItems)} itens</span>
                 </div>
-                <div className="mt-2 flex items-center justify-between">
+                <div className="mt-1.5 flex items-center justify-between">
                   <span className="text-sm font-medium">Total da venda</span>
                   <span className="font-display text-xl font-semibold">
                     {formatCurrency(total)}
@@ -535,7 +543,7 @@ const PdvFrenteCaixa = ({
                 </div>
               ) : null}
 
-              <div className="flex flex-col gap-3 sm:flex-row">
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <Button
                   type="button"
                   variant="outline"

@@ -323,7 +323,7 @@ function OptionRow({
         )}
       </div>
       <span className="shrink-0 text-sm text-muted-foreground">
-        {option.price > 0 ? `+ R$ ${option.price.toFixed(2)}` : "Grátis"}
+        {(option.price ?? 0) > 0 ? `+ R$ ${(option.price ?? 0).toFixed(2)}` : "Grátis"}
       </span>
       <div className="flex shrink-0 gap-1">
         <Button
@@ -618,10 +618,16 @@ function LinkGroupSelector({
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
-    fetchRestaurantOptionGroupsAction(slug).then((groups) => {
-      setAllGroups(groups);
-      setLoading(false);
-    });
+    fetchRestaurantOptionGroupsAction(slug)
+      .then((groups) => {
+        setAllGroups(groups);
+      })
+      .catch((err) => {
+        console.error("Erro ao carregar grupos do restaurante:", err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, [slug]);
 
   const available = allGroups.filter((g) => !linkedGroupIds.has(g.id));
@@ -708,12 +714,17 @@ export function ProductOptionsManager({
   const [isPending, startTransition] = useTransition();
   const [refreshTick, setRefreshTick] = useState(0);
 
-  const load = useCallback(() => {
+  const load = useCallback(async () => {
     setLoading(true);
-    fetchProductOptionsAction(slug, productId).then((result) => {
+    try {
+      const result = await fetchProductOptionsAction(slug, productId);
       setGroups(result?.optionGroups ?? []);
+    } catch (err) {
+      console.error("Erro ao carregar adicionais do produto:", err);
+      toast.error("Não foi possível carregar os adicionais do produto.");
+    } finally {
       setLoading(false);
-    });
+    }
   }, [slug, productId]);
 
   useEffect(() => {

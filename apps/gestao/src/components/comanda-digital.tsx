@@ -2,9 +2,9 @@
 
 import type { MesaComanda, PaymentMethod, PedidoRecebimento } from "@fsw/db";
 import {
-  ChefHatIcon,
   CreditCardIcon,
   Loader2Icon,
+  PlusIcon,
   SearchIcon,
   ShoppingBasketIcon,
   UsersRoundIcon,
@@ -34,6 +34,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ProdutoComanda {
   id: string;
@@ -57,6 +58,8 @@ interface FeedbackState {
   type: "success" | "error";
   message: string;
 }
+
+type TableFilter = "TODAS" | "LIVRES" | "OCUPADAS";
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat("pt-BR", {
@@ -92,6 +95,9 @@ const ComandaDigital = ({
   const [selectedTableId, setSelectedTableId] = useState(
     initialTables[0]?.table.id ?? "",
   );
+  const [tableFilter, setTableFilter] = useState<TableFilter>("TODAS");
+  const [selectedProductCategory, setSelectedProductCategory] =
+    useState("TODOS");
   const [searchValue, setSearchValue] = useState("");
   const [openingCustomerName, setOpeningCustomerName] = useState("");
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
@@ -155,28 +161,42 @@ const ComandaDigital = ({
     return tables.find((mesa) => mesa.table.id === selectedTableId) ?? null;
   }, [selectedTableId, tables]);
 
+  const occupiedTables = tables.filter((mesa) => mesa.currentOrder).length;
+  const freeTables = tables.length - occupiedTables;
+
+  const displayedTables = useMemo(() => {
+    if (tableFilter === "LIVRES") return tables.filter((m) => !m.currentOrder);
+    if (tableFilter === "OCUPADAS")
+      return tables.filter((m) => m.currentOrder);
+    return tables;
+  }, [tables, tableFilter]);
+
+  const productCategories = useMemo(() => {
+    const cats = Array.from(
+      new Set(products.filter((p) => p.isActive).map((p) => p.categoryName)),
+    ).sort();
+    return ["TODOS", ...cats];
+  }, [products]);
+
   const filteredProducts = useMemo(() => {
     const normalizedSearchValue = deferredSearchValue.trim().toLowerCase();
 
     return products.filter((product) => {
-      if (!product.isActive) {
+      if (!product.isActive) return false;
+      if (
+        selectedProductCategory !== "TODOS" &&
+        product.categoryName !== selectedProductCategory
+      )
         return false;
-      }
-
-      if (!normalizedSearchValue) {
-        return true;
-      }
-
+      if (!normalizedSearchValue) return true;
       return (
         product.name.toLowerCase().includes(normalizedSearchValue) ||
         product.categoryName.toLowerCase().includes(normalizedSearchValue) ||
         product.description.toLowerCase().includes(normalizedSearchValue)
       );
     });
-  }, [deferredSearchValue, products]);
+  }, [deferredSearchValue, products, selectedProductCategory]);
 
-  const occupiedTables = tables.filter((mesa) => mesa.currentOrder).length;
-  const freeTables = tables.length - occupiedTables;
   const selectedOrderItemsCount =
     selectedMesa?.currentOrder?.orderProducts.reduce((accumulator, item) => {
       return accumulator + item.quantity;
@@ -189,7 +209,8 @@ const ComandaDigital = ({
           ? {
               ...mesa,
               currentOrder:
-                updatedOrder.status === "FINISHED" || updatedOrder.status === "CANCELLED"
+                updatedOrder.status === "FINISHED" ||
+                updatedOrder.status === "CANCELLED"
                   ? null
                   : updatedOrder,
             }
@@ -310,8 +331,8 @@ const ComandaDigital = ({
               Salao de {restaurantName}
             </CardTitle>
             <CardDescription>
-              Abra mesas, lance itens em tempo real e acompanhe o status da conta
-              em qualquer dispositivo.
+              Abra mesas, lance itens em tempo real e acompanhe o status da
+              conta em qualquer dispositivo.
             </CardDescription>
           </div>
 
@@ -348,48 +369,80 @@ const ComandaDigital = ({
         </CardHeader>
       </Card>
 
-      <div className="grid gap-4 xl:grid-cols-[340px_minmax(0,1fr)]">
+      <div className="grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)]">
         <Card className="xl:sticky xl:top-4 xl:self-start">
-          <CardHeader>
+          <CardHeader className="pb-3">
             <CardTitle>Mesas</CardTitle>
             <CardDescription>
               Toque em uma mesa para abrir ou operar a comanda.
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-2">
-            {tables.map((mesa) => (
-              <button
-                key={mesa.table.id}
-                type="button"
-                onClick={() => setSelectedTableId(mesa.table.id)}
-                className={`rounded-[24px] border p-4 text-left transition ${
-                  selectedTableId === mesa.table.id
-                    ? "border-primary bg-primary/5"
-                    : "border-border bg-background"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="font-semibold">{mesa.table.name}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {String(mesa.table.seats)} lugares
-                    </p>
+          <CardContent className="space-y-3">
+            <Tabs
+              value={tableFilter}
+              onValueChange={(v) => setTableFilter(v as TableFilter)}
+            >
+              <TabsList className="w-full">
+                <TabsTrigger value="TODAS" className="flex-1 text-xs">
+                  Todas ({String(tables.length)})
+                </TabsTrigger>
+                <TabsTrigger value="LIVRES" className="flex-1 text-xs">
+                  Livres ({String(freeTables)})
+                </TabsTrigger>
+                <TabsTrigger value="OCUPADAS" className="flex-1 text-xs">
+                  Ocupadas ({String(occupiedTables)})
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            <div className="grid grid-cols-2 gap-2">
+              {displayedTables.map((mesa) => (
+                <button
+                  key={mesa.table.id}
+                  type="button"
+                  onClick={() => setSelectedTableId(mesa.table.id)}
+                  className={`rounded-2xl border p-3 text-left transition ${
+                    selectedTableId === mesa.table.id
+                      ? "border-primary bg-primary/5"
+                      : "border-border bg-background"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-1">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold">
+                        {mesa.table.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {String(mesa.table.seats)} lugares
+                      </p>
+                    </div>
+                    <Badge
+                      variant={getMesaStatusVariant(mesa)}
+                      className="shrink-0 text-xs"
+                    >
+                      {getMesaStatusLabel(mesa)}
+                    </Badge>
                   </div>
-                  <Badge variant={getMesaStatusVariant(mesa)}>
-                    {getMesaStatusLabel(mesa)}
-                  </Badge>
+                  {mesa.currentOrder ? (
+                    <p className="mt-2 text-xs font-medium text-slate-900">
+                      {formatCurrency(mesa.currentOrder.total)}
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Pronta para abrir
+                    </p>
+                  )}
+                </button>
+              ))}
+
+              {displayedTables.length === 0 && (
+                <div className="col-span-2 rounded-xl border border-dashed py-6 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    Nenhuma mesa neste filtro.
+                  </p>
                 </div>
-                {mesa.currentOrder ? (
-                  <p className="mt-3 text-sm font-medium text-slate-900">
-                    Conta atual: {formatCurrency(mesa.currentOrder.total)}
-                  </p>
-                ) : (
-                  <p className="mt-3 text-sm text-muted-foreground">
-                    Pronta para abrir
-                  </p>
-                )}
-              </button>
-            ))}
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -398,10 +451,15 @@ const ComandaDigital = ({
             <>
               <Card className="border-white/80 bg-slate-950 text-white">
                 <CardHeader>
-                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div>
-                      <Badge variant="secondary" className="w-fit bg-white/10 text-white">
-                        {selectedMesa.currentOrder ? "Mesa em atendimento" : "Mesa livre"}
+                      <Badge
+                        variant="secondary"
+                        className="w-fit bg-white/10 text-white"
+                      >
+                        {selectedMesa.currentOrder
+                          ? "Mesa em atendimento"
+                          : "Mesa livre"}
                       </Badge>
                       <CardTitle className="mt-2 font-display text-xl">
                         {selectedMesa.table.name}
@@ -413,13 +471,15 @@ const ComandaDigital = ({
                       </CardDescription>
                     </div>
 
-                    <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="grid gap-2 sm:grid-cols-2">
                       <div className="rounded-xl border border-white/10 bg-white/5 p-3">
                         <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
                           Status da conta
                         </p>
-                        <p className="mt-2 font-medium text-white">
-                          {selectedMesa.currentOrder ? "Em aberto" : "Aguardando abertura"}
+                        <p className="mt-1.5 text-sm font-medium text-white">
+                          {selectedMesa.currentOrder
+                            ? "Em aberto"
+                            : "Aguardando abertura"}
                         </p>
                       </div>
                       <div className="rounded-xl border border-white/10 bg-white/5 p-3">
@@ -427,7 +487,9 @@ const ComandaDigital = ({
                           Total atual
                         </p>
                         <p className="mt-1 font-display text-xl font-semibold">
-                          {formatCurrency(selectedMesa.currentOrder?.total ?? 0)}
+                          {formatCurrency(
+                            selectedMesa.currentOrder?.total ?? 0,
+                          )}
                         </p>
                       </div>
                     </div>
@@ -440,7 +502,8 @@ const ComandaDigital = ({
                   <CardHeader>
                     <CardTitle>Abrir mesa</CardTitle>
                     <CardDescription>
-                      Registre um nome de referencia opcional e inicie a comanda.
+                      Registre um nome de referencia opcional e inicie a
+                      comanda.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -450,7 +513,9 @@ const ComandaDigital = ({
                       </label>
                       <Input
                         value={openingCustomerName}
-                        onChange={(event) => setOpeningCustomerName(event.target.value)}
+                        onChange={(event) =>
+                          setOpeningCustomerName(event.target.value)
+                        }
                         placeholder="Ex.: Ana, familia Silva, aniversario"
                       />
                     </div>
@@ -468,16 +533,17 @@ const ComandaDigital = ({
                   </CardContent>
                 </Card>
               ) : (
-                <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_360px]">
-                  <div className="space-y-4">
+                <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_340px]">
+                  <div className="space-y-3">
                     <Card>
-                      <CardHeader>
+                      <CardHeader className="pb-3">
                         <CardTitle>Lancar itens</CardTitle>
                         <CardDescription>
-                          Toque para enviar os itens da mesa direto para a comanda.
+                          Toque para enviar os itens da mesa direto para a
+                          comanda.
                         </CardDescription>
                       </CardHeader>
-                      <CardContent className="space-y-4">
+                      <CardContent className="space-y-3">
                         <div className="relative">
                           <SearchIcon
                             className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
@@ -485,39 +551,53 @@ const ComandaDigital = ({
                           />
                           <Input
                             value={searchValue}
-                            onChange={(event) => setSearchValue(event.target.value)}
+                            onChange={(event) =>
+                              setSearchValue(event.target.value)
+                            }
                             placeholder="Buscar produto para a mesa..."
                             className="pl-11"
                           />
                         </div>
 
-                        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                          {filteredProducts.map((product) => (
-                            <Card
-                              key={product.id}
-                              className="border-white/80 bg-white/95 transition hover:-translate-y-0.5 hover:shadow-xl"
-                            >
-                              <CardHeader className="space-y-2">
-                                <div className="flex items-start justify-between gap-2">
-                                  <div>
-                                    <Badge variant="secondary">
-                                      {product.categoryName}
-                                    </Badge>
-                                    <CardTitle className="mt-2">
+                        <Tabs
+                          value={selectedProductCategory}
+                          onValueChange={setSelectedProductCategory}
+                        >
+                          <TabsList className="h-auto flex-wrap gap-1 bg-muted/60 p-1">
+                            {productCategories.map((cat) => (
+                              <TabsTrigger
+                                key={cat}
+                                value={cat}
+                                className="text-xs"
+                              >
+                                {cat}
+                              </TabsTrigger>
+                            ))}
+                          </TabsList>
+                        </Tabs>
+
+                        {filteredProducts.length === 0 ? (
+                          <div className="rounded-xl border border-dashed bg-slate-50 px-4 py-5 text-center">
+                            <p className="text-sm font-medium text-slate-900">
+                              Nenhum produto encontrado
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Ajuste a busca ou categoria.
+                            </p>
+                          </div>
+                        ) : (
+                          <Card className="overflow-hidden">
+                            <div className="divide-y">
+                              {filteredProducts.map((product) => (
+                                <div
+                                  key={product.id}
+                                  className="flex items-center gap-3 px-4 py-2.5 transition hover:bg-slate-50/80"
+                                >
+                                  <div className="min-w-0 flex-1">
+                                    <p className="truncate text-sm font-medium text-slate-900">
                                       {product.name}
-                                    </CardTitle>
+                                    </p>
                                   </div>
-                                  <ChefHatIcon className="text-primary" size={14} />
-                                </div>
-                                <CardDescription className="line-clamp-2 min-h-[36px] leading-5">
-                                  {product.description}
-                                </CardDescription>
-                              </CardHeader>
-                              <CardContent className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                  <p className="font-display text-base font-semibold">
-                                    {formatCurrency(product.price)}
-                                  </p>
                                   <Badge
                                     variant={
                                       product.trackInventory
@@ -526,116 +606,130 @@ const ComandaDigital = ({
                                           : "danger"
                                         : "secondary"
                                     }
+                                    className="shrink-0 text-xs"
                                   >
                                     {product.trackInventory
-                                      ? `Estoque ${String(product.stockQuantity)}`
-                                      : "Sem controle"}
+                                      ? `Est. ${String(product.stockQuantity)}`
+                                      : "Livre"}
                                   </Badge>
+                                  <p className="w-20 shrink-0 text-right font-display text-sm font-semibold">
+                                    {formatCurrency(product.price)}
+                                  </p>
+                                  <Button
+                                    size="icon"
+                                    className="h-7 w-7 shrink-0"
+                                    disabled={
+                                      isPending ||
+                                      (product.trackInventory &&
+                                        product.stockQuantity <= 0)
+                                    }
+                                    onClick={() =>
+                                      handleAddProduct(product.id)
+                                    }
+                                  >
+                                    <PlusIcon size={14} />
+                                  </Button>
                                 </div>
-
-                                <Button
-                                  size="sm"
-                                  className="w-full"
-                                  disabled={
-                                    isPending ||
-                                    (product.trackInventory && product.stockQuantity <= 0)
-                                  }
-                                  onClick={() => handleAddProduct(product.id)}
-                                >
-                                  Adicionar na comanda
-                                </Button>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
+                              ))}
+                            </div>
+                          </Card>
+                        )}
                       </CardContent>
                     </Card>
                   </div>
 
                   <div className="space-y-4">
                     <Card>
-                      <CardHeader>
+                      <CardHeader className="pb-3">
                         <CardTitle>Conta da mesa</CardTitle>
                         <CardDescription>
                           Acompanhe itens lancados e finalize quando necessario.
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-3">
-                        <div className="rounded-xl border bg-slate-50 p-3">
+                        <div className="rounded-lg border bg-slate-50 px-3 py-2">
                           <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
                             Cliente
                           </p>
-                          <p className="mt-1 text-sm font-medium text-slate-950">
+                          <p className="mt-0.5 text-sm font-medium text-slate-950">
                             {selectedMesa.currentOrder.customerName}
                           </p>
                         </div>
 
-                        <div className="space-y-3">
-                          {selectedMesa.currentOrder.orderProducts.length === 0 ? (
-                            <div className="rounded-xl border border-dashed bg-slate-50 px-4 py-6 text-center">
-                              <p className="font-medium text-slate-900">
+                        <div className="space-y-1.5">
+                          {selectedMesa.currentOrder.orderProducts.length ===
+                          0 ? (
+                            <div className="rounded-xl border border-dashed bg-slate-50 px-4 py-5 text-center">
+                              <p className="text-sm font-medium text-slate-900">
                                 Nenhum item lancado ainda
                               </p>
-                              <p className="mt-2 text-sm text-muted-foreground">
+                              <p className="mt-1 text-xs text-muted-foreground">
                                 Use a busca ao lado para comecar a comanda.
                               </p>
                             </div>
                           ) : (
-                            selectedMesa.currentOrder.orderProducts.map((item) => (
-                              <div
-                                key={item.id}
-                                className="rounded-xl border bg-slate-50/80 p-3"
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div>
-                                    <p className="text-sm font-medium text-slate-950">
+                            selectedMesa.currentOrder.orderProducts.map(
+                              (item) => (
+                                <div
+                                  key={item.id}
+                                  className="flex items-center justify-between gap-2 rounded-lg border bg-slate-50/80 px-3 py-2"
+                                >
+                                  <div className="min-w-0">
+                                    <p className="truncate text-sm font-medium text-slate-950">
                                       {item.product.name}
                                     </p>
                                     <p className="text-xs text-muted-foreground">
-                                      {String(item.quantity)} x {formatCurrency(item.price)}
+                                      {String(item.quantity)} ×{" "}
+                                      {formatCurrency(item.price)}
                                     </p>
                                     {item.notes && (
-                                      <p className="mt-1 text-xs italic text-amber-600">
-                                        Obs: {item.notes}
+                                      <p className="mt-0.5 text-xs italic text-amber-600/80">
+                                        {item.notes}
                                       </p>
                                     )}
                                   </div>
-                                  <p className="font-semibold text-slate-950">
+                                  <p className="shrink-0 text-sm font-semibold text-slate-950">
                                     {formatCurrency(item.lineTotal)}
                                   </p>
                                 </div>
-                              </div>
-                            ))
+                              ),
+                            )
                           )}
                         </div>
 
                         <div className="rounded-xl border bg-slate-950 p-3 text-white">
                           <div className="flex items-center justify-between text-xs text-slate-300">
                             <span>Itens lancados</span>
-                            <span>{String(selectedOrderItemsCount)} unidades</span>
+                            <span>
+                              {String(selectedOrderItemsCount)} unidades
+                            </span>
                           </div>
-                          <div className="mt-2 flex items-center justify-between">
-                            <span className="text-sm font-medium">Total da conta</span>
+                          <div className="mt-1.5 flex items-center justify-between">
+                            <span className="text-sm font-medium">
+                              Total da conta
+                            </span>
                             <span className="font-display text-xl font-semibold">
                               {formatCurrency(selectedMesa.currentOrder.total)}
                             </span>
                           </div>
                         </div>
 
-                        <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="grid gap-2 sm:grid-cols-2">
                           <Button
                             disabled={isPending}
                             onClick={() => handleCloseBill("DINHEIRO")}
                           >
-                            <CreditCardIcon size={16} />
+                            <CreditCardIcon size={15} />
                             Fechar em dinheiro
                           </Button>
                           <Button
                             disabled={isPending}
                             variant="outline"
-                            onClick={() => handleCloseBill("CARTAO_PRESENCIAL")}
+                            onClick={() =>
+                              handleCloseBill("CARTAO_PRESENCIAL")
+                            }
                           >
-                            <ShoppingBasketIcon size={16} />
+                            <ShoppingBasketIcon size={15} />
                             Fechar no cartao
                           </Button>
                         </div>
@@ -653,7 +747,8 @@ const ComandaDigital = ({
                   Nenhuma mesa cadastrada
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Cadastre mesas no banco para comecar a operar a comanda digital.
+                  Cadastre mesas no banco para comecar a operar a comanda
+                  digital.
                 </p>
               </CardContent>
             </Card>

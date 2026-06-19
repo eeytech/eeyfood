@@ -478,7 +478,7 @@ export const buscarProdutoComOpcionaisGestao = async (
   const groupMap = new Map<string, GrupoAdicionalComOpcoes>();
   for (const row of rows) {
     const g = groupMap.get(row.group.id) ?? { ...row.group, options: [] };
-    if (row.option) g.options.push(row.option);
+    if (row.option?.id) g.options.push(row.option);
     groupMap.set(row.group.id, g);
   }
 
@@ -509,7 +509,7 @@ export const buscarGruposAdicionaisDoRestaurante = async (
   const groupMap = new Map<string, GrupoAdicionalComOpcoes>();
   for (const row of rows) {
     const g = groupMap.get(row.group.id) ?? { ...row.group, options: [] };
-    if (row.option) g.options.push(row.option);
+    if (row.option?.id) g.options.push(row.option);
     groupMap.set(row.group.id, g);
   }
 
