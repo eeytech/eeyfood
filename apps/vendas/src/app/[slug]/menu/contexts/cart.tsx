@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, ReactNode, useState } from "react";
+import { createContext, ReactNode, useEffect, useRef, useState } from "react";
+import { useParams } from "next/navigation";
 
 import type { Product } from "@/lib/db";
 
@@ -45,8 +46,34 @@ export const CartContext = createContext<ICartContext>({
 });
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
+  const { slug } = useParams<{ slug: string }>();
+  const storageKey = slug ? `cart_${slug}` : null;
+  // Prevents the save effect from overwriting localStorage before the load effect applies
+  const isFirstRender = useRef(true);
+
   const [products, setProducts] = useState<CartProduct[]>([]);
   const [isOpen, setIsOpen] = useState<boolean>(false);
+
+  // After mounting in the browser, restore the cart saved for this restaurant
+  useEffect(() => {
+    if (!storageKey) return;
+    try {
+      const stored = localStorage.getItem(storageKey);
+      if (stored) setProducts(JSON.parse(stored) as CartProduct[]);
+    } catch {
+      // Corrupted data — start with an empty cart
+    }
+  }, [storageKey]);
+
+  // Persist cart to localStorage on every change, skipping the initial render
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (!storageKey) return;
+    localStorage.setItem(storageKey, JSON.stringify(products));
+  }, [products, storageKey]);
 
   const total = products.reduce((acc, product) => {
     const optionsTotal =
@@ -64,6 +91,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const clearCart = () => {
     setProducts([]);
+    if (storageKey) localStorage.removeItem(storageKey);
   };
 
   const addProduct = (product: CartProduct) => {

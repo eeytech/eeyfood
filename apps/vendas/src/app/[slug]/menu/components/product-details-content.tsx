@@ -12,7 +12,8 @@ import {
   SearchIcon,
 } from "lucide-react";
 import Image from "next/image";
-import { useContext, useMemo, useState } from "react";
+import { useContext, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -47,6 +48,9 @@ const ProductDetailsContent = ({
   const [isImageLoading, setIsImageLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const [shakingGroupId, setShakingGroupId] = useState<string | null>(null);
+  const groupRefs = useRef<Map<string, HTMLElement>>(new Map());
+  const shakeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const optionGroups = useMemo(() => product.optionGroups || [], [product.optionGroups]);
   const showOptionImages = product.restaurant.showOptionImages;
@@ -137,7 +141,33 @@ const ProductDetailsContent = ({
   }, [optionGroups, selectedOptions]);
 
   const handleAddToCart = () => {
-    if (!canAddToCart) return;
+    // Find the first required group where the customer hasn't met the minimum selection
+    const firstIncompleteGroup = optionGroups.find((group) => {
+      const selected = selectedOptions[group.id] || [];
+      return group.minOptions > 0 && selected.length < group.minOptions;
+    });
+
+    if (firstIncompleteGroup) {
+      toast.warning(`Selecione uma opção em "${firstIncompleteGroup.name}"`);
+
+      // Clear any active search so the group becomes visible, then ensure it's expanded
+      setSearchTerm("");
+      setExpandedGroups((prev) => ({ ...prev, [firstIncompleteGroup.id]: true }));
+
+      // Scroll to the group after it's expanded (small delay lets React re-render first)
+      const el = groupRefs.current.get(firstIncompleteGroup.id);
+      if (el) {
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }, 50);
+      }
+
+      // Trigger the shake animation, then clear it once the animation finishes
+      if (shakeTimeoutRef.current) clearTimeout(shakeTimeoutRef.current);
+      setShakingGroupId(firstIncompleteGroup.id);
+      shakeTimeoutRef.current = setTimeout(() => setShakingGroupId(null), 700);
+      return;
+    }
 
     const sortedOptionIds = selectedOptionsList.map((o) => o.id).sort();
     const commentHash = comment
@@ -280,19 +310,44 @@ const ProductDetailsContent = ({
             {filteredGroups.map((group) => {
               const isRadio = group.maxOptions === 1;
               const expanded = isGroupExpanded(group.id);
+              const groupSelectedCount = (selectedOptions[group.id] || []).length;
+              const isGroupComplete = group.minOptions > 0 && groupSelectedCount >= group.minOptions;
+              const isShaking = shakingGroupId === group.id;
 
               return (
-                <div key={group.id} className="mt-4">
+                <div
+                  key={group.id}
+                  className={`mt-4 rounded-xl ${isShaking ? "animate-shake" : ""}`}
+                  ref={(el) => {
+                    if (el) groupRefs.current.set(group.id, el);
+                    else groupRefs.current.delete(group.id);
+                  }}
+                >
                   {/* Group header */}
                   <button
                     type="button"
                     onClick={() => toggleGroup(group.id)}
-                    className="flex w-full items-center justify-between rounded-xl bg-slate-100 px-4 py-2.5 text-left transition hover:bg-slate-200"
+                    className={`flex w-full items-center justify-between rounded-xl px-4 py-2.5 text-left transition hover:bg-slate-200 ${
+                      isShaking ? "bg-amber-100" : "bg-slate-100"
+                    }`}
                   >
                     <div>
-                      <p className="text-sm font-semibold text-slate-900">{group.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-slate-900">{group.name}</p>
+                        {group.minOptions > 0 && (
+                          isGroupComplete ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                              <CircleCheckIcon size={10} aria-hidden="true" />
+                              Obrigatório
+                            </span>
+                          ) : (
+                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                              Obrigatório
+                            </span>
+                          )
+                        )}
+                      </div>
                       <p className="text-xs text-slate-500">
-                        {group.minOptions > 0 ? "Obrigatório • " : ""}
                         {isRadio ? "Selecione 1 opção" : `Selecione até ${group.maxOptions} opções`}
                       </p>
                     </div>
@@ -450,7 +505,7 @@ const ProductDetailsContent = ({
             <Button
               className="h-12 w-full rounded-xl text-base font-bold shadow-lg shadow-destructive/20 transition hover:scale-[1.01] active:scale-[0.99]"
               onClick={handleAddToCart}
-              disabled={!isOpen || !canAddToCart || isOutOfStock}
+              disabled={!isOpen || isOutOfStock}
             >
               Adicionar à sacola • {formatCurrency(unitPrice * quantity)}
             </Button>

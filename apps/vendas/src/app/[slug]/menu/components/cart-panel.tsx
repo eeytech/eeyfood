@@ -1,6 +1,6 @@
 "use client";
 
-import { ShoppingBagIcon } from "lucide-react";
+import { CheckCircle2Icon, ShoppingBagIcon } from "lucide-react";
 import { useContext, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,12 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
   const { products, total, totalQuantity } = useContext(CartContext);
   const hasProducts = products.length > 0;
 
+  const threshold = restaurant.freeDeliveryThreshold;
+  const showFreeDelivery = threshold != null && threshold > 0;
+  const freeDeliveryRemaining = showFreeDelivery ? Math.max(threshold - total, 0) : 0;
+  const freeDeliveryProgress = showFreeDelivery ? Math.min((total / threshold) * 100, 100) : 0;
+  const freeDeliveryAchieved = showFreeDelivery && freeDeliveryRemaining === 0;
+
   const content = (
     <>
       <div className={variant === "sheet" ? "flex flex-col gap-1 px-6 pt-0" : "flex flex-col gap-1 px-4 pt-6"}>
@@ -37,6 +43,36 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
             : "Adicione produtos para começar seu pedido."}
         </p>
       </div>
+
+      {showFreeDelivery && (
+        <div className={variant === "sheet" ? "px-6 pb-2 pt-3" : "px-6 pb-1 pt-3"}>
+          {freeDeliveryAchieved ? (
+            <div className="flex items-center gap-2 rounded-2xl bg-emerald-50 px-4 py-3">
+              <CheckCircle2Icon size={16} className="shrink-0 text-emerald-600" aria-hidden="true" />
+              <p className="text-sm font-semibold text-emerald-700">
+                Parabéns, você garantiu Frete Grátis neste pedido!
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs text-slate-500">
+                Falta apenas{" "}
+                <span className="font-bold text-slate-800">
+                  {formatCurrency(freeDeliveryRemaining)}
+                </span>{" "}
+                para você ganhar{" "}
+                <span className="font-semibold text-emerald-600">Frete Grátis!</span>
+              </p>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className="h-full rounded-full bg-emerald-500 transition-all duration-300 ease-out"
+                  style={{ width: `${freeDeliveryProgress}%` }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {hasProducts && (
         <div className={variant === "sheet" ? "flex-1 overflow-hidden px-6 pt-4" : "min-h-0 flex-1 overflow-hidden px-0 pt-3"}>
