@@ -16,8 +16,11 @@ import {
   productOptionsTable,
   productToOptionGroupsTable,
   productsTable,
+  recipeItemsTable,
   restaurantsTable,
   stockMovementsTable,
+  type InventoryItem,
+  type RecipeItem,
 } from "@fsw/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -927,6 +930,177 @@ export const deleteInventoryItemAction = async (
         eq(inventoryItemsTable.restaurantId, restaurant.id),
       ),
     );
+
+  revalidateRestaurantPaths(slug);
+  return { success: true };
+};
+
+// ─── Ficha Técnica (RecipeItem) ───────────────────────────────────────────────
+
+export interface RecipeItemComInsumo extends RecipeItem {
+  inventoryItem: Pick<InventoryItem, "id" | "name" | "unitOfMeasure">;
+}
+
+export const fetchRecipeItemsAction = async (
+  slug: string,
+  productId: string,
+): Promise<RecipeItemComInsumo[]> => {
+  const restaurant = await getRestaurantOrThrow(slug);
+
+  const [product] = await db
+    .select({ id: productsTable.id })
+    .from(productsTable)
+    .where(
+      and(
+        eq(productsTable.id, productId),
+        eq(productsTable.restaurantId, restaurant.id),
+      ),
+    )
+    .limit(1);
+
+  if (!product) return [];
+
+  const rows = await db
+    .select({
+      id: recipeItemsTable.id,
+      productId: recipeItemsTable.productId,
+      inventoryItemId: recipeItemsTable.inventoryItemId,
+      quantityNeeded: recipeItemsTable.quantityNeeded,
+      createdAt: recipeItemsTable.createdAt,
+      updatedAt: recipeItemsTable.updatedAt,
+      inventoryItem: {
+        id: inventoryItemsTable.id,
+        name: inventoryItemsTable.name,
+        unitOfMeasure: inventoryItemsTable.unitOfMeasure,
+      },
+    })
+    .from(recipeItemsTable)
+    .innerJoin(inventoryItemsTable, eq(inventoryItemsTable.id, recipeItemsTable.inventoryItemId))
+    .where(eq(recipeItemsTable.productId, productId));
+
+  return rows;
+};
+
+export const fetchInventoryItemsForRecipeAction = async (
+  slug: string,
+): Promise<Pick<InventoryItem, "id" | "name" | "unitOfMeasure" | "currentQuantity">[]> => {
+  const restaurant = await getRestaurantOrThrow(slug);
+
+  return db
+    .select({
+      id: inventoryItemsTable.id,
+      name: inventoryItemsTable.name,
+      unitOfMeasure: inventoryItemsTable.unitOfMeasure,
+      currentQuantity: inventoryItemsTable.currentQuantity,
+    })
+    .from(inventoryItemsTable)
+    .where(eq(inventoryItemsTable.restaurantId, restaurant.id))
+    .orderBy(inventoryItemsTable.name);
+};
+
+export const addRecipeItemAction = async (
+  slug: string,
+  productId: string,
+  inventoryItemId: string,
+  quantityNeeded: number,
+): Promise<InventoryActionResult> => {
+  if (quantityNeeded <= 0) {
+    return { success: false, error: "A quantidade deve ser maior que zero." };
+  }
+
+  const restaurant = await getRestaurantOrThrow(slug);
+
+  const [product] = await db
+    .select({ id: productsTable.id })
+    .from(productsTable)
+    .where(
+      and(
+        eq(productsTable.id, productId),
+        eq(productsTable.restaurantId, restaurant.id),
+      ),
+    )
+    .limit(1);
+
+  if (!product) return { success: false, error: "Produto não encontrado." };
+
+  const [invItem] = await db
+    .select({ id: inventoryItemsTable.id })
+    .from(inventoryItemsTable)
+    .where(
+      and(
+        eq(inventoryItemsTable.id, inventoryItemId),
+        eq(inventoryItemsTable.restaurantId, restaurant.id),
+      ),
+    )
+    .limit(1);
+
+  if (!invItem) return { success: false, error: "Insumo não encontrado." };
+
+  await db.insert(recipeItemsTable).values({
+    productId,
+    inventoryItemId,
+    quantityNeeded,
+  });
+
+  revalidateRestaurantPaths(slug);
+  return { success: true };
+};
+
+export const updateRecipeItemAction = async (
+  slug: string,
+  recipeItemId: string,
+  quantityNeeded: number,
+): Promise<InventoryActionResult> => {
+  if (quantityNeeded <= 0) {
+    return { success: false, error: "A quantidade deve ser maior que zero." };
+  }
+
+  const restaurant = await getRestaurantOrThrow(slug);
+
+  const [existing] = await db
+    .select({ id: recipeItemsTable.id, productId: recipeItemsTable.productId })
+    .from(recipeItemsTable)
+    .innerJoin(productsTable, eq(productsTable.id, recipeItemsTable.productId))
+    .where(
+      and(
+        eq(recipeItemsTable.id, recipeItemId),
+        eq(productsTable.restaurantId, restaurant.id),
+      ),
+    )
+    .limit(1);
+
+  if (!existing) return { success: false, error: "Item da ficha técnica não encontrado." };
+
+  await db
+    .update(recipeItemsTable)
+    .set({ quantityNeeded, updatedAt: new Date() })
+    .where(eq(recipeItemsTable.id, recipeItemId));
+
+  revalidateRestaurantPaths(slug);
+  return { success: true };
+};
+
+export const removeRecipeItemAction = async (
+  slug: string,
+  recipeItemId: string,
+): Promise<InventoryActionResult> => {
+  const restaurant = await getRestaurantOrThrow(slug);
+
+  const [existing] = await db
+    .select({ id: recipeItemsTable.id })
+    .from(recipeItemsTable)
+    .innerJoin(productsTable, eq(productsTable.id, recipeItemsTable.productId))
+    .where(
+      and(
+        eq(recipeItemsTable.id, recipeItemId),
+        eq(productsTable.restaurantId, restaurant.id),
+      ),
+    )
+    .limit(1);
+
+  if (!existing) return { success: false, error: "Item da ficha técnica não encontrado." };
+
+  await db.delete(recipeItemsTable).where(eq(recipeItemsTable.id, recipeItemId));
 
   revalidateRestaurantPaths(slug);
   return { success: true };

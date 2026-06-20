@@ -2,9 +2,12 @@
 
 import type { MesaComanda, PaymentMethod, PedidoRecebimento } from "@fsw/db";
 import {
+  ArrowLeftRightIcon,
+  BanknoteIcon,
   CreditCardIcon,
   Loader2Icon,
   PlusIcon,
+  ScissorsIcon,
   SearchIcon,
   ShoppingBasketIcon,
   UsersRoundIcon,
@@ -22,7 +25,10 @@ import { io } from "socket.io-client";
 import {
   abrirMesaAction,
   adicionarItensComandaAction,
+  buscarPagamentosParciaisAction,
   fecharComandaAction,
+  registrarPagamentoParcialAction,
+  transferirMesaAction,
 } from "@/app/[slug]/comandas/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,7 +39,22 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ProdutoComanda {
@@ -91,72 +112,39 @@ const ComandaDigital = ({
   initialTables,
   products,
 }: ComandaDigitalProps) => {
+  // ── Table state ────────────────────────────────────────────────────────
   const [tables, setTables] = useState(initialTables);
   const [selectedTableId, setSelectedTableId] = useState(
     initialTables[0]?.table.id ?? "",
   );
   const [tableFilter, setTableFilter] = useState<TableFilter>("TODAS");
+
+  // ── Product search ─────────────────────────────────────────────────────
   const [selectedProductCategory, setSelectedProductCategory] =
     useState("TODOS");
   const [searchValue, setSearchValue] = useState("");
+
+  // ── Opening ────────────────────────────────────────────────────────────
   const [openingCustomerName, setOpeningCustomerName] = useState("");
+
+  // ── Feedback ───────────────────────────────────────────────────────────
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  // ── Transfer dialog ────────────────────────────────────────────────────
+  const [isTransferOpen, setIsTransferOpen] = useState(false);
+  const [targetTableId, setTargetTableId] = useState("");
+
+  // ── Division / partial payment ─────────────────────────────────────────
+  const [divisaoPessoas, setDivisaoPessoas] = useState(1);
+  const [selectedItemIds, setSelectedItemIds] = useState(new Set<string>());
+  const [paidAmount, setPaidAmount] = useState(0);
 
   const deferredSearchValue = useDeferredValue(searchValue);
   const websocketUrl =
     process.env.NEXT_PUBLIC_WEBSOCKET_URL ?? "http://localhost:4000";
 
-  useEffect(() => {
-    if (selectedTableId || tables.length === 0) {
-      return;
-    }
-
-    setSelectedTableId(tables[0].table.id);
-  }, [selectedTableId, tables]);
-
-  const syncTables = useCallback(async () => {
-    const response = await fetch(`/api/comandas/${slug}`, {
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      return;
-    }
-
-    const updatedTables = (await response.json()) as MesaComanda[];
-    setTables(updatedTables);
-  }, [slug]);
-
-  useEffect(() => {
-    const socket = io(websocketUrl, {
-      transports: ["websocket"],
-    });
-
-    const handleConnect = () => {
-      socket.emit("JOIN_RESTAURANT_ROOM", slug);
-    };
-
-    const handleOrderEvent = async (payload: { restaurantSlug: string }) => {
-      if (payload.restaurantSlug !== slug) {
-        return;
-      }
-
-      await syncTables();
-    };
-
-    socket.on("connect", handleConnect);
-    socket.on("NEW_ORDER", handleOrderEvent);
-    socket.on("ORDER_UPDATED", handleOrderEvent);
-
-    return () => {
-      socket.off("connect", handleConnect);
-      socket.off("NEW_ORDER", handleOrderEvent);
-      socket.off("ORDER_UPDATED", handleOrderEvent);
-      socket.disconnect();
-    };
-  }, [slug, syncTables, websocketUrl]);
-
+  // ── Derived state (declared before effects that depend on them) ────────
   const selectedMesa = useMemo(() => {
     return tables.find((mesa) => mesa.table.id === selectedTableId) ?? null;
   }, [selectedTableId, tables]);
@@ -202,6 +190,105 @@ const ComandaDigital = ({
       return accumulator + item.quantity;
     }, 0) ?? 0;
 
+  const transferTargetTables = useMemo(
+    () =>
+      tables.filter(
+        (m) => !m.currentOrder && m.table.id !== selectedMesa?.table.id,
+      ),
+    [tables, selectedMesa?.table.id],
+  );
+
+  const orderTotal = selectedMesa?.currentOrder?.total ?? 0;
+  const remainingAmount = Math.max(
+    Number((orderTotal - paidAmount).toFixed(2)),
+    0,
+  );
+
+  const selectedItemsTotal = useMemo(
+    () =>
+      selectedMesa?.currentOrder?.orderProducts
+        .filter((item) => selectedItemIds.has(item.id))
+        .reduce((acc, item) => acc + item.lineTotal, 0) ?? 0,
+    [selectedMesa?.currentOrder?.orderProducts, selectedItemIds],
+  );
+
+  const valorPorPessoa =
+    divisaoPessoas > 0
+      ? Number((remainingAmount / divisaoPessoas).toFixed(2))
+      : remainingAmount;
+
+  // ── Auto-select first table ────────────────────────────────────────────
+  useEffect(() => {
+    if (selectedTableId || tables.length === 0) {
+      return;
+    }
+    setSelectedTableId(tables[0].table.id);
+  }, [selectedTableId, tables]);
+
+  // ── Load existing partial payments when active order changes ───────────
+  const activeOrderId = selectedMesa?.currentOrder?.id;
+
+  useEffect(() => {
+    setSelectedItemIds(new Set());
+    setDivisaoPessoas(1);
+
+    if (!activeOrderId) {
+      setPaidAmount(0);
+      return;
+    }
+
+    let cancelled = false;
+    void buscarPagamentosParciaisAction(activeOrderId).then(({ totalPago }) => {
+      if (!cancelled) setPaidAmount(totalPago);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeOrderId]);
+
+  // ── WebSocket sync ─────────────────────────────────────────────────────
+  const syncTables = useCallback(async () => {
+    const response = await fetch(`/api/comandas/${slug}`, {
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return;
+    }
+
+    const updatedTables = (await response.json()) as MesaComanda[];
+    setTables(updatedTables);
+  }, [slug]);
+
+  useEffect(() => {
+    const socket = io(websocketUrl, {
+      transports: ["websocket"],
+    });
+
+    const handleConnect = () => {
+      socket.emit("JOIN_RESTAURANT_ROOM", slug);
+    };
+
+    const handleOrderEvent = async (payload: { restaurantSlug: string }) => {
+      if (payload.restaurantSlug !== slug) {
+        return;
+      }
+      await syncTables();
+    };
+
+    socket.on("connect", handleConnect);
+    socket.on("NEW_ORDER", handleOrderEvent);
+    socket.on("ORDER_UPDATED", handleOrderEvent);
+
+    return () => {
+      socket.off("connect", handleConnect);
+      socket.off("NEW_ORDER", handleOrderEvent);
+      socket.off("ORDER_UPDATED", handleOrderEvent);
+      socket.disconnect();
+    };
+  }, [slug, syncTables, websocketUrl]);
+
+  // ── Local optimistic update helper ─────────────────────────────────────
   const updateMesaOrder = (updatedOrder: PedidoRecebimento) => {
     setTables((currentTables) =>
       currentTables.map((mesa) =>
@@ -219,6 +306,16 @@ const ComandaDigital = ({
     );
   };
 
+  const toggleSelectedItem = (itemId: string) => {
+    setSelectedItemIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(itemId)) next.delete(itemId);
+      else next.add(itemId);
+      return next;
+    });
+  };
+
+  // ── Action handlers ────────────────────────────────────────────────────
   const handleOpenTable = () => {
     if (!selectedMesa) {
       return;
@@ -303,6 +400,8 @@ const ComandaDigital = ({
         });
 
         updateMesaOrder(order);
+        setPaidAmount(0);
+        setSelectedItemIds(new Set());
         setFeedback({
           type: "success",
           message: `Conta da ${selectedMesa.table.name} encerrada em ${formatCurrency(order.total)}.`,
@@ -319,8 +418,91 @@ const ComandaDigital = ({
     });
   };
 
+  const handleTransferirMesa = () => {
+    if (!selectedMesa?.currentOrder || !targetTableId) return;
+    setFeedback(null);
+
+    const orderId = selectedMesa.currentOrder.id;
+    const oldTableId = selectedMesa.table.id;
+    const newTableId = targetTableId;
+    const newTableName =
+      tables.find((m) => m.table.id === newTableId)?.table.name ?? "nova mesa";
+
+    startTransition(async () => {
+      try {
+        const updatedOrder = await transferirMesaAction({
+          slug,
+          orderId,
+          novoTableId: newTableId,
+        });
+
+        setTables((currentTables) =>
+          currentTables.map((mesa) => {
+            if (mesa.table.id === oldTableId)
+              return { ...mesa, currentOrder: null };
+            if (mesa.table.id === newTableId)
+              return { ...mesa, currentOrder: updatedOrder };
+            return mesa;
+          }),
+        );
+        setSelectedTableId(newTableId);
+        setIsTransferOpen(false);
+        setTargetTableId("");
+        setFeedback({
+          type: "success",
+          message: `Comanda transferida para ${newTableName} com sucesso.`,
+        });
+      } catch (error) {
+        setFeedback({
+          type: "error",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Nao foi possivel transferir a comanda.",
+        });
+      }
+    });
+  };
+
+  const handlePagamentoParcial = (
+    paymentMethod: Extract<PaymentMethod, "DINHEIRO" | "CARTAO_PRESENCIAL">,
+  ) => {
+    if (!selectedMesa?.currentOrder || selectedItemsTotal <= 0) return;
+    setFeedback(null);
+
+    const orderId = selectedMesa.currentOrder.id;
+    const amount = Number(selectedItemsTotal.toFixed(2));
+
+    startTransition(async () => {
+      try {
+        const result = await registrarPagamentoParcialAction({
+          slug,
+          orderId,
+          amount,
+          paymentMethod,
+        });
+
+        setPaidAmount((prev) => Number((prev + result.amountPaid).toFixed(2)));
+        setSelectedItemIds(new Set());
+        setFeedback({
+          type: "success",
+          message: `Pagamento parcial de ${formatCurrency(result.amountPaid)} registrado.`,
+        });
+      } catch (error) {
+        setFeedback({
+          type: "error",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Nao foi possivel registrar o pagamento parcial.",
+        });
+      }
+    });
+  };
+
   return (
     <section className="space-y-4">
+      {/* ── Page header ─────────────────────────────────────────────── */}
       <Card className="border-white/80 bg-white/85">
         <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -342,7 +524,9 @@ const ComandaDigital = ({
                 <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
                   Mesas livres
                 </p>
-                <p className="mt-1 font-display text-xl">{String(freeTables)}</p>
+                <p className="mt-1 font-display text-xl">
+                  {String(freeTables)}
+                </p>
               </CardContent>
             </Card>
             <Card className="bg-slate-950 text-white">
@@ -370,6 +554,7 @@ const ComandaDigital = ({
       </Card>
 
       <div className="grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)]">
+        {/* ── Table list sidebar ──────────────────────────────────────── */}
         <Card className="xl:sticky xl:top-4 xl:self-start">
           <CardHeader className="pb-3">
             <CardTitle>Mesas</CardTitle>
@@ -446,9 +631,11 @@ const ComandaDigital = ({
           </CardContent>
         </Card>
 
+        {/* ── Main panel ─────────────────────────────────────────────── */}
         <div className="space-y-4">
           {selectedMesa ? (
             <>
+              {/* Selected table header card */}
               <Card className="border-white/80 bg-slate-950 text-white">
                 <CardHeader>
                   <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -469,6 +656,22 @@ const ComandaDigital = ({
                           ? `Comanda aberta em ${formatDateTime(selectedMesa.currentOrder.createdAt)}`
                           : "Abra a mesa para comecar a lancar itens."}
                       </CardDescription>
+
+                      {selectedMesa.currentOrder && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-3 gap-1.5 border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                          onClick={() => {
+                            setTargetTableId("");
+                            setIsTransferOpen(true);
+                          }}
+                          disabled={isPending}
+                        >
+                          <ArrowLeftRightIcon size={13} />
+                          Transferir mesa
+                        </Button>
+                      )}
                     </div>
 
                     <div className="grid gap-2 sm:grid-cols-2">
@@ -498,6 +701,7 @@ const ComandaDigital = ({
               </Card>
 
               {!selectedMesa.currentOrder ? (
+                /* Open table form */
                 <Card>
                   <CardHeader>
                     <CardTitle>Abrir mesa</CardTitle>
@@ -533,7 +737,9 @@ const ComandaDigital = ({
                   </CardContent>
                 </Card>
               ) : (
+                /* Active order panels */
                 <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_340px]">
+                  {/* Product launcher */}
                   <div className="space-y-3">
                     <Card>
                       <CardHeader className="pb-3">
@@ -623,9 +829,7 @@ const ComandaDigital = ({
                                       (product.trackInventory &&
                                         product.stockQuantity <= 0)
                                     }
-                                    onClick={() =>
-                                      handleAddProduct(product.id)
-                                    }
+                                    onClick={() => handleAddProduct(product.id)}
                                   >
                                     <PlusIcon size={14} />
                                   </Button>
@@ -638,6 +842,7 @@ const ComandaDigital = ({
                     </Card>
                   </div>
 
+                  {/* Bill panel */}
                   <div className="space-y-4">
                     <Card>
                       <CardHeader className="pb-3">
@@ -647,6 +852,7 @@ const ComandaDigital = ({
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-3">
+                        {/* Customer */}
                         <div className="rounded-lg border bg-slate-50 px-3 py-2">
                           <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
                             Cliente
@@ -656,6 +862,7 @@ const ComandaDigital = ({
                           </p>
                         </div>
 
+                        {/* Item list with checkboxes for partial payment */}
                         <div className="space-y-1.5">
                           {selectedMesa.currentOrder.orderProducts.length ===
                           0 ? (
@@ -668,35 +875,54 @@ const ComandaDigital = ({
                               </p>
                             </div>
                           ) : (
-                            selectedMesa.currentOrder.orderProducts.map(
-                              (item) => (
-                                <div
-                                  key={item.id}
-                                  className="flex items-center justify-between gap-2 rounded-lg border bg-slate-50/80 px-3 py-2"
-                                >
-                                  <div className="min-w-0">
-                                    <p className="truncate text-sm font-medium text-slate-950">
-                                      {item.product.name}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {String(item.quantity)} ×{" "}
-                                      {formatCurrency(item.price)}
-                                    </p>
-                                    {item.notes && (
-                                      <p className="mt-0.5 text-xs italic text-amber-600/80">
-                                        {item.notes}
+                            <>
+                              <p className="text-xs text-muted-foreground">
+                                Marque itens para divisao parcial
+                              </p>
+                              {selectedMesa.currentOrder.orderProducts.map(
+                                (item) => (
+                                  <div
+                                    key={item.id}
+                                    className={`flex items-center gap-2.5 rounded-lg border px-3 py-2 transition ${
+                                      selectedItemIds.has(item.id)
+                                        ? "border-amber-300 bg-amber-50"
+                                        : "border-border bg-slate-50/80"
+                                    }`}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedItemIds.has(item.id)}
+                                      onChange={() =>
+                                        toggleSelectedItem(item.id)
+                                      }
+                                      disabled={isPending}
+                                      className="h-4 w-4 shrink-0 cursor-pointer rounded accent-amber-500"
+                                    />
+                                    <div className="min-w-0 flex-1">
+                                      <p className="truncate text-sm font-medium text-slate-950">
+                                        {item.product.name}
                                       </p>
-                                    )}
+                                      <p className="text-xs text-muted-foreground">
+                                        {String(item.quantity)} ×{" "}
+                                        {formatCurrency(item.price)}
+                                      </p>
+                                      {item.notes && (
+                                        <p className="mt-0.5 text-xs italic text-amber-600/80">
+                                          {item.notes}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <p className="shrink-0 text-sm font-semibold text-slate-950">
+                                      {formatCurrency(item.lineTotal)}
+                                    </p>
                                   </div>
-                                  <p className="shrink-0 text-sm font-semibold text-slate-950">
-                                    {formatCurrency(item.lineTotal)}
-                                  </p>
-                                </div>
-                              ),
-                            )
+                                ),
+                              )}
+                            </>
                           )}
                         </div>
 
+                        {/* Total block */}
                         <div className="rounded-xl border bg-slate-950 p-3 text-white">
                           <div className="flex items-center justify-between text-xs text-slate-300">
                             <span>Itens lancados</span>
@@ -714,6 +940,123 @@ const ComandaDigital = ({
                           </div>
                         </div>
 
+                        {/* ── Division section ──────────────────────── */}
+                        {selectedMesa.currentOrder.orderProducts.length >
+                          0 && (
+                          <div className="space-y-3 rounded-xl border p-3">
+                            <div className="flex items-center gap-1.5">
+                              <ScissorsIcon
+                                size={13}
+                                className="text-muted-foreground"
+                              />
+                              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                                Opcoes de divisao
+                              </p>
+                            </div>
+
+                            {/* A) Division by people */}
+                            <div>
+                              <label className="mb-1.5 block text-xs font-medium">
+                                Dividir por pessoas
+                              </label>
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={50}
+                                  value={divisaoPessoas}
+                                  onChange={(e) =>
+                                    setDivisaoPessoas(
+                                      Math.max(1, Number(e.target.value) || 1),
+                                    )
+                                  }
+                                  className="h-8 w-20 text-center"
+                                />
+                                <span className="text-xs text-muted-foreground">
+                                  pessoas
+                                </span>
+                                <span className="ml-auto text-sm font-semibold text-slate-900">
+                                  {formatCurrency(valorPorPessoa)} / pessoa
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* B) Partial by selected items */}
+                            {selectedItemIds.size > 0 ? (
+                              <div className="rounded-lg border border-amber-200 bg-amber-50 p-2.5">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-medium text-amber-800">
+                                    {selectedItemIds.size} item(s)
+                                    selecionado(s)
+                                  </span>
+                                  <span className="text-sm font-semibold text-amber-900">
+                                    {formatCurrency(selectedItemsTotal)}
+                                  </span>
+                                </div>
+                                <p className="mt-1 text-xs text-amber-700">
+                                  Registra pagamento parcial sem encerrar a
+                                  comanda.
+                                </p>
+                                <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
+                                  <Button
+                                    size="sm"
+                                    disabled={isPending}
+                                    onClick={() =>
+                                      handlePagamentoParcial("DINHEIRO")
+                                    }
+                                    className="gap-1.5"
+                                  >
+                                    <BanknoteIcon size={13} />
+                                    Parcial dinheiro
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={isPending}
+                                    onClick={() =>
+                                      handlePagamentoParcial(
+                                        "CARTAO_PRESENCIAL",
+                                      )
+                                    }
+                                    className="gap-1.5"
+                                  >
+                                    <CreditCardIcon size={13} />
+                                    Parcial cartao
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="text-xs text-muted-foreground">
+                                Marque itens acima para registrar um pagamento
+                                parcial.
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Already paid / remaining balance */}
+                        {paidAmount > 0 && (
+                          <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5">
+                            <div>
+                              <p className="text-xs font-medium text-emerald-800">
+                                Ja pago
+                              </p>
+                              <p className="font-display text-base font-semibold text-emerald-700">
+                                {formatCurrency(paidAmount)}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs font-medium text-slate-700">
+                                Saldo restante a pagar
+                              </p>
+                              <p className="font-display text-lg font-semibold text-slate-900">
+                                {formatCurrency(remainingAmount)}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Payment buttons (unchanged) */}
                         <div className="grid gap-2 sm:grid-cols-2">
                           <Button
                             disabled={isPending}
@@ -767,6 +1110,65 @@ const ComandaDigital = ({
           ) : null}
         </div>
       </div>
+
+      {/* ── Transfer dialog ──────────────────────────────────────────────── */}
+      <Dialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Transferir mesa</DialogTitle>
+            <DialogDescription>
+              Selecione a mesa de destino. Apenas mesas livres estao
+              disponiveis.
+            </DialogDescription>
+          </DialogHeader>
+
+          {transferTargetTables.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              Nenhuma mesa livre disponivel para transferencia no momento.
+            </p>
+          ) : (
+            <Select value={targetTableId} onValueChange={setTargetTableId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione a mesa destino..." />
+              </SelectTrigger>
+              <SelectContent>
+                {transferTargetTables.map((mesa) => (
+                  <SelectItem key={mesa.table.id} value={mesa.table.id}>
+                    {mesa.table.name} — {String(mesa.table.seats)} lugares
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsTransferOpen(false)}
+              disabled={isPending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleTransferirMesa}
+              disabled={
+                !targetTableId ||
+                isPending ||
+                transferTargetTables.length === 0
+              }
+            >
+              {isPending ? (
+                <>
+                  <Loader2Icon className="animate-spin" size={14} />
+                  Transferindo...
+                </>
+              ) : (
+                "Confirmar transferencia"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 };

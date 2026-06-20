@@ -16,6 +16,7 @@ import type { CategoriaComProdutos } from "@/lib/admin-queries";
 import type { Product } from "@fsw/db";
 
 import { ProductOptionsManager } from "./product-options-manager";
+import { RecipeManager } from "./recipe-manager";
 
 interface ProductFormProps {
   slug: string;
@@ -287,6 +288,7 @@ export function ProductForm({ slug, categories, defaultValues, onSuccess }: Prod
     <Tabs defaultValue="details">
       <TabsList className="mb-4 w-full">
         <TabsTrigger value="details" className="flex-1">Detalhes</TabsTrigger>
+        <TabsTrigger value="recipe" className="flex-1">Ficha Técnica</TabsTrigger>
         <TabsTrigger value="options" className="flex-1">Adicionais</TabsTrigger>
       </TabsList>
 
@@ -297,6 +299,10 @@ export function ProductForm({ slug, categories, defaultValues, onSuccess }: Prod
           defaultValues={defaultValues}
           onSuccess={onSuccess}
         />
+      </TabsContent>
+
+      <TabsContent value="recipe">
+        <RecipeManager slug={slug} productId={defaultValues.id} />
       </TabsContent>
 
       <TabsContent value="options">

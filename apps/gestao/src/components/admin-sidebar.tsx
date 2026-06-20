@@ -7,6 +7,7 @@ import {
   ChevronRightIcon,
   CircleDollarSignIcon,
   ClipboardListIcon,
+  ConciergeBellIcon,
   LayoutGridIcon,
   MonitorSmartphoneIcon,
   SparklesIcon,
@@ -35,6 +36,7 @@ const navigationGroups = [
       { href: "comandas", label: "Comandas", icon: UsersRoundIcon },
       { href: "mesas", label: "Mesas", icon: LayoutGridIcon },
       { href: "pedidos", label: "Pedidos", icon: ClipboardListIcon },
+      { href: "kds", label: "KDS", icon: ConciergeBellIcon },
     ],
   },
   {

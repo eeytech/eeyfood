@@ -595,6 +595,19 @@ export const stockMovementsTable = pgTable("StockMovement", {
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
+export const recipeItemsTable = pgTable("RecipeItem", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  productId: uuid("productId")
+    .notNull()
+    .references(() => productsTable.id, { onDelete: "cascade" }),
+  inventoryItemId: uuid("inventoryItemId")
+    .notNull()
+    .references(() => inventoryItemsTable.id, { onDelete: "cascade" }),
+  quantityNeeded: doublePrecision("quantityNeeded").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
 export const financialClosingsTable = pgTable("FinancialClosing", {
   id: uuid("id").defaultRandom().primaryKey(),
   restaurantId: uuid("restaurantId")
@@ -735,6 +748,7 @@ export const productsRelations = relations(productsTable, ({ one, many }) => ({
   orderProducts: many(orderProductsTable),
   stockMovements: many(stockMovementsTable),
   optionGroupLinks: many(productToOptionGroupsTable),
+  recipeItems: many(recipeItemsTable),
 }));
 
 export const productOptionGroupsRelations = relations(
@@ -876,6 +890,18 @@ export const inventoryItemsRelations = relations(inventoryItemsTable, ({ one, ma
     references: [restaurantsTable.id],
   }),
   stockMovements: many(stockMovementsTable),
+  recipeItems: many(recipeItemsTable),
+}));
+
+export const recipeItemsRelations = relations(recipeItemsTable, ({ one }) => ({
+  product: one(productsTable, {
+    fields: [recipeItemsTable.productId],
+    references: [productsTable.id],
+  }),
+  inventoryItem: one(inventoryItemsTable, {
+    fields: [recipeItemsTable.inventoryItemId],
+    references: [inventoryItemsTable.id],
+  }),
 }));
 
 export const stockMovementsRelations = relations(

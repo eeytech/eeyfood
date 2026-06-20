@@ -39,6 +39,7 @@ const TAB_LABELS: Record<string, string> = {
   logistica: "Logística e Entregadores",
   marketing: "Marketing — Cupons e Cashback",
   pagamentos: "Pagamentos e Custos",
+  dre: "DRE — Demonstrativo de Resultado do Exercício",
 };
 
 interface ExportPDFButtonProps {
@@ -259,6 +260,99 @@ const ExportPDFButton = ({ data, activeTab, from, to }: ExportPDFButtonProps) =>
         styles: { fontSize: 9 },
         headStyles: { fillColor: HEAD },
         columnStyles: { 3: { halign: "right" } },
+      });
+    }
+
+    // ── DRE FINANCEIRO ────────────────────────────────────────────────────────
+    if (activeTab === "dre") {
+      const revenueTransactions = data.financialBreakdown.filter((f) => f.type === "REVENUE");
+      const expenseTransactions = data.financialBreakdown.filter((f) => f.type === "EXPENSE");
+
+      const faturamentoPedidos = data.summary.grossRevenue;
+      const receitasAvulsas = revenueTransactions.reduce((s, f) => s + f.total, 0);
+      const receitaBrutaTotal = faturamentoPedidos + receitasAvulsas;
+
+      const cmv = data.summary.estimatedCost;
+      const margemContribuicao = receitaBrutaTotal - cmv;
+
+      const totalDespesas = expenseTransactions.reduce((s, f) => s + f.total, 0);
+      const resultadoLiquido = margemContribuicao - totalDespesas;
+
+      const base = receitaBrutaTotal;
+      const vertPct = (v: number) =>
+        base === 0 ? "—" : `${((v / base) * 100).toFixed(1)}%`;
+      const fmtDeduction = (v: number) => `(${fmt(v)})`;
+
+      const dreBody: (string | number)[][] = [
+        // Section: Receita
+        ["1. RECEITA OPERACIONAL BRUTA", "", ""],
+        [`   (+) Faturamento de Pedidos`, fmt(faturamentoPedidos), vertPct(faturamentoPedidos)],
+        ...revenueTransactions.map((f) => [
+          `   (+) ${f.categoryName ?? "Receitas Avulsas"}`,
+          fmt(f.total),
+          vertPct(f.total),
+        ]),
+        ["(=) RECEITA BRUTA TOTAL", fmt(receitaBrutaTotal), "100,0%"],
+
+        // Section: CMV
+        ["2. CUSTO DE MERCADORIA VENDIDA", "", ""],
+        ["   (−) CMV — Custo estimado dos produtos", fmtDeduction(cmv), vertPct(cmv)],
+        [
+          "(=) MARGEM DE CONTRIBUIÇÃO",
+          margemContribuicao < 0 ? fmtDeduction(Math.abs(margemContribuicao)) : fmt(margemContribuicao),
+          vertPct(Math.abs(margemContribuicao)),
+        ],
+
+        // Section: Despesas
+        ["3. DESPESAS OPERACIONAIS", "", ""],
+        ...expenseTransactions.map((f) => [
+          `   (−) ${f.categoryName ?? "Despesas Gerais"}`,
+          fmtDeduction(f.total),
+          vertPct(f.total),
+        ]),
+        ["(=) TOTAL DE DESPESAS OPERACIONAIS", fmtDeduction(totalDespesas), vertPct(totalDespesas)],
+
+        // Resultado
+        [
+          "(=) RESULTADO LÍQUIDO (EBITDA)",
+          resultadoLiquido < 0 ? fmtDeduction(Math.abs(resultadoLiquido)) : fmt(resultadoLiquido),
+          vertPct(Math.abs(resultadoLiquido)),
+        ],
+      ];
+
+      const isProfit = resultadoLiquido >= 0;
+      const resultColor: [number, number, number] = isProfit ? [5, 150, 105] : [220, 38, 38];
+
+      autoTable(doc, {
+        startY: y,
+        head: [["Descrição", "Valor (R$)", "A.V.%"]],
+        body: dreBody,
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: HEAD },
+        columnStyles: { 1: { halign: "right" }, 2: { halign: "right" } },
+        didParseCell: (hookData) => {
+          const { row, cell } = hookData;
+          const label = String(dreBody[row.index]?.[0] ?? "");
+          const isSectionHeader =
+            label.startsWith("1.") || label.startsWith("2.") || label.startsWith("3.");
+          const isSubtotal = label.startsWith("(=)");
+          const isResult = label === "(=) RESULTADO LÍQUIDO (EBITDA)";
+
+          if (isSectionHeader) {
+            cell.styles.fontStyle = "bold";
+            cell.styles.fillColor = [241, 245, 249];
+            cell.styles.textColor = [100, 116, 139];
+            cell.styles.fontSize = 8;
+          } else if (isResult) {
+            cell.styles.fontStyle = "bold";
+            cell.styles.fillColor = isProfit ? [236, 253, 245] : [254, 242, 242];
+            cell.styles.textColor = resultColor;
+            cell.styles.fontSize = 10;
+          } else if (isSubtotal) {
+            cell.styles.fontStyle = "bold";
+            cell.styles.fillColor = [248, 250, 252];
+          }
+        },
       });
     }
 

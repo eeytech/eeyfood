@@ -21,6 +21,7 @@ import {
   paymentMethodEnum,
   paymentStatusEnum,
   productsTable,
+  recipeItemsTable,
   restaurantsTable,
   restaurantStatusEnum,
   operatingHoursTable,
@@ -122,6 +123,9 @@ export type UnitOfMeasure = (typeof unitOfMeasureEnum.enumValues)[number];
 
 export type FinancialClosing = InferSelectModel<typeof financialClosingsTable>;
 export type NewFinancialClosing = InferInsertModel<typeof financialClosingsTable>;
+
+export type RecipeItem = InferSelectModel<typeof recipeItemsTable>;
+export type NewRecipeItem = InferInsertModel<typeof recipeItemsTable>;
 
 export type OperatingHours = InferSelectModel<typeof operatingHoursTable>;
 export type NewOperatingHours = InferInsertModel<typeof operatingHoursTable>;

@@ -21,6 +21,8 @@ const PdvPage = async ({ params }: PdvPageProps) => {
     <PdvFrenteCaixa
       slug={slug}
       restaurantName={cardapio.restaurant.name}
+      isCashbackEnabled={cardapio.restaurant.isCashbackEnabled}
+      isCouponsEnabled={cardapio.restaurant.isCouponsEnabled}
       products={cardapio.products.map((product) => ({
         id: product.id,
         name: product.name,

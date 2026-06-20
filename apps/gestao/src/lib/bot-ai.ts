@@ -1,9 +1,10 @@
 import {
   aiSettingsTable,
   buscarRestauranteComCardapioPorSlug,
-  criarPedido,
   db,
   eq,
+  restaurantsTable,
+  salvarCarrinhoAbandonado,
 } from "@fsw/db";
 import OpenAI from "openai";
 
@@ -21,18 +22,14 @@ export const processarMensagemBot = async ({
   customerName,
   messageText,
 }: ProcessarMensagemBotInput) => {
-  // 1. Buscar configurações de IA do restaurante
   const [aiSettings] = await db
     .select()
     .from(aiSettingsTable)
     .innerJoin(
-      (await import("@fsw/db")).restaurantsTable,
-      eq(
-        aiSettingsTable.restaurantId,
-        (await import("@fsw/db")).restaurantsTable.id,
-      ),
+      restaurantsTable,
+      eq(aiSettingsTable.restaurantId, restaurantsTable.id),
     )
-    .where(eq((await import("@fsw/db")).restaurantsTable.slug, slug))
+    .where(eq(restaurantsTable.slug, slug))
     .limit(1);
 
   if (
@@ -48,10 +45,8 @@ export const processarMensagemBot = async ({
   });
 
   const textToProcess = messageText || "";
-
   if (!textToProcess) return null;
 
-  // 3. Definir ferramentas para o OpenAI
   const tools: OpenAI.Chat.ChatCompletionTool[] = [
     {
       type: "function",
@@ -68,102 +63,142 @@ export const processarMensagemBot = async ({
     {
       type: "function",
       function: {
-        name: "criar_pedido",
-        description: "Cria um novo pedido para o cliente.",
+        name: "gerar_link_confirmacao",
+        description:
+          "Salva o carrinho do cliente e gera um link para que ele confirme o pedido no app, onde poderá ajustar opcionais, informar o endereço de entrega, escolher o pagamento e finalizar a compra.",
         parameters: {
           type: "object",
           properties: {
             itens: {
               type: "array",
+              description: "Lista de itens que o cliente deseja pedir",
               items: {
                 type: "object",
                 properties: {
                   produtoId: { type: "string", description: "ID do produto" },
+                  nomeProduto: { type: "string", description: "Nome do produto" },
                   quantidade: { type: "number", description: "Quantidade" },
+                  precoUnitario: {
+                    type: "number",
+                    description: "Preço unitário do produto em reais",
+                  },
                 },
-                required: ["produtoId", "quantidade"],
+                required: ["produtoId", "nomeProduto", "quantidade", "precoUnitario"],
               },
             },
             metodoConsumo: {
               type: "string",
               enum: ["DELIVERY", "TAKEAWAY", "DINE_IN"],
-              description: "Método de consumo",
-            },
-            metodoPagamento: {
-              type: "string",
-              enum: ["DINHEIRO", "CARTAO_PRESENCIAL", "MERCADO_PAGO"],
-              description: "Método de pagamento",
+              description: "Método de consumo preferido pelo cliente",
             },
           },
-          required: ["itens", "metodoConsumo", "metodoPagamento"],
+          required: ["itens", "metodoConsumo"],
         },
       },
     },
   ];
 
-  // 4. Interagir com OpenAI
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      {
-        role: "system",
-        content:
-          aiSettings.AiSettings.systemPrompt ||
-          "Você é um atendente virtual de delivery.",
-      },
-      {
-        role: "user",
-        content: `Cliente: ${customerName} (${customerPhone})\nMensagem: ${textToProcess}`,
-      },
-    ],
+  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+    {
+      role: "system",
+      content:
+        aiSettings.AiSettings.systemPrompt ||
+        "Você é um atendente virtual de delivery educado e eficiente. Ajude o cliente a escolher itens do cardápio e, quando ele confirmar os itens desejados, gere o link de confirmação do carrinho.",
+    },
+    {
+      role: "user",
+      content: `Cliente: ${customerName} (${customerPhone})\nMensagem: ${textToProcess}`,
+    },
+  ];
 
-    tools,
-  });
+  // Loop agêntico: permite que o modelo encadeie chamadas de ferramentas
+  // (ex.: listar_cardapio → gerar_link_confirmacao) em uma única interação.
+  const MAX_ITERATIONS = 5;
 
-  const message = response.choices[0].message;
+  for (let i = 0; i < MAX_ITERATIONS; i++) {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages,
+      tools,
+    });
 
-  if (message.tool_calls) {
-    for (const toolCall of message.tool_calls) {
-      if (toolCall.type === "function") {
-        const functionName = toolCall.function.name;
+    const assistantMessage = response.choices[0].message;
+    messages.push(assistantMessage);
 
-        if (functionName === "listar_cardapio") {
-          const cardapio = await buscarRestauranteComCardapioPorSlug(slug);
-          // Enviar cardapio de volta para o LLM ou formatar resposta
-          return `Aqui está nosso cardápio:\n${cardapio?.menuCategories
-            .map(
-              (c) =>
-                `*${c.name}*\n${c.products
-                  .map((p) => `- ${p.name} (ID: ${p.id}): R$ ${p.price}`)
-                  .join("\n")}`,
-            )
-            .join("\n\n")}`;
-        }
+    if (!assistantMessage.tool_calls || assistantMessage.tool_calls.length === 0) {
+      return assistantMessage.content;
+    }
 
-        if (functionName === "criar_pedido") {
-          const args = JSON.parse(toolCall.function.arguments) as {
-            itens: Array<{ produtoId: string; quantity: number }>;
-            metodoConsumo: "DELIVERY" | "TAKEAWAY" | "DINE_IN";
-            metodoPagamento: "DINHEIRO" | "CARTAO_PRESENCIAL" | "MERCADO_PAGO";
-          };
+    for (const toolCall of assistantMessage.tool_calls) {
+      if (toolCall.type !== "function") continue;
 
-          const order = await criarPedido({
-            customerName,
-            customerPhone,
-            slug,
-            consumptionMethod: args.metodoConsumo,
-            paymentMethod: args.metodoPagamento,
-            products: args.itens.map((i) => ({
-              id: i.produtoId,
-              quantity: i.quantity,
-            })),
+      const functionName = toolCall.function.name;
+      let toolResult = "";
+
+      if (functionName === "listar_cardapio") {
+        const cardapio = await buscarRestauranteComCardapioPorSlug(slug);
+        toolResult = cardapio
+          ? cardapio.menuCategories
+              .map(
+                (c) =>
+                  `*${c.name}*\n${c.products
+                    .map((p) => `- ${p.name} (ID: ${p.id}): R$ ${p.price}`)
+                    .join("\n")}`,
+              )
+              .join("\n\n")
+          : "Cardápio não disponível no momento.";
+      } else if (functionName === "gerar_link_confirmacao") {
+        const args = JSON.parse(toolCall.function.arguments) as {
+          itens: Array<{
+            produtoId: string;
+            nomeProduto: string;
+            quantidade: number;
+            precoUnitario: number;
+          }>;
+          metodoConsumo: "DELIVERY" | "TAKEAWAY" | "DINE_IN";
+        };
+
+        // sessionId por cliente — upsert garante um carrinho ativo por vez
+        const sessionId = `wa-${customerPhone}`;
+
+        const cart = await salvarCarrinhoAbandonado({
+          sessionId,
+          slug,
+          customerName,
+          customerPhone,
+          consumptionMethod: args.metodoConsumo,
+          products: args.itens.map((i) => ({
+            id: i.produtoId,
+            name: i.nomeProduto,
+            quantity: i.quantidade,
+            price: i.precoUnitario,
+          })),
+        });
+
+        if (!cart) {
+          toolResult = JSON.stringify({
+            erro: "Não foi possível criar o carrinho. Tente novamente.",
           });
-
-          return `Pedido #${order.id} criado com sucesso! Em breve você receberá atualizações.`;
+        } else {
+          const vendasUrl = process.env.VENDAS_URL || "http://localhost:3001";
+          const cartLink = `${vendasUrl}/${slug}/menu?cartId=${cart.id}`;
+          toolResult = JSON.stringify({
+            cartId: cart.id,
+            cartLink,
+            subtotal: cart.subtotal,
+            total: cart.total,
+            itemCount: cart.itemCount,
+          });
         }
       }
+
+      messages.push({
+        role: "tool",
+        tool_call_id: toolCall.id,
+        content: toolResult,
+      });
     }
   }
 
-  return message.content;
+  return null;
 };

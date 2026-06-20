@@ -1,13 +1,18 @@
 "use server";
 
 import {
+  and,
+  asc,
   buscarRestaurantePorSlug,
   companyVehiclesTable,
   couriersTable,
   db,
   despacharPedido,
   eq,
+  inArray,
+  isNotNull,
   listarCouriersPorSlug,
+  ordersTable,
   restaurantsTable,
 } from "@fsw/db";
 import { revalidatePath } from "next/cache";
@@ -177,6 +182,53 @@ export const dispatchOrderAction = async (orderId: number, courierId: string) =>
 
 export const getCouriersAction = async (slug: string) => {
   return listarCouriersPorSlug(slug);
+};
+
+export const buscarPedidosParaRoteirizadorAction = async (slug: string) => {
+  const restaurant = await getRestaurantOrThrow(slug);
+  return db
+    .select({
+      id: ordersTable.id,
+      customerName: ordersTable.customerName,
+      deliveryAddress: ordersTable.deliveryAddress,
+      deliveryLatitude: ordersTable.deliveryLatitude,
+      deliveryLongitude: ordersTable.deliveryLongitude,
+      total: ordersTable.total,
+    })
+    .from(ordersTable)
+    .where(
+      and(
+        eq(ordersTable.restaurantId, restaurant.id),
+        eq(ordersTable.status, "READY_FOR_PICKUP"),
+        eq(ordersTable.consumptionMethod, "DELIVERY"),
+        isNotNull(ordersTable.deliveryLatitude),
+        isNotNull(ordersTable.deliveryLongitude),
+      ),
+    )
+    .orderBy(asc(ordersTable.createdAt));
+};
+
+export const despacharLoteAction = async (
+  slug: string,
+  orderIds: number[],
+  courierId: string,
+): Promise<{ success: boolean }> => {
+  if (orderIds.length === 0) return { success: false };
+
+  await db
+    .update(ordersTable)
+    .set({
+      courierId,
+      status: "OUT_FOR_DELIVERY",
+      dispatchedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(inArray(ordersTable.id, orderIds));
+
+  revalidatePath(`/${slug}/pedidos`);
+  revalidatePath(`/${slug}/logistica`);
+
+  return { success: true };
 };
 
 export const createVehicleAction = async (slug: string, formData: FormData) => {

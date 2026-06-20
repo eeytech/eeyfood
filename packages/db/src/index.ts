@@ -85,6 +85,8 @@ export {
   productOptionsTable,
   productToOptionGroupsTable,
   productToOptionGroupsRelations,
+  recipeItemsRelations,
+  recipeItemsTable,
   restaurantsRelations,
   restaurantsTable,
   stockMovementTypeEnum,
@@ -158,4 +160,6 @@ export type {
   Wallet,
   LoyaltyRule,
   NewLoyaltyRule,
+  RecipeItem,
+  NewRecipeItem,
 } from "./types.js";

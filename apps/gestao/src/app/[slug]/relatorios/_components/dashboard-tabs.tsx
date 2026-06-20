@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { DashboardData } from "@/lib/admin-queries";
 
+import DreTab from "./dre-tab";
 import ExportPDFButton from "./export-pdf-button";
 import LogisticaTab from "./logistica-tab";
 import MarketingTab from "./marketing-tab";
@@ -18,6 +19,7 @@ const TABS = [
   { value: "logistica", label: "Logística" },
   { value: "marketing", label: "Marketing" },
   { value: "pagamentos", label: "Pagamentos" },
+  { value: "dre", label: "DRE Financeiro" },
 ] as const;
 
 type TabValue = (typeof TABS)[number]["value"];
@@ -66,6 +68,10 @@ const DashboardTabs = ({ data, from, to }: DashboardTabsProps) => {
 
       <TabsContent value="pagamentos" className="mt-4">
         <PagamentosTab data={data} />
+      </TabsContent>
+
+      <TabsContent value="dre" className="mt-4">
+        <DreTab data={data} />
       </TabsContent>
     </Tabs>
   );

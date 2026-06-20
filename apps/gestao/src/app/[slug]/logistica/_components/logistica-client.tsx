@@ -1,17 +1,5 @@
 "use client";
 
-import {
-  BikeIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  PencilIcon,
-  PlusIcon,
-  SearchIcon,
-  Trash2Icon,
-} from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-
 import { deleteCourierAction } from "@/app/[slug]/logistica-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,10 +21,36 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { CompanyVehicle, Courier, Restaurant } from "@fsw/db";
+import {
+  BikeIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  Loader2Icon,
+  MapIcon,
+  PencilIcon,
+  PlusIcon,
+  SearchIcon,
+  Trash2Icon,
+} from "lucide-react";
+import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 
 import { CourierForm } from "./courier-form";
 import { DeliveryParamsTab } from "./delivery-params-tab";
 import { VehiclesTab } from "./vehicles-tab";
+
+const MapaRoteirizador = dynamic(
+  () => import("./mapa-roteirizador").then((m) => m.MapaRoteirizador),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-[640px] items-center justify-center rounded-lg border bg-white/90 shadow-sm">
+        <Loader2Icon className="animate-spin text-muted-foreground" size={24} />
+      </div>
+    ),
+  },
+);
 
 interface LogisticaClientProps {
   slug: string;
@@ -178,12 +192,14 @@ export function LogisticaClient({
       {/* Abas principais */}
       <Tabs
         defaultValue={
-        initialTab === "vehicles"
-          ? "vehicles"
-          : initialTab === "params"
-            ? "params"
-            : "motoboys"
-      }
+          initialTab === "vehicles"
+            ? "vehicles"
+            : initialTab === "params"
+              ? "params"
+              : initialTab === "roteirizador"
+                ? "roteirizador"
+                : "motoboys"
+        }
         onValueChange={(tab) => {
           const params = new URLSearchParams();
           params.set("tab", tab);
@@ -194,6 +210,10 @@ export function LogisticaClient({
           <TabsTrigger value="motoboys">Motoboys</TabsTrigger>
           <TabsTrigger value="vehicles">Veículos da Empresa</TabsTrigger>
           <TabsTrigger value="params">Parâmetros</TabsTrigger>
+          <TabsTrigger value="roteirizador" className="gap-1.5">
+            <MapIcon size={13} />
+            Roteirizador
+          </TabsTrigger>
         </TabsList>
 
         {/* ── Aba Motoboys ── */}
@@ -447,6 +467,19 @@ export function LogisticaClient({
         {/* ── Aba Parâmetros ── */}
         <TabsContent value="params" className="mt-4">
           <DeliveryParamsTab slug={slug} restaurant={restaurant} />
+        </TabsContent>
+
+        {/* ── Aba Roteirizador ── */}
+        <TabsContent value="roteirizador" className="mt-4">
+          <div className="mb-3">
+            <h2 className="font-display text-base font-semibold">
+              Roteirizador de Entregas
+            </h2>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              Visualize pedidos prontos no mapa, selecione-os e atribua um motoboy em lote.
+            </p>
+          </div>
+          <MapaRoteirizador slug={slug} restaurant={restaurant} />
         </TabsContent>
       </Tabs>
     </div>

@@ -1,43 +1,91 @@
 import { aiSettingsTable, db, eq, restaurantsTable } from "@fsw/db";
 import axios from "axios";
 import { NextResponse } from "next/server";
+import OpenAI, { toFile } from "openai";
 
 import { processarMensagemBot } from "@/lib/bot-ai";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    
-    // Evolution API envia eventos como 'messages.upsert'
+
     if (body.event !== "messages.upsert") {
       return NextResponse.json({ ok: true });
     }
 
     const messageData = body.data;
+
+    // Ignora mensagens enviadas pelo próprio bot
+    if (messageData.key.fromMe) {
+      return NextResponse.json({ ok: true });
+    }
+
     const customerPhone = messageData.key.remoteJid.replace("@s.whatsapp.net", "");
     const customerName = messageData.pushName || "Cliente";
     const instanceName = body.instance;
-    
-    // Buscar qual restaurante pertence esta instância
+    const evolutionUrl = process.env.EVOLUTION_API_URL || "http://localhost:8080";
+
     const [aiSettings] = await db
       .select({
         slug: restaurantsTable.slug,
         evolutionApiKey: aiSettingsTable.evolutionApiKey,
+        openaiApiKey: aiSettingsTable.openaiApiKey,
+        isBotActive: aiSettingsTable.isBotActive,
       })
       .from(aiSettingsTable)
       .innerJoin(restaurantsTable, eq(aiSettingsTable.restaurantId, restaurantsTable.id))
       .where(eq(aiSettingsTable.evolutionInstanceName, instanceName))
       .limit(1);
 
-    if (!aiSettings) {
-      return NextResponse.json({ error: "Instância não configurada." }, { status: 404 });
+    if (!aiSettings || !aiSettings.isBotActive) {
+      return NextResponse.json({ ok: true });
     }
 
-    const messageText = messageData.message?.conversation || 
-                       messageData.message?.extendedTextMessage?.text || 
-                       "";
+    let messageText =
+      messageData.message?.conversation ||
+      messageData.message?.extendedTextMessage?.text ||
+      "";
 
-    // Chamar lógica de IA
+    // Intercepta mensagens de áudio/voz e transcreve via Whisper
+    const audioMessage =
+      messageData.message?.audioMessage || messageData.message?.pttMessage;
+
+    if (!messageText && audioMessage && aiSettings.openaiApiKey) {
+      try {
+        const mediaResponse = await axios.post<{ base64: string; mimetype: string }>(
+          `${evolutionUrl}/chat/getBase64FromMediaMessage/${instanceName}`,
+          { message: { key: messageData.key, message: messageData.message } },
+          { headers: { apikey: aiSettings.evolutionApiKey } },
+        );
+
+        const base64Data = mediaResponse.data.base64;
+        const mimeType = mediaResponse.data.mimetype || "audio/ogg";
+        const ext = mimeType.includes("mp4")
+          ? "mp4"
+          : mimeType.includes("mp3")
+            ? "mp3"
+            : "ogg";
+
+        const buffer = Buffer.from(base64Data, "base64");
+        const audioFile = await toFile(buffer, `audio.${ext}`, { type: mimeType });
+
+        const openai = new OpenAI({ apiKey: aiSettings.openaiApiKey });
+        const transcription = await openai.audio.transcriptions.create({
+          file: audioFile,
+          model: "whisper-1",
+          language: "pt",
+        });
+
+        messageText = transcription.text;
+      } catch (audioError) {
+        console.error("Erro ao transcrever áudio:", audioError);
+      }
+    }
+
+    if (!messageText) {
+      return NextResponse.json({ ok: true });
+    }
+
     const botResponse = await processarMensagemBot({
       slug: aiSettings.slug,
       customerPhone,
@@ -46,9 +94,6 @@ export async function POST(request: Request) {
     });
 
     if (botResponse) {
-      // Enviar resposta de volta via Evolution API
-      const evolutionUrl = process.env.EVOLUTION_API_URL || "http://localhost:8080";
-      
       await axios.post(
         `${evolutionUrl}/message/sendText/${instanceName}`,
         {
@@ -59,7 +104,7 @@ export async function POST(request: Request) {
           headers: {
             apikey: aiSettings.evolutionApiKey,
           },
-        }
+        },
       );
     }
 

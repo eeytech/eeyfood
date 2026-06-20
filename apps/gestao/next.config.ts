@@ -7,7 +7,7 @@ const __dirname = path.dirname(__filename);
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  transpilePackages: ["@fsw/db"],
+  transpilePackages: ["@fsw/db", "react-leaflet", "leaflet"],
   images: {
     remotePatterns: [{ hostname: "u9a6wmr3as.ufs.sh" }],
   },

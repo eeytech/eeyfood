@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNotNull, sql } from "drizzle-orm";
 
 import { db } from "./client.js";
 import { isRestaurantOpen } from "./restaurant-utils.js";
@@ -9,12 +9,14 @@ import {
   diningTablesTable,
   financialCategoriesTable,
   financialTransactionsTable,
+  inventoryItemsTable,
   menuCategoriesTable,
   operatingHoursTable,
   orderProductsTable,
   orderRatingsTable,
   ordersTable,
   productsTable,
+  recipeItemsTable,
   restaurantsTable,
   stockMovementsTable,
   walletsTable,
@@ -1338,6 +1340,44 @@ export const criarPedido = async (input: CriarPedidoInput): Promise<Order> => {
       });
     }
 
+    // Baixa proporcional de insumos via Ficha Técnica
+    for (const item of contexto.itens) {
+      const recipeItems = await tx
+        .select({
+          inventoryItemId: recipeItemsTable.inventoryItemId,
+          quantityNeeded: recipeItemsTable.quantityNeeded,
+          currentQuantity: inventoryItemsTable.currentQuantity,
+        })
+        .from(recipeItemsTable)
+        .innerJoin(
+          inventoryItemsTable,
+          eq(inventoryItemsTable.id, recipeItemsTable.inventoryItemId),
+        )
+        .where(eq(recipeItemsTable.productId, item.productId));
+
+      for (const ri of recipeItems) {
+        const totalConsumed = ri.quantityNeeded * item.quantity;
+        const prevQty = ri.currentQuantity;
+        const nextQty = prevQty - totalConsumed;
+
+        await tx
+          .update(inventoryItemsTable)
+          .set({ currentQuantity: nextQty, updatedAt: new Date() })
+          .where(eq(inventoryItemsTable.id, ri.inventoryItemId));
+
+        await tx.insert(stockMovementsTable).values({
+          restaurantId: contexto.restaurant.id,
+          inventoryItemId: ri.inventoryItemId,
+          orderId: order.id,
+          type: "OUT",
+          quantityDelta: -totalConsumed,
+          previousQuantity: prevQty,
+          currentQuantity: nextQty,
+          reason: `Venda automatica - Pedido #${String(order.id)}`,
+        });
+      }
+    }
+
     return order;
   });
 
@@ -1631,6 +1671,42 @@ export const adicionarItensComanda = async ({
           reason: `Lancamento na comanda ${table?.name ?? "mesa"} do pedido #${String(order.id)}`,
         });
       }
+
+      // Baixa proporcional de insumos via Ficha Técnica
+      const recipeItems = await tx
+        .select({
+          inventoryItemId: recipeItemsTable.inventoryItemId,
+          quantityNeeded: recipeItemsTable.quantityNeeded,
+          currentQuantity: inventoryItemsTable.currentQuantity,
+        })
+        .from(recipeItemsTable)
+        .innerJoin(
+          inventoryItemsTable,
+          eq(inventoryItemsTable.id, recipeItemsTable.inventoryItemId),
+        )
+        .where(eq(recipeItemsTable.productId, product.id));
+
+      for (const ri of recipeItems) {
+        const totalConsumed = ri.quantityNeeded * selectedProduct.quantity;
+        const prevQty = ri.currentQuantity;
+        const nextQty = prevQty - totalConsumed;
+
+        await tx
+          .update(inventoryItemsTable)
+          .set({ currentQuantity: nextQty, updatedAt: new Date() })
+          .where(eq(inventoryItemsTable.id, ri.inventoryItemId));
+
+        await tx.insert(stockMovementsTable).values({
+          restaurantId: order.restaurantId,
+          inventoryItemId: ri.inventoryItemId,
+          orderId: order.id,
+          type: "OUT",
+          quantityDelta: -totalConsumed,
+          previousQuantity: prevQty,
+          currentQuantity: nextQty,
+          reason: `Venda automatica - Comanda ${table?.name ?? "mesa"} - Pedido #${String(order.id)}`,
+        });
+      }
     }
 
     const updatedOrderProducts = await tx
@@ -1804,6 +1880,50 @@ export const atualizarStatusPedido = async ({
           quantityDelta: item.orderProduct.quantity,
           previousQuantity,
           currentQuantity,
+          reason: `Reposicao por cancelamento do pedido #${String(orderId)}`,
+        });
+      }
+
+      // Restaurar insumos de Ficha Técnica baixados neste pedido
+      const inventoryOutMovements = await tx
+        .select()
+        .from(stockMovementsTable)
+        .where(
+          and(
+            eq(stockMovementsTable.orderId, orderId),
+            eq(stockMovementsTable.type, "OUT"),
+            isNotNull(stockMovementsTable.inventoryItemId),
+          ),
+        );
+
+      for (const mov of inventoryOutMovements) {
+        if (!mov.inventoryItemId) continue;
+
+        const [invItem] = await tx
+          .select({ currentQuantity: inventoryItemsTable.currentQuantity })
+          .from(inventoryItemsTable)
+          .where(eq(inventoryItemsTable.id, mov.inventoryItemId))
+          .limit(1);
+
+        if (!invItem) continue;
+
+        const restoredQty = -mov.quantityDelta;
+        const prevQty = invItem.currentQuantity;
+        const nextQty = prevQty + restoredQty;
+
+        await tx
+          .update(inventoryItemsTable)
+          .set({ currentQuantity: nextQty, updatedAt: new Date() })
+          .where(eq(inventoryItemsTable.id, mov.inventoryItemId));
+
+        await tx.insert(stockMovementsTable).values({
+          restaurantId: updatedOrder.restaurantId,
+          inventoryItemId: mov.inventoryItemId,
+          orderId,
+          type: "IN",
+          quantityDelta: restoredQty,
+          previousQuantity: prevQty,
+          currentQuantity: nextQty,
           reason: `Reposicao por cancelamento do pedido #${String(orderId)}`,
         });
       }
