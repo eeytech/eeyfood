@@ -176,6 +176,13 @@
       "when": 1782015809875,
       "tag": "0024_zippy_vector",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1782065421307,
+      "tag": "0025_nervous_leper_queen",
+      "breakpoints": true
     }
   ]
 }
