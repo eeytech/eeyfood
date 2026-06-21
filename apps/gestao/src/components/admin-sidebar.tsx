@@ -96,7 +96,6 @@ const AdminSidebar = ({
   slug,
   companies,
   currentCompanyId,
-  userPermissions: _userPermissions,
 }: AdminSidebarProps) => {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);

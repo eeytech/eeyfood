@@ -12,7 +12,6 @@ import {
 import { useRef, useState, useTransition } from "react";
 import {
   importarExtratoOfxAction,
-  vincularTransacaoAction,
   ignorarLancamentoExtratoAction,
   criarTransacaoDeExtratoAction,
 } from "../actions";
@@ -29,7 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { BankAccount, BankStatement, BankStatementEntry, FinancialTransaction } from "@fsw/db";
+import type { BankAccount, BankStatement, BankStatementEntry } from "@fsw/db";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
@@ -85,22 +84,6 @@ export function ConciliacaoClient({ slug, contas }: ConciliacaoClientProps) {
           "Erro: " + (err instanceof Error ? err.message : "Falha ao importar extrato."),
         );
       }
-    });
-  };
-
-  const handleVincular = (entryId: string, transactionId: string) => {
-    startTransition(async () => {
-      await vincularTransacaoAction(slug, entryId, transactionId);
-      setExtratos((prev) =>
-        prev.map((ext) => ({
-          ...ext,
-          entries: ext.entries.map((en) =>
-            en.id === entryId
-              ? { ...en, status: "MATCHED" as const, matchedTransactionId: transactionId }
-              : en,
-          ),
-        })),
-      );
     });
   };
 

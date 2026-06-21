@@ -8,9 +8,8 @@ import {
 import { Users2Icon } from "lucide-react";
 import { notFound } from "next/navigation";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   classificarClientesRFMAction,
   listarClientesCRMAction,
@@ -32,14 +31,6 @@ const SEGMENT_LABELS: Record<string, string> = {
   RECOVERED: "Recuperados",
 };
 
-const SEGMENT_COLORS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  ALL: "default",
-  NEW: "default",
-  VIP: "default",
-  INACTIVE: "secondary",
-  AT_RISK: "destructive",
-  RECOVERED: "default",
-};
 
 async function getSegmentStats(restaurantId: string) {
   const rows = await db

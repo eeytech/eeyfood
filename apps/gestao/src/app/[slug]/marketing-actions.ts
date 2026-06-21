@@ -8,7 +8,6 @@ import {
   db,
   eq,
   marketingSettingsTable,
-  walletsTable,
   and,
 } from "@fsw/db";
 import axios from "axios";

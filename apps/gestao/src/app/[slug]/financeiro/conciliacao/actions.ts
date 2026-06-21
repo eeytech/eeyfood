@@ -7,9 +7,6 @@ import {
   vincularLinhaExtratoTransacao,
   ignorarLinhaExtrato,
   criarTransacaoFinanceira,
-  db,
-  eq,
-  financialTransactionsTable,
 } from "@fsw/db";
 import { revalidatePath } from "next/cache";
 import { getStringValue } from "@/lib/admin-form-utils";

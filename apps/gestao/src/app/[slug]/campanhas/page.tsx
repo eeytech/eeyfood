@@ -1,5 +1,4 @@
 import {
-  and,
   customersTable,
   db,
   eq,
@@ -12,7 +11,6 @@ import {
 } from "lucide-react";
 import { notFound } from "next/navigation";
 
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { dispararCampanhaAction } from "../marketing-actions";
 import { CampanhaForm } from "./campanha-form";

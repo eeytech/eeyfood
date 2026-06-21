@@ -11,7 +11,6 @@ import {
   atualizarRegraFrete,
   excluirRegraFrete,
   db,
-  deliveryFeeRulesTable,
   despacharPedido,
   eq,
   inArray,

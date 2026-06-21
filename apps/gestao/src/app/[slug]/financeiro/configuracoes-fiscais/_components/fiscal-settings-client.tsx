@@ -189,7 +189,7 @@ export function FiscalSettingsClient({
         <CardContent className="space-y-1 text-sm text-muted-foreground">
           <p>1. Configure o token FocusNFe e selecione o ambiente.</p>
           <p>2. Certifique-se de que os produtos possuem NCM e CFOP cadastrados.</p>
-          <p>3. Acesse o pedido em <strong>Pedidos</strong> e clique em <strong>"Emitir NFC-e"</strong>.</p>
+          <p>3. Acesse o pedido em <strong>Pedidos</strong> e clique em <strong>&ldquo;Emitir NFC-e&rdquo;</strong>.</p>
           <p>4. O sistema enviará a nota automaticamente e disponibilizará o link do DANFE.</p>
         </CardContent>
       </Card>
