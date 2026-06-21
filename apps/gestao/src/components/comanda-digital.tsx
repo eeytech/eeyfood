@@ -5,7 +5,6 @@ import type {
   PaymentMethod,
   PedidoRecebimento,
   TableReservation,
-  Waiter,
   WaitingQueueEntry,
   ComandaAvulsaComPedido,
 } from "@fsw/db";
@@ -102,7 +101,6 @@ interface ComandaDigitalProps {
   restaurantName: string;
   initialTables: MesaComanda[];
   products: ProdutoComanda[];
-  initialWaiters?: Waiter[];
   initialReservations?: TableReservation[];
   initialQueue?: WaitingQueueEntry[];
   initialComandasAvulsas?: ComandaAvulsaComPedido[];
@@ -176,7 +174,6 @@ const ComandaDigital = ({
   restaurantName,
   initialTables,
   products,
-  initialWaiters = [],
   initialReservations = [],
   initialQueue = [],
   initialComandasAvulsas = [],

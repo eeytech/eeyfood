@@ -19,7 +19,7 @@ interface ComandasPageProps {
 
 const ComandasPage = async ({ params }: ComandasPageProps) => {
   const { slug } = await params;
-  const [restaurant, cardapio, mesas, waiters, reservations, queue, avulsas] =
+  const [restaurant, cardapio, mesas, , reservations, queue, avulsas] =
     await Promise.all([
       buscarRestauranteParaGestao(slug),
       buscarCardapioGestao(slug),
@@ -49,7 +49,6 @@ const ComandasPage = async ({ params }: ComandasPageProps) => {
         trackInventory: product.trackInventory,
         stockQuantity: product.stockQuantity,
       }))}
-      initialWaiters={waiters}
       initialReservations={reservations}
       initialQueue={queue}
       initialComandasAvulsas={avulsas}
