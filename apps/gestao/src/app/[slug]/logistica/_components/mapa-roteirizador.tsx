@@ -295,7 +295,7 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
                           </Badge>
                         )}
                         {order.hasPizza && (
-                          <Badge variant="outline" className="border-orange-300 bg-orange-50 text-orange-700 text-[10px]">
+                          <Badge variant="warning" className="border-orange-300 bg-orange-50 text-orange-700 text-[10px]">
                             🍕 Mochila redonda
                           </Badge>
                         )}

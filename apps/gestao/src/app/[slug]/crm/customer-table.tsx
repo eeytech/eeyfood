@@ -17,12 +17,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-const SEGMENT_BADGES: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+const SEGMENT_BADGES: Record<string, { label: string; variant: "default" | "secondary" | "success" | "warning" | "danger" }> = {
   NEW: { label: "Novo", variant: "default" },
-  VIP: { label: "VIP", variant: "default" },
+  VIP: { label: "VIP", variant: "success" },
   INACTIVE: { label: "Inativo", variant: "secondary" },
-  AT_RISK: { label: "Em Risco", variant: "destructive" },
-  RECOVERED: { label: "Recuperado", variant: "outline" },
+  AT_RISK: { label: "Em Risco", variant: "danger" },
+  RECOVERED: { label: "Recuperado", variant: "warning" },
 };
 
 const formatCurrency = (value: number) =>
@@ -78,7 +78,7 @@ export function CustomerTable({ customers, total, page, pageSize, slug }: Custom
           </TableHeader>
           <TableBody>
             {customers.map((c) => {
-              const badge = SEGMENT_BADGES[c.segment] ?? { label: c.segment, variant: "outline" as const };
+              const badge = SEGMENT_BADGES[c.segment] ?? { label: c.segment, variant: "secondary" as const };
               return (
                 <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50">
                   <TableCell>

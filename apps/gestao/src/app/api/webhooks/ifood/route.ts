@@ -1,4 +1,5 @@
 import {
+  buscarRestaurantePorSlug,
   criarPedido,
   db,
   eq,

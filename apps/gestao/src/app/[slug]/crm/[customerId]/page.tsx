@@ -208,7 +208,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
                 {customer.interactions.map((interaction) => (
                   <div key={interaction.id} className="space-y-1 border-b pb-3 last:border-0 last:pb-0">
                     <div className="flex items-center justify-between">
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="secondary" className="text-xs">
                         {interaction.type === "CART_RECOVERY" ? "Recuperação" : interaction.type === "CAMPAIGN" ? "Campanha" : interaction.type}
                       </Badge>
                       <span className="text-xs text-muted-foreground">
@@ -256,7 +256,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
                           {formatDateTime(order.createdAt)}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={order.status === "CANCELLED" ? "destructive" : order.status === "FINISHED" ? "secondary" : "default"}>
+                          <Badge variant={order.status === "CANCELLED" ? "danger" : order.status === "FINISHED" ? "secondary" : "default"}>
                             {STATUS_LABELS[order.status] ?? order.status}
                           </Badge>
                         </TableCell>
