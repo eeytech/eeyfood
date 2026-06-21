@@ -3,17 +3,20 @@
 import {
   AlertTriangleIcon,
   BoxesIcon,
+  CalendarIcon,
   PackageIcon,
   PencilIcon,
   PlusIcon,
   ScanLineIcon,
   SearchIcon,
   Trash2Icon,
+  TriangleAlertIcon,
   WarehouseIcon,
 } from "lucide-react";
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 
-import { deleteInventoryItemAction, updateStockAction } from "@/app/[slug]/actions";
+import { criarLoteAction, deleteInventoryItemAction, registrarPerdaAction, updateStockAction } from "@/app/[slug]/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,6 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
 import {
   Table,
   TableBody,
@@ -35,8 +39,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { CardapioGestao } from "@/lib/admin-queries";
-import type { InventoryItem, InventoryItemType } from "@fsw/db";
+import type { CardapioGestao, LoteComInsumo, PerdaComInsumo } from "@/lib/admin-queries";
+import type { InventoryItem, InventoryItemType, InventoryLossReason } from "@fsw/db";
 
 import { InventoryFormDialog } from "./inventory-form-dialog";
 
@@ -46,7 +50,16 @@ interface EstoqueClientProps {
   slug: string;
   products: ProductWithCategory[];
   inventoryItems: InventoryItem[];
+  lotes: LoteComInsumo[];
+  perdas: PerdaComInsumo[];
 }
+
+const LOSS_REASON_LABELS: Record<InventoryLossReason, string> = {
+  VENCIDO: "Vencido",
+  DANIFICADO: "Danificado",
+  ESTRAGADO: "Estragado",
+  OUTROS: "Outros",
+};
 
 const TYPE_LABELS: Record<InventoryItemType, string> = {
   INSUMO: "Insumo",
@@ -64,7 +77,7 @@ const TYPE_VARIANTS: Record<InventoryItemType, "default" | "secondary" | "succes
   OUTROS: "secondary",
 };
 
-export function EstoqueClient({ slug, products, inventoryItems }: EstoqueClientProps) {
+export function EstoqueClient({ slug, products, inventoryItems, lotes, perdas }: EstoqueClientProps) {
   // ── Produto Cardápio state ─────────────────────────────────────────────────
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -78,6 +91,28 @@ export function EstoqueClient({ slug, products, inventoryItems }: EstoqueClientP
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [deleteConfirmItem, setDeleteConfirmItem] = useState<InventoryItem | null>(null);
   const [isDeleting, startDeleteTransition] = useTransition();
+
+  // ── Perdas state ───────────────────────────────────────────────────────────
+  const [lossDialogOpen, setLossDialogOpen] = useState(false);
+  const [isLossPending, startLossTransition] = useTransition();
+
+  // ── Lotes state ────────────────────────────────────────────────────────────
+  const [batchDialogOpen, setBatchDialogOpen] = useState(false);
+  const [isBatchPending, startBatchTransition] = useTransition();
+
+  // ── Batch/expiry helpers ───────────────────────────────────────────────────
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const sevenDaysLater = new Date(today);
+  sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
+
+  const getBatchStatus = (expirationDate: string | null) => {
+    if (!expirationDate) return "ok";
+    const exp = new Date(expirationDate);
+    if (exp < today) return "expired";
+    if (exp <= sevenDaysLater) return "warning";
+    return "ok";
+  };
 
   // ── Produto Cardápio helpers ──────────────────────────────────────────────
   const lowStockProducts = products.filter(
@@ -245,6 +280,149 @@ export function EstoqueClient({ slug, products, inventoryItems }: EstoqueClientP
         }}
       />
 
+      {/* Loss Registration Dialog */}
+      <Dialog open={lossDialogOpen} onOpenChange={setLossDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Registrar Desperdício</DialogTitle>
+            <DialogDescription>
+              Informe o insumo perdido. O estoque será reduzido e a despesa será lançada no financeiro.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.currentTarget);
+              startLossTransition(async () => {
+                const result = await registrarPerdaAction(slug, fd);
+                if (result.success) {
+                  toast.success("Perda registrada e estoque atualizado.");
+                  setLossDialogOpen(false);
+                } else {
+                  toast.error(result.error ?? "Erro ao registrar perda.");
+                }
+              });
+            }}
+            className="space-y-4"
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="loss-item">Insumo *</Label>
+              <select
+                id="loss-item"
+                name="inventoryItemId"
+                required
+                className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm"
+              >
+                <option value="">Selecione o insumo...</option>
+                {inventoryItems.map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.name} ({i.unitOfMeasure}) — Qtd atual: {i.currentQuantity}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="loss-qty">Quantidade perdida *</Label>
+                <Input id="loss-qty" name="quantity" type="number" min="0.001" step="0.001" required placeholder="Ex.: 2.5" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="loss-reason">Motivo *</Label>
+                <select
+                  id="loss-reason"
+                  name="reason"
+                  required
+                  className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm"
+                >
+                  {(Object.keys(LOSS_REASON_LABELS) as InventoryLossReason[]).map((r) => (
+                    <option key={r} value={r}>{LOSS_REASON_LABELS[r]}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="loss-notes">Observação</Label>
+              <Input id="loss-notes" name="notes" placeholder="Detalhe opcional sobre a perda..." />
+            </div>
+            <Button type="submit" className="w-full" disabled={isLossPending}>
+              {isLossPending ? "Registrando..." : "Registrar Perda"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Batch Registration Dialog */}
+      <Dialog open={batchDialogOpen} onOpenChange={setBatchDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Registrar Lote</DialogTitle>
+            <DialogDescription>
+              Cadastre um novo lote de estoque com validade e custo. O custo médio do insumo será recalculado.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.currentTarget);
+              startBatchTransition(async () => {
+                const result = await criarLoteAction(slug, fd);
+                if (result.success) {
+                  toast.success("Lote registrado e estoque atualizado.");
+                  setBatchDialogOpen(false);
+                } else {
+                  toast.error(result.error ?? "Erro ao registrar lote.");
+                }
+              });
+            }}
+            className="space-y-4"
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="batch-item">Insumo *</Label>
+              <select
+                id="batch-item"
+                name="inventoryItemId"
+                required
+                className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm"
+              >
+                <option value="">Selecione o insumo...</option>
+                {inventoryItems.map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.name} ({i.unitOfMeasure})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="batch-qty">Quantidade *</Label>
+                <Input id="batch-qty" name="quantity" type="number" min="0.001" step="0.001" required placeholder="Ex.: 10" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="batch-cost">Custo unitário</Label>
+                <Input id="batch-cost" name="unitCost" type="number" min="0" step="0.01" placeholder="Ex.: 4.50" />
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="batch-mfg">Fabricação</Label>
+                <Input id="batch-mfg" name="manufacturingDate" type="date" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="batch-exp">Validade</Label>
+                <Input id="batch-exp" name="expirationDate" type="date" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="batch-code">Código do lote</Label>
+              <Input id="batch-code" name="batchCode" placeholder="Ex.: LOT-2024-001" />
+            </div>
+            <Button type="submit" className="w-full" disabled={isBatchPending}>
+              {isBatchPending ? "Registrando..." : "Registrar Lote"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       {/* Page Header */}
       <div>
         <h1 className="font-display text-xl font-semibold">Estoque</h1>
@@ -268,6 +446,19 @@ export function EstoqueClient({ slug, products, inventoryItems }: EstoqueClientP
                 {lowStockInv.length}
               </span>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="lotes" className="gap-1.5">
+            <CalendarIcon size={14} />
+            Lotes e Validade
+            {lotes.filter((l) => getBatchStatus(l.expirationDate) !== "ok").length > 0 && (
+              <span className="ml-1 rounded-full bg-rose-500 px-1.5 py-px text-[10px] font-bold text-white">
+                {lotes.filter((l) => getBatchStatus(l.expirationDate) !== "ok").length}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="perdas" className="gap-1.5">
+            <TriangleAlertIcon size={14} />
+            Perdas
           </TabsTrigger>
         </TabsList>
 
@@ -623,6 +814,181 @@ export function EstoqueClient({ slug, products, inventoryItems }: EstoqueClientP
               </Table>
             </div>
           </div>
+        </TabsContent>
+        {/* ── Tab: Lotes e Validade ─────────────────────────────────── */}
+        <TabsContent value="lotes" className="mt-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex gap-3">
+              <Card className="border-rose-100 bg-rose-50">
+                <CardContent className="flex items-center gap-3 px-4 py-3">
+                  <AlertTriangleIcon className="text-rose-500" size={16} />
+                  <div>
+                    <p className="text-xs text-rose-700">Vencidos</p>
+                    <p className="font-display font-semibold text-rose-900">
+                      {lotes.filter((l) => getBatchStatus(l.expirationDate) === "expired").length}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-amber-100 bg-amber-50">
+                <CardContent className="flex items-center gap-3 px-4 py-3">
+                  <AlertTriangleIcon className="text-amber-500" size={16} />
+                  <div>
+                    <p className="text-xs text-amber-700">Vence em 7 dias</p>
+                    <p className="font-display font-semibold text-amber-900">
+                      {lotes.filter((l) => getBatchStatus(l.expirationDate) === "warning").length}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-white/80 bg-white/90">
+                <CardContent className="flex items-center gap-3 px-4 py-3">
+                  <BoxesIcon className="text-slate-500" size={16} />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Total de lotes</p>
+                    <p className="font-display font-semibold">{lotes.length}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            <Button size="sm" className="gap-1.5" onClick={() => setBatchDialogOpen(true)}>
+              <PlusIcon size={14} />
+              Novo Lote
+            </Button>
+          </div>
+
+          {lotes.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-16 text-center">
+              <CalendarIcon size={32} className="text-slate-200" />
+              <p className="text-sm text-muted-foreground">Nenhum lote cadastrado. Importe uma NF-e ou registre manualmente.</p>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Insumo</TableHead>
+                      <TableHead>Cód. Lote</TableHead>
+                      <TableHead className="text-right">Qtd.</TableHead>
+                      <TableHead>Unidade</TableHead>
+                      <TableHead>Fabricação</TableHead>
+                      <TableHead>Validade</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Custo Unit.</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {lotes.map((lote) => {
+                      const status = getBatchStatus(lote.expirationDate);
+                      return (
+                        <TableRow key={lote.id} className={status === "expired" ? "bg-rose-50/50" : status === "warning" ? "bg-amber-50/50" : ""}>
+                          <TableCell className="font-medium">{lote.inventoryItemName}</TableCell>
+                          <TableCell className="font-mono text-xs text-muted-foreground">{lote.batchCode ?? "—"}</TableCell>
+                          <TableCell className="text-right font-semibold">{lote.quantity}</TableCell>
+                          <TableCell className="font-mono text-xs">{lote.inventoryItemUnit}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {lote.manufacturingDate ? new Date(lote.manufacturingDate).toLocaleDateString("pt-BR") : "—"}
+                          </TableCell>
+                          <TableCell className={`text-sm font-medium ${status === "expired" ? "text-rose-600" : status === "warning" ? "text-amber-600" : ""}`}>
+                            {lote.expirationDate ? new Date(lote.expirationDate).toLocaleDateString("pt-BR") : "—"}
+                          </TableCell>
+                          <TableCell>
+                            {status === "expired" && <Badge variant="danger">Vencido</Badge>}
+                            {status === "warning" && <Badge variant="warning">Vence em breve</Badge>}
+                            {status === "ok" && <Badge variant="success">OK</Badge>}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {lote.unitCost != null
+                              ? lote.unitCost.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+                              : "—"}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ── Tab: Perdas ────────────────────────────────────────────── */}
+        <TabsContent value="perdas" className="mt-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex gap-3">
+              <Card className="border-rose-100 bg-rose-50">
+                <CardContent className="flex items-center gap-3 px-4 py-3">
+                  <TriangleAlertIcon className="text-rose-500" size={16} />
+                  <div>
+                    <p className="text-xs text-rose-700">Prejuízo total</p>
+                    <p className="font-display font-semibold text-rose-900">
+                      {perdas.reduce((acc, p) => acc + p.financialLoss, 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-white/80 bg-white/90">
+                <CardContent className="flex items-center gap-3 px-4 py-3">
+                  <BoxesIcon className="text-slate-500" size={16} />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Registros</p>
+                    <p className="font-display font-semibold">{perdas.length}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            <Button size="sm" variant="destructive" className="gap-1.5" onClick={() => setLossDialogOpen(true)}>
+              <PlusIcon size={14} />
+              Registrar Desperdício
+            </Button>
+          </div>
+
+          {perdas.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-16 text-center">
+              <TriangleAlertIcon size={32} className="text-slate-200" />
+              <p className="text-sm text-muted-foreground">Nenhuma perda registrada.</p>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Insumo</TableHead>
+                      <TableHead>Motivo</TableHead>
+                      <TableHead className="text-right">Qtd. Perdida</TableHead>
+                      <TableHead>Unidade</TableHead>
+                      <TableHead className="text-right">Prejuízo</TableHead>
+                      <TableHead>Observação</TableHead>
+                      <TableHead>Data</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {perdas.map((perda) => (
+                      <TableRow key={perda.id}>
+                        <TableCell className="font-medium">{perda.inventoryItemName}</TableCell>
+                        <TableCell>
+                          <Badge variant={perda.reason === "VENCIDO" ? "danger" : "warning"}>
+                            {LOSS_REASON_LABELS[perda.reason]}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-semibold text-rose-600">{perda.quantity}</TableCell>
+                        <TableCell className="font-mono text-xs">{perda.inventoryItemUnit}</TableCell>
+                        <TableCell className="text-right font-semibold text-rose-600">
+                          {perda.financialLoss.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                        </TableCell>
+                        <TableCell className="max-w-xs truncate text-sm text-muted-foreground">{perda.notes ?? "—"}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {new Date(perda.occurredAt).toLocaleDateString("pt-BR")}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>

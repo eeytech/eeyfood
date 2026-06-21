@@ -62,3 +62,21 @@
     animation: shake 0.6s ease-in-out;
   }
 }
+
+/* Kiosk / Totem mode — larger touch targets */
+.kiosk-mode {
+  font-size: 1.125rem;
+}
+.kiosk-mode button {
+  min-height: 3.25rem;
+  font-size: 1.1rem;
+}
+.kiosk-mode [data-product-card] {
+  border-radius: 1rem;
+}
+.kiosk-mode [data-product-name] {
+  font-size: 1.15rem;
+}
+.kiosk-mode [data-product-price] {
+  font-size: 1.2rem;
+}

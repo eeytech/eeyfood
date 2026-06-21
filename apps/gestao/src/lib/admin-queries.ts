@@ -1,40 +1,68 @@
 import type {
+  BankAccount,
+  BankStatement,
+  BankStatementEntry,
   CompanyVehicle,
   Coupon,
   Courier,
+  CustomerLedger,
+  CustomerLedgerEntry,
   DiningTable,
+  FinancialTransaction,
+  FiscalSettings,
+  InventoryBatch,
+  InventoryLoss,
   LoyaltyRule,
   MenuCategory,
   Product,
   ProductOption,
   ProductOptionGroup,
+  PurchaseInvoice,
   Restaurant,
+  Supplier,
   VehicleStatus,
 } from "@fsw/db";
 import type { InventoryItem } from "@fsw/db";
 import {
   aiSettingsTable,
+  abandonedCartsTable,
   and,
   asc,
+  bankAccountsTable,
+  bankStatementsTable,
+  bankStatementEntriesTable,
   buscarRestaurantePorSlug,
+  buscarConfiguracoesFiscaisPorSlug,
   companyVehiclesTable,
   couponsTable,
   couriersTable,
+  customersTable,
+  customerLedgersTable,
+  customerLedgerEntriesTable,
   db,
   desc,
   diningTablesTable,
   eq,
   financialCategoriesTable,
   financialTransactionsTable,
+  fiscalSettingsTable,
   gte,
   ilike,
+  inventoryBatchesTable,
   inventoryItemsTable,
+  inventoryLossesTable,
   isNotNull,
   listarCouriersPorSlug,
+  listarGarconsPorSlug,
+  listarReservasPorSlug,
+  listarFilaEsperaPorSlug,
+  listarComandasAvulsasPorSlug,
   listarMesasComandasPorSlug,
   listarPedidosRecebimentoPorSlug,
   loyaltyRulesTable,
   lt,
+  lte,
+  marketingSpendTable,
   menuCategoriesTable,
   ne,
   operatingHoursTable,
@@ -46,7 +74,9 @@ import {
   productOptionsTable,
   productToOptionGroupsTable,
   productsTable,
+  purchaseInvoicesTable,
   sql,
+  suppliersTable,
   walletsTable,
 } from "@fsw/db";
 
@@ -83,6 +113,22 @@ export interface RelatorioBasico {
 
 export const listarMesasComandasGestao = async (slug: string) => {
   return listarMesasComandasPorSlug(slug);
+};
+
+export const listarGarconsGestao = async (slug: string) => {
+  return listarGarconsPorSlug(slug);
+};
+
+export const listarReservasGestao = async (slug: string) => {
+  return listarReservasPorSlug(slug);
+};
+
+export const listarFilaEsperaGestao = async (slug: string) => {
+  return listarFilaEsperaPorSlug(slug);
+};
+
+export const listarComandasAvulsasGestao = async (slug: string) => {
+  return listarComandasAvulsasPorSlug(slug);
 };
 
 export const listarMesasGestao = async (slug: string): Promise<DiningTable[]> => {
@@ -422,6 +468,99 @@ export const listarCategoriasFinanceirasGestao = async (slug: string) => {
     .orderBy(asc(financialCategoriesTable.name));
 };
 
+export const listarContasBancariasGestao = async (slug: string): Promise<BankAccount[]> => {
+  const restaurant = await buscarRestaurantePorSlug(slug);
+  if (!restaurant) return [];
+  return db
+    .select()
+    .from(bankAccountsTable)
+    .where(eq(bankAccountsTable.restaurantId, restaurant.id))
+    .orderBy(asc(bankAccountsTable.name));
+};
+
+export const buscarConfiguracoesFiscaisGestao = async (slug: string): Promise<FiscalSettings | null> => {
+  return buscarConfiguracoesFiscaisPorSlug(slug);
+};
+
+export const listarFiadosGestao = async (slug: string): Promise<CustomerLedger[]> => {
+  const restaurant = await buscarRestaurantePorSlug(slug);
+  if (!restaurant) return [];
+  return db
+    .select()
+    .from(customerLedgersTable)
+    .where(eq(customerLedgersTable.restaurantId, restaurant.id))
+    .orderBy(asc(customerLedgersTable.customerName));
+};
+
+export const buscarFiadoComLancamentos = async (
+  ledgerId: string,
+): Promise<(CustomerLedger & { entries: CustomerLedgerEntry[] }) | null> => {
+  const [ledger] = await db
+    .select()
+    .from(customerLedgersTable)
+    .where(eq(customerLedgersTable.id, ledgerId))
+    .limit(1);
+
+  if (!ledger) return null;
+
+  const entries = await db
+    .select()
+    .from(customerLedgerEntriesTable)
+    .where(eq(customerLedgerEntriesTable.ledgerId, ledgerId))
+    .orderBy(desc(customerLedgerEntriesTable.createdAt));
+
+  return { ...ledger, entries };
+};
+
+export const listarExtratosGestao = async (
+  bankAccountId: string,
+): Promise<(BankStatement & { entries: BankStatementEntry[] })[]> => {
+  const statements = await db
+    .select()
+    .from(bankStatementsTable)
+    .where(eq(bankStatementsTable.bankAccountId, bankAccountId))
+    .orderBy(desc(bankStatementsTable.createdAt));
+
+  if (statements.length === 0) return [];
+
+  const statementIds = statements.map((s) => s.id);
+
+  const allEntries = await db
+    .select()
+    .from(bankStatementEntriesTable)
+    .where(
+      statementIds.length === 1
+        ? eq(bankStatementEntriesTable.statementId, statementIds[0]!)
+        : sql`${bankStatementEntriesTable.statementId} = ANY(ARRAY[${sql.join(statementIds.map((id) => sql`${id}::uuid`), sql`, `)}])`,
+    )
+    .orderBy(asc(bankStatementEntriesTable.entryDate));
+
+  const entriesMap = new Map<string, BankStatementEntry[]>();
+  allEntries.forEach((e) => {
+    const list = entriesMap.get(e.statementId) ?? [];
+    list.push(e);
+    entriesMap.set(e.statementId, list);
+  });
+
+  return statements.map((s) => ({ ...s, entries: entriesMap.get(s.id) ?? [] }));
+};
+
+export const listarTransacoesParaConciliacao = async (
+  restaurantId: string,
+  bankAccountId: string,
+): Promise<FinancialTransaction[]> => {
+  return db
+    .select()
+    .from(financialTransactionsTable)
+    .where(
+      and(
+        eq(financialTransactionsTable.restaurantId, restaurantId),
+        eq(financialTransactionsTable.bankAccountId, bankAccountId),
+      ),
+    )
+    .orderBy(desc(financialTransactionsTable.dueDate));
+};
+
 export const buscarAiSettingsPorSlug = async (slug: string) => {
   const restaurant = await buscarRestaurantePorSlug(slug);
   if (!restaurant) return null;
@@ -590,6 +729,121 @@ export const listarInventarioGestao = async (slug: string): Promise<InventoryIte
     .from(inventoryItemsTable)
     .where(eq(inventoryItemsTable.restaurantId, restaurant.id))
     .orderBy(asc(inventoryItemsTable.name));
+};
+
+// ─── Lotes de Estoque ─────────────────────────────────────────────────────────
+
+export interface LoteComInsumo extends InventoryBatch {
+  inventoryItemName: string;
+  inventoryItemUnit: string;
+}
+
+export const listarLotesGestao = async (slug: string): Promise<LoteComInsumo[]> => {
+  const restaurant = await buscarRestaurantePorSlug(slug);
+  if (!restaurant) return [];
+
+  const rows = await db
+    .select({
+      id: inventoryBatchesTable.id,
+      restaurantId: inventoryBatchesTable.restaurantId,
+      inventoryItemId: inventoryBatchesTable.inventoryItemId,
+      purchaseInvoiceId: inventoryBatchesTable.purchaseInvoiceId,
+      batchCode: inventoryBatchesTable.batchCode,
+      quantity: inventoryBatchesTable.quantity,
+      manufacturingDate: inventoryBatchesTable.manufacturingDate,
+      expirationDate: inventoryBatchesTable.expirationDate,
+      unitCost: inventoryBatchesTable.unitCost,
+      createdAt: inventoryBatchesTable.createdAt,
+      updatedAt: inventoryBatchesTable.updatedAt,
+      inventoryItemName: inventoryItemsTable.name,
+      inventoryItemUnit: inventoryItemsTable.unitOfMeasure,
+    })
+    .from(inventoryBatchesTable)
+    .innerJoin(inventoryItemsTable, eq(inventoryItemsTable.id, inventoryBatchesTable.inventoryItemId))
+    .where(eq(inventoryBatchesTable.restaurantId, restaurant.id))
+    .orderBy(asc(inventoryBatchesTable.expirationDate));
+
+  return rows;
+};
+
+// ─── Perdas de Estoque ────────────────────────────────────────────────────────
+
+export interface PerdaComInsumo extends InventoryLoss {
+  inventoryItemName: string;
+  inventoryItemUnit: string;
+}
+
+export const listarPerdasGestao = async (slug: string): Promise<PerdaComInsumo[]> => {
+  const restaurant = await buscarRestaurantePorSlug(slug);
+  if (!restaurant) return [];
+
+  const rows = await db
+    .select({
+      id: inventoryLossesTable.id,
+      restaurantId: inventoryLossesTable.restaurantId,
+      inventoryItemId: inventoryLossesTable.inventoryItemId,
+      quantity: inventoryLossesTable.quantity,
+      occurredAt: inventoryLossesTable.occurredAt,
+      reason: inventoryLossesTable.reason,
+      financialLoss: inventoryLossesTable.financialLoss,
+      notes: inventoryLossesTable.notes,
+      createdAt: inventoryLossesTable.createdAt,
+      updatedAt: inventoryLossesTable.updatedAt,
+      inventoryItemName: inventoryItemsTable.name,
+      inventoryItemUnit: inventoryItemsTable.unitOfMeasure,
+    })
+    .from(inventoryLossesTable)
+    .innerJoin(inventoryItemsTable, eq(inventoryItemsTable.id, inventoryLossesTable.inventoryItemId))
+    .where(eq(inventoryLossesTable.restaurantId, restaurant.id))
+    .orderBy(desc(inventoryLossesTable.occurredAt));
+
+  return rows;
+};
+
+// ─── Fornecedores ─────────────────────────────────────────────────────────────
+
+export const listarFornecedoresGestao = async (slug: string): Promise<Supplier[]> => {
+  const restaurant = await buscarRestaurantePorSlug(slug);
+  if (!restaurant) return [];
+
+  return db
+    .select()
+    .from(suppliersTable)
+    .where(eq(suppliersTable.restaurantId, restaurant.id))
+    .orderBy(asc(suppliersTable.companyName));
+};
+
+// ─── Notas de Compra ──────────────────────────────────────────────────────────
+
+export interface NotaCompraComFornecedor extends PurchaseInvoice {
+  supplierName: string | null;
+}
+
+export const listarNotasCompraGestao = async (slug: string): Promise<NotaCompraComFornecedor[]> => {
+  const restaurant = await buscarRestaurantePorSlug(slug);
+  if (!restaurant) return [];
+
+  const rows = await db
+    .select({
+      id: purchaseInvoicesTable.id,
+      restaurantId: purchaseInvoicesTable.restaurantId,
+      supplierId: purchaseInvoicesTable.supplierId,
+      accessKey: purchaseInvoicesTable.accessKey,
+      invoiceNumber: purchaseInvoicesTable.invoiceNumber,
+      totalAmount: purchaseInvoicesTable.totalAmount,
+      xmlContent: purchaseInvoicesTable.xmlContent,
+      issuedAt: purchaseInvoicesTable.issuedAt,
+      items: purchaseInvoicesTable.items,
+      createdAt: purchaseInvoicesTable.createdAt,
+      updatedAt: purchaseInvoicesTable.updatedAt,
+      supplierName: suppliersTable.companyName,
+    })
+    .from(purchaseInvoicesTable)
+    .leftJoin(suppliersTable, eq(suppliersTable.id, purchaseInvoicesTable.supplierId))
+    .where(eq(purchaseInvoicesTable.restaurantId, restaurant.id))
+    .orderBy(desc(purchaseInvoicesTable.createdAt));
+
+  return rows;
 };
 
 // ─── Dashboard de Relatórios ──────────────────────────────────────────────────
@@ -977,5 +1231,182 @@ export const buscarDadosDashboard = async (
       total: r.total ?? 0,
       count: r.count ?? 0,
     })),
+  };
+};
+
+// ─── Advanced BI KPIs ────────────────────────────────────────────────────────
+
+export interface AdvancedKPIs {
+  ltv: number;
+  churnRate: number;
+  cac: number;
+  roi: number;
+  conversionFunnel: {
+    sessions: number;
+    carts: number;
+    checkouts: number;
+    orders: number;
+  };
+  marketingSpend: number;
+  newCustomers: number;
+}
+
+export const buscarKPIsAvancados = async (
+  slug: string,
+  startDate: Date,
+  endDate: Date,
+): Promise<AdvancedKPIs | null> => {
+  const restaurant = await buscarRestaurantePorSlug(slug);
+  if (!restaurant) return null;
+
+  const restaurantId = restaurant.id;
+
+  const [
+    ltvRow,
+    segmentRows,
+    newCustomersRow,
+    marketingSpendRow,
+    couponDiscountRow,
+    funnelCartsRow,
+    funnelOrdersRow,
+  ] = await Promise.all([
+    // LTV médio da base (todos os clientes com pedidos)
+    db
+      .select({
+        avgLtv: sql<number>`coalesce(avg(${customersTable.totalSpent}), 0)`,
+      })
+      .from(customersTable)
+      .where(
+        and(
+          eq(customersTable.restaurantId, restaurantId),
+          sql`${customersTable.totalSpent} > 0`,
+        ),
+      ),
+
+    // Churn: total de clientes vs inativos/em risco
+    db
+      .select({
+        segment: customersTable.segment,
+        count: sql<number>`cast(count(*) as int)`,
+      })
+      .from(customersTable)
+      .where(eq(customersTable.restaurantId, restaurantId))
+      .groupBy(customersTable.segment),
+
+    // Novos clientes no período (firstOrderAt dentro do intervalo)
+    db
+      .select({
+        count: sql<number>`cast(count(*) as int)`,
+      })
+      .from(customersTable)
+      .where(
+        and(
+          eq(customersTable.restaurantId, restaurantId),
+          gte(customersTable.firstOrderAt, startDate),
+          lt(customersTable.firstOrderAt, endDate),
+        ),
+      ),
+
+    // Gasto total de marketing no período
+    db
+      .select({
+        total: sql<number>`coalesce(sum(${marketingSpendTable.amountSpent}), 0)`,
+      })
+      .from(marketingSpendTable)
+      .where(
+        and(
+          eq(marketingSpendTable.restaurantId, restaurantId),
+          gte(
+            sql`${marketingSpendTable.referenceMonth}::timestamp`,
+            startDate,
+          ),
+          lte(
+            sql`${marketingSpendTable.referenceMonth}::timestamp`,
+            endDate,
+          ),
+        ),
+      ),
+
+    // ROI: total de desconto em cupons vs faturamento gerado por cupons
+    db
+      .select({
+        totalDiscount: sql<number>`coalesce(sum(${ordersTable.couponDiscountAmount}), 0)`,
+        revenueWithCoupon: sql<number>`coalesce(sum(case when ${ordersTable.couponCode} is not null then ${ordersTable.total} else 0 end), 0)`,
+      })
+      .from(ordersTable)
+      .where(
+        and(
+          eq(ordersTable.restaurantId, restaurantId),
+          ne(ordersTable.status, "CANCELLED"),
+          eq(ordersTable.paymentStatus, "PAID"),
+          gte(ordersTable.createdAt, startDate),
+          lt(ordersTable.createdAt, endDate),
+        ),
+      ),
+
+    // Funil: carrinhos criados vs checkouts no período
+    db
+      .select({
+        totalCarts: sql<number>`cast(count(*) as int)`,
+        convertedCarts: sql<number>`cast(count(case when ${abandonedCartsTable.status} = 'CONVERTED' then 1 end) as int)`,
+      })
+      .from(abandonedCartsTable)
+      .where(
+        and(
+          eq(abandonedCartsTable.restaurantId, restaurantId),
+          gte(abandonedCartsTable.createdAt, startDate),
+          lt(abandonedCartsTable.createdAt, endDate),
+        ),
+      ),
+
+    // Funil: pedidos finalizados no período
+    db
+      .select({
+        count: sql<number>`cast(count(*) as int)`,
+      })
+      .from(ordersTable)
+      .where(
+        and(
+          eq(ordersTable.restaurantId, restaurantId),
+          ne(ordersTable.status, "CANCELLED"),
+          eq(ordersTable.paymentStatus, "PAID"),
+          gte(ordersTable.createdAt, startDate),
+          lt(ordersTable.createdAt, endDate),
+        ),
+      ),
+  ]);
+
+  const totalCustomers = segmentRows.reduce((sum, r) => sum + (r.count ?? 0), 0);
+  const churnCount = segmentRows
+    .filter((r) => r.segment === "INACTIVE" || r.segment === "AT_RISK")
+    .reduce((sum, r) => sum + (r.count ?? 0), 0);
+  const churnRate = totalCustomers > 0 ? (churnCount / totalCustomers) * 100 : 0;
+
+  const ltv = ltvRow[0]?.avgLtv ?? 0;
+  const newCustomers = newCustomersRow[0]?.count ?? 0;
+  const totalMarketingSpend = marketingSpendRow[0]?.total ?? 0;
+  const cac = newCustomers > 0 ? totalMarketingSpend / newCustomers : 0;
+
+  const totalDiscount = couponDiscountRow[0]?.totalDiscount ?? 0;
+  const revenueWithCoupon = couponDiscountRow[0]?.revenueWithCoupon ?? 0;
+  const roi = totalDiscount > 0 ? ((revenueWithCoupon - totalDiscount) / totalDiscount) * 100 : 0;
+
+  const totalCarts = funnelCartsRow[0]?.totalCarts ?? 0;
+  const convertedCarts = funnelCartsRow[0]?.convertedCarts ?? 0;
+  const totalOrders = funnelOrdersRow[0]?.count ?? 0;
+
+  return {
+    ltv,
+    churnRate,
+    cac,
+    roi,
+    marketingSpend: totalMarketingSpend,
+    newCustomers,
+    conversionFunnel: {
+      sessions: totalCarts,
+      carts: totalCarts,
+      checkouts: convertedCarts,
+      orders: totalOrders,
+    },
   };
 };

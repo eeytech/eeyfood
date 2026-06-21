@@ -1,7 +1,8 @@
-import { BotIcon, MessageSquareIcon, SaveIcon, SparklesIcon } from "lucide-react";
+import { AlertTriangleIcon, BotIcon, MessageSquareIcon, SaveIcon, SparklesIcon, UserIcon } from "lucide-react";
 import { notFound } from "next/navigation";
 
 import { updateAiSettingsAction } from "@/app/[slug]/ai-actions";
+import ReativarBotButton from "@/app/[slug]/_components/reativar-bot-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -42,6 +43,41 @@ const AiSettingsPage = async ({ params }: AiSettingsPageProps) => {
           </div>
         </CardHeader>
       </Card>
+
+      {aiSettings?.isBotPaused && (
+        <Card className="border-amber-300 bg-amber-50">
+          <CardHeader className="flex flex-row items-center gap-4 pb-2">
+            <AlertTriangleIcon className="shrink-0 text-amber-600" size={24} />
+            <div className="flex-1">
+              <CardTitle className="text-lg text-amber-800">Atendimento Humano Ativo</CardTitle>
+              <CardDescription className="text-amber-700">
+                O robô está pausado aguardando o atendimento de{" "}
+                <strong>{aiSettings.pausedForPhone ?? "um cliente"}</strong>.{" "}
+                {aiSettings.pausedAt && (
+                  <>
+                    Solicitado em{" "}
+                    {new Date(aiSettings.pausedAt).toLocaleString("pt-BR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                    .
+                  </>
+                )}
+              </CardDescription>
+            </div>
+            <ReativarBotButton slug={slug} />
+          </CardHeader>
+          <CardContent className="flex items-center gap-2 pt-0">
+            <UserIcon size={14} className="text-amber-600" />
+            <span className="text-xs text-amber-700">
+              Após concluir o atendimento humano, clique em &ldquo;Reativar Robô&rdquo; para que o bot volte a responder automaticamente.
+            </span>
+          </CardContent>
+        </Card>
+      )}
 
       <form action={updateAiSettingsAction.bind(null, slug)}>
         <div className="grid gap-4 lg:grid-cols-2">

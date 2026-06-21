@@ -1,6 +1,6 @@
 "use server";
 
-import { aiSettingsTable, buscarRestaurantePorSlug, db } from "@fsw/db";
+import { aiSettingsTable, buscarRestaurantePorSlug, db, reativarBot } from "@fsw/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -51,5 +51,13 @@ export const updateAiSettingsAction = async (
       set: values,
     });
 
+  revalidatePath(`/${slug}/ai`);
+};
+
+export const reativarBotAction = async (slug: string) => {
+  const restaurant = await buscarRestaurantePorSlug(slug);
+  if (!restaurant) throw new Error("Restaurante não encontrado.");
+
+  await reativarBot(restaurant.id);
   revalidatePath(`/${slug}/ai`);
 };

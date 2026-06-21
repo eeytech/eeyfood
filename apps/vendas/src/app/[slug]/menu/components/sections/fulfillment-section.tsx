@@ -10,6 +10,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -50,6 +51,28 @@ export const FulfillmentSection = ({
   <section>
     <SectionHeader icon={<MapPinIcon size={16} />} title="Entrega / Retirada" />
     <div className="rounded-[24px] border bg-slate-50/50 p-4 space-y-3">
+
+      {consumptionMethod === "DELIVERY" && (
+        <FormField
+          control={form.control}
+          name="deliveryAddress"
+          render={({ field }) => (
+            <FormItem className="space-y-1.5">
+              <FormLabel className="text-xs font-bold uppercase text-slate-400">
+                Endereço de entrega
+              </FormLabel>
+              <FormControl>
+                <Input
+                  {...field}
+                  placeholder="Rua, número, bairro, cidade..."
+                  className="h-10 rounded-xl text-sm"
+                />
+              </FormControl>
+              <FormMessage className="text-xs" />
+            </FormItem>
+          )}
+        />
+      )}
       <div className="space-y-1">
         <p className="text-sm font-semibold">Horário da {schedulingLabel}</p>
         <p className="text-xs text-muted-foreground leading-relaxed">

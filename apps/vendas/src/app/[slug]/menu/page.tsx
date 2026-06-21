@@ -6,7 +6,7 @@ import RestaurantMenuPageContent from "./components/menu-page-content";
 
 interface RestaurantMenuPageProps {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ consumptionMethod: string }>;
+  searchParams: Promise<{ consumptionMethod: string; tableId?: string; mode?: string }>;
 }
 
 const isConsumptionMethodValid = (consumptionMethod: string) => {
@@ -20,7 +20,7 @@ const RestaurantMenuPage = async ({
   searchParams,
 }: RestaurantMenuPageProps) => {
   const { slug } = await params;
-  const { consumptionMethod } = await searchParams;
+  const { consumptionMethod, tableId, mode } = await searchParams;
 
   if (!isConsumptionMethodValid(consumptionMethod)) {
     return redirect("/?error=not_found");
@@ -32,7 +32,14 @@ const RestaurantMenuPage = async ({
     return redirect("/?error=not_found");
   }
 
-  return <RestaurantMenuPageContent restaurant={restaurant} />;
+  return (
+    <RestaurantMenuPageContent
+      restaurant={restaurant}
+      consumptionMethod={consumptionMethod.toUpperCase() as "DINE_IN" | "TAKEAWAY" | "DELIVERY"}
+      tableId={tableId}
+      isKioskMode={mode === "totem"}
+    />
+  );
 };
 
 export default RestaurantMenuPage;

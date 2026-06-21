@@ -27,6 +27,7 @@ import type {
   RestaurantComCategoriasEProdutos,
 } from "@/lib/db";
 
+import { trackInitiateCheckout, trackPurchase } from "@/hooks/use-pixel-events";
 import { createOrder } from "../actions/create-order";
 import { criarPreferenciaMercadoPago } from "../actions/criar-preferencia-mercado-pago";
 import { getAvailableSchedulingSlots } from "../actions/get-scheduling-slots";
@@ -178,7 +179,8 @@ const FinishOrderSheet = ({
   useEffect(() => {
     if (!open) return;
     void getLoyaltyUpsell(slug, total).then(setLoyaltyUpsell).catch(() => null);
-  }, [open, slug, total]);
+    trackInitiateCheckout({ value: total, numItems: products.reduce((s, p) => s + p.quantity, 0) });
+  }, [open, slug, total, products]);
 
   // Cart change always invalidates benefits (subtotal and products changed)
   useEffect(() => {
@@ -384,6 +386,7 @@ const FinishOrderSheet = ({
         couponCode: data.couponCode,
         useWalletBalance,
         diningTableId: data.diningTableId,
+        deliveryAddress: consumptionMethod === "DELIVERY" ? data.deliveryAddress : undefined,
         products: products.map((product) => ({
           id: product.id,
           quantity: product.quantity,
@@ -392,6 +395,8 @@ const FinishOrderSheet = ({
         })),
         slug,
       });
+
+      trackPurchase({ orderId: order.id, value: order.total });
 
       if (data.paymentMethod === "MERCADO_PAGO") {
         const orderSummary = products

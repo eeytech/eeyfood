@@ -3,10 +3,12 @@
 import { useState } from "react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { DashboardData } from "@/lib/admin-queries";
+import type { AdvancedKPIs, DashboardData } from "@/lib/admin-queries";
 
+import AssistenteIaTab from "./assistente-ia-tab";
 import DreTab from "./dre-tab";
 import ExportPDFButton from "./export-pdf-button";
+import KPIsBITab from "./kpis-bi-tab";
 import LogisticaTab from "./logistica-tab";
 import MarketingTab from "./marketing-tab";
 import OverviewTab from "./overview-tab";
@@ -20,17 +22,21 @@ const TABS = [
   { value: "marketing", label: "Marketing" },
   { value: "pagamentos", label: "Pagamentos" },
   { value: "dre", label: "DRE Financeiro" },
+  { value: "kpis", label: "KPIs & BI" },
+  { value: "ia", label: "Assistente IA" },
 ] as const;
 
 type TabValue = (typeof TABS)[number]["value"];
 
 interface DashboardTabsProps {
   data: DashboardData;
+  kpis: AdvancedKPIs;
+  slug: string;
   from: string;
   to: string;
 }
 
-const DashboardTabs = ({ data, from, to }: DashboardTabsProps) => {
+const DashboardTabs = ({ data, kpis, slug, from, to }: DashboardTabsProps) => {
   const [activeTab, setActiveTab] = useState<TabValue>("overview");
 
   return (
@@ -72,6 +78,14 @@ const DashboardTabs = ({ data, from, to }: DashboardTabsProps) => {
 
       <TabsContent value="dre" className="mt-4">
         <DreTab data={data} />
+      </TabsContent>
+
+      <TabsContent value="kpis" className="mt-4">
+        <KPIsBITab kpis={kpis} />
+      </TabsContent>
+
+      <TabsContent value="ia" className="mt-4">
+        <AssistenteIaTab slug={slug} />
       </TabsContent>
     </Tabs>
   );

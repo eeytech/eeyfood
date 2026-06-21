@@ -1,7 +1,7 @@
-import { and, asc, desc, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNotNull, sql } from "drizzle-orm";
 import { db } from "./client.js";
 import { isRestaurantOpen } from "./restaurant-utils.js";
-import { abandonedCartsTable, couponsTable, couriersTable, diningTablesTable, financialCategoriesTable, financialTransactionsTable, menuCategoriesTable, operatingHoursTable, orderProductsTable, orderRatingsTable, ordersTable, productsTable, restaurantsTable, stockMovementsTable, walletsTable, loyaltyRulesTable, productOptionsTable, productOptionGroupsTable, productToOptionGroupsTable, orderProductOptionsTable, } from "./schema.js";
+import { abandonedCartsTable, aiSettingsTable, bankAccountsTable, bankStatementsTable, bankStatementEntriesTable, couponsTable, couriersTable, courierTripsTable, customerLedgersTable, customerLedgerEntriesTable, deliveryFeeRulesTable, fiscalSettingsTable, marketingSpendTable, marketplaceIntegrationsTable, diningTablesTable, financialCategoriesTable, financialTransactionsTable, inventoryItemsTable, menuCategoriesTable, operatingHoursTable, orderProductsTable, orderRatingsTable, ordersTable, productsTable, productionSectorsTable, recipeItemsTable, restaurantsTable, stockMovementsTable, walletsTable, loyaltyRulesTable, productOptionsTable, productOptionGroupsTable, productToOptionGroupsTable, orderProductOptionsTable, waitersTable, tableReservationsTable, waitingQueueTable, comandasAvulsasTable, } from "./schema.js";
 // ... (rest of queries)
 export const listarCategoriasFinanceirasPorSlug = async (slug) => {
     const restaurant = await buscarRestaurantePorSlug(slug);
@@ -58,6 +58,17 @@ export const buscarDREBasico = async (slug, startDate, endDate) => {
 };
 const arredondarMoeda = (value) => {
     return Number(value.toFixed(2));
+};
+const calcularDistanciaKm = (lat1, lng1, lat2, lng2) => {
+    const R = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLng = ((lng2 - lng1) * Math.PI) / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos((lat1 * Math.PI) / 180) *
+            Math.cos((lat2 * Math.PI) / 180) *
+            Math.sin(dLng / 2) *
+            Math.sin(dLng / 2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 const normalizarCodigoCupom = (couponCode) => {
     const normalizedCouponCode = couponCode?.trim().toUpperCase();
@@ -334,6 +345,33 @@ const carregarContextoPedidoCalculado = async (input) => {
             .where(inArray(productOptionsTable.id, allOptionIds));
         options.forEach((o) => optionsMap.set(o.id, o));
     }
+    // Verificar disponibilidade de insumos via Ficha Técnica antes de confirmar o pedido
+    const allProductIds = Array.from(new Set(productsInput.map((p) => p.id)));
+    const allRecipeItemsForCheck = await db
+        .select({
+        productId: recipeItemsTable.productId,
+        inventoryItemId: recipeItemsTable.inventoryItemId,
+        quantityNeeded: recipeItemsTable.quantityNeeded,
+        inventoryName: inventoryItemsTable.name,
+        currentQuantity: inventoryItemsTable.currentQuantity,
+    })
+        .from(recipeItemsTable)
+        .innerJoin(inventoryItemsTable, eq(inventoryItemsTable.id, recipeItemsTable.inventoryItemId))
+        .where(inArray(recipeItemsTable.productId, allProductIds));
+    const consumoTotal = new Map();
+    for (const prodInput of productsInput) {
+        for (const ri of allRecipeItemsForCheck.filter((r) => r.productId === prodInput.id)) {
+            const key = ri.inventoryItemId;
+            const existing = consumoTotal.get(key) ?? { name: ri.inventoryName, needed: 0, available: ri.currentQuantity };
+            existing.needed += ri.quantityNeeded * prodInput.quantity;
+            consumoTotal.set(key, existing);
+        }
+    }
+    for (const [, info] of consumoTotal) {
+        if (info.needed > info.available) {
+            throw new Error(`Desculpe, ingrediente "${info.name}" temporariamente indisponível.`);
+        }
+    }
     const itens = productsInput.map((itemInput) => {
         const currentProduct = productsMap.get(itemInput.id);
         if (!currentProduct) {
@@ -393,7 +431,41 @@ const carregarContextoPedidoCalculado = async (input) => {
     const cashbackRedeemedAmount = input.useWalletBalance && wallet
         ? arredondarMoeda(Math.min(wallet.balance, totalAfterCoupon))
         : 0;
-    const deliveryFee = 0;
+    let deliveryFee = restaurant.deliveryFee ?? 0;
+    if (input.consumptionMethod === "DELIVERY") {
+        const lat = input.deliveryLatitude;
+        const lng = input.deliveryLongitude;
+        const feeRules = await db
+            .select()
+            .from(deliveryFeeRulesTable)
+            .where(and(eq(deliveryFeeRulesTable.restaurantId, restaurant.id), eq(deliveryFeeRulesTable.isActive, true)))
+            .orderBy(asc(deliveryFeeRulesTable.displayOrder));
+        if (feeRules.length > 0) {
+            const matchedRule = lat !== undefined && lng !== undefined && restaurant.latitude && restaurant.longitude
+                ? feeRules.find((rule) => {
+                    if (rule.type === "RADIUS_KM" && rule.maxDistanceKm !== null) {
+                        const distKm = calcularDistanciaKm(restaurant.latitude, restaurant.longitude, lat, lng);
+                        return distKm <= rule.maxDistanceKm;
+                    }
+                    return false;
+                }) ?? feeRules[0]
+                : feeRules[0];
+            if (matchedRule) {
+                if (matchedRule.freeDeliveryThreshold !== null && subtotal >= matchedRule.freeDeliveryThreshold) {
+                    deliveryFee = 0;
+                }
+                else {
+                    deliveryFee = matchedRule.fee;
+                }
+            }
+        }
+        else if (restaurant.freeDeliveryThreshold !== null && subtotal >= (restaurant.freeDeliveryThreshold ?? Infinity)) {
+            deliveryFee = 0;
+        }
+    }
+    else {
+        deliveryFee = 0;
+    }
     const discountAmount = arredondarMoeda(couponDiscountAmount + cashbackRedeemedAmount);
     const total = arredondarMoeda(Math.max(subtotal + deliveryFee - discountAmount, 0));
     // Buscar regras de fidelidade ativas para o restaurante
@@ -749,6 +821,11 @@ export const criarPedido = async (input) => {
             customerPhone: input.customerPhone,
             scheduledFor,
             diningTableId: input.diningTableId,
+            deliveryAddress: input.deliveryAddress,
+            deliveryLatitude: input.deliveryLatitude,
+            deliveryLongitude: input.deliveryLongitude,
+            marketplaceOrderId: input.marketplaceOrderId,
+            marketplaceType: input.marketplaceType,
         })
             .returning();
         await tx.insert(orderProductsTable).values(contexto.itens.map((item) => ({
@@ -785,6 +862,37 @@ export const criarPedido = async (input) => {
                 reason: `Baixa automatica do pedido #${String(order.id)}`,
             });
         }
+        // Baixa proporcional de insumos via Ficha Técnica
+        for (const item of contexto.itens) {
+            const recipeItems = await tx
+                .select({
+                inventoryItemId: recipeItemsTable.inventoryItemId,
+                quantityNeeded: recipeItemsTable.quantityNeeded,
+                currentQuantity: inventoryItemsTable.currentQuantity,
+            })
+                .from(recipeItemsTable)
+                .innerJoin(inventoryItemsTable, eq(inventoryItemsTable.id, recipeItemsTable.inventoryItemId))
+                .where(eq(recipeItemsTable.productId, item.productId));
+            for (const ri of recipeItems) {
+                const totalConsumed = ri.quantityNeeded * item.quantity;
+                const prevQty = ri.currentQuantity;
+                const nextQty = prevQty - totalConsumed;
+                await tx
+                    .update(inventoryItemsTable)
+                    .set({ currentQuantity: nextQty, updatedAt: new Date() })
+                    .where(eq(inventoryItemsTable.id, ri.inventoryItemId));
+                await tx.insert(stockMovementsTable).values({
+                    restaurantId: contexto.restaurant.id,
+                    inventoryItemId: ri.inventoryItemId,
+                    orderId: order.id,
+                    type: "OUT",
+                    quantityDelta: -totalConsumed,
+                    previousQuantity: prevQty,
+                    currentQuantity: nextQty,
+                    reason: `Venda automatica - Pedido #${String(order.id)}`,
+                });
+            }
+        }
         return order;
     });
     await marcarCarrinhoAbandonadoComoConvertido({
@@ -792,7 +900,31 @@ export const criarPedido = async (input) => {
         restaurantId: contexto.restaurant.id,
         sessionId: input.abandonedCartSessionId,
     });
+    // Desativar produtos cujo ingrediente principal zerou no estoque
+    await desativarProdutosSemInsumo(contexto.restaurant.id);
     return order;
+};
+const desativarProdutosSemInsumo = async (restaurantId) => {
+    // Busca todos os insumos zerados deste restaurante
+    const esgotados = await db
+        .select({ id: inventoryItemsTable.id })
+        .from(inventoryItemsTable)
+        .where(and(eq(inventoryItemsTable.restaurantId, restaurantId), sql `${inventoryItemsTable.currentQuantity} <= 0`));
+    if (esgotados.length === 0)
+        return;
+    const esgotadosIds = esgotados.map((e) => e.id);
+    // Busca produtos ativos que dependem exclusivamente desses insumos esgotados
+    const produtosAfetados = await db
+        .selectDistinct({ productId: recipeItemsTable.productId })
+        .from(recipeItemsTable)
+        .innerJoin(productsTable, eq(productsTable.id, recipeItemsTable.productId))
+        .where(and(eq(productsTable.restaurantId, restaurantId), eq(productsTable.isActive, true), inArray(recipeItemsTable.inventoryItemId, esgotadosIds)));
+    if (produtosAfetados.length === 0)
+        return;
+    await db
+        .update(productsTable)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(and(inArray(productsTable.id, produtosAfetados.map((p) => p.productId)), eq(productsTable.restaurantId, restaurantId)));
 };
 export const listarMesasComandasPorSlug = async (slug) => {
     const restaurant = await buscarRestaurantePorSlug(slug);
@@ -988,6 +1120,35 @@ export const adicionarItensComanda = async ({ orderId, products, }) => {
                     reason: `Lancamento na comanda ${table?.name ?? "mesa"} do pedido #${String(order.id)}`,
                 });
             }
+            // Baixa proporcional de insumos via Ficha Técnica
+            const recipeItems = await tx
+                .select({
+                inventoryItemId: recipeItemsTable.inventoryItemId,
+                quantityNeeded: recipeItemsTable.quantityNeeded,
+                currentQuantity: inventoryItemsTable.currentQuantity,
+            })
+                .from(recipeItemsTable)
+                .innerJoin(inventoryItemsTable, eq(inventoryItemsTable.id, recipeItemsTable.inventoryItemId))
+                .where(eq(recipeItemsTable.productId, product.id));
+            for (const ri of recipeItems) {
+                const totalConsumed = ri.quantityNeeded * selectedProduct.quantity;
+                const prevQty = ri.currentQuantity;
+                const nextQty = prevQty - totalConsumed;
+                await tx
+                    .update(inventoryItemsTable)
+                    .set({ currentQuantity: nextQty, updatedAt: new Date() })
+                    .where(eq(inventoryItemsTable.id, ri.inventoryItemId));
+                await tx.insert(stockMovementsTable).values({
+                    restaurantId: order.restaurantId,
+                    inventoryItemId: ri.inventoryItemId,
+                    orderId: order.id,
+                    type: "OUT",
+                    quantityDelta: -totalConsumed,
+                    previousQuantity: prevQty,
+                    currentQuantity: nextQty,
+                    reason: `Venda automatica - Comanda ${table?.name ?? "mesa"} - Pedido #${String(order.id)}`,
+                });
+            }
         }
         const updatedOrderProducts = await tx
             .select()
@@ -1118,6 +1279,39 @@ export const atualizarStatusPedido = async ({ orderId, status, }) => {
                     quantityDelta: item.orderProduct.quantity,
                     previousQuantity,
                     currentQuantity,
+                    reason: `Reposicao por cancelamento do pedido #${String(orderId)}`,
+                });
+            }
+            // Restaurar insumos de Ficha Técnica baixados neste pedido
+            const inventoryOutMovements = await tx
+                .select()
+                .from(stockMovementsTable)
+                .where(and(eq(stockMovementsTable.orderId, orderId), eq(stockMovementsTable.type, "OUT"), isNotNull(stockMovementsTable.inventoryItemId)));
+            for (const mov of inventoryOutMovements) {
+                if (!mov.inventoryItemId)
+                    continue;
+                const [invItem] = await tx
+                    .select({ currentQuantity: inventoryItemsTable.currentQuantity })
+                    .from(inventoryItemsTable)
+                    .where(eq(inventoryItemsTable.id, mov.inventoryItemId))
+                    .limit(1);
+                if (!invItem)
+                    continue;
+                const restoredQty = -mov.quantityDelta;
+                const prevQty = invItem.currentQuantity;
+                const nextQty = prevQty + restoredQty;
+                await tx
+                    .update(inventoryItemsTable)
+                    .set({ currentQuantity: nextQty, updatedAt: new Date() })
+                    .where(eq(inventoryItemsTable.id, mov.inventoryItemId));
+                await tx.insert(stockMovementsTable).values({
+                    restaurantId: updatedOrder.restaurantId,
+                    inventoryItemId: mov.inventoryItemId,
+                    orderId,
+                    type: "IN",
+                    quantityDelta: restoredQty,
+                    previousQuantity: prevQty,
+                    currentQuantity: nextQty,
                     reason: `Reposicao por cancelamento do pedido #${String(orderId)}`,
                 });
             }
@@ -1263,9 +1457,15 @@ export const buscarPedidoRecebimentoPorId = async (orderId) => {
             name: productsTable.name,
             imageUrl: productsTable.imageUrl,
         },
+        productionSector: {
+            id: productionSectorsTable.id,
+            name: productionSectorsTable.name,
+            color: productionSectorsTable.color,
+        },
     })
         .from(orderProductsTable)
         .innerJoin(productsTable, eq(productsTable.id, orderProductsTable.productId))
+        .leftJoin(productionSectorsTable, eq(productionSectorsTable.id, productsTable.productionSectorId))
         .where(eq(orderProductsTable.orderId, orderId));
     const orderProductIds = itens.map((i) => i.orderProduct.id);
     const options = orderProductIds.length > 0
@@ -1289,6 +1489,7 @@ export const buscarPedidoRecebimentoPorId = async (orderId) => {
             ...item.orderProduct,
             product: item.product,
             orderProductOptions: optionsMap.get(item.orderProduct.id) ?? [],
+            productionSector: item.productionSector?.id ? item.productionSector : null,
         })),
     };
 };
@@ -1329,6 +1530,324 @@ export const buscarPedidoParaRastreamento = async (orderId) => {
     });
     return pedido;
 };
+export const listarGarconsPorSlug = async (slug) => {
+    const restaurant = await buscarRestaurantePorSlug(slug);
+    if (!restaurant)
+        return [];
+    return db
+        .select()
+        .from(waitersTable)
+        .where(eq(waitersTable.restaurantId, restaurant.id))
+        .orderBy(asc(waitersTable.name));
+};
+export const listarReservasPorSlug = async (slug) => {
+    const restaurant = await buscarRestaurantePorSlug(slug);
+    if (!restaurant)
+        return [];
+    return db
+        .select()
+        .from(tableReservationsTable)
+        .where(eq(tableReservationsTable.restaurantId, restaurant.id))
+        .orderBy(asc(tableReservationsTable.scheduledFor));
+};
+export const listarFilaEsperaPorSlug = async (slug) => {
+    const restaurant = await buscarRestaurantePorSlug(slug);
+    if (!restaurant)
+        return [];
+    return db
+        .select()
+        .from(waitingQueueTable)
+        .where(and(eq(waitingQueueTable.restaurantId, restaurant.id), eq(waitingQueueTable.status, "WAITING")))
+        .orderBy(asc(waitingQueueTable.position));
+};
+export const listarComandasAvulsasPorSlug = async (slug) => {
+    const restaurant = await buscarRestaurantePorSlug(slug);
+    if (!restaurant)
+        return [];
+    const comandas = await db
+        .select()
+        .from(comandasAvulsasTable)
+        .where(and(eq(comandasAvulsasTable.restaurantId, restaurant.id), eq(comandasAvulsasTable.status, "ACTIVE")))
+        .orderBy(asc(comandasAvulsasTable.numero));
+    const results = await Promise.all(comandas.map(async (comanda) => {
+        const order = comanda.orderId
+            ? await buscarPedidoRecebimentoPorId(comanda.orderId)
+            : null;
+        return { ...comanda, order };
+    }));
+    return results;
+};
+export const transferirItensComanda = async ({ sourceOrderId, destinationOrderId, orderProductIds, }) => {
+    if (orderProductIds.length === 0)
+        return;
+    await db.transaction(async (tx) => {
+        const items = await tx
+            .select()
+            .from(orderProductsTable)
+            .where(and(eq(orderProductsTable.orderId, sourceOrderId), inArray(orderProductsTable.id, orderProductIds)));
+        if (items.length === 0)
+            return;
+        const transferredTotal = items.reduce((acc, item) => acc + item.lineTotal, 0);
+        for (const item of items) {
+            await tx
+                .update(orderProductsTable)
+                .set({ orderId: destinationOrderId, updatedAt: new Date() })
+                .where(eq(orderProductsTable.id, item.id));
+        }
+        const [srcItems] = await tx
+            .select({ total: sql `COALESCE(SUM(${orderProductsTable.lineTotal}),0)` })
+            .from(orderProductsTable)
+            .where(eq(orderProductsTable.orderId, sourceOrderId));
+        await tx
+            .update(ordersTable)
+            .set({
+            total: Number((srcItems?.total ?? 0).toFixed(2)),
+            subtotal: Number((srcItems?.total ?? 0).toFixed(2)),
+            updatedAt: new Date(),
+        })
+            .where(eq(ordersTable.id, sourceOrderId));
+        const [dstItems] = await tx
+            .select({ total: sql `COALESCE(SUM(${orderProductsTable.lineTotal}),0)` })
+            .from(orderProductsTable)
+            .where(eq(orderProductsTable.orderId, destinationOrderId));
+        await tx
+            .update(ordersTable)
+            .set({
+            total: Number((dstItems?.total ?? 0).toFixed(2)),
+            subtotal: Number((dstItems?.total ?? 0).toFixed(2)),
+            updatedAt: new Date(),
+        })
+            .where(eq(ordersTable.id, destinationOrderId));
+    });
+};
+export const unirMesas = async ({ mainOrderId, secondaryOrderId }) => {
+    await db.transaction(async (tx) => {
+        await tx
+            .update(orderProductsTable)
+            .set({ orderId: mainOrderId, updatedAt: new Date() })
+            .where(eq(orderProductsTable.orderId, secondaryOrderId));
+        const [mainItems] = await tx
+            .select({ total: sql `COALESCE(SUM(${orderProductsTable.lineTotal}),0)` })
+            .from(orderProductsTable)
+            .where(eq(orderProductsTable.orderId, mainOrderId));
+        await tx
+            .update(ordersTable)
+            .set({
+            total: Number((mainItems?.total ?? 0).toFixed(2)),
+            subtotal: Number((mainItems?.total ?? 0).toFixed(2)),
+            updatedAt: new Date(),
+        })
+            .where(eq(ordersTable.id, mainOrderId));
+        await tx
+            .update(ordersTable)
+            .set({
+            status: "FINISHED",
+            paymentStatus: "PAID",
+            diningTableId: null,
+            finishedAt: new Date(),
+            updatedAt: new Date(),
+        })
+            .where(eq(ordersTable.id, secondaryOrderId));
+    });
+};
+export const buscarProdutosPorCategoria = async (categoryId, restaurantId) => {
+    return db
+        .select()
+        .from(productsTable)
+        .where(and(eq(productsTable.menuCategoryId, categoryId), eq(productsTable.restaurantId, restaurantId), eq(productsTable.isActive, true)))
+        .orderBy(asc(productsTable.name));
+};
+export const buscarUltimoPedidoPorTelefone = async (customerPhone, restaurantId) => {
+    const [pedido] = await db
+        .select({
+        order: ordersTable,
+        restaurant: {
+            name: restaurantsTable.name,
+            avatarImageUrl: restaurantsTable.avatarImageUrl,
+            slug: restaurantsTable.slug,
+        },
+        diningTable: {
+            id: diningTablesTable.id,
+            name: diningTablesTable.name,
+            seats: diningTablesTable.seats,
+        },
+        courier: {
+            id: couriersTable.id,
+            name: couriersTable.name,
+            phone: couriersTable.phone,
+        },
+    })
+        .from(ordersTable)
+        .innerJoin(restaurantsTable, eq(restaurantsTable.id, ordersTable.restaurantId))
+        .leftJoin(diningTablesTable, eq(diningTablesTable.id, ordersTable.diningTableId))
+        .leftJoin(couriersTable, eq(couriersTable.id, ordersTable.courierId))
+        .where(and(eq(ordersTable.customerPhone, customerPhone), eq(ordersTable.restaurantId, restaurantId), eq(ordersTable.status, "FINISHED")))
+        .orderBy(desc(ordersTable.createdAt))
+        .limit(1);
+    if (!pedido)
+        return null;
+    const itens = await db
+        .select({
+        orderId: orderProductsTable.orderId,
+        orderProduct: orderProductsTable,
+        product: productsTable,
+    })
+        .from(orderProductsTable)
+        .innerJoin(productsTable, eq(productsTable.id, orderProductsTable.productId))
+        .where(eq(orderProductsTable.orderId, pedido.order.id));
+    const orderProductIds = itens.map((i) => i.orderProduct.id);
+    const options = orderProductIds.length > 0
+        ? await db
+            .select()
+            .from(orderProductOptionsTable)
+            .where(inArray(orderProductOptionsTable.orderProductId, orderProductIds))
+        : [];
+    const optionsMap = new Map();
+    options.forEach((opt) => {
+        const list = optionsMap.get(opt.orderProductId) ?? [];
+        list.push(opt);
+        optionsMap.set(opt.orderProductId, list);
+    });
+    const pedidoNormalizado = {
+        ...pedido.order,
+        restaurant: pedido.restaurant,
+        diningTable: pedido.diningTable ?? null,
+        courier: pedido.courier ?? null,
+        orderProducts: itens.map((item) => ({
+            ...item.orderProduct,
+            product: item.product,
+            orderProductOptions: optionsMap.get(item.orderProduct.id) ?? [],
+        })),
+    };
+    return pedidoNormalizado;
+};
+export const buscarRegrasFreteAtivas = async (restaurantId) => {
+    return db
+        .select()
+        .from(deliveryFeeRulesTable)
+        .where(eq(deliveryFeeRulesTable.restaurantId, restaurantId))
+        .orderBy(asc(deliveryFeeRulesTable.displayOrder));
+};
+export const criarRegraFrete = async (input) => {
+    const [rule] = await db.insert(deliveryFeeRulesTable).values(input).returning();
+    if (!rule)
+        throw new Error("Falha ao criar regra de frete.");
+    return rule;
+};
+export const atualizarRegraFrete = async (id, data) => {
+    const [rule] = await db
+        .update(deliveryFeeRulesTable)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(deliveryFeeRulesTable.id, id))
+        .returning();
+    if (!rule)
+        throw new Error("Regra de frete não encontrada.");
+    return rule;
+};
+export const excluirRegraFrete = async (id) => {
+    await db.delete(deliveryFeeRulesTable).where(eq(deliveryFeeRulesTable.id, id));
+};
+export const buscarPedidosParaEntregador = async (courierId) => {
+    const courier = await db.select().from(couriersTable).where(eq(couriersTable.id, courierId)).limit(1);
+    if (!courier[0])
+        return [];
+    return db
+        .select({
+        id: ordersTable.id,
+        customerName: ordersTable.customerName,
+        deliveryAddress: ordersTable.deliveryAddress,
+        deliveryLatitude: ordersTable.deliveryLatitude,
+        deliveryLongitude: ordersTable.deliveryLongitude,
+        total: ordersTable.total,
+        status: ordersTable.status,
+        courierId: ordersTable.courierId,
+        createdAt: ordersTable.createdAt,
+    })
+        .from(ordersTable)
+        .where(and(eq(ordersTable.restaurantId, courier[0].restaurantId), eq(ordersTable.consumptionMethod, "DELIVERY"), eq(ordersTable.status, "READY_FOR_PICKUP")))
+        .orderBy(asc(ordersTable.createdAt));
+};
+export const atualizarLocalizacaoEntregador = async (courierId, latitude, longitude) => {
+    await db
+        .update(couriersTable)
+        .set({ latitude, longitude, updatedAt: new Date() })
+        .where(eq(couriersTable.id, courierId));
+};
+export const registrarComprovanteEntrega = async (orderId, proofUrl, latitude, longitude) => {
+    await db
+        .update(ordersTable)
+        .set({
+        deliveryProofUrl: proofUrl,
+        deliveryConfirmationLatitude: latitude,
+        deliveryConfirmationLongitude: longitude,
+        status: "FINISHED",
+        deliveredAt: new Date(),
+        finishedAt: new Date(),
+        updatedAt: new Date(),
+    })
+        .where(eq(ordersTable.id, orderId));
+};
+export const criarViagemMotoboy = async (input) => {
+    const [trip] = await db
+        .insert(courierTripsTable)
+        .values({
+        restaurantId: input.restaurantId,
+        courierId: input.courierId,
+        orderIds: input.orderIds,
+        commissionAmount: input.commissionAmount ?? 0,
+        status: "IN_TRANSIT",
+    })
+        .returning();
+    if (!trip)
+        throw new Error("Falha ao criar viagem.");
+    return trip;
+};
+export const concluirViagemMotoboy = async (tripId) => {
+    await db
+        .update(courierTripsTable)
+        .set({ status: "COMPLETED", returnedAt: new Date(), updatedAt: new Date() })
+        .where(eq(courierTripsTable.id, tripId));
+};
+export const buscarIntegracaoMarketplace = async (restaurantId, type) => {
+    const [integration] = await db
+        .select()
+        .from(marketplaceIntegrationsTable)
+        .where(and(eq(marketplaceIntegrationsTable.restaurantId, restaurantId), eq(marketplaceIntegrationsTable.type, type)))
+        .limit(1);
+    return integration ?? null;
+};
+export const salvarIntegracaoMarketplace = async (restaurantId, type, data) => {
+    const values = { restaurantId, type, ...data, updatedAt: new Date() };
+    const [integration] = await db
+        .insert(marketplaceIntegrationsTable)
+        .values(values)
+        .onConflictDoUpdate({
+        target: [marketplaceIntegrationsTable.restaurantId, marketplaceIntegrationsTable.type],
+        set: { ...data, updatedAt: new Date() },
+    })
+        .returning();
+    if (!integration)
+        throw new Error("Falha ao salvar integração.");
+    return integration;
+};
+export const listarSetoresProducaoPorSlug = async (slug) => {
+    const restaurant = await buscarRestaurantePorSlug(slug);
+    if (!restaurant)
+        return [];
+    return db
+        .select()
+        .from(productionSectorsTable)
+        .where(eq(productionSectorsTable.restaurantId, restaurant.id))
+        .orderBy(asc(productionSectorsTable.displayOrder), asc(productionSectorsTable.name));
+};
+export const atualizarStatusItemPedido = async ({ itemId, itemStatus, }) => {
+    const [updated] = await db
+        .update(orderProductsTable)
+        .set({ itemStatus, updatedAt: new Date() })
+        .where(eq(orderProductsTable.id, itemId))
+        .returning();
+    return updated ?? null;
+};
 export const despacharPedido = async ({ orderId, courierId, }) => {
     const [updatedOrder] = await db
         .update(ordersTable)
@@ -1358,4 +1877,244 @@ export const despacharPedido = async ({ orderId, courierId, }) => {
         dispatchedAt: updatedOrder.dispatchedAt,
         restaurantSlug,
     };
+};
+// ─── Contas Bancárias ─────────────────────────────────────────────────────────
+export const listarContasBancariasPorSlug = async (slug) => {
+    const restaurant = await buscarRestaurantePorSlug(slug);
+    if (!restaurant)
+        return [];
+    return db
+        .select()
+        .from(bankAccountsTable)
+        .where(eq(bankAccountsTable.restaurantId, restaurant.id))
+        .orderBy(asc(bankAccountsTable.name));
+};
+export const criarContaBancaria = async (input) => {
+    const [account] = await db.insert(bankAccountsTable).values(input).returning();
+    if (!account)
+        throw new Error("Falha ao criar conta bancária.");
+    return account;
+};
+export const atualizarContaBancaria = async (id, data) => {
+    const [account] = await db
+        .update(bankAccountsTable)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(bankAccountsTable.id, id))
+        .returning();
+    if (!account)
+        throw new Error("Conta bancária não encontrada.");
+    return account;
+};
+export const excluirContaBancaria = async (id) => {
+    await db.delete(bankAccountsTable).where(eq(bankAccountsTable.id, id));
+};
+// ─── Configurações Fiscais ────────────────────────────────────────────────────
+export const buscarConfiguracoesFiscaisPorSlug = async (slug) => {
+    const restaurant = await buscarRestaurantePorSlug(slug);
+    if (!restaurant)
+        return null;
+    const [settings] = await db
+        .select()
+        .from(fiscalSettingsTable)
+        .where(eq(fiscalSettingsTable.restaurantId, restaurant.id))
+        .limit(1);
+    return settings ?? null;
+};
+export const salvarConfiguracoesFiscais = async (restaurantId, data) => {
+    const [settings] = await db
+        .insert(fiscalSettingsTable)
+        .values({ restaurantId, ...data })
+        .onConflictDoUpdate({
+        target: fiscalSettingsTable.restaurantId,
+        set: { ...data, updatedAt: new Date() },
+    })
+        .returning();
+    if (!settings)
+        throw new Error("Falha ao salvar configurações fiscais.");
+    return settings;
+};
+export const atualizarStatusFiscalPedido = async (orderId, data) => {
+    await db
+        .update(ordersTable)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(ordersTable.id, orderId));
+};
+// ─── Livro de Fiados ─────────────────────────────────────────────────────────
+export const listarFiadosPorSlug = async (slug) => {
+    const restaurant = await buscarRestaurantePorSlug(slug);
+    if (!restaurant)
+        return [];
+    return db
+        .select()
+        .from(customerLedgersTable)
+        .where(and(eq(customerLedgersTable.restaurantId, restaurant.id), eq(customerLedgersTable.isActive, true)))
+        .orderBy(asc(customerLedgersTable.customerName));
+};
+export const criarFiado = async (input) => {
+    const [ledger] = await db.insert(customerLedgersTable).values({ ...input, debtBalance: 0 }).returning();
+    if (!ledger)
+        throw new Error("Falha ao criar cadastro de fiado.");
+    return ledger;
+};
+export const atualizarFiado = async (id, data) => {
+    const [ledger] = await db
+        .update(customerLedgersTable)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(customerLedgersTable.id, id))
+        .returning();
+    if (!ledger)
+        throw new Error("Fiado não encontrado.");
+    return ledger;
+};
+export const listarLancamentosFiado = async (ledgerId) => {
+    return db
+        .select()
+        .from(customerLedgerEntriesTable)
+        .where(eq(customerLedgerEntriesTable.ledgerId, ledgerId))
+        .orderBy(desc(customerLedgerEntriesTable.createdAt));
+};
+export const registrarDebitoFiado = async (input) => {
+    return db.transaction(async (tx) => {
+        const [entry] = await tx
+            .insert(customerLedgerEntriesTable)
+            .values({ ...input, type: "DEBIT" })
+            .returning();
+        await tx
+            .update(customerLedgersTable)
+            .set({
+            debtBalance: sql `${customerLedgersTable.debtBalance} + ${input.amount}`,
+            updatedAt: new Date(),
+        })
+            .where(eq(customerLedgersTable.id, input.ledgerId));
+        return entry;
+    });
+};
+export const registrarPagamentoFiado = async (input) => {
+    return db.transaction(async (tx) => {
+        const [entry] = await tx
+            .insert(customerLedgerEntriesTable)
+            .values({ ...input, type: "CREDIT" })
+            .returning();
+        await tx
+            .update(customerLedgersTable)
+            .set({
+            debtBalance: sql `GREATEST(0, ${customerLedgersTable.debtBalance} - ${input.amount})`,
+            updatedAt: new Date(),
+        })
+            .where(eq(customerLedgersTable.id, input.ledgerId));
+        if (input.bankAccountId) {
+            await tx
+                .update(bankAccountsTable)
+                .set({
+                currentBalance: sql `${bankAccountsTable.currentBalance} + ${input.amount}`,
+                updatedAt: new Date(),
+            })
+                .where(eq(bankAccountsTable.id, input.bankAccountId));
+        }
+        return entry;
+    });
+};
+// ─── Conciliação Bancária (OFX) ───────────────────────────────────────────────
+export const criarExtratoImportado = async (input) => {
+    const [statement] = await db.insert(bankStatementsTable).values(input).returning();
+    if (!statement)
+        throw new Error("Falha ao importar extrato.");
+    return statement;
+};
+export const listarExtratosPorConta = async (bankAccountId) => {
+    return db
+        .select()
+        .from(bankStatementsTable)
+        .where(eq(bankStatementsTable.bankAccountId, bankAccountId))
+        .orderBy(desc(bankStatementsTable.createdAt));
+};
+export const criarLinhasExtrato = async (entries) => {
+    if (entries.length === 0)
+        return [];
+    return db.insert(bankStatementEntriesTable).values(entries).returning();
+};
+export const listarLinhasExtrato = async (statementId) => {
+    return db
+        .select()
+        .from(bankStatementEntriesTable)
+        .where(eq(bankStatementEntriesTable.statementId, statementId))
+        .orderBy(asc(bankStatementEntriesTable.entryDate));
+};
+export const vincularLinhaExtratoTransacao = async (entryId, transactionId) => {
+    const [entry] = await db
+        .update(bankStatementEntriesTable)
+        .set({
+        matchedTransactionId: transactionId,
+        status: transactionId ? "MATCHED" : "PENDING",
+        updatedAt: new Date(),
+    })
+        .where(eq(bankStatementEntriesTable.id, entryId))
+        .returning();
+    if (entry && transactionId) {
+        await db
+            .update(bankStatementsTable)
+            .set({
+            matchedEntries: sql `${bankStatementsTable.matchedEntries} + 1`,
+            updatedAt: new Date(),
+        })
+            .where(eq(bankStatementsTable.id, entry.statementId));
+    }
+    return entry ?? null;
+};
+export const ignorarLinhaExtrato = async (entryId) => {
+    await db
+        .update(bankStatementEntriesTable)
+        .set({ status: "IGNORED", updatedAt: new Date() })
+        .where(eq(bankStatementEntriesTable.id, entryId));
+};
+// ─── Handoff Bot ──────────────────────────────────────────────────────────────
+export const pausarBot = async (restaurantId, customerPhone) => {
+    await db
+        .update(aiSettingsTable)
+        .set({
+        isBotPaused: true,
+        pausedAt: new Date(),
+        pausedForPhone: customerPhone,
+        conversationStatus: "HUMAN_REQUIRED",
+        updatedAt: new Date(),
+    })
+        .where(eq(aiSettingsTable.restaurantId, restaurantId));
+};
+export const reativarBot = async (restaurantId) => {
+    await db
+        .update(aiSettingsTable)
+        .set({
+        isBotPaused: false,
+        pausedAt: null,
+        pausedForPhone: null,
+        conversationStatus: "BOT_ACTIVE",
+        updatedAt: new Date(),
+    })
+        .where(eq(aiSettingsTable.restaurantId, restaurantId));
+};
+export const buscarStatusHandoff = async (restaurantId) => {
+    const [settings] = await db
+        .select({
+        isBotPaused: aiSettingsTable.isBotPaused,
+        pausedAt: aiSettingsTable.pausedAt,
+        pausedForPhone: aiSettingsTable.pausedForPhone,
+        conversationStatus: aiSettingsTable.conversationStatus,
+    })
+        .from(aiSettingsTable)
+        .where(eq(aiSettingsTable.restaurantId, restaurantId))
+        .limit(1);
+    return settings ?? null;
+};
+export const criarGastoMarketing = async (input) => {
+    await db.insert(marketingSpendTable).values(input);
+};
+export const listarGastosMarketing = async (restaurantId) => {
+    return db
+        .select()
+        .from(marketingSpendTable)
+        .where(eq(marketingSpendTable.restaurantId, restaurantId))
+        .orderBy(sql `${marketingSpendTable.referenceMonth} desc`);
+};
+export const excluirGastoMarketing = async (id) => {
+    await db.delete(marketingSpendTable).where(eq(marketingSpendTable.id, id));
 };

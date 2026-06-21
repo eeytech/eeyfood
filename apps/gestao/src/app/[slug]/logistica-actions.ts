@@ -4,16 +4,25 @@ import {
   and,
   asc,
   buscarRestaurantePorSlug,
+  buscarRegrasFreteAtivas,
   companyVehiclesTable,
   couriersTable,
+  criarRegraFrete,
+  atualizarRegraFrete,
+  excluirRegraFrete,
   db,
+  deliveryFeeRulesTable,
   despacharPedido,
   eq,
   inArray,
   isNotNull,
   listarCouriersPorSlug,
+  menuCategoriesTable,
   ordersTable,
+  orderProductsTable,
+  productsTable,
   restaurantsTable,
+  type CriarRegraFreteInput,
 } from "@fsw/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -186,7 +195,8 @@ export const getCouriersAction = async (slug: string) => {
 
 export const buscarPedidosParaRoteirizadorAction = async (slug: string) => {
   const restaurant = await getRestaurantOrThrow(slug);
-  return db
+
+  const orders = await db
     .select({
       id: ordersTable.id,
       customerName: ordersTable.customerName,
@@ -206,6 +216,101 @@ export const buscarPedidosParaRoteirizadorAction = async (slug: string) => {
       ),
     )
     .orderBy(asc(ordersTable.createdAt));
+
+  if (orders.length === 0) return orders.map((o) => ({ ...o, hasPizza: false }));
+
+  const orderIds = orders.map((o) => o.id);
+  const pizzaProducts = await db
+    .select({ orderId: orderProductsTable.orderId })
+    .from(orderProductsTable)
+    .innerJoin(productsTable, eq(productsTable.id, orderProductsTable.productId))
+    .innerJoin(menuCategoriesTable, eq(menuCategoriesTable.id, productsTable.menuCategoryId))
+    .where(
+      and(
+        inArray(orderProductsTable.orderId, orderIds),
+        eq(menuCategoriesTable.isPizzaCategory, true),
+      ),
+    );
+
+  const pizzaOrderIds = new Set(pizzaProducts.map((p) => p.orderId));
+
+  return orders.map((o) => ({ ...o, hasPizza: pizzaOrderIds.has(o.id) }));
+};
+
+export const listarRegrasFreteAction = async (slug: string) => {
+  const restaurant = await getRestaurantOrThrow(slug);
+  return buscarRegrasFreteAtivas(restaurant.id);
+};
+
+const regraFreteSchema = z.object({
+  name: z.string().trim().min(1, "Informe um nome para a regra."),
+  type: z.enum(["RADIUS_KM", "NEIGHBORHOOD", "CEP_RANGE"]),
+  fee: z.number().min(0),
+  minimumOrderValue: z.number().min(0).optional(),
+  freeDeliveryThreshold: z.number().min(0).nullable().optional(),
+  maxDistanceKm: z.number().min(0).nullable().optional(),
+  neighborhood: z.string().trim().nullable().optional(),
+  cepFrom: z.string().trim().nullable().optional(),
+  cepTo: z.string().trim().nullable().optional(),
+  displayOrder: z.number().int().optional(),
+});
+
+export const criarRegraFreteAction = async (slug: string, formData: FormData) => {
+  const restaurant = await getRestaurantOrThrow(slug);
+
+  const parsed = regraFreteSchema.safeParse({
+    name: getStringValue(formData.get("name")),
+    type: getStringValue(formData.get("type")),
+    fee: parseFloat(getStringValue(formData.get("fee"))) || 0,
+    minimumOrderValue: parseFloat(getStringValue(formData.get("minimumOrderValue"))) || 0,
+    freeDeliveryThreshold: formData.get("freeDeliveryThreshold")
+      ? parseFloat(getStringValue(formData.get("freeDeliveryThreshold"))) || null
+      : null,
+    maxDistanceKm: formData.get("maxDistanceKm")
+      ? parseFloat(getStringValue(formData.get("maxDistanceKm"))) || null
+      : null,
+    neighborhood: getOptionalStringValue(formData.get("neighborhood")),
+    cepFrom: getOptionalStringValue(formData.get("cepFrom")),
+    cepTo: getOptionalStringValue(formData.get("cepTo")),
+    displayOrder: parseInt(getStringValue(formData.get("displayOrder"))) || 0,
+  });
+
+  if (!parsed.success) throw new Error("Dados inválidos.");
+
+  await criarRegraFrete({ ...parsed.data, restaurantId: restaurant.id } as CriarRegraFreteInput);
+  revalidatePath(`/${slug}/logistica`);
+};
+
+export const atualizarRegraFreteAction = async (slug: string, formData: FormData) => {
+  await getRestaurantOrThrow(slug);
+  const ruleId = getStringValue(formData.get("ruleId"));
+
+  const parsed = regraFreteSchema.safeParse({
+    name: getStringValue(formData.get("name")),
+    type: getStringValue(formData.get("type")),
+    fee: parseFloat(getStringValue(formData.get("fee"))) || 0,
+    minimumOrderValue: parseFloat(getStringValue(formData.get("minimumOrderValue"))) || 0,
+    freeDeliveryThreshold: formData.get("freeDeliveryThreshold")
+      ? parseFloat(getStringValue(formData.get("freeDeliveryThreshold"))) || null
+      : null,
+    maxDistanceKm: formData.get("maxDistanceKm")
+      ? parseFloat(getStringValue(formData.get("maxDistanceKm"))) || null
+      : null,
+    neighborhood: getOptionalStringValue(formData.get("neighborhood")),
+    cepFrom: getOptionalStringValue(formData.get("cepFrom")),
+    cepTo: getOptionalStringValue(formData.get("cepTo")),
+  });
+
+  if (!parsed.success) throw new Error("Dados inválidos.");
+
+  await atualizarRegraFrete(ruleId, parsed.data);
+  revalidatePath(`/${slug}/logistica`);
+};
+
+export const excluirRegraFreteAction = async (slug: string, formData: FormData) => {
+  const ruleId = getStringValue(formData.get("ruleId"));
+  await excluirRegraFrete(ruleId);
+  revalidatePath(`/${slug}/logistica`);
 };
 
 export const despacharLoteAction = async (

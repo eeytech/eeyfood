@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import PdvFrenteCaixa from "@/components/pdv-frente-caixa";
 import { buscarCardapioGestao } from "@/lib/admin-queries";
+import { buscarTurnoAtivoPdv } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,11 @@ interface PdvPageProps {
 
 const PdvPage = async ({ params }: PdvPageProps) => {
   const { slug } = await params;
-  const cardapio = await buscarCardapioGestao(slug);
+
+  const [cardapio, activeShift] = await Promise.all([
+    buscarCardapioGestao(slug),
+    buscarTurnoAtivoPdv(slug),
+  ]);
 
   if (!cardapio) {
     return notFound();
@@ -23,6 +28,10 @@ const PdvPage = async ({ params }: PdvPageProps) => {
       restaurantName={cardapio.restaurant.name}
       isCashbackEnabled={cardapio.restaurant.isCashbackEnabled}
       isCouponsEnabled={cardapio.restaurant.isCouponsEnabled}
+      initialShift={activeShift}
+      scaleProtocol={(cardapio.restaurant.scaleProtocol as "TOLEDO" | "FILIZOLA" | "ELGIN" | null) ?? null}
+      scaleBaudRate={cardapio.restaurant.scaleBaudRate ?? 9600}
+      drawerPulseHex={cardapio.restaurant.drawerPulseHex ?? null}
       products={cardapio.products.map((product) => ({
         id: product.id,
         name: product.name,
@@ -32,6 +41,7 @@ const PdvPage = async ({ params }: PdvPageProps) => {
         isActive: product.isActive,
         trackInventory: product.trackInventory,
         stockQuantity: product.stockQuantity,
+        sku: product.sku ?? undefined,
       }))}
     />
   );

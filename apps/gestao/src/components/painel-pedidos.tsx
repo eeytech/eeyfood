@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface PainelPedidosProps {
   slug: string;
@@ -278,10 +279,20 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
       await syncOrderById(payload.orderId);
     };
 
+    const handleCallWaiter = (payload: { restaurantSlug: string; tableId: string; tableName: string }) => {
+      if (payload.restaurantSlug !== slug) return;
+      try { new Audio("/sounds/bell.mp3").play().catch(() => null); } catch { /* ignore */ }
+      toast.warning(`Mesa ${payload.tableName} solicitando atendimento!`, {
+        duration: 10000,
+        icon: "🔔",
+      });
+    };
+
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
     socket.on("NEW_ORDER", handleNewOrder);
     socket.on("ORDER_UPDATED", handleOrderUpdated);
+    socket.on("CALL_WAITER", handleCallWaiter);
 
     getCouriersAction(slug).then(setCouriers);
 
@@ -290,6 +301,7 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
       socket.off("disconnect", handleDisconnect);
       socket.off("NEW_ORDER", handleNewOrder);
       socket.off("ORDER_UPDATED", handleOrderUpdated);
+      socket.off("CALL_WAITER", handleCallWaiter);
       socket.disconnect();
     };
   }, [slug, websocketUrl]);

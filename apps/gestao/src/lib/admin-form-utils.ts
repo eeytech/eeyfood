@@ -18,6 +18,13 @@ export const getBooleanValue = (value: FormDataEntryValue | null) => {
   return value === "on";
 };
 
+export const getOptionalNumberValue = (value: FormDataEntryValue | null) => {
+  const str = getStringValue(value).replace(",", ".");
+  if (!str) return undefined;
+  const num = Number(str);
+  return isNaN(num) ? undefined : num;
+};
+
 export const getFileValue = (value: FormDataEntryValue | null) => {
   if (!(value instanceof File) || value.size === 0) {
     return null;

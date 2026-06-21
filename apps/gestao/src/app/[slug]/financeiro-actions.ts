@@ -58,6 +58,7 @@ export const createTransactionAction = async (slug: string, formData: FormData) 
     restaurantId: restaurant.id,
     paidAt: parsedData.data.status === "PAID" ? new Date() : null,
     orderId: null,
+    bankAccountId: null,
   });
 
 

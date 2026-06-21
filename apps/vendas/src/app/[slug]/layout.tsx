@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import { ReactNode } from "react";
 
+import { MarketingScripts } from "@/components/marketing-scripts";
 import { buscarRestaurantePorSlug } from "@/lib/db";
 
 interface RestaurantLayoutProps {
@@ -28,6 +29,17 @@ export async function generateMetadata({
   };
 }
 
-export default function RestaurantLayout({ children }: { children: ReactNode }) {
-  return <>{children}</>;
+export default async function RestaurantLayout({
+  children,
+  params,
+}: RestaurantLayoutProps) {
+  const { slug } = await params;
+  const restaurant = await buscarRestaurantePorSlug(slug);
+
+  return (
+    <>
+      {restaurant && <MarketingScripts restaurantId={restaurant.id} />}
+      {children}
+    </>
+  );
 }

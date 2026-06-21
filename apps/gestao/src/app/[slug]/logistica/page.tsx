@@ -1,3 +1,4 @@
+import { buscarRegrasFreteAtivas, buscarRestaurantePorSlug } from "@fsw/db";
 import { notFound } from "next/navigation";
 
 import {
@@ -37,7 +38,9 @@ const LogisticaPage = async ({ params, searchParams }: LogisticaPageProps) => {
   const vsearch = sp.vsearch ?? "";
   const vstatus = sp.vstatus ?? "all";
 
-  const [courierResult, vehicleResult] = await Promise.all([
+  const restaurantForFee = await buscarRestaurantePorSlug(slug);
+
+  const [courierResult, vehicleResult, feeRules] = await Promise.all([
     listarCouriersGestaoFiltrado({
       slug,
       page,
@@ -53,6 +56,7 @@ const LogisticaPage = async ({ params, searchParams }: LogisticaPageProps) => {
       search: vsearch || undefined,
       status: vstatus !== "all" ? vstatus : undefined,
     }),
+    restaurantForFee ? buscarRegrasFreteAtivas(restaurantForFee.id) : Promise.resolve([]),
   ]);
 
   return (
@@ -76,6 +80,7 @@ const LogisticaPage = async ({ params, searchParams }: LogisticaPageProps) => {
         initialVSearch={vsearch}
         initialVStatus={vstatus}
         initialTab={tab}
+        feeRules={feeRules}
       />
     </main>
   );

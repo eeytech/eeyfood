@@ -4,6 +4,7 @@ import { createContext, ReactNode, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 
 import type { Product } from "@/lib/db";
+import { trackAddToCart } from "@/hooks/use-pixel-events";
 
 export interface CartProductOption {
   id: string;
@@ -95,6 +96,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addProduct = (product: CartProduct) => {
+    trackAddToCart({ productId: product.id, productName: product.name, price: product.price, quantity: product.quantity });
+
     const productIsAlreadyOnTheCart = products.some(
       (prevProduct) => prevProduct.cartItemId === product.cartItemId,
     );

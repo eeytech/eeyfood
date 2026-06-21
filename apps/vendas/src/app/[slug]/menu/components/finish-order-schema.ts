@@ -33,6 +33,7 @@ export const formSchema = z
     changeFor: z.string().trim().optional(),
     consumptionMethod: z.enum(["DINE_IN", "DELIVERY", "TAKEAWAY"]),
     diningTableId: z.string().uuid().optional(),
+    deliveryAddress: z.string().trim().optional(),
   })
   .superRefine((values, context) => {
     if (values.consumptionMethod === "DINE_IN" && !values.diningTableId) {
@@ -40,6 +41,14 @@ export const formSchema = z
         code: z.ZodIssueCode.custom,
         path: ["diningTableId"],
         message: "Selecione a mesa para o seu pedido.",
+      });
+    }
+
+    if (values.consumptionMethod === "DELIVERY" && !values.deliveryAddress?.trim()) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["deliveryAddress"],
+        message: "Informe o endereço de entrega.",
       });
     }
 

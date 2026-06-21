@@ -1,10 +1,12 @@
 "use client";
 
-import { InfoIcon } from "lucide-react";
-import { useTransition } from "react";
+import { InfoIcon, SparklesIcon } from "lucide-react";
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
 
 import {
   createProductAction,
+  generateProductAiAction,
   updateProductAction,
 } from "@/app/[slug]/actions";
 import { Button } from "@/components/ui/button";
@@ -32,6 +34,47 @@ function ProductFields({
   onSuccess,
 }: ProductFormProps) {
   const [isPending, startTransition] = useTransition();
+  const [isGeneratingAi, startAiTransition] = useTransition();
+  const [description, setDescription] = useState(defaultValues?.description ?? "");
+  const [nutritionValues, setNutritionValues] = useState({
+    calories: defaultValues?.nutritionInfo?.calories ?? "",
+    carbs: defaultValues?.nutritionInfo?.carbs ?? "",
+    protein: defaultValues?.nutritionInfo?.protein ?? "",
+    fat: defaultValues?.nutritionInfo?.fat ?? "",
+    fiber: defaultValues?.nutritionInfo?.fiber ?? "",
+    sodium: defaultValues?.nutritionInfo?.sodium ?? "",
+  });
+
+  const handleGenerateAi = (form: HTMLFormElement) => {
+    const name = (form.elements.namedItem("name") as HTMLInputElement)?.value;
+    const categoryId = (form.elements.namedItem("menuCategoryId") as HTMLSelectElement)?.value;
+    const category = categories.find((c) => c.id === categoryId);
+
+    if (!name || !categoryId) {
+      toast.warning("Preencha o nome e selecione a categoria antes de gerar com IA.");
+      return;
+    }
+
+    startAiTransition(async () => {
+      const result = await generateProductAiAction(slug, name, category?.name ?? "");
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      if (result.description) setDescription(result.description);
+      if (result.nutrition) {
+        setNutritionValues({
+          calories: result.nutrition.calories ?? "",
+          carbs: result.nutrition.carbs ?? "",
+          protein: result.nutrition.protein ?? "",
+          fat: result.nutrition.fat ?? "",
+          fiber: result.nutrition.fiber ?? "",
+          sodium: result.nutrition.sodium ?? "",
+        });
+      }
+      toast.success("Descrição e tabela nutricional geradas pela IA!");
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -63,12 +106,26 @@ function ProductFields({
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="prod-description">Descrição</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="prod-description">Descrição</Label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isGeneratingAi}
+            onClick={(e) => handleGenerateAi(e.currentTarget.closest("form")!)}
+            className="h-7 gap-1.5 border-purple-200 bg-purple-50 px-2.5 text-xs font-semibold text-purple-700 hover:bg-purple-100"
+          >
+            <SparklesIcon size={12} />
+            {isGeneratingAi ? "Gerando..." : "Gerar com IA"}
+          </Button>
+        </div>
         <Textarea
           id="prod-description"
           name="description"
           placeholder="Descreva o produto para o cliente..."
-          defaultValue={defaultValues?.description}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
           className="min-h-[80px]"
           required
         />
@@ -257,6 +314,94 @@ function ProductFields({
             defaultValue={defaultValues?.csosn ?? ""}
             maxLength={3}
           />
+        </div>
+      </div>
+
+      {/* Vídeo */}
+      <div className="space-y-1.5">
+        <Label htmlFor="prod-video">URL do vídeo demonstrativo (opcional)</Label>
+        <Input
+          id="prod-video"
+          name="videoUrl"
+          placeholder="https://youtube.com/..."
+          defaultValue={defaultValues?.videoUrl ?? ""}
+        />
+      </div>
+
+      {/* Horário de disponibilidade */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="prod-available-from">Disponível a partir de</Label>
+          <Input
+            id="prod-available-from"
+            name="availableFrom"
+            type="time"
+            defaultValue={defaultValues?.availableFrom ?? ""}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="prod-available-to">Disponível até</Label>
+          <Input
+            id="prod-available-to"
+            name="availableTo"
+            type="time"
+            defaultValue={defaultValues?.availableTo ?? ""}
+          />
+        </div>
+      </div>
+
+      {/* Selos alimentares */}
+      <div>
+        <p className="mb-2 text-sm font-semibold text-slate-700">Selos alimentares</p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {(["isVegan", "isGlutenFree", "isLactoseFree", "isSpicy"] as const).map((field) => {
+            const labels: Record<string, string> = {
+              isVegan: "Vegano",
+              isGlutenFree: "Sem Glúten",
+              isLactoseFree: "Sem Lactose",
+              isSpicy: "Picante",
+            };
+            return (
+              <label key={field} className="flex cursor-pointer items-center gap-2 rounded-md border bg-slate-50 px-3 py-2 text-sm font-medium">
+                <input
+                  type="checkbox"
+                  name={field}
+                  defaultChecked={(defaultValues as Record<string, unknown>)?.[field] as boolean ?? false}
+                  className="h-4 w-4 rounded"
+                />
+                {labels[field]}
+              </label>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Tabela nutricional */}
+      <div>
+        <p className="mb-2 text-sm font-semibold text-slate-700">Tabela Nutricional (por porção)</p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {[
+            { name: "nutritionCalories", label: "Calorias (kcal)", key: "calories" },
+            { name: "nutritionCarbs", label: "Carboidratos (g)", key: "carbs" },
+            { name: "nutritionProtein", label: "Proteínas (g)", key: "protein" },
+            { name: "nutritionFat", label: "Gorduras (g)", key: "fat" },
+            { name: "nutritionFiber", label: "Fibras (g)", key: "fiber" },
+            { name: "nutritionSodium", label: "Sódio (mg)", key: "sodium" },
+          ].map(({ name, label, key }) => (
+            <div key={name} className="space-y-1">
+              <Label htmlFor={`prod-${name}`} className="text-xs">{label}</Label>
+              <Input
+                id={`prod-${name}`}
+                name={name}
+                type="number"
+                min="0"
+                step="0.1"
+                value={String(nutritionValues[key as keyof typeof nutritionValues])}
+                onChange={(e) => setNutritionValues((prev) => ({ ...prev, [key]: e.target.value }))}
+                placeholder="0"
+              />
+            </div>
+          ))}
         </div>
       </div>
 

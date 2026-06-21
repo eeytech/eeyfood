@@ -1,4 +1,4 @@
-import { listarPedidosRecebimentoPorSlug } from "@fsw/db";
+import { listarPedidosRecebimentoPorSlug, listarSetoresProducaoPorSlug } from "@fsw/db";
 import { notFound } from "next/navigation";
 
 import KdsPainel from "@/components/kds-painel";
@@ -8,19 +8,32 @@ export const dynamic = "force-dynamic";
 
 interface KdsPageProps {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ setor?: string }>;
 }
 
-const KdsPage = async ({ params }: KdsPageProps) => {
+const KdsPage = async ({ params, searchParams }: KdsPageProps) => {
   const { slug } = await params;
+  const { setor } = await searchParams;
+
   const restaurant = await buscarRestauranteParaGestao(slug);
 
   if (!restaurant) {
     return notFound();
   }
 
-  const orders = await listarPedidosRecebimentoPorSlug(slug);
+  const [orders, sectors] = await Promise.all([
+    listarPedidosRecebimentoPorSlug(slug),
+    listarSetoresProducaoPorSlug(slug),
+  ]);
 
-  return <KdsPainel initialOrders={orders} slug={slug} />;
+  return (
+    <KdsPainel
+      initialOrders={orders}
+      slug={slug}
+      sectors={sectors}
+      initialSectorId={setor}
+    />
+  );
 };
 
 export default KdsPage;

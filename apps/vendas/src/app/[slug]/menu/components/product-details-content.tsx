@@ -23,6 +23,7 @@ import { formatCurrency } from "@/helpers/format-currency";
 import { isRestaurantOpen } from "@/helpers/restaurant-status";
 import type { ProductComRestaurante, ProductOption, ProductOptionGroup } from "@/lib/db";
 
+import { trackViewContent } from "@/hooks/use-pixel-events";
 import { CartContext } from "../contexts/cart";
 
 interface ProductWithModifier extends ProductComRestaurante {
@@ -42,6 +43,13 @@ const ProductDetailsContent = ({
 }: ProductDetailsContentProps) => {
   const { toggleCart, addProduct } = useContext(CartContext);
   const [quantity, setQuantity] = useState<number>(1);
+
+  // Fire ViewContent once when the product detail is mounted
+  const viewTrackedRef = useRef(false);
+  if (!viewTrackedRef.current) {
+    viewTrackedRef.current = true;
+    trackViewContent({ productId: product.id, productName: product.name, price: product.price });
+  }
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string[]>>({});
   const [optionCounts, setOptionCounts] = useState<Record<string, Record<string, number>>>({});
   const [comment, setComment] = useState<string>("");
@@ -61,6 +69,19 @@ const ProductDetailsContent = ({
   );
 
   const isOutOfStock = product.trackInventory && product.stockQuantity <= 0;
+
+  const isOutsideAvailableHours = (() => {
+    const p = product as typeof product & { availableFrom?: string | null; availableTo?: string | null };
+    if (!p.availableFrom || !p.availableTo) return false;
+    const now = new Date();
+    const [fH, fM] = p.availableFrom.split(":").map(Number);
+    const [tH, tM] = p.availableTo.split(":").map(Number);
+    const currentMins = now.getHours() * 60 + now.getMinutes();
+    const fromMins = (fH ?? 0) * 60 + (fM ?? 0);
+    const toMins = (tH ?? 0) * 60 + (tM ?? 0);
+    if (fromMins <= toMins) return currentMins < fromMins || currentMins > toMins;
+    return currentMins < fromMins && currentMins > toMins;
+  })();
 
   const isGroupExpanded = (groupId: string) =>
     expandedGroups[groupId] !== false;
@@ -502,10 +523,18 @@ const ProductDetailsContent = ({
                 Produto temporariamente esgotado.
               </p>
             )}
+            {isOutsideAvailableHours && (() => {
+              const p = product as typeof product & { availableFrom?: string | null; availableTo?: string | null };
+              return (
+                <p className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-center text-sm font-semibold text-blue-600">
+                  Disponível apenas das {p.availableFrom} às {p.availableTo}
+                </p>
+              );
+            })()}
             <Button
               className="h-12 w-full rounded-xl text-base font-bold shadow-lg shadow-destructive/20 transition hover:scale-[1.01] active:scale-[0.99]"
               onClick={handleAddToCart}
-              disabled={!isOpen || isOutOfStock}
+              disabled={!isOpen || isOutOfStock || isOutsideAvailableHours}
             >
               Adicionar à sacola • {formatCurrency(unitPrice * quantity)}
             </Button>

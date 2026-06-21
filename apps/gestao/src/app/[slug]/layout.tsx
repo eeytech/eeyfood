@@ -1,7 +1,7 @@
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 
 import AdminSidebar from "@/components/admin-sidebar";
-import { buscarRestauranteParaGestao } from "@/lib/admin-queries";
+import { getSession } from "@/lib/auth/session";
 
 interface RestaurantLayoutProps {
   children: React.ReactNode;
@@ -13,15 +13,29 @@ const RestaurantLayout = async ({
   params,
 }: RestaurantLayoutProps) => {
   const { slug } = await params;
-  const restaurant = await buscarRestauranteParaGestao(slug);
+  const session = await getSession();
 
-  if (!restaurant) {
-    return notFound();
+  if (!session) {
+    redirect("/login");
   }
+
+  // Prevent a user from accessing another restaurant by guessing its slug.
+  if (session.companySlug !== slug) {
+    redirect(`/${session.companySlug}/pedidos`);
+  }
+
+  const activeCompany = session.companies.find((c) => c.id === session.companyId);
+  const restaurantName = activeCompany?.name ?? slug;
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
-      <AdminSidebar slug={slug} restaurantName={restaurant.name} />
+      <AdminSidebar
+        slug={slug}
+        restaurantName={restaurantName}
+        companies={session.companies}
+        currentCompanyId={session.companyId}
+        userPermissions={session.permissions}
+      />
       <main className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-5">
         <div className="mx-auto max-w-[1600px]">{children}</div>
       </main>

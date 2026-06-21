@@ -8,6 +8,30 @@ import {
 } from "@fsw/db";
 import OpenAI from "openai";
 
+const HANDOFF_KEYWORDS = [
+  "atendente",
+  "falar com atendente",
+  "humano",
+  "pessoa real",
+  "suporte",
+  "ajuda humana",
+  "falar com alguem",
+  "falar com alguém",
+  "quero atendimento",
+  "atendimento humano",
+];
+
+const consecutiveFailuresMap = new Map<string, number>();
+
+const detectaHandoff = (text: string): boolean => {
+  const lower = text.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  return HANDOFF_KEYWORDS.some((kw) =>
+    lower.includes(kw.normalize("NFD").replace(/[̀-ͯ]/g, "")),
+  );
+};
+
+export const HANDOFF_SIGNAL = "__HANDOFF_REQUIRED__";
+
 interface ProcessarMensagemBotInput {
   slug: string;
   customerPhone: string;
@@ -38,6 +62,21 @@ export const processarMensagemBot = async ({
     !aiSettings.AiSettings.openaiApiKey
   ) {
     return null;
+  }
+
+  // Se bot está pausado para este cliente, silenciar
+  if (
+    aiSettings.AiSettings.isBotPaused &&
+    aiSettings.AiSettings.pausedForPhone === customerPhone
+  ) {
+    return null;
+  }
+
+  const conversationKey = `${aiSettings.AiSettings.restaurantId}:${customerPhone}`;
+
+  if (detectaHandoff(messageText ?? "")) {
+    consecutiveFailuresMap.delete(conversationKey);
+    return HANDOFF_SIGNAL;
   }
 
   const openai = new OpenAI({
@@ -116,16 +155,28 @@ export const processarMensagemBot = async ({
   const MAX_ITERATIONS = 5;
 
   for (let i = 0; i < MAX_ITERATIONS; i++) {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages,
-      tools,
-    });
+    let response;
+    try {
+      response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages,
+        tools,
+      });
+    } catch {
+      const failures = (consecutiveFailuresMap.get(conversationKey) ?? 0) + 1;
+      consecutiveFailuresMap.set(conversationKey, failures);
+      if (failures >= 3) {
+        consecutiveFailuresMap.delete(conversationKey);
+        return HANDOFF_SIGNAL;
+      }
+      return null;
+    }
 
     const assistantMessage = response.choices[0].message;
     messages.push(assistantMessage);
 
     if (!assistantMessage.tool_calls || assistantMessage.tool_calls.length === 0) {
+      consecutiveFailuresMap.delete(conversationKey);
       return assistantMessage.content;
     }
 

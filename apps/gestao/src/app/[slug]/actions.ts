@@ -7,19 +7,29 @@ import {
   aiSettingsTable,
   and,
   buscarRestaurantePorSlug,
+  criarTransacaoFinanceira,
   db,
   eq,
+  financialCategoriesTable,
+  financialTransactionsTable,
+  inArray,
+  inventoryBatchesTable,
   inventoryItemsTable,
+  inventoryLossesTable,
   menuCategoriesTable,
   operatingHoursTable,
   productOptionGroupsTable,
   productOptionsTable,
   productToOptionGroupsTable,
   productsTable,
+  purchaseInvoicesTable,
   recipeItemsTable,
   restaurantsTable,
+  sql,
   stockMovementsTable,
+  suppliersTable,
   type InventoryItem,
+  type InventoryLossReason,
   type RecipeItem,
 } from "@fsw/db";
 import { revalidatePath } from "next/cache";
@@ -30,6 +40,7 @@ import {
   getBooleanValue,
   getFileValue,
   getNumberValue,
+  getOptionalNumberValue,
   getOptionalStringValue,
   getStringValue,
 } from "@/lib/admin-form-utils";
@@ -38,6 +49,7 @@ const categorySchema = z.object({
   name: z.string().trim().min(2, "Informe um nome de categoria válido."),
   displayOrder: z.number().int().min(0),
   isActive: z.boolean(),
+  isPizzaCategory: z.boolean(),
   imageUrl: z.string().trim().optional(),
 });
 
@@ -60,6 +72,19 @@ const productSchema = z.object({
   ncm: z.string().trim().max(8, "NCM deve ter 8 dígitos.").optional(),
   cfop: z.string().trim().max(4, "CFOP deve ter 4 dígitos.").optional(),
   csosn: z.string().trim().max(3, "CSOSN deve ter 3 dígitos.").optional(),
+  videoUrl: z.string().trim().url().optional().or(z.literal("")),
+  availableFrom: z.string().trim().optional(),
+  availableTo: z.string().trim().optional(),
+  isVegan: z.boolean(),
+  isGlutenFree: z.boolean(),
+  isLactoseFree: z.boolean(),
+  isSpicy: z.boolean(),
+  nutritionCalories: z.number().min(0).optional(),
+  nutritionCarbs: z.number().min(0).optional(),
+  nutritionProtein: z.number().min(0).optional(),
+  nutritionFat: z.number().min(0).optional(),
+  nutritionFiber: z.number().min(0).optional(),
+  nutritionSodium: z.number().min(0).optional(),
 });
 
 
@@ -105,6 +130,26 @@ const resolveProductImageUrl = async (formData: FormData) => {
   return getOptionalStringValue(formData.get("imageUrl"));
 };
 
+type NutritionData = {
+  nutritionCalories?: number;
+  nutritionCarbs?: number;
+  nutritionProtein?: number;
+  nutritionFat?: number;
+  nutritionFiber?: number;
+  nutritionSodium?: number;
+};
+
+const buildNutritionInfo = (data: NutritionData) => {
+  const info: Record<string, number> = {};
+  if (data.nutritionCalories !== undefined) info.calories = data.nutritionCalories;
+  if (data.nutritionCarbs !== undefined) info.carbs = data.nutritionCarbs;
+  if (data.nutritionProtein !== undefined) info.protein = data.nutritionProtein;
+  if (data.nutritionFat !== undefined) info.fat = data.nutritionFat;
+  if (data.nutritionFiber !== undefined) info.fiber = data.nutritionFiber;
+  if (data.nutritionSodium !== undefined) info.sodium = data.nutritionSodium;
+  return info;
+};
+
 const revalidateRestaurantPaths = (slug: string) => {
   revalidatePath(`/${slug}/pedidos`);
   revalidatePath(`/${slug}/cardapio`);
@@ -132,6 +177,7 @@ export const createCategoryAction = async (slug: string, formData: FormData) => 
     name: getStringValue(formData.get("name")),
     displayOrder: getNumberValue(formData.get("displayOrder")),
     isActive: getBooleanValue(formData.get("isActive")),
+    isPizzaCategory: getBooleanValue(formData.get("isPizzaCategory")),
     imageUrl,
   });
 
@@ -144,6 +190,7 @@ export const createCategoryAction = async (slug: string, formData: FormData) => 
     name: parsedData.data.name,
     displayOrder: parsedData.data.displayOrder,
     isActive: parsedData.data.isActive,
+    isPizzaCategory: parsedData.data.isPizzaCategory,
     imageUrl: parsedData.data.imageUrl,
     restaurantId: restaurant.id,
   });
@@ -160,6 +207,7 @@ export const updateCategoryAction = async (slug: string, formData: FormData) => 
     name: getStringValue(formData.get("name")),
     displayOrder: getNumberValue(formData.get("displayOrder")),
     isActive: getBooleanValue(formData.get("isActive")),
+    isPizzaCategory: getBooleanValue(formData.get("isPizzaCategory")),
     imageUrl,
   });
 
@@ -174,6 +222,7 @@ export const updateCategoryAction = async (slug: string, formData: FormData) => 
       name: parsedData.data.name,
       displayOrder: parsedData.data.displayOrder,
       isActive: parsedData.data.isActive,
+      isPizzaCategory: parsedData.data.isPizzaCategory,
       imageUrl: parsedData.data.imageUrl,
       updatedAt: new Date(),
     })
@@ -223,6 +272,19 @@ export const createProductAction = async (slug: string, formData: FormData) => {
     ncm: getOptionalStringValue(formData.get("ncm")),
     cfop: getOptionalStringValue(formData.get("cfop")),
     csosn: getOptionalStringValue(formData.get("csosn")),
+    videoUrl: getOptionalStringValue(formData.get("videoUrl")),
+    availableFrom: getOptionalStringValue(formData.get("availableFrom")),
+    availableTo: getOptionalStringValue(formData.get("availableTo")),
+    isVegan: getBooleanValue(formData.get("isVegan")),
+    isGlutenFree: getBooleanValue(formData.get("isGlutenFree")),
+    isLactoseFree: getBooleanValue(formData.get("isLactoseFree")),
+    isSpicy: getBooleanValue(formData.get("isSpicy")),
+    nutritionCalories: getOptionalNumberValue(formData.get("nutritionCalories")),
+    nutritionCarbs: getOptionalNumberValue(formData.get("nutritionCarbs")),
+    nutritionProtein: getOptionalNumberValue(formData.get("nutritionProtein")),
+    nutritionFat: getOptionalNumberValue(formData.get("nutritionFat")),
+    nutritionFiber: getOptionalNumberValue(formData.get("nutritionFiber")),
+    nutritionSodium: getOptionalNumberValue(formData.get("nutritionSodium")),
   });
 
   if (!parsedData.success) {
@@ -234,6 +296,8 @@ export const createProductAction = async (slug: string, formData: FormData) => {
     console.error("Falha ao validar produto.", "Imagem obrigatória.");
     return;
   }
+
+  const nutritionInfo = buildNutritionInfo(parsedData.data);
 
   await db.insert(productsTable).values({
     name: parsedData.data.name,
@@ -250,6 +314,14 @@ export const createProductAction = async (slug: string, formData: FormData) => {
     ncm: parsedData.data.ncm,
     cfop: parsedData.data.cfop,
     csosn: parsedData.data.csosn,
+    videoUrl: parsedData.data.videoUrl || null,
+    availableFrom: parsedData.data.availableFrom || null,
+    availableTo: parsedData.data.availableTo || null,
+    isVegan: parsedData.data.isVegan,
+    isGlutenFree: parsedData.data.isGlutenFree,
+    isLactoseFree: parsedData.data.isLactoseFree,
+    isSpicy: parsedData.data.isSpicy,
+    nutritionInfo: Object.keys(nutritionInfo).length > 0 ? nutritionInfo : null,
     ingredients: parsedData.data.ingredients
       ? parsedData.data.ingredients
           .split(",")
@@ -286,6 +358,19 @@ export const updateProductAction = async (slug: string, formData: FormData) => {
     ncm: getOptionalStringValue(formData.get("ncm")),
     cfop: getOptionalStringValue(formData.get("cfop")),
     csosn: getOptionalStringValue(formData.get("csosn")),
+    videoUrl: getOptionalStringValue(formData.get("videoUrl")),
+    availableFrom: getOptionalStringValue(formData.get("availableFrom")),
+    availableTo: getOptionalStringValue(formData.get("availableTo")),
+    isVegan: getBooleanValue(formData.get("isVegan")),
+    isGlutenFree: getBooleanValue(formData.get("isGlutenFree")),
+    isLactoseFree: getBooleanValue(formData.get("isLactoseFree")),
+    isSpicy: getBooleanValue(formData.get("isSpicy")),
+    nutritionCalories: getOptionalNumberValue(formData.get("nutritionCalories")),
+    nutritionCarbs: getOptionalNumberValue(formData.get("nutritionCarbs")),
+    nutritionProtein: getOptionalNumberValue(formData.get("nutritionProtein")),
+    nutritionFat: getOptionalNumberValue(formData.get("nutritionFat")),
+    nutritionFiber: getOptionalNumberValue(formData.get("nutritionFiber")),
+    nutritionSodium: getOptionalNumberValue(formData.get("nutritionSodium")),
   });
 
   if (!parsedData.success) {
@@ -297,6 +382,8 @@ export const updateProductAction = async (slug: string, formData: FormData) => {
     console.error("Falha ao validar atualização de produto.", "Imagem obrigatória.");
     return;
   }
+
+  const nutritionInfo = buildNutritionInfo(parsedData.data);
 
   await db
     .update(productsTable)
@@ -315,6 +402,14 @@ export const updateProductAction = async (slug: string, formData: FormData) => {
       ncm: parsedData.data.ncm,
       cfop: parsedData.data.cfop,
       csosn: parsedData.data.csosn,
+      videoUrl: parsedData.data.videoUrl || null,
+      availableFrom: parsedData.data.availableFrom || null,
+      availableTo: parsedData.data.availableTo || null,
+      isVegan: parsedData.data.isVegan,
+      isGlutenFree: parsedData.data.isGlutenFree,
+      isLactoseFree: parsedData.data.isLactoseFree,
+      isSpicy: parsedData.data.isSpicy,
+      nutritionInfo: Object.keys(nutritionInfo).length > 0 ? nutritionInfo : null,
       ingredients: parsedData.data.ingredients
         ? parsedData.data.ingredients
             .split(",")
@@ -966,6 +1061,9 @@ export const fetchRecipeItemsAction = async (
       productId: recipeItemsTable.productId,
       inventoryItemId: recipeItemsTable.inventoryItemId,
       quantityNeeded: recipeItemsTable.quantityNeeded,
+      yieldFactor: recipeItemsTable.yieldFactor,
+      preparationMethod: recipeItemsTable.preparationMethod,
+      suggestedMargin: recipeItemsTable.suggestedMargin,
       createdAt: recipeItemsTable.createdAt,
       updatedAt: recipeItemsTable.updatedAt,
       inventoryItem: {
@@ -1104,4 +1202,468 @@ export const removeRecipeItemAction = async (
 
   revalidateRestaurantPaths(slug);
   return { success: true };
+};
+
+export interface AiProductGenerationResult {
+  description?: string;
+  nutrition?: {
+    calories?: number;
+    carbs?: number;
+    protein?: number;
+    fat?: number;
+    fiber?: number;
+    sodium?: number;
+  };
+  error?: string;
+}
+
+export const generateProductAiAction = async (
+  slug: string,
+  productName: string,
+  categoryName: string,
+): Promise<AiProductGenerationResult> => {
+  const restaurant = await getRestaurantOrThrow(slug);
+
+  const [aiSettings] = await db
+    .select({ openaiApiKey: aiSettingsTable.openaiApiKey })
+    .from(aiSettingsTable)
+    .where(eq(aiSettingsTable.restaurantId, restaurant.id))
+    .limit(1);
+
+  if (!aiSettings?.openaiApiKey) {
+    return { error: "Configure a chave da OpenAI em Inteligência Artificial para usar este recurso." };
+  }
+
+  try {
+    const { OpenAI } = await import("openai");
+    const openai = new OpenAI({ apiKey: aiSettings.openaiApiKey });
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content: `Você é um especialista em gastronomia e copywriting para menus de restaurantes.
+Responda SOMENTE em JSON com este formato exato:
+{
+  "description": "descrição gourmet vendedora em até 2 frases",
+  "nutrition": {
+    "calories": 0,
+    "carbs": 0,
+    "protein": 0,
+    "fat": 0,
+    "fiber": 0,
+    "sodium": 0
+  }
+}
+Os valores nutricionais são por porção individual e devem ser números inteiros aproximados.`,
+        },
+        {
+          role: "user",
+          content: `Produto: "${productName}" — Categoria: "${categoryName}". Gere a descrição e a tabela nutricional aproximada.`,
+        },
+      ],
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) return { error: "Resposta vazia da IA." };
+
+    const parsed = JSON.parse(content) as AiProductGenerationResult;
+    return parsed;
+  } catch {
+    return { error: "Erro ao comunicar com a IA. Verifique sua chave de API." };
+  }
+};
+
+// ─── Registro de Perdas (InventoryLoss) ──────────────────────────────────────
+
+export const registrarPerdaAction = async (
+  slug: string,
+  formData: FormData,
+): Promise<InventoryActionResult> => {
+  const restaurant = await getRestaurantOrThrow(slug);
+
+  const inventoryItemId = getStringValue(formData.get("inventoryItemId"));
+  const quantity = getNumberValue(formData.get("quantity"));
+  const reason = getStringValue(formData.get("reason")) as InventoryLossReason;
+  const notes = getOptionalStringValue(formData.get("notes"));
+
+  if (!inventoryItemId || quantity <= 0) {
+    return { success: false, error: "Informe o insumo e uma quantidade válida." };
+  }
+
+  const [item] = await db
+    .select({ currentQuantity: inventoryItemsTable.currentQuantity, unitCost: inventoryItemsTable.unitCost, name: inventoryItemsTable.name })
+    .from(inventoryItemsTable)
+    .where(and(eq(inventoryItemsTable.id, inventoryItemId), eq(inventoryItemsTable.restaurantId, restaurant.id)))
+    .limit(1);
+
+  if (!item) return { success: false, error: "Insumo não encontrado." };
+
+  const financialLoss = (item.unitCost ?? 0) * quantity;
+  const prevQty = item.currentQuantity;
+  const nextQty = Math.max(prevQty - quantity, 0);
+
+  await db.transaction(async (tx) => {
+    await tx.insert(inventoryLossesTable).values({
+      restaurantId: restaurant.id,
+      inventoryItemId,
+      quantity,
+      reason,
+      financialLoss,
+      notes,
+    });
+
+    await tx
+      .update(inventoryItemsTable)
+      .set({ currentQuantity: nextQty, updatedAt: new Date() })
+      .where(eq(inventoryItemsTable.id, inventoryItemId));
+
+    await tx.insert(stockMovementsTable).values({
+      restaurantId: restaurant.id,
+      inventoryItemId,
+      type: "OUT",
+      quantityDelta: -quantity,
+      previousQuantity: prevQty,
+      currentQuantity: nextQty,
+      reason: `Perda/Desperdício — ${reason}${notes ? `: ${notes}` : ""}`,
+    });
+
+    if (financialLoss > 0) {
+      // Registrar despesa financeira pela perda
+      const [lossCategory] = await tx
+        .select({ id: financialCategoriesTable.id })
+        .from(financialCategoriesTable)
+        .where(and(eq(financialCategoriesTable.restaurantId, restaurant.id), eq(financialCategoriesTable.type, "EXPENSE")))
+        .limit(1);
+
+      await tx.insert(financialTransactionsTable).values({
+        restaurantId: restaurant.id,
+        description: `Perda de estoque — ${item.name} (${quantity} un.) — ${reason}`,
+        amount: financialLoss,
+        type: "EXPENSE",
+        status: "PAID",
+        dueDate: new Date(),
+        paidAt: new Date(),
+        categoryId: lossCategory?.id ?? null,
+      });
+    }
+  });
+
+  revalidateRestaurantPaths(slug);
+  return { success: true };
+};
+
+// ─── Lotes de Estoque (InventoryBatch) ───────────────────────────────────────
+
+export const criarLoteAction = async (
+  slug: string,
+  formData: FormData,
+): Promise<InventoryActionResult> => {
+  const restaurant = await getRestaurantOrThrow(slug);
+
+  const inventoryItemId = getStringValue(formData.get("inventoryItemId"));
+  const quantity = getNumberValue(formData.get("quantity"));
+  const batchCode = getOptionalStringValue(formData.get("batchCode"));
+  const expirationDate = getOptionalStringValue(formData.get("expirationDate"));
+  const manufacturingDate = getOptionalStringValue(formData.get("manufacturingDate"));
+  const unitCost = getOptionalNumberValue(formData.get("unitCost"));
+
+  if (!inventoryItemId || quantity <= 0) {
+    return { success: false, error: "Informe o insumo e uma quantidade válida." };
+  }
+
+  const [item] = await db
+    .select({ currentQuantity: inventoryItemsTable.currentQuantity, unitCost: inventoryItemsTable.unitCost })
+    .from(inventoryItemsTable)
+    .where(and(eq(inventoryItemsTable.id, inventoryItemId), eq(inventoryItemsTable.restaurantId, restaurant.id)))
+    .limit(1);
+
+  if (!item) return { success: false, error: "Insumo não encontrado." };
+
+  const effectiveUnitCost = unitCost ?? item.unitCost ?? 0;
+  const prevQty = item.currentQuantity;
+  const nextQty = prevQty + quantity;
+
+  await db.transaction(async (tx) => {
+    await tx.insert(inventoryBatchesTable).values({
+      restaurantId: restaurant.id,
+      inventoryItemId,
+      batchCode,
+      quantity,
+      expirationDate: expirationDate ?? null,
+      manufacturingDate: manufacturingDate ?? null,
+      unitCost: effectiveUnitCost,
+    });
+
+    const newAvgCost = prevQty > 0
+      ? ((item.unitCost ?? 0) * prevQty + effectiveUnitCost * quantity) / nextQty
+      : effectiveUnitCost;
+
+    await tx.update(inventoryItemsTable).set({
+      currentQuantity: nextQty,
+      unitCost: newAvgCost,
+      updatedAt: new Date(),
+    }).where(eq(inventoryItemsTable.id, inventoryItemId));
+
+    await tx.insert(stockMovementsTable).values({
+      restaurantId: restaurant.id,
+      inventoryItemId,
+      type: "IN",
+      quantityDelta: quantity,
+      previousQuantity: prevQty,
+      currentQuantity: nextQty,
+      reason: batchCode ? `Entrada de lote ${batchCode}` : "Entrada de estoque",
+    });
+  });
+
+  revalidateRestaurantPaths(slug);
+  return { success: true };
+};
+
+// ─── Fornecedores (Supplier) ──────────────────────────────────────────────────
+
+export const criarFornecedorAction = async (
+  slug: string,
+  formData: FormData,
+): Promise<InventoryActionResult & { id?: string }> => {
+  const restaurant = await getRestaurantOrThrow(slug);
+
+  const companyName = getStringValue(formData.get("companyName"));
+  if (!companyName) return { success: false, error: "Informe a Razão Social." };
+
+  const [supplier] = await db.insert(suppliersTable).values({
+    restaurantId: restaurant.id,
+    companyName,
+    cnpj: getOptionalStringValue(formData.get("cnpj")),
+    phone: getOptionalStringValue(formData.get("phone")),
+    email: getOptionalStringValue(formData.get("email")),
+    address: getOptionalStringValue(formData.get("address")),
+  }).returning({ id: suppliersTable.id });
+
+  revalidateRestaurantPaths(slug);
+  return { success: true, id: supplier?.id };
+};
+
+export const atualizarFornecedorAction = async (
+  slug: string,
+  supplierId: string,
+  formData: FormData,
+): Promise<InventoryActionResult> => {
+  const restaurant = await getRestaurantOrThrow(slug);
+
+  await db.update(suppliersTable).set({
+    companyName: getStringValue(formData.get("companyName")),
+    cnpj: getOptionalStringValue(formData.get("cnpj")),
+    phone: getOptionalStringValue(formData.get("phone")),
+    email: getOptionalStringValue(formData.get("email")),
+    address: getOptionalStringValue(formData.get("address")),
+    updatedAt: new Date(),
+  }).where(and(eq(suppliersTable.id, supplierId), eq(suppliersTable.restaurantId, restaurant.id)));
+
+  revalidateRestaurantPaths(slug);
+  return { success: true };
+};
+
+export const excluirFornecedorAction = async (
+  slug: string,
+  supplierId: string,
+): Promise<InventoryActionResult> => {
+  const restaurant = await getRestaurantOrThrow(slug);
+  await db.delete(suppliersTable).where(and(eq(suppliersTable.id, supplierId), eq(suppliersTable.restaurantId, restaurant.id)));
+  revalidateRestaurantPaths(slug);
+  return { success: true };
+};
+
+// ─── Importação de XML NF-e ───────────────────────────────────────────────────
+
+interface NFeItem {
+  nfeCode: string;
+  nfeName: string;
+  quantity: number;
+  unitCost: number;
+  unitOfMeasure: string;
+}
+
+interface NFeParseResult {
+  supplierCnpj: string;
+  supplierName: string;
+  invoiceNumber: string;
+  accessKey: string;
+  totalAmount: number;
+  issuedAt: Date | null;
+  items: NFeItem[];
+}
+
+const extractTag = (xml: string, tag: string): string => {
+  const m = xml.match(new RegExp(`<${tag}[^>]*>([^<]*)<\/${tag}>`, "i"));
+  return m ? m[1].trim() : "";
+};
+
+const extractAllTags = (xml: string, tag: string): string[] => {
+  const matches: string[] = [];
+  const re = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\/${tag}>`, "gi");
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(xml)) !== null) matches.push(m[1]);
+  return matches;
+};
+
+const parseNFeXml = (xml: string): NFeParseResult => {
+  const supplierCnpj = extractTag(xml, "CNPJ");
+  const supplierName = extractTag(xml, "xNome") || extractTag(xml, "xFant");
+  const invoiceNumber = extractTag(xml, "nNF");
+  const dhEmi = extractTag(xml, "dhEmi") || extractTag(xml, "dEmi");
+  const issuedAt = dhEmi ? new Date(dhEmi) : null;
+
+  const idAttr = xml.match(/infNFe\s+Id\s*=\s*["']([^"']+)["']/i);
+  const accessKey = idAttr ? idAttr[1].replace(/^NFe/, "") : extractTag(xml, "chNFe");
+
+  const vNFMatch = xml.match(/<ICMSTot>[\s\S]*?<vNF>([^<]+)<\/vNF>/i);
+  const totalAmount = vNFMatch ? parseFloat(vNFMatch[1]) : 0;
+
+  const detBlocks = extractAllTags(xml, "det");
+  const items: NFeItem[] = detBlocks.map((det) => ({
+    nfeCode: extractTag(det, "cProd"),
+    nfeName: extractTag(det, "xProd"),
+    quantity: parseFloat(extractTag(det, "qCom")) || 0,
+    unitCost: parseFloat(extractTag(det, "vUnCom")) || 0,
+    unitOfMeasure: extractTag(det, "uCom"),
+  })).filter((i) => i.nfeName && i.quantity > 0);
+
+  return { supplierCnpj, supplierName, invoiceNumber, accessKey, totalAmount, issuedAt, items };
+};
+
+export interface ImportarXmlResult {
+  success: boolean;
+  error?: string;
+  invoiceId?: string;
+  parsed?: NFeParseResult;
+  supplierId?: string;
+}
+
+export const parseXmlNFeAction = async (
+  slug: string,
+  xmlContent: string,
+): Promise<ImportarXmlResult> => {
+  await getRestaurantOrThrow(slug);
+
+  try {
+    const parsed = parseNFeXml(xmlContent);
+    if (!parsed.supplierName && !parsed.invoiceNumber) {
+      return { success: false, error: "XML inválido ou não reconhecido como NF-e." };
+    }
+    return { success: true, parsed };
+  } catch {
+    return { success: false, error: "Falha ao processar o XML da NF-e." };
+  }
+};
+
+export interface MapeamentoItem {
+  nfeCode: string;
+  nfeName: string;
+  quantity: number;
+  unitCost: number;
+  unitOfMeasure: string;
+  inventoryItemId: string | null;
+  conversionFactor: number;
+}
+
+export const confirmarImportacaoNFeAction = async (
+  slug: string,
+  xmlContent: string,
+  mapeamentos: MapeamentoItem[],
+): Promise<ImportarXmlResult> => {
+  const restaurant = await getRestaurantOrThrow(slug);
+
+  try {
+    const parsed = parseNFeXml(xmlContent);
+
+    // Upsert fornecedor pelo CNPJ
+    let supplierId: string | null = null;
+    if (parsed.supplierCnpj) {
+      const [existing] = await db
+        .select({ id: suppliersTable.id })
+        .from(suppliersTable)
+        .where(and(eq(suppliersTable.restaurantId, restaurant.id), eq(suppliersTable.cnpj, parsed.supplierCnpj)))
+        .limit(1);
+
+      if (existing) {
+        supplierId = existing.id;
+      } else {
+        const [newSupplier] = await db.insert(suppliersTable).values({
+          restaurantId: restaurant.id,
+          companyName: parsed.supplierName || parsed.supplierCnpj,
+          cnpj: parsed.supplierCnpj,
+        }).returning({ id: suppliersTable.id });
+        supplierId = newSupplier?.id ?? null;
+      }
+    }
+
+    // Criar nota de compra
+    const [invoice] = await db.insert(purchaseInvoicesTable).values({
+      restaurantId: restaurant.id,
+      supplierId,
+      accessKey: parsed.accessKey || null,
+      invoiceNumber: parsed.invoiceNumber || null,
+      totalAmount: parsed.totalAmount,
+      xmlContent,
+      issuedAt: parsed.issuedAt,
+      items: mapeamentos,
+    }).returning({ id: purchaseInvoicesTable.id });
+
+    const invoiceId = invoice?.id ?? null;
+
+    // Dar entrada nos insumos mapeados
+    for (const map of mapeamentos) {
+      if (!map.inventoryItemId) continue;
+
+      const effectiveQty = map.quantity * map.conversionFactor;
+      const [item] = await db
+        .select({ currentQuantity: inventoryItemsTable.currentQuantity, unitCost: inventoryItemsTable.unitCost })
+        .from(inventoryItemsTable)
+        .where(and(eq(inventoryItemsTable.id, map.inventoryItemId), eq(inventoryItemsTable.restaurantId, restaurant.id)))
+        .limit(1);
+
+      if (!item) continue;
+
+      const prevQty = item.currentQuantity;
+      const nextQty = prevQty + effectiveQty;
+      const newAvgCost = prevQty > 0
+        ? ((item.unitCost ?? 0) * prevQty + map.unitCost * effectiveQty) / nextQty
+        : map.unitCost;
+
+      await db.update(inventoryItemsTable).set({
+        currentQuantity: nextQty,
+        unitCost: newAvgCost,
+        updatedAt: new Date(),
+      }).where(eq(inventoryItemsTable.id, map.inventoryItemId));
+
+      await db.insert(stockMovementsTable).values({
+        restaurantId: restaurant.id,
+        inventoryItemId: map.inventoryItemId,
+        type: "IN",
+        quantityDelta: effectiveQty,
+        previousQuantity: prevQty,
+        currentQuantity: nextQty,
+        reason: `Entrada via NF-e ${parsed.invoiceNumber || "s/n"} — ${map.nfeName}`,
+      });
+
+      if (invoiceId) {
+        await db.insert(inventoryBatchesTable).values({
+          restaurantId: restaurant.id,
+          inventoryItemId: map.inventoryItemId,
+          purchaseInvoiceId: invoiceId,
+          quantity: effectiveQty,
+          unitCost: map.unitCost,
+        });
+      }
+    }
+
+    revalidateRestaurantPaths(slug);
+    return { success: true, invoiceId: invoiceId ?? undefined, supplierId: supplierId ?? undefined };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Erro desconhecido.";
+    return { success: false, error: msg };
+  }
 };

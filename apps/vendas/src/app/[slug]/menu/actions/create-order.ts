@@ -24,6 +24,9 @@ interface CreateOrderInput {
   couponCode?: string;
   useWalletBalance?: boolean;
   diningTableId?: string;
+  deliveryAddress?: string;
+  deliveryLatitude?: number;
+  deliveryLongitude?: number;
   slug: string;
 }
 
@@ -67,6 +70,9 @@ export const createOrder = async (input: CreateOrderInput) => {
     couponCode: input.couponCode?.trim().toUpperCase(),
     useWalletBalance: input.useWalletBalance,
     diningTableId: input.diningTableId,
+    deliveryAddress: input.deliveryAddress,
+    deliveryLatitude: input.deliveryLatitude,
+    deliveryLongitude: input.deliveryLongitude,
   });
 
   revalidatePath(`/${input.slug}/orders`);

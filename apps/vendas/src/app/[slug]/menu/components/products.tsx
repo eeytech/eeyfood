@@ -5,9 +5,10 @@ import Image from "next/image";
 import { useState } from "react";
 
 import { formatCurrency } from "@/helpers/format-currency";
-import type { Product, ProductComRestaurante, RestaurantComCategoriasEProdutos } from "@/lib/db";
+import type { Product, ProductComRestaurante, ProductOption, ProductOptionGroup, RestaurantComCategoriasEProdutos } from "@/lib/db";
 
 import { fetchProductWithOptions } from "../actions";
+import PizzaBuilderSheet from "./pizza-builder-sheet";
 import ProductSheet from "./product-sheet";
 
 interface ProductsProps {
@@ -15,13 +16,39 @@ interface ProductsProps {
   restaurant: RestaurantComCategoriasEProdutos;
 }
 
+type FullProduct = ProductComRestaurante & {
+  optionGroups?: (ProductOptionGroup & { options: ProductOption[] })[];
+};
+
 const Products = ({ products, restaurant }: ProductsProps) => {
-  const [selectedProduct, setSelectedProduct] =
-    useState<ProductComRestaurante | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<ProductComRestaurante | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isLoadingProduct, setIsLoadingProduct] = useState(false);
+  const [isPizzaSheetOpen, setIsPizzaSheetOpen] = useState(false);
+  const [pizzaProduct, setPizzaProduct] = useState<FullProduct | null>(null);
+  const [pizzaCategoryId, setPizzaCategoryId] = useState("");
+
+  const getCategoryForProduct = (product: Product) =>
+    restaurant.menuCategories.find((c) => c.id === product.menuCategoryId);
+
+  const getBorderGroup = (fullProduct: FullProduct) =>
+    fullProduct.optionGroups?.find((g) =>
+      g.name.toLowerCase().includes("borda"),
+    ) ?? undefined;
 
   const handleProductClick = async (product: Product) => {
+    const category = getCategoryForProduct(product);
+
+    if (category?.isPizzaCategory) {
+      setIsPizzaSheetOpen(true);
+      setPizzaProduct(null);
+      setPizzaCategoryId(product.menuCategoryId);
+
+      const full = await fetchProductWithOptions(restaurant.slug, product.id);
+      setPizzaProduct((full ?? { ...product, restaurant }) as FullProduct);
+      return;
+    }
+
     setIsSheetOpen(true);
     setIsLoadingProduct(true);
     setSelectedProduct(null);
@@ -108,6 +135,19 @@ const Products = ({ products, restaurant }: ProductsProps) => {
         onOpenChange={(open) => {
           setIsSheetOpen(open);
           if (!open) setSelectedProduct(null);
+        }}
+      />
+
+      <PizzaBuilderSheet
+        isOpen={isPizzaSheetOpen}
+        product={pizzaProduct}
+        categoryId={pizzaCategoryId}
+        restaurantSlug={restaurant.slug}
+        pizzaPricingRule={(restaurant as unknown as { pizzaPricingRule: "MAX" | "AVERAGE" }).pizzaPricingRule ?? "MAX"}
+        borderOptionGroup={pizzaProduct ? getBorderGroup(pizzaProduct) : undefined}
+        onOpenChange={(open) => {
+          setIsPizzaSheetOpen(open);
+          if (!open) setPizzaProduct(null);
         }}
       />
     </div>

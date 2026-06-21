@@ -16,8 +16,22 @@ CREATE TABLE IF NOT EXISTS "RecipeItem" (
 --> statement-breakpoint
 ALTER TABLE "ProductOptionGroup" DROP CONSTRAINT "ProductOptionGroup_productId_Product_id_fk";
 --> statement-breakpoint
-ALTER TABLE "ProductOptionGroup" ALTER COLUMN "productId" DROP NOT NULL;--> statement-breakpoint
-ALTER TABLE "ProductOptionGroup" ADD COLUMN "restaurantId" uuid NOT NULL;--> statement-breakpoint
+ALTER TABLE "ProductOptionGroup" ALTER COLUMN "productId" DROP NOT NULL;
+--> statement-breakpoint
+ALTER TABLE "ProductOptionGroup" ADD COLUMN "restaurantId" uuid;
+--> statement-breakpoint
+UPDATE "ProductOptionGroup" pog
+SET "restaurantId" = p."restaurantId"
+FROM "Product" p
+WHERE pog."productId" = p.id;
+--> statement-breakpoint
+ALTER TABLE "ProductOptionGroup" ALTER COLUMN "restaurantId" SET NOT NULL;
+--> statement-breakpoint
+INSERT INTO "ProductToOptionGroup" ("id", "productId", "productOptionGroupId", "createdAt")
+SELECT gen_random_uuid(), pog."productId", pog.id, NOW()
+FROM "ProductOptionGroup" pog
+WHERE pog."productId" IS NOT NULL;
+--> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "ProductToOptionGroup" ADD CONSTRAINT "ProductToOptionGroup_productId_Product_id_fk" FOREIGN KEY ("productId") REFERENCES "public"."Product"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION

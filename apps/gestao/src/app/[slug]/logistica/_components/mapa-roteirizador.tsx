@@ -4,7 +4,7 @@ import "leaflet/dist/leaflet.css";
 
 import type { Courier, Restaurant } from "@fsw/db";
 import L from "leaflet";
-import { BikeIcon, Loader2Icon, MapPinIcon, RefreshCwIcon } from "lucide-react";
+import { BikeIcon, Loader2Icon, MapPinIcon, RefreshCwIcon, RouteIcon } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 import { toast } from "sonner";
@@ -16,6 +16,16 @@ import {
 } from "@/app/[slug]/logistica-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+
+const calcDistKm = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
 import {
   Select,
   SelectContent,
@@ -31,6 +41,7 @@ interface PedidoRoteirizador {
   deliveryLatitude: number | null;
   deliveryLongitude: number | null;
   total: number;
+  hasPizza?: boolean;
 }
 
 interface MapaRoteirizadorProps {
@@ -109,6 +120,40 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
     }
   };
 
+  const optimizeRoute = () => {
+    if (!restaurant.latitude || !restaurant.longitude) return;
+    const withCoords = orders.filter(
+      (o): o is PedidoRoteirizador & { deliveryLatitude: number; deliveryLongitude: number } =>
+        o.deliveryLatitude !== null && o.deliveryLongitude !== null,
+    );
+    if (withCoords.length === 0) return;
+
+    let restLat = restaurant.latitude;
+    let restLng = restaurant.longitude;
+    const remaining = [...withCoords];
+    const sorted: typeof remaining = [];
+
+    while (remaining.length > 0) {
+      let nearestIdx = 0;
+      let nearestDist = Infinity;
+      remaining.forEach((o, idx) => {
+        const d = calcDistKm(restLat, restLng, o.deliveryLatitude, o.deliveryLongitude);
+        if (d < nearestDist) { nearestDist = d; nearestIdx = idx; }
+      });
+      const nearest = remaining.splice(nearestIdx, 1)[0];
+      sorted.push(nearest);
+      restLat = nearest.deliveryLatitude;
+      restLng = nearest.deliveryLongitude;
+    }
+
+    const noCoords = orders.filter(
+      (o) => o.deliveryLatitude === null || o.deliveryLongitude === null,
+    );
+    setOrders([...sorted, ...noCoords]);
+    setSelectedIds(new Set(sorted.map((o) => o.id)));
+    toast.success("Rota otimizada! Pedidos reordenados do mais próximo ao mais distante.");
+  };
+
   const handleDispatch = () => {
     if (selectedIds.size === 0 || !selectedCourierId) return;
     startTransition(async () => {
@@ -145,20 +190,32 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
               {orders.length} aguardando despacho
             </p>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={loadData}
-            disabled={isLoading}
-            title="Atualizar"
-          >
-            {isLoading ? (
-              <Loader2Icon size={14} className="animate-spin" />
-            ) : (
-              <RefreshCwIcon size={14} />
-            )}
-          </Button>
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={optimizeRoute}
+              disabled={isLoading || orders.length < 2}
+              title="Otimizar Rota (menor distância)"
+            >
+              <RouteIcon size={14} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={loadData}
+              disabled={isLoading}
+              title="Atualizar"
+            >
+              {isLoading ? (
+                <Loader2Icon size={14} className="animate-spin" />
+              ) : (
+                <RefreshCwIcon size={14} />
+              )}
+            </Button>
+          </div>
         </div>
 
         {/* Selecionar todos */}
@@ -231,11 +288,18 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
                       <p className="mt-0.5 truncate text-xs text-muted-foreground">
                         {order.deliveryAddress ?? "Endereço não informado"}
                       </p>
-                      {!hasCoords && (
-                        <Badge variant="secondary" className="mt-1 text-[10px]">
-                          Sem coordenadas
-                        </Badge>
-                      )}
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {!hasCoords && (
+                          <Badge variant="secondary" className="text-[10px]">
+                            Sem coordenadas
+                          </Badge>
+                        )}
+                        {order.hasPizza && (
+                          <Badge variant="outline" className="border-orange-300 bg-orange-50 text-orange-700 text-[10px]">
+                            🍕 Mochila redonda
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </li>
                 );

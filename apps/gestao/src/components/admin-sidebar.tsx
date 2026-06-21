@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  BarChart2Icon,
   BarChart3Icon,
   BoxesIcon,
   ChevronLeftIcon,
@@ -8,24 +9,36 @@ import {
   CircleDollarSignIcon,
   ClipboardListIcon,
   ConciergeBellIcon,
+  HeadphonesIcon,
   LayoutGridIcon,
+  LogOutIcon,
+  MegaphoneIcon,
   MonitorSmartphoneIcon,
+  ShoppingCartIcon,
   SparklesIcon,
   StoreIcon,
   TagIcon,
   TruckIcon,
+  Users2Icon,
   UsersRoundIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
+import { CompanySwitcher } from "@/components/auth/CompanySwitcher";
+import { SupportTicketForm } from "@/components/auth/SupportTicketForm";
 import { Button } from "@/components/ui/button";
+import { logoutAction } from "@/lib/auth/actions";
 import { cn } from "@/lib/utils";
+import type { TokenCompany, TokenPermission } from "@/lib/auth/types";
 
 interface AdminSidebarProps {
   slug: string;
   restaurantName: string;
+  companies: TokenCompany[];
+  currentCompanyId: string;
+  userPermissions: TokenPermission[];
 }
 
 const navigationGroups = [
@@ -44,6 +57,7 @@ const navigationGroups = [
     items: [
       { href: "cardapio", label: "Cardápio", icon: LayoutGridIcon },
       { href: "estoque", label: "Estoque", icon: BoxesIcon },
+      { href: "estoque/compras", label: "Compras", icon: ShoppingCartIcon },
     ],
   },
   {
@@ -62,6 +76,14 @@ const navigationGroups = [
     ],
   },
   {
+    label: "CRM & Marketing",
+    items: [
+      { href: "crm", label: "Clientes (CRM)", icon: Users2Icon },
+      { href: "campanhas", label: "Campanhas", icon: MegaphoneIcon },
+      { href: "marketing", label: "Marketing", icon: BarChart2Icon },
+    ],
+  },
+  {
     label: "Configurar",
     items: [
       { href: "logistica", label: "Logística", icon: TruckIcon },
@@ -70,9 +92,15 @@ const navigationGroups = [
   },
 ];
 
-const AdminSidebar = ({ slug, restaurantName }: AdminSidebarProps) => {
+const AdminSidebar = ({
+  slug,
+  companies,
+  currentCompanyId,
+  userPermissions: _userPermissions,
+}: AdminSidebarProps) => {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [showSupport, setShowSupport] = useState(false);
 
   return (
     <aside
@@ -94,30 +122,18 @@ const AdminSidebar = ({ slug, restaurantName }: AdminSidebarProps) => {
         )}
       </Button>
 
-      <div
-        className={cn(
-          "flex items-center gap-2.5 overflow-hidden border-b border-white/10 px-3 py-4",
-          isCollapsed && "justify-center px-0",
-        )}
-      >
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
-          <StoreIcon size={15} />
-        </div>
-        {!isCollapsed && (
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[10px] uppercase tracking-widest text-slate-500">
-              Gestão
-            </p>
-            <h2 className="truncate text-sm font-semibold leading-tight">
-              {restaurantName}
-            </h2>
-          </div>
-        )}
-      </div>
+      <CompanySwitcher
+        companies={companies}
+        currentCompanyId={currentCompanyId}
+        isCollapsed={isCollapsed}
+      />
 
       <nav className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden p-2">
         {navigationGroups.map((group, groupIndex) => (
-          <div key={group.label} className={cn("flex flex-col gap-0.5", groupIndex > 0 && "mt-3")}>
+          <div
+            key={group.label}
+            className={cn("flex flex-col gap-0.5", groupIndex > 0 && "mt-3")}
+          >
             {!isCollapsed && (
               <p className="mb-0.5 px-2 text-[10px] font-medium uppercase tracking-widest text-slate-600">
                 {group.label}
@@ -149,6 +165,42 @@ const AdminSidebar = ({ slug, restaurantName }: AdminSidebarProps) => {
           </div>
         ))}
       </nav>
+
+      <div className="shrink-0 border-t border-white/10 p-2">
+        {showSupport && !isCollapsed ? (
+          <div className="rounded-md border border-white/10 bg-slate-900 p-3">
+            <SupportTicketForm onClose={() => setShowSupport(false)} />
+          </div>
+        ) : (
+          <div className={cn("flex flex-col gap-1", isCollapsed && "items-center")}>
+            <button
+              onClick={() => setShowSupport(true)}
+              title={isCollapsed ? "Suporte" : undefined}
+              className={cn(
+                "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-100",
+                isCollapsed && "justify-center",
+              )}
+            >
+              <HeadphonesIcon size={15} className="shrink-0" />
+              {!isCollapsed && <span>Suporte</span>}
+            </button>
+
+            <form action={logoutAction}>
+              <button
+                type="submit"
+                title={isCollapsed ? "Sair" : undefined}
+                className={cn(
+                  "flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-slate-400 transition-colors hover:bg-white/5 hover:text-red-400",
+                  isCollapsed && "justify-center",
+                )}
+              >
+                <LogOutIcon size={15} className="shrink-0" />
+                {!isCollapsed && <span>Sair</span>}
+              </button>
+            </form>
+          </div>
+        )}
+      </div>
     </aside>
   );
 };

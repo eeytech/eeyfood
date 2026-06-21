@@ -60,15 +60,26 @@ export function CategoryForm({ slug, defaultValues, onSuccess }: CategoryFormPro
             required
           />
         </div>
-        <label className="flex cursor-pointer items-center gap-2.5 rounded-md border bg-slate-50 px-3 py-2.5 text-sm font-medium">
-          <input
-            type="checkbox"
-            name="isActive"
-            defaultChecked={defaultValues?.isActive ?? true}
-            className="h-4 w-4 rounded"
-          />
-          Categoria ativa
-        </label>
+        <div className="flex flex-col gap-2">
+          <label className="flex cursor-pointer items-center gap-2.5 rounded-md border bg-slate-50 px-3 py-2.5 text-sm font-medium">
+            <input
+              type="checkbox"
+              name="isActive"
+              defaultChecked={defaultValues?.isActive ?? true}
+              className="h-4 w-4 rounded"
+            />
+            Categoria ativa
+          </label>
+          <label className="flex cursor-pointer items-center gap-2.5 rounded-md border bg-orange-50 px-3 py-2.5 text-sm font-medium text-orange-800">
+            <input
+              type="checkbox"
+              name="isPizzaCategory"
+              defaultChecked={defaultValues?.isPizzaCategory ?? false}
+              className="h-4 w-4 rounded"
+            />
+            Categoria de pizzas (ativa montador meio a meio)
+          </label>
+        </div>
       </div>
 
       {defaultValues?.imageUrl && (

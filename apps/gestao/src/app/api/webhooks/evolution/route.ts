@@ -1,9 +1,9 @@
-import { aiSettingsTable, db, eq, restaurantsTable } from "@fsw/db";
+import { aiSettingsTable, db, eq, pausarBot, restaurantsTable } from "@fsw/db";
 import axios from "axios";
 import { NextResponse } from "next/server";
 import OpenAI, { toFile } from "openai";
 
-import { processarMensagemBot } from "@/lib/bot-ai";
+import { HANDOFF_SIGNAL, processarMensagemBot } from "@/lib/bot-ai";
 
 export async function POST(request: Request) {
   try {
@@ -28,9 +28,12 @@ export async function POST(request: Request) {
     const [aiSettings] = await db
       .select({
         slug: restaurantsTable.slug,
+        restaurantId: restaurantsTable.id,
         evolutionApiKey: aiSettingsTable.evolutionApiKey,
         openaiApiKey: aiSettingsTable.openaiApiKey,
         isBotActive: aiSettingsTable.isBotActive,
+        isBotPaused: aiSettingsTable.isBotPaused,
+        pausedForPhone: aiSettingsTable.pausedForPhone,
       })
       .from(aiSettingsTable)
       .innerJoin(restaurantsTable, eq(aiSettingsTable.restaurantId, restaurantsTable.id))
@@ -38,6 +41,11 @@ export async function POST(request: Request) {
       .limit(1);
 
     if (!aiSettings || !aiSettings.isBotActive) {
+      return NextResponse.json({ ok: true });
+    }
+
+    // Bot pausado para este cliente específico — silenciar respostas automáticas
+    if (aiSettings.isBotPaused && aiSettings.pausedForPhone === customerPhone) {
       return NextResponse.json({ ok: true });
     }
 
@@ -92,6 +100,31 @@ export async function POST(request: Request) {
       customerName,
       messageText,
     });
+
+    if (botResponse === HANDOFF_SIGNAL) {
+      // Pausar bot e notificar painel via WebSocket
+      await pausarBot(aiSettings.restaurantId, customerPhone);
+
+      const wsUrl = process.env.WEBSOCKET_URL || "http://localhost:4000";
+      await axios
+        .post(`${wsUrl}/eventos/handoff-humano`, {
+          restaurantSlug: aiSettings.slug,
+          customerPhone,
+          customerName,
+        })
+        .catch(() => null); // Não bloquear fluxo se WS estiver offline
+
+      await axios.post(
+        `${evolutionUrl}/message/sendText/${instanceName}`,
+        {
+          number: customerPhone,
+          text: "Entendido! Um atendente humano foi notificado e assumirá a conversa a partir de agora. Por favor, aguarde um momento.",
+        },
+        { headers: { apikey: aiSettings.evolutionApiKey } },
+      );
+
+      return NextResponse.json({ ok: true });
+    }
 
     if (botResponse) {
       await axios.post(

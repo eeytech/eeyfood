@@ -20,7 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { CompanyVehicle, Courier, Restaurant } from "@fsw/db";
+import type { CompanyVehicle, Courier, DeliveryFeeRule, Restaurant } from "@fsw/db";
 import {
   BikeIcon,
   ChevronLeftIcon,
@@ -37,6 +37,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { CourierForm } from "./courier-form";
+import { DeliveryFeeRulesTab } from "./delivery-fee-rules-tab";
 import { DeliveryParamsTab } from "./delivery-params-tab";
 import { VehiclesTab } from "./vehicles-tab";
 
@@ -71,6 +72,7 @@ interface LogisticaClientProps {
   initialVSearch: string;
   initialVStatus: string;
   initialTab: string;
+  feeRules: DeliveryFeeRule[];
 }
 
 const vehicleLabel: Record<string, string> = {
@@ -108,6 +110,7 @@ export function LogisticaClient({
   initialVSearch,
   initialVStatus,
   initialTab,
+  feeRules,
 }: LogisticaClientProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -198,7 +201,9 @@ export function LogisticaClient({
               ? "params"
               : initialTab === "roteirizador"
                 ? "roteirizador"
-                : "motoboys"
+                : initialTab === "zonas"
+                  ? "zonas"
+                  : "motoboys"
         }
         onValueChange={(tab) => {
           const params = new URLSearchParams();
@@ -210,6 +215,7 @@ export function LogisticaClient({
           <TabsTrigger value="motoboys">Motoboys</TabsTrigger>
           <TabsTrigger value="vehicles">Veículos da Empresa</TabsTrigger>
           <TabsTrigger value="params">Parâmetros</TabsTrigger>
+          <TabsTrigger value="zonas">Zonas de Frete</TabsTrigger>
           <TabsTrigger value="roteirizador" className="gap-1.5">
             <MapIcon size={13} />
             Roteirizador
@@ -467,6 +473,11 @@ export function LogisticaClient({
         {/* ── Aba Parâmetros ── */}
         <TabsContent value="params" className="mt-4">
           <DeliveryParamsTab slug={slug} restaurant={restaurant} />
+        </TabsContent>
+
+        {/* ── Aba Zonas de Frete ── */}
+        <TabsContent value="zonas" className="mt-4">
+          <DeliveryFeeRulesTab slug={slug} rules={feeRules} />
         </TabsContent>
 
         {/* ── Aba Roteirizador ── */}

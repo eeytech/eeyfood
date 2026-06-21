@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { buscarDadosDashboard } from "@/lib/admin-queries";
+import { buscarDadosDashboard, buscarKPIsAvancados } from "@/lib/admin-queries";
 
 import DateRangeFilter from "./_components/date-range-filter";
 import DashboardTabs from "./_components/dashboard-tabs";
@@ -31,14 +31,17 @@ const RelatoriosPage = async ({ params, searchParams }: RelatoriosPageProps) => 
   const startDate = new Date(`${fromStr}T00:00:00.000Z`);
   const endDate = new Date(`${toStr}T23:59:59.999Z`);
 
-  const data = await buscarDadosDashboard(slug, startDate, endDate);
+  const [data, kpis] = await Promise.all([
+    buscarDadosDashboard(slug, startDate, endDate),
+    buscarKPIsAvancados(slug, startDate, endDate),
+  ]);
 
-  if (!data) return notFound();
+  if (!data || !kpis) return notFound();
 
   return (
     <main className="space-y-4">
       <DateRangeFilter from={fromStr} to={toStr} />
-      <DashboardTabs data={data} from={fromStr} to={toStr} />
+      <DashboardTabs data={data} kpis={kpis} slug={slug} from={fromStr} to={toStr} />
     </main>
   );
 };
