@@ -33,12 +33,12 @@ const SEGMENT_LABELS: Record<string, string> = {
   RECOVERED: "Recuperado",
 };
 
-const SEGMENT_VARIANTS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+const SEGMENT_VARIANTS: Record<string, "default" | "secondary" | "success" | "warning" | "danger"> = {
   NEW: "default",
-  VIP: "default",
+  VIP: "success",
   INACTIVE: "secondary",
-  AT_RISK: "destructive",
-  RECOVERED: "outline",
+  AT_RISK: "danger",
+  RECOVERED: "warning",
 };
 
 const formatCurrency = (v: number) =>
@@ -87,7 +87,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
     ),
   });
 
-  const segmentVariant = SEGMENT_VARIANTS[customer.segment] ?? "outline";
+  const segmentVariant = SEGMENT_VARIANTS[customer.segment] ?? "secondary";
   const segmentLabel = SEGMENT_LABELS[customer.segment] ?? customer.segment;
 
   return (
