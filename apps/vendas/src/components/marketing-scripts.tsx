@@ -1,6 +1,6 @@
 import Script from "next/script";
 
-import { db, eq, marketingSettingsTable, restaurantsTable } from "@/lib/db";
+import { db, eq, marketingSettingsTable } from "@/lib/db";
 
 interface MarketingScriptsProps {
   restaurantId: string;

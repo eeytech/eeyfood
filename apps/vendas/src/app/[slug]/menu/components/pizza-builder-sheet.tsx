@@ -4,7 +4,7 @@ import {
   CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  CircleHalfIcon,
+  CircleDivideIcon,
   PizzaIcon,
 } from "lucide-react";
 import Image from "next/image";
@@ -173,7 +173,7 @@ const PizzaBuilderSheet = ({
                     : "border-slate-200 bg-white hover:bg-slate-50"
                 }`}
               >
-                <CircleHalfIcon size={28} className={fraction === "meio-a-meio" ? "text-orange-500" : "text-slate-400"} />
+                <CircleDivideIcon size={28} className={fraction === "meio-a-meio" ? "text-orange-500" : "text-slate-400"} />
                 <span className="text-sm font-semibold">Meio a Meio</span>
                 <span className="text-xs text-slate-500">2 sabores</span>
               </button>

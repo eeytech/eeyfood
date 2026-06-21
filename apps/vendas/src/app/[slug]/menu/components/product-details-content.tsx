@@ -154,13 +154,6 @@ const ProductDetailsContent = ({
     return product.price + optionsTotal;
   }, [product.price, selectedOptionsList]);
 
-  const canAddToCart = useMemo(() => {
-    return optionGroups.every((group) => {
-      const selected = selectedOptions[group.id] || [];
-      return selected.length >= group.minOptions;
-    });
-  }, [optionGroups, selectedOptions]);
-
   const handleAddToCart = () => {
     // Find the first required group where the customer hasn't met the minimum selection
     const firstIncompleteGroup = optionGroups.find((group) => {
