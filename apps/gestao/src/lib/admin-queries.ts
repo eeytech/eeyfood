@@ -45,7 +45,6 @@ import {
   eq,
   financialCategoriesTable,
   financialTransactionsTable,
-  fiscalSettingsTable,
   gte,
   ilike,
   inventoryBatchesTable,

@@ -19,14 +19,11 @@ import {
   ListIcon,
   Loader2Icon,
   MapIcon,
-  MicIcon,
   PlusIcon,
   QrCodeIcon,
   ScissorsIcon,
   SearchIcon,
-  ShoppingBasketIcon,
   UsersRoundIcon,
-  XIcon,
 } from "lucide-react";
 import {
   useCallback,
@@ -192,7 +189,6 @@ const ComandaDigital = ({
   const [salonView, setSalonView] = useState<SalonView>("LISTA");
 
   // ── Waiters / reservations / queue / avulsas ────────────────────────────
-  const [waiters] = useState<Waiter[]>(initialWaiters);
   const [reservations, setReservations] = useState<TableReservation[]>(initialReservations);
   const [queue, setQueue] = useState<WaitingQueueEntry[]>(initialQueue);
   const [comandasAvulsas, setComandasAvulsas] = useState<ComandaAvulsaComPedido[]>(
@@ -765,9 +761,6 @@ const ComandaDigital = ({
   };
 
   // ── Product panel (shared between mesas and avulsas) ───────────────────
-  const activeOrderForProducts =
-    mainView === "MESAS" ? selectedMesa?.currentOrder : selectedAvulsa?.order;
-
   const ProductPanel = () => (
     <Card>
       <CardHeader className="pb-3">
