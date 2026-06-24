@@ -66,7 +66,7 @@ export async function loginAction(
       .limit(1);
 
     if (!restaurant) {
-      throw new Error("Restaurante não encontrado.");
+      throw new Error(`Restaurante não encontrado. (ID esperado no banco local: ${activeCompanyId})`);
     }
 
     redirectSlug = restaurant.slug;
