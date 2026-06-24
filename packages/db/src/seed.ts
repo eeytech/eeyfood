@@ -141,7 +141,8 @@ const main = async () => {
     const [restaurant] = await tx
       .insert(restaurantsTable)
       .values({
-        name: "Burger Craft SP",
+        id: "6b737e3b-470d-4f05-bf7f-8a72f63b36d5",
+        name: "Empresa Demonstrativa eeyFood",
         slug: "burger-craft-sp",
         description: "Hambúrgueres artesanais no coração de São Paulo.",
         avatarImageUrl:
