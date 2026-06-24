@@ -1,19 +1,16 @@
 export const authConfig = {
   eeycore: {
     get baseUrl() {
-      return process.env.EECORE_BASE_URL ?? "";
+      return process.env.NEXT_PUBLIC_ADMIN_API_URL ?? "";
     },
     get appSlug() {
-      return process.env.EECORE_APP_SLUG ?? "";
-    },
-    get apiKey() {
-      return process.env.EECORE_API_KEY ?? "";
+      return process.env.NEXT_PUBLIC_APP_SLUG ?? "";
     },
     get jwtSecret() {
-      const secret = process.env.EECORE_JWT_SECRET;
+      const secret = process.env.JWT_SECRET;
       if (!secret) {
         throw new Error(
-          "[SECURITY] EECORE_JWT_SECRET não está configurado. Configure a variável de ambiente antes de iniciar a aplicação.",
+          "[SECURITY] JWT_SECRET não está configurado. Configure a variável de ambiente antes de iniciar a aplicação.",
         );
       }
       return secret;

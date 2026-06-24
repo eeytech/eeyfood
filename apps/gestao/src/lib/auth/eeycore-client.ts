@@ -27,13 +27,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
 export const eeycore = {
   withApiKey<T>(path: string, options: RequestOptions = {}): Promise<T> {
-    return request<T>(path, {
-      ...options,
-      headers: {
-        ...options.headers,
-        "x-api-key": authConfig.eeycore.apiKey,
-      },
-    });
+    return request<T>(path, options);
   },
 
   withUserToken<T>(

@@ -10,10 +10,10 @@ const PUBLIC_PATHS = [
 ];
 
 const getJwtSecret = () => {
-  const secret = process.env.EECORE_JWT_SECRET;
+  const secret = process.env.JWT_SECRET;
   if (!secret) {
     throw new Error(
-      "[SECURITY] EECORE_JWT_SECRET não está configurado. A aplicação não pode operar de forma segura.",
+      "[SECURITY] JWT_SECRET não está configurado. A aplicação não pode operar de forma segura.",
     );
   }
   return new TextEncoder().encode(secret);
@@ -38,7 +38,7 @@ export async function middleware(request: NextRequest) {
   try {
     const { payload } = await jwtVerify(token, jwtSecret);
 
-    if (payload.appSlug !== process.env.EECORE_APP_SLUG) {
+    if (payload.appSlug !== process.env.NEXT_PUBLIC_APP_SLUG) {
       return NextResponse.redirect(new URL("/unauthorized", request.url));
     }
 
