@@ -31,14 +31,14 @@ import { SupportTicketForm } from "@/components/auth/SupportTicketForm";
 import { Button } from "@/components/ui/button";
 import { logoutAction } from "@/lib/auth/actions";
 import { cn } from "@/lib/utils";
-import type { TokenCompany, TokenPermission } from "@/lib/auth/types";
+import type { TokenCompany } from "@/lib/auth/types";
 
 interface AdminSidebarProps {
   slug: string;
   restaurantName: string;
   companies: TokenCompany[];
   currentCompanyId: string;
-  userPermissions: TokenPermission[];
+  userPermissions: Record<string, string[]>;
 }
 
 const navigationGroups = [

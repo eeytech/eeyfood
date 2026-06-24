@@ -38,7 +38,7 @@ export async function middleware(request: NextRequest) {
   try {
     const { payload } = await jwtVerify(token, jwtSecret);
 
-    if (payload.appSlug !== process.env.NEXT_PUBLIC_APP_SLUG) {
+    if (payload.application !== process.env.NEXT_PUBLIC_APP_SLUG) {
       return NextResponse.redirect(new URL("/unauthorized", request.url));
     }
 

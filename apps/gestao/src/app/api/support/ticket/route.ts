@@ -30,8 +30,8 @@ export async function POST(request: Request) {
       method: "POST",
       body: JSON.stringify({
         userId: session.sub,
-        restaurantId: session.companyId,
-        appSlug: session.appSlug,
+        restaurantId: session.activeCompanyId,
+        appSlug: session.application,
         title,
         message,
       }),
