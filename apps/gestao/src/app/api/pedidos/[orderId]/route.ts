@@ -83,7 +83,19 @@ const parsePayload = async (request: Request): Promise<PedidoPatchPayload> => {
   return payload;
 };
 
-export async function GET(_request: Request, context: RouteContext) {
+// Extrai o slug do restaurante autenticado injetado pelo middleware JWT
+const getCompanySlug = (request: Request): string | null => {
+  const raw = request.headers.get("x-user-data");
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as { companySlug?: unknown };
+    return typeof parsed.companySlug === "string" ? parsed.companySlug : null;
+  } catch {
+    return null;
+  }
+};
+
+export async function GET(request: Request, context: RouteContext) {
   const orderId = await getOrderId(context);
 
   if (!orderId) {
@@ -100,6 +112,12 @@ export async function GET(_request: Request, context: RouteContext) {
       { message: "Pedido não encontrado." },
       { status: 404 },
     );
+  }
+
+  // IDOR: garante que o pedido pertence ao restaurante autenticado
+  const companySlug = getCompanySlug(request);
+  if (companySlug && order.restaurant.slug !== companySlug) {
+    return NextResponse.json({ message: "Acesso negado." }, { status: 403 });
   }
 
   return NextResponse.json(order);
@@ -122,6 +140,21 @@ export async function PATCH(request: Request, context: RouteContext) {
       { message: "Nenhuma atualização válida foi informada." },
       { status: 400 },
     );
+  }
+
+  // IDOR: valida pertença ao restaurante antes de qualquer mutação
+  const companySlug = getCompanySlug(request);
+  if (companySlug) {
+    const existingOrder = await buscarPedidoRecebimentoPorId(orderId);
+    if (!existingOrder) {
+      return NextResponse.json(
+        { message: "Pedido não encontrado." },
+        { status: 404 },
+      );
+    }
+    if (existingOrder.restaurant.slug !== companySlug) {
+      return NextResponse.json({ message: "Acesso negado." }, { status: 403 });
+    }
   }
 
   let updatedStatus: OrderStatus | undefined;

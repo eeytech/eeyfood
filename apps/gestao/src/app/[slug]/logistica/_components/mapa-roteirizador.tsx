@@ -5,7 +5,7 @@ import "leaflet/dist/leaflet.css";
 import type { Courier, Restaurant } from "@fsw/db";
 import L from "leaflet";
 import { BikeIcon, Loader2Icon, MapPinIcon, RefreshCwIcon, RouteIcon } from "lucide-react";
-import { useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 import { toast } from "sonner";
 
@@ -16,6 +16,13 @@ import {
 } from "@/app/[slug]/logistica-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const calcDistKm = (lat1: number, lng1: number, lat2: number, lng2: number) => {
   const R = 6371;
@@ -26,13 +33,6 @@ const calcDistKm = (lat1: number, lng1: number, lat2: number, lng2: number) => {
     Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 interface PedidoRoteirizador {
   id: number;
@@ -84,7 +84,7 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
       ? [restaurant.latitude, restaurant.longitude]
       : BRAZIL_CENTER;
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
       const [fetchedOrders, fetchedCouriers] = await Promise.all([
@@ -96,12 +96,11 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [slug]);
 
   useEffect(() => {
     void loadData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug]);
+  }, [loadData]);
 
   const toggleOrder = (id: number) => {
     setSelectedIds((prev) => {

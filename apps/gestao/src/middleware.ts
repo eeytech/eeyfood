@@ -9,8 +9,15 @@ const PUBLIC_PATHS = [
   "/api/webhooks/",
 ];
 
-const getJwtSecret = () =>
-  new TextEncoder().encode(process.env.EECORE_JWT_SECRET ?? "");
+const getJwtSecret = () => {
+  const secret = process.env.EECORE_JWT_SECRET;
+  if (!secret) {
+    throw new Error(
+      "[SECURITY] EECORE_JWT_SECRET não está configurado. A aplicação não pode operar de forma segura.",
+    );
+  }
+  return new TextEncoder().encode(secret);
+};
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -25,8 +32,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
+  // Falha explícita se o segredo não estiver configurado — não capturar como token inválido
+  const jwtSecret = getJwtSecret();
+
   try {
-    const { payload } = await jwtVerify(token, getJwtSecret());
+    const { payload } = await jwtVerify(token, jwtSecret);
 
     if (payload.appSlug !== process.env.EECORE_APP_SLUG) {
       return NextResponse.redirect(new URL("/unauthorized", request.url));

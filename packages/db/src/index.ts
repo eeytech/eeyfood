@@ -15,12 +15,8 @@ export {
   buscarProximaRegraFidelidade,
   buscarRestaurantePorSlug,
   criarPedido,
-  criarTransacaoFinanceira,
-  atualizarStatusTransacao,
-  buscarDREBasico,
   despacharPedido,
   fecharComanda,
-  listarCategoriasFinanceirasPorSlug,
   listarCouriersPorSlug,
   listarMesasComandasPorSlug,
   listarPedidosRecebimentoPorSlug,
@@ -35,17 +31,25 @@ export {
   unirMesas,
   buscarProdutosPorCategoria,
   buscarUltimoPedidoPorTelefone,
-  buscarRegrasFreteAtivas,
-  criarRegraFrete,
-  atualizarRegraFrete,
-  excluirRegraFrete,
-  buscarPedidosParaEntregador,
-  atualizarLocalizacaoEntregador,
-  registrarComprovanteEntrega,
-  criarViagemMotoboy,
-  concluirViagemMotoboy,
-  buscarIntegracaoMarketplace,
-  salvarIntegracaoMarketplace,
+} from "./queries.js";
+export type {
+  TransferirItensInput,
+  UnirMesasInput,
+} from "./queries.js";
+export type {
+  AdicionarItensComandaInput,
+  AbrirComandaMesaInput,
+  CriarPedidoInput,
+  DespacharPedidoInput,
+  FecharComandaInput,
+  SalvarCarrinhoAbandonadoInput,
+  ValidarBeneficiosPedidoInput,
+} from "./queries.js";
+export {
+  criarTransacaoFinanceira,
+  atualizarStatusTransacao,
+  buscarDREBasico,
+  listarCategoriasFinanceirasPorSlug,
   listarContasBancariasPorSlug,
   criarContaBancaria,
   atualizarContaBancaria,
@@ -65,30 +69,31 @@ export {
   listarLinhasExtrato,
   vincularLinhaExtratoTransacao,
   ignorarLinhaExtrato,
+} from "./queries/financial.js";
+export {
+  buscarRegrasFreteAtivas,
+  criarRegraFrete,
+  atualizarRegraFrete,
+  excluirRegraFrete,
+  buscarPedidosParaEntregador,
+  atualizarLocalizacaoEntregador,
+  registrarComprovanteEntrega,
+  criarViagemMotoboy,
+  concluirViagemMotoboy,
+} from "./queries/delivery.js";
+export type { CriarRegraFreteInput, CriarViagemMotoboyInput } from "./queries/delivery.js";
+export {
+  buscarIntegracaoMarketplace,
+  salvarIntegracaoMarketplace,
   pausarBot,
   reativarBot,
   buscarStatusHandoff,
   criarGastoMarketing,
   listarGastosMarketing,
   excluirGastoMarketing,
-} from "./queries.js";
-export type {
-  TransferirItensInput,
-  UnirMesasInput,
-  CriarRegraFreteInput,
-  CriarViagemMotoboyInput,
-  CriarGastoMarketingInput,
-} from "./queries.js";
+} from "./queries/integration.js";
+export type { CriarGastoMarketingInput } from "./queries/integration.js";
 export { isRestaurantOpen, getNextOpeningTime } from "./restaurant-utils.js";
-export type {
-  AdicionarItensComandaInput,
-  AbrirComandaMesaInput,
-  CriarPedidoInput,
-  DespacharPedidoInput,
-  FecharComandaInput,
-  SalvarCarrinhoAbandonadoInput,
-  ValidarBeneficiosPedidoInput,
-} from "./queries.js";
 export {
   abandonedCartStatusEnum,
   abandonedCartsRelations,

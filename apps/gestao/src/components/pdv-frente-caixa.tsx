@@ -295,6 +295,10 @@ const PdvFrenteCaixa = ({
   const searchInputRef = useRef<HTMLInputElement>(null);
   const barcodeBufferRef = useRef("");
   const barcodeTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // Stable callback refs: o listener de teclado usa .current para sempre chamar a versão mais recente
+  // das funções sem precisar re-registrar o listener a cada mudança de estado.
+  const handleFinishSaleRef = useRef<() => void>(() => {});
+  const addProductRef = useRef<(product: PdvProduct, overrideWeight?: number) => void>(() => {});
 
   // ── Search / filter ────────────────────────────────────────────────────────
   const deferredSearchValue = useDeferredValue(searchValue);
@@ -380,6 +384,12 @@ const PdvFrenteCaixa = ({
     return () => clearTimeout(timer);
   }, [customerPhone, slug, isCashbackEnabled]);
 
+  // Sincroniza os refs a cada render para que o handler de teclado use sempre as versões atuais
+  useEffect(() => {
+    handleFinishSaleRef.current = handleFinishSale;
+    addProductRef.current = addProduct;
+  });
+
   // Keyboard shortcuts (F2 / F8 / F12) + barcode scanner
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -399,7 +409,7 @@ const PdvFrenteCaixa = ({
       if (e.key === "F12") {
         e.preventDefault();
         if (cartItems.length > 0 && !isPending && activeShift) {
-          handleFinishSale();
+          handleFinishSaleRef.current();
         }
         return;
       }
@@ -416,7 +426,7 @@ const PdvFrenteCaixa = ({
           const found = products.find(
             (p) => p.isActive && p.sku && p.sku.toLowerCase() === code.toLowerCase(),
           );
-          if (found) addProduct(found);
+          if (found) addProductRef.current(found);
         }
         return;
       }
@@ -433,7 +443,6 @@ const PdvFrenteCaixa = ({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cartItems, isPending, activeShift, products]);
 
   // Online / offline status + sync on reconnect

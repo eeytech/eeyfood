@@ -10,7 +10,13 @@ export const authConfig = {
       return process.env.EECORE_API_KEY ?? "";
     },
     get jwtSecret() {
-      return process.env.EECORE_JWT_SECRET ?? "";
+      const secret = process.env.EECORE_JWT_SECRET;
+      if (!secret) {
+        throw new Error(
+          "[SECURITY] EECORE_JWT_SECRET não está configurado. Configure a variável de ambiente antes de iniciar a aplicação.",
+        );
+      }
+      return secret;
     },
   },
   cookie: {
