@@ -76,10 +76,8 @@ export const createOrder = async (input: CreateOrderInput) => {
   });
 
   revalidatePath(`/${input.slug}/orders`);
-  await notificarNovoPedido({
-    orderId: order.id,
-    restaurantSlug: input.slug,
-  });
+  // Não bloqueia resposta ao cliente — falha silenciosa é aceitável aqui
+  notificarNovoPedido({ orderId: order.id, restaurantSlug: input.slug });
 
   return order;
 };

@@ -1,8 +1,16 @@
+import { unstable_cache } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { buscarRestauranteComCardapioPorSlug } from "@/lib/db";
 
 import RestaurantMenuPageContent from "./components/menu-page-content";
+
+const buscarMenuCached = (slug: string) =>
+  unstable_cache(
+    () => buscarRestauranteComCardapioPorSlug(slug),
+    ["restaurant-menu", slug],
+    { revalidate: 300, tags: [`restaurant-menu:${slug}`] },
+  )();
 
 interface RestaurantMenuPageProps {
   params: Promise<{ slug: string }>;
@@ -26,7 +34,7 @@ const RestaurantMenuPage = async ({
     return redirect("/?error=not_found");
   }
 
-  const restaurant = await buscarRestauranteComCardapioPorSlug(slug);
+  const restaurant = await buscarMenuCached(slug);
 
   if (!restaurant) {
     return redirect("/?error=not_found");

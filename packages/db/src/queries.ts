@@ -185,6 +185,14 @@ interface CupomAplicado {
   discountAmount: number;
 }
 
+interface RecipeItemParaConsumo {
+  productId: string;
+  inventoryItemId: string;
+  quantityNeeded: number;
+  inventoryName: string;
+  currentQuantity: number;
+}
+
 interface ContextoPedidoCalculado {
   restaurant: Restaurant;
   itens: ItemPedidoCalculado[];
@@ -203,6 +211,7 @@ interface ContextoPedidoCalculado {
     cashbackPercent: number;
     remainingAmount: number;
   } | null;
+  recipeItems: RecipeItemParaConsumo[];
 }
 
 const arredondarMoeda = (value: number) => {
@@ -589,61 +598,38 @@ const carregarContextoPedidoCalculado = async (
     throw new Error("Restaurante nao encontrado.");
   }
 
-  const operatingHours = await db
-    .select()
-    .from(operatingHoursTable)
-    .where(eq(operatingHoursTable.restaurantId, restaurant.id));
-
-  const isOpen = isRestaurantOpen(restaurant.status, operatingHours);
-  const isScheduled = (input as any).scheduledFor !== undefined;
-
-  if (!isOpen && !isScheduled) {
-    throw new Error(
-      "O restaurante está fechado no momento e não aceita novos pedidos.",
-    );
-  }
-
-  // Usamos os produtos originais do input para preservar as opções selecionadas por item
   const productsInput = input.products;
 
   if (productsInput.length === 0) {
     throw new Error("O pedido precisa ter pelo menos um item.");
   }
 
+  const isScheduled = (input as any).scheduledFor !== undefined;
   const productIds = Array.from(new Set(productsInput.map((p) => p.id)));
-  const productsWithPrices = await db
-    .select()
-    .from(productsTable)
-    .where(
+  const allOptionIds = Array.from(new Set(productsInput.flatMap((p) => p.selectedOptions || [])));
+
+  // Rodada 1: todas as queries independentes em paralelo
+  const [
+    operatingHours,
+    productsWithPrices,
+    optionsRaw,
+    allRecipeItems,
+    walletRaw,
+    feeRulesRaw,
+    loyaltyRules,
+  ] = await Promise.all([
+    db.select().from(operatingHoursTable).where(eq(operatingHoursTable.restaurantId, restaurant.id)),
+    db.select().from(productsTable).where(
       and(
         inArray(productsTable.id, productIds),
         eq(productsTable.restaurantId, restaurant.id),
         eq(productsTable.isActive, true),
       ),
-    );
-
-  const productsMap = new Map<string, Product>(
-    productsWithPrices.map((product) => [product.id, product]),
-  );
-
-  // Carregar todas as opções selecionadas de uma vez para otimizar
-  const allOptionIds = Array.from(
-    new Set(productsInput.flatMap((p) => p.selectedOptions || [])),
-  );
-  const optionsMap = new Map<string, ProductOption>();
-
-  if (allOptionIds.length > 0) {
-    const options = await db
-      .select()
-      .from(productOptionsTable)
-      .where(inArray(productOptionsTable.id, allOptionIds));
-    options.forEach((o) => optionsMap.set(o.id, o));
-  }
-
-  // Verificar disponibilidade de insumos via Ficha Técnica antes de confirmar o pedido
-  const allProductIds = Array.from(new Set(productsInput.map((p) => p.id)));
-  const allRecipeItemsForCheck = await db
-    .select({
+    ),
+    allOptionIds.length > 0
+      ? db.select().from(productOptionsTable).where(inArray(productOptionsTable.id, allOptionIds))
+      : Promise.resolve([] as (typeof productOptionsTable.$inferSelect)[]),
+    db.select({
       productId: recipeItemsTable.productId,
       inventoryItemId: recipeItemsTable.inventoryItemId,
       quantityNeeded: recipeItemsTable.quantityNeeded,
@@ -652,15 +638,49 @@ const carregarContextoPedidoCalculado = async (
     })
     .from(recipeItemsTable)
     .innerJoin(inventoryItemsTable, eq(inventoryItemsTable.id, recipeItemsTable.inventoryItemId))
-    .where(inArray(recipeItemsTable.productId, allProductIds));
+    .where(inArray(recipeItemsTable.productId, productIds)),
+    db.select().from(walletsTable).where(
+      and(
+        eq(walletsTable.restaurantId, restaurant.id),
+        eq(walletsTable.customerPhone, input.customerPhone),
+      ),
+    ).limit(1),
+    input.consumptionMethod === "DELIVERY"
+      ? db.select().from(deliveryFeeRulesTable).where(
+          and(
+            eq(deliveryFeeRulesTable.restaurantId, restaurant.id),
+            eq(deliveryFeeRulesTable.isActive, true),
+          ),
+        ).orderBy(asc(deliveryFeeRulesTable.displayOrder))
+      : Promise.resolve([] as (typeof deliveryFeeRulesTable.$inferSelect)[]),
+    db.select().from(loyaltyRulesTable).where(
+      and(
+        eq(loyaltyRulesTable.restaurantId, restaurant.id),
+        eq(loyaltyRulesTable.isActive, true),
+      ),
+    ).orderBy(desc(loyaltyRulesTable.minOrderValue)),
+  ]);
 
+  const isOpen = isRestaurantOpen(restaurant.status, operatingHours);
+
+  if (!isOpen && !isScheduled) {
+    throw new Error(
+      "O restaurante está fechado no momento e não aceita novos pedidos.",
+    );
+  }
+
+  const productsMap = new Map<string, Product>(productsWithPrices.map((p) => [p.id, p]));
+  const optionsMap = new Map<string, ProductOption>(optionsRaw.map((o) => [o.id, o]));
+  const wallet = walletRaw[0] ?? null;
+
+  // Verificar disponibilidade de insumos via Ficha Técnica
   const consumoTotal = new Map<string, { name: string; needed: number; available: number }>();
   for (const prodInput of productsInput) {
-    for (const ri of allRecipeItemsForCheck.filter((r) => r.productId === prodInput.id)) {
-      const key = ri.inventoryItemId;
-      const existing = consumoTotal.get(key) ?? { name: ri.inventoryName, needed: 0, available: ri.currentQuantity };
+    for (const ri of allRecipeItems) {
+      if (ri.productId !== prodInput.id) continue;
+      const existing = consumoTotal.get(ri.inventoryItemId) ?? { name: ri.inventoryName, needed: 0, available: ri.currentQuantity };
       existing.needed += ri.quantityNeeded * prodInput.quantity;
-      consumoTotal.set(key, existing);
+      consumoTotal.set(ri.inventoryItemId, existing);
     }
   }
 
@@ -687,17 +707,10 @@ const carregarContextoPedidoCalculado = async (
     const selectedOptions = (itemInput.selectedOptions || []).map((optId) => {
       const option = optionsMap.get(optId);
       if (!option) throw new Error("Opção selecionada não encontrada.");
-      return {
-        id: option.id,
-        name: option.name,
-        price: option.price,
-      };
+      return { id: option.id, name: option.name, price: option.price };
     });
 
-    const optionsPrice = selectedOptions.reduce(
-      (acc, opt) => acc + opt.price,
-      0,
-    );
+    const optionsPrice = selectedOptions.reduce((acc, opt) => acc + opt.price, 0);
     const unitPrice = currentProduct.price + optionsPrice;
     const lineTotal = arredondarMoeda(unitPrice * itemInput.quantity);
 
@@ -714,39 +727,20 @@ const carregarContextoPedidoCalculado = async (
     };
   });
 
-  const subtotal = arredondarMoeda(
-    itens.reduce((accumulator, item) => {
-      return accumulator + item.lineTotal;
-    }, 0),
-  );
+  const subtotal = arredondarMoeda(itens.reduce((acc, item) => acc + item.lineTotal, 0));
+  const estimatedCost = arredondarMoeda(itens.reduce((acc, item) => acc + item.unitCost * item.quantity, 0));
 
-  const estimatedCost = arredondarMoeda(
-    itens.reduce((accumulator, item) => {
-      return accumulator + item.unitCost * item.quantity;
-    }, 0),
-  );
+  if (input.useWalletBalance && (!wallet || wallet.balance <= 0)) {
+    throw new Error("Voce nao possui saldo de cashback disponivel para resgate.");
+  }
 
+  // Rodada 2: cupom (depende do subtotal calculado)
   const coupon = await resolverCupomAplicado({
     couponCode: input.couponCode,
     restaurantId: restaurant.id,
     customerPhone: input.customerPhone,
     subtotal,
   });
-
-  const [wallet] = await db
-    .select()
-    .from(walletsTable)
-    .where(
-      and(
-        eq(walletsTable.restaurantId, restaurant.id),
-        eq(walletsTable.customerPhone, input.customerPhone),
-      ),
-    )
-    .limit(1);
-
-  if (input.useWalletBalance && (!wallet || wallet.balance <= 0)) {
-    throw new Error("Voce nao possui saldo de cashback disponivel para resgate.");
-  }
 
   const couponDiscountAmount = coupon?.discountAmount ?? 0;
   const totalAfterCoupon = Math.max(subtotal - couponDiscountAmount, 0);
@@ -757,87 +751,41 @@ const carregarContextoPedidoCalculado = async (
 
   let deliveryFee = restaurant.deliveryFee ?? 0;
 
-  if (input.consumptionMethod === "DELIVERY") {
+  if (input.consumptionMethod === "DELIVERY" && feeRulesRaw.length > 0) {
     const lat = (input as ValidarBeneficiosPedidoInput).deliveryLatitude;
     const lng = (input as ValidarBeneficiosPedidoInput).deliveryLongitude;
-    const feeRules = await db
-      .select()
-      .from(deliveryFeeRulesTable)
-      .where(
-        and(
-          eq(deliveryFeeRulesTable.restaurantId, restaurant.id),
-          eq(deliveryFeeRulesTable.isActive, true),
-        ),
-      )
-      .orderBy(asc(deliveryFeeRulesTable.displayOrder));
 
-    if (feeRules.length > 0) {
-      const matchedRule = lat !== undefined && lng !== undefined && restaurant.latitude && restaurant.longitude
-        ? feeRules.find((rule) => {
-            if (rule.type === "RADIUS_KM" && rule.maxDistanceKm !== null) {
-              const distKm = calcularDistanciaKm(
-                restaurant.latitude!,
-                restaurant.longitude!,
-                lat,
-                lng,
-              );
-              return distKm <= rule.maxDistanceKm;
-            }
-            return false;
-          }) ?? feeRules[0]
-        : feeRules[0];
+    const matchedRule = lat !== undefined && lng !== undefined && restaurant.latitude && restaurant.longitude
+      ? feeRulesRaw.find((rule) => {
+          if (rule.type === "RADIUS_KM" && rule.maxDistanceKm !== null) {
+            const distKm = calcularDistanciaKm(restaurant.latitude!, restaurant.longitude!, lat, lng);
+            return distKm <= rule.maxDistanceKm;
+          }
+          return false;
+        }) ?? feeRulesRaw[0]
+      : feeRulesRaw[0];
 
-      if (matchedRule) {
-        if (matchedRule.freeDeliveryThreshold !== null && subtotal >= matchedRule.freeDeliveryThreshold) {
-          deliveryFee = 0;
-        } else {
-          deliveryFee = matchedRule.fee;
-        }
-      }
-    } else if (restaurant.freeDeliveryThreshold !== null && subtotal >= (restaurant.freeDeliveryThreshold ?? Infinity)) {
+    if (matchedRule) {
+      deliveryFee = matchedRule.freeDeliveryThreshold !== null && subtotal >= matchedRule.freeDeliveryThreshold
+        ? 0
+        : matchedRule.fee;
+    }
+  } else if (input.consumptionMethod === "DELIVERY") {
+    if (restaurant.freeDeliveryThreshold !== null && subtotal >= (restaurant.freeDeliveryThreshold ?? Infinity)) {
       deliveryFee = 0;
     }
   } else {
     deliveryFee = 0;
   }
 
-  const discountAmount = arredondarMoeda(
-    couponDiscountAmount + cashbackRedeemedAmount,
-  );
-  const total = arredondarMoeda(
-    Math.max(subtotal + deliveryFee - discountAmount, 0),
-  );
+  const discountAmount = arredondarMoeda(couponDiscountAmount + cashbackRedeemedAmount);
+  const total = arredondarMoeda(Math.max(subtotal + deliveryFee - discountAmount, 0));
 
-  // Buscar regras de fidelidade ativas para o restaurante
-  const loyaltyRules = await db
-    .select()
-    .from(loyaltyRulesTable)
-    .where(
-      and(
-        eq(loyaltyRulesTable.restaurantId, restaurant.id),
-        eq(loyaltyRulesTable.isActive, true),
-      ),
-    )
-    .orderBy(desc(loyaltyRulesTable.minOrderValue));
+  const applicableRule = loyaltyRules.find((rule) => subtotal >= rule.minOrderValue);
+  const cashbackPercent = applicableRule ? applicableRule.cashbackPercent : restaurant.cashbackPercent;
+  const cashbackEarnedAmount = arredondarMoeda(total * (cashbackPercent / 100));
 
-  // Encontrar a melhor regra aplicável ao subtotal atual
-  const applicableRule = loyaltyRules.find(
-    (rule) => subtotal >= rule.minOrderValue,
-  );
-
-  const cashbackPercent = applicableRule
-    ? applicableRule.cashbackPercent
-    : restaurant.cashbackPercent;
-
-  const cashbackEarnedAmount = arredondarMoeda(
-    total * (cashbackPercent / 100),
-  );
-
-  // Encontrar a próxima regra de fidelidade (para upsell)
-  const nextLoyaltyRule = [...loyaltyRules]
-    .reverse()
-    .find((rule) => rule.minOrderValue > subtotal);
-
+  const nextLoyaltyRule = [...loyaltyRules].reverse().find((rule) => rule.minOrderValue > subtotal);
   const nextLoyaltyRuleFormatted = nextLoyaltyRule
     ? {
         minOrderValue: nextLoyaltyRule.minOrderValue,
@@ -852,7 +800,7 @@ const carregarContextoPedidoCalculado = async (
     subtotal,
     estimatedCost,
     coupon,
-    wallet: wallet ?? null,
+    wallet,
     couponDiscountAmount,
     cashbackRedeemedAmount,
     deliveryFee,
@@ -860,6 +808,7 @@ const carregarContextoPedidoCalculado = async (
     total,
     cashbackEarnedAmount,
     nextLoyaltyRule: nextLoyaltyRuleFormatted,
+    recipeItems: allRecipeItems,
   };
 };
 
@@ -1367,33 +1316,36 @@ export const criarPedido = async (input: CriarPedidoInput): Promise<Order> => {
     }
 
     // Baixa proporcional de insumos via Ficha Técnica
-    for (const item of contexto.itens) {
-      const recipeItems = await tx
-        .select({
-          inventoryItemId: recipeItemsTable.inventoryItemId,
-          quantityNeeded: recipeItemsTable.quantityNeeded,
-          currentQuantity: inventoryItemsTable.currentQuantity,
-        })
-        .from(recipeItemsTable)
-        .innerJoin(
-          inventoryItemsTable,
-          eq(inventoryItemsTable.id, recipeItemsTable.inventoryItemId),
-        )
-        .where(eq(recipeItemsTable.productId, item.productId));
+    // Agregar consumo total por insumo (evita N+1 e atualiza cada inventário uma só vez)
+    if (contexto.recipeItems.length > 0) {
+      const consumoAgregado = new Map<string, number>();
+      for (const item of contexto.itens) {
+        for (const ri of contexto.recipeItems) {
+          if (ri.productId !== item.productId) continue;
+          consumoAgregado.set(ri.inventoryItemId, (consumoAgregado.get(ri.inventoryItemId) ?? 0) + ri.quantityNeeded * item.quantity);
+        }
+      }
 
-      for (const ri of recipeItems) {
-        const totalConsumed = ri.quantityNeeded * item.quantity;
-        const prevQty = ri.currentQuantity;
+      const inventoryIds = [...consumoAgregado.keys()];
+      const currentInventory = await tx
+        .select({ id: inventoryItemsTable.id, currentQuantity: inventoryItemsTable.currentQuantity })
+        .from(inventoryItemsTable)
+        .where(inArray(inventoryItemsTable.id, inventoryIds));
+
+      const inventoryMap = new Map(currentInventory.map((i) => [i.id, i.currentQuantity]));
+
+      for (const [inventoryItemId, totalConsumed] of consumoAgregado) {
+        const prevQty = inventoryMap.get(inventoryItemId) ?? 0;
         const nextQty = prevQty - totalConsumed;
 
         await tx
           .update(inventoryItemsTable)
           .set({ currentQuantity: nextQty, updatedAt: new Date() })
-          .where(eq(inventoryItemsTable.id, ri.inventoryItemId));
+          .where(eq(inventoryItemsTable.id, inventoryItemId));
 
         await tx.insert(stockMovementsTable).values({
           restaurantId: contexto.restaurant.id,
-          inventoryItemId: ri.inventoryItemId,
+          inventoryItemId,
           orderId: order.id,
           type: "OUT",
           quantityDelta: -totalConsumed,
@@ -1413,8 +1365,8 @@ export const criarPedido = async (input: CriarPedidoInput): Promise<Order> => {
     sessionId: input.abandonedCartSessionId,
   });
 
-  // Desativar produtos cujo ingrediente principal zerou no estoque
-  await desativarProdutosSemInsumo(contexto.restaurant.id);
+  // Desativar produtos cujo ingrediente principal zerou — não bloqueia resposta ao cliente
+  desativarProdutosSemInsumo(contexto.restaurant.id).catch(console.error);
 
   return order;
 };
