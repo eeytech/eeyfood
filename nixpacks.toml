@@ -3,7 +3,7 @@
 
 [variables]
 NODE_ENV = "production"
-# Limita o consumo de memória da heap do Node.js durante o build (evita estouro de RAM)
+# Limita o consumo dee memória da heap do Node.js durante o build (evita estouro de RAM)
 NODE_OPTIONS = "--max-old-space-size=1536"
 CI = "true"
 
