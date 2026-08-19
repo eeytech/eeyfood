@@ -88,6 +88,7 @@ const navigationGroups = [
     items: [
       { href: "logistica", label: "Logística", icon: TruckIcon },
       { href: "configuracoes", label: "Configurações", icon: StoreIcon },
+      { href: "configuracoes/usuarios", label: "Usuários", icon: Users2Icon },
     ],
   },
 ];

@@ -86,6 +86,8 @@ import {
   comandaAvulsaStatusEnum,
   productSizePricesTable,
   pizzaPricingRuleEnum,
+  usersTable,
+  userRoleEnum,
 } from "./schema.js";
 
   // ...
@@ -364,3 +366,8 @@ export type NewLoyaltyPrize = InferInsertModel<typeof loyaltyPrizesTable>;
 export type MarketingSpend = InferSelectModel<typeof marketingSpendTable>;
 export type NewMarketingSpend = InferInsertModel<typeof marketingSpendTable>;
 export type MarketingChannel = (typeof marketingChannelEnum.enumValues)[number];
+
+export type User = InferSelectModel<typeof usersTable>;
+export type NewUser = InferInsertModel<typeof usersTable>;
+export type UserRole = (typeof userRoleEnum.enumValues)[number];
+

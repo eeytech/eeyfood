@@ -1,3 +1,4 @@
+import bcrypt from "bcryptjs";
 import { db } from "./client.js";
 import {
   abandonedCartsTable,
@@ -50,6 +51,7 @@ import {
   suppliersTable,
   tableReservationsTable,
   tipClosingsTable,
+  usersTable,
   waitersTable,
   waitingQueueTable,
   walletsTable,
@@ -130,13 +132,14 @@ const main = async () => {
     await tx.delete(aiSettingsTable);
     await tx.delete(fiscalSettingsTable);
     await tx.delete(marketingSettingsTable);
+    await tx.delete(usersTable);
     await tx.delete(restaurantsTable);
 
     process.stdout.write("✅ Banco limpo.\n");
 
-    // ── MÓDULO A: RESTAURANTE ─────────────────────────────────────────────────
+    // ── MÓDULO A: RESTAURANTE E USUÁRIOS ──────────────────────────────────────
 
-    process.stdout.write("🍔 [A] Criando restaurante...\n");
+    process.stdout.write("🍔 [A] Criando restaurante e usuários...\n");
 
     const [restaurant] = await tx
       .insert(restaurantsTable)
@@ -169,6 +172,27 @@ const main = async () => {
         pizzaPricingRule: "MAX",
       })
       .returning();
+
+    const defaultPasswordHash = bcrypt.hashSync("admin123", 10);
+
+    await tx.insert(usersTable).values([
+      {
+        name: "Super Administrador",
+        email: "admin@eeyfood.com",
+        passwordHash: defaultPasswordHash,
+        role: "SUPER_ADMIN",
+        restaurantId: null,
+      },
+      {
+        name: "Gerente Donalds",
+        email: "gerente@donalds.com",
+        passwordHash: defaultPasswordHash,
+        role: "ADMIN",
+        restaurantId: restaurant.id,
+      },
+    ]);
+
+    process.stdout.write("🔑 [Auth] Usuários iniciais criados (admin@eeyfood.com / gerente@donalds.com).\n");
 
     await tx.insert(operatingHoursTable).values([
       { restaurantId: restaurant.id, dayOfWeek: 0, openTime: "11:00", closeTime: "22:00" },

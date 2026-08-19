@@ -1,0 +1,20 @@
+# Configuração do Nixpacks para deploy no Coolify
+# Limita o uso de memória no build do Next.js/Node para evitar travar a VPS
+
+[variables]
+NODE_ENV = "production"
+# Limita o consumo de memória da heap do Node.js durante o build (evita estouro de RAM)
+NODE_OPTIONS = "--max-old-space-size=1536"
+CI = "true"
+
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.install]
+cmds = ["npm ci"]
+
+[phases.build]
+cmds = ["npm run build"]
+
+[start]
+cmd = "npm run dev:gestao"

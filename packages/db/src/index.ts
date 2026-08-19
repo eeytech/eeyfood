@@ -232,6 +232,9 @@ export {
   marketingChannelEnum,
   marketingSpendTable,
   marketingSpendRelations,
+  usersTable,
+  usersRelations,
+  userRoleEnum,
 } from "./schema.js";
 export type {
   AbandonedCart,
@@ -370,4 +373,8 @@ export type {
   MarketingSpend,
   NewMarketingSpend,
   MarketingChannel,
+  User,
+  NewUser,
+  UserRole,
 } from "./types.js";
+

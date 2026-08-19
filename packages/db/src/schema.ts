@@ -207,6 +207,28 @@ export const marketingChannelEnum = pgEnum("MarketingChannel", [
   "OTHER",
 ]);
 
+export const userRoleEnum = pgEnum("UserRole", [
+  "SUPER_ADMIN",
+  "ADMIN",
+  "MANAGER",
+  "WAITER",
+  "KITCHEN",
+]);
+
+export const usersTable = pgTable("User", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  passwordHash: text("passwordHash").notNull(),
+  role: userRoleEnum("role").default("ADMIN").notNull(),
+  restaurantId: uuid("restaurantId").references(() => restaurantsTable.id, {
+    onDelete: "cascade",
+  }),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
 export const restaurantsTable = pgTable("Restaurant", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
@@ -1954,3 +1976,11 @@ export const marketingSpendRelations = relations(marketingSpendTable, ({ one }) 
     references: [restaurantsTable.id],
   }),
 }));
+
+export const usersRelations = relations(usersTable, ({ one }) => ({
+  restaurant: one(restaurantsTable, {
+    fields: [usersTable.restaurantId],
+    references: [restaurantsTable.id],
+  }),
+}));
+

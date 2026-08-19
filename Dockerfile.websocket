@@ -1,0 +1,15 @@
+FROM node:22-slim AS base
+
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY packages/db/package.json ./packages/db/
+COPY apps/websocket/package.json ./apps/websocket/
+RUN npm ci
+
+COPY apps/websocket ./apps/websocket
+
+ENV NODE_ENV=production
+ENV PORT=4000
+
+EXPOSE 4000
+CMD ["npx", "tsx", "apps/websocket/src/server.ts"]

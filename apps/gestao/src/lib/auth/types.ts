@@ -7,13 +7,16 @@ export interface EeyCoreTokenPayload {
   sub: string;
   email: string;
   name?: string;
-  application: string;
-  applicationId: string;
-  modules: Record<string, string[]>;
-  isApplicationAdmin: boolean;
-  companyIds: string[];
-  companies: TokenCompany[];
-  activeCompanyId: string;
-  iat: number;
-  exp: number;
+  role?: string;
+  application?: string;
+  applicationId?: string;
+  companyId?: string;
+  companySlug?: string;
+  activeCompanyId?: string;
+  companyIds?: string[];
+  companies?: TokenCompany[];
+  modules?: Record<string, string[]>;
+  isApplicationAdmin?: boolean;
+  iat?: number;
+  exp?: number;
 }

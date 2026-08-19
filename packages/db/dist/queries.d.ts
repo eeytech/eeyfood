@@ -1,15 +1,4 @@
-import { bankAccountsTable, bankStatementEntriesTable, customerLedgersTable, fiscalSettingsTable } from "./schema.js";
-import type { AbandonedCart, CourierTrip, DeliveryFeeRule, MarketplaceIntegration, MarketplaceType, Waiter, TableReservation, WaitingQueueEntry, ComandaAvulsaComPedido, ConsumptionMethod, Courier, FinancialCategory, FinancialTransaction, MesaComanda, Order, OrderComItens, OrderProduct, OrderProductItemStatus, OrderStatus, PaymentMethod, PaymentStatus, PedidoBeneficiosValidado, PedidoRecebimento, Product, ProductComRestaurante, ProductionSector, ProductOption, ProductOptionGroup, Restaurant, RestaurantComCategoriasEProdutos, TransactionStatus } from "./types.js";
-export declare const listarCategoriasFinanceirasPorSlug: (slug: string) => Promise<FinancialCategory[]>;
-export declare const criarTransacaoFinanceira: (input: Omit<FinancialTransaction, "id" | "createdAt" | "updatedAt"> & {
-    bankAccountId?: string | null;
-}) => Promise<FinancialTransaction>;
-export declare const atualizarStatusTransacao: (transactionId: string, status: TransactionStatus, paidAt?: Date | null) => Promise<FinancialTransaction | null>;
-export declare const buscarDREBasico: (slug: string, startDate: Date, endDate: Date) => Promise<{
-    revenue: number;
-    expenses: number;
-    netProfit: number;
-} | null>;
+import type { AbandonedCart, ComandaAvulsaComPedido, ConsumptionMethod, Courier, MarketplaceType, MesaComanda, Order, OrderComItens, OrderProduct, OrderProductItemStatus, OrderStatus, PaymentMethod, PaymentStatus, PedidoBeneficiosValidado, PedidoRecebimento, Product, ProductComRestaurante, ProductionSector, ProductOption, ProductOptionGroup, Restaurant, RestaurantComCategoriasEProdutos, TableReservation, Waiter, WaitingQueueEntry } from "./types.js";
 export interface CriarPedidoInput {
     customerName: string;
     customerPhone: string;
@@ -136,11 +125,11 @@ export declare const listarPedidosRecebimentoPorSlug: (slug: string) => Promise<
 export declare const listarCouriersPorSlug: (slug: string) => Promise<Courier[]>;
 export declare const buscarPedidoParaRastreamento: (orderId: number) => Promise<{
     id: number;
+    restaurantId: string;
     status: "PENDING" | "IN_PREPARATION" | "READY_FOR_PICKUP" | "OUT_FOR_DELIVERY" | "FINISHED" | "CANCELLED";
     deliveryFee: number;
     createdAt: Date;
     updatedAt: Date;
-    restaurantId: string;
     notes: string | null;
     paidAt: Date | null;
     subtotal: number;
@@ -227,12 +216,12 @@ export declare const buscarPedidoParaRastreamento: (orderId: number) => Promise<
     courier: {
         id: string;
         name: string;
+        restaurantId: string;
         phone: string;
         latitude: number | null;
         longitude: number | null;
         createdAt: Date;
         updatedAt: Date;
-        restaurantId: string;
         isActive: boolean;
         vehicleType: string | null;
         licensePlate: string | null;
@@ -272,51 +261,6 @@ export interface UnirMesasInput {
 export declare const unirMesas: ({ mainOrderId, secondaryOrderId }: UnirMesasInput) => Promise<void>;
 export declare const buscarProdutosPorCategoria: (categoryId: string, restaurantId: string) => Promise<Product[]>;
 export declare const buscarUltimoPedidoPorTelefone: (customerPhone: string, restaurantId: string) => Promise<OrderComItens | null>;
-export interface CriarRegraFreteInput {
-    restaurantId: string;
-    name: string;
-    type: "RADIUS_KM" | "NEIGHBORHOOD" | "CEP_RANGE";
-    fee: number;
-    minimumOrderValue?: number;
-    freeDeliveryThreshold?: number | null;
-    maxDistanceKm?: number | null;
-    neighborhood?: string | null;
-    cepFrom?: string | null;
-    cepTo?: string | null;
-    displayOrder?: number;
-}
-export declare const buscarRegrasFreteAtivas: (restaurantId: string) => Promise<DeliveryFeeRule[]>;
-export declare const criarRegraFrete: (input: CriarRegraFreteInput) => Promise<DeliveryFeeRule>;
-export declare const atualizarRegraFrete: (id: string, data: Partial<CriarRegraFreteInput>) => Promise<DeliveryFeeRule>;
-export declare const excluirRegraFrete: (id: string) => Promise<void>;
-export declare const buscarPedidosParaEntregador: (courierId: string) => Promise<{
-    id: number;
-    customerName: string;
-    deliveryAddress: string | null;
-    deliveryLatitude: number | null;
-    deliveryLongitude: number | null;
-    total: number;
-    status: "PENDING" | "IN_PREPARATION" | "READY_FOR_PICKUP" | "OUT_FOR_DELIVERY" | "FINISHED" | "CANCELLED";
-    courierId: string | null;
-    createdAt: Date;
-}[]>;
-export declare const atualizarLocalizacaoEntregador: (courierId: string, latitude: number, longitude: number) => Promise<void>;
-export declare const registrarComprovanteEntrega: (orderId: number, proofUrl: string, latitude?: number, longitude?: number) => Promise<void>;
-export interface CriarViagemMotoboyInput {
-    restaurantId: string;
-    courierId: string;
-    orderIds: number[];
-    commissionAmount?: number;
-}
-export declare const criarViagemMotoboy: (input: CriarViagemMotoboyInput) => Promise<CourierTrip>;
-export declare const concluirViagemMotoboy: (tripId: string) => Promise<void>;
-export declare const buscarIntegracaoMarketplace: (restaurantId: string, type: MarketplaceType) => Promise<MarketplaceIntegration | null>;
-export declare const salvarIntegracaoMarketplace: (restaurantId: string, type: MarketplaceType, data: {
-    apiToken?: string;
-    merchantId?: string;
-    isActive?: boolean;
-    menuMappings?: Record<string, string>;
-}) => Promise<MarketplaceIntegration>;
 export declare const listarSetoresProducaoPorSlug: (slug: string) => Promise<ProductionSector[]>;
 export declare const atualizarStatusItemPedido: ({ itemId, itemStatus, }: {
     itemId: string;
@@ -326,266 +270,4 @@ export declare const despacharPedido: ({ orderId, courierId, }: DespacharPedidoI
     courierId: string;
     dispatchedAt: Date;
 }) | null>;
-export declare const listarContasBancariasPorSlug: (slug: string) => Promise<{
-    id: string;
-    name: string;
-    createdAt: Date;
-    updatedAt: Date;
-    restaurantId: string;
-    isActive: boolean;
-    type: "CHECKING" | "SAVINGS" | "INTERNAL" | "DIGITAL";
-    bankName: string | null;
-    agency: string | null;
-    accountNumber: string | null;
-    currentBalance: number;
-}[]>;
-export declare const criarContaBancaria: (input: Omit<typeof bankAccountsTable.$inferInsert, "id" | "createdAt" | "updatedAt">) => Promise<{
-    id: string;
-    name: string;
-    createdAt: Date;
-    updatedAt: Date;
-    restaurantId: string;
-    isActive: boolean;
-    type: "CHECKING" | "SAVINGS" | "INTERNAL" | "DIGITAL";
-    bankName: string | null;
-    agency: string | null;
-    accountNumber: string | null;
-    currentBalance: number;
-}>;
-export declare const atualizarContaBancaria: (id: string, data: Partial<Omit<typeof bankAccountsTable.$inferInsert, "id" | "restaurantId" | "createdAt">>) => Promise<{
-    id: string;
-    restaurantId: string;
-    name: string;
-    type: "CHECKING" | "SAVINGS" | "INTERNAL" | "DIGITAL";
-    bankName: string | null;
-    agency: string | null;
-    accountNumber: string | null;
-    currentBalance: number;
-    isActive: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-}>;
-export declare const excluirContaBancaria: (id: string) => Promise<void>;
-export declare const buscarConfiguracoesFiscaisPorSlug: (slug: string) => Promise<{
-    id: string;
-    cnpj: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-    restaurantId: string;
-    inscricaoEstadual: string | null;
-    ambienteFiscal: string;
-    certificadoPfxBase64: string | null;
-    certificadoSenha: string | null;
-    serieNfe: string;
-    proximoNumeroNfe: number;
-    serieNfce: string;
-    proximoNumeroNfce: number;
-    focusNfeToken: string | null;
-    webhookUrl: string | null;
-} | null>;
-export declare const salvarConfiguracoesFiscais: (restaurantId: string, data: Omit<typeof fiscalSettingsTable.$inferInsert, "id" | "restaurantId" | "createdAt" | "updatedAt">) => Promise<{
-    id: string;
-    cnpj: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-    restaurantId: string;
-    inscricaoEstadual: string | null;
-    ambienteFiscal: string;
-    certificadoPfxBase64: string | null;
-    certificadoSenha: string | null;
-    serieNfe: string;
-    proximoNumeroNfe: number;
-    serieNfce: string;
-    proximoNumeroNfce: number;
-    focusNfeToken: string | null;
-    webhookUrl: string | null;
-}>;
-export declare const atualizarStatusFiscalPedido: (orderId: number, data: {
-    nfeStatus?: "PENDING" | "ISSUED" | "REJECTED" | "CANCELLED";
-    nfeAccessKey?: string | null;
-    nfeDanfeUrl?: string | null;
-    nfeRejectionReason?: string | null;
-}) => Promise<void>;
-export declare const listarFiadosPorSlug: (slug: string) => Promise<{
-    id: string;
-    createdAt: Date;
-    updatedAt: Date;
-    restaurantId: string;
-    isActive: boolean;
-    notes: string | null;
-    customerName: string;
-    customerPhone: string | null;
-    customerCpf: string | null;
-    creditLimit: number;
-    debtBalance: number;
-}[]>;
-export declare const criarFiado: (input: Omit<typeof customerLedgersTable.$inferInsert, "id" | "createdAt" | "updatedAt" | "debtBalance">) => Promise<{
-    id: string;
-    createdAt: Date;
-    updatedAt: Date;
-    restaurantId: string;
-    isActive: boolean;
-    notes: string | null;
-    customerName: string;
-    customerPhone: string | null;
-    customerCpf: string | null;
-    creditLimit: number;
-    debtBalance: number;
-}>;
-export declare const atualizarFiado: (id: string, data: Partial<Pick<typeof customerLedgersTable.$inferInsert, "customerName" | "customerPhone" | "customerCpf" | "creditLimit" | "isActive" | "notes">>) => Promise<{
-    id: string;
-    restaurantId: string;
-    customerName: string;
-    customerPhone: string | null;
-    customerCpf: string | null;
-    creditLimit: number;
-    debtBalance: number;
-    isActive: boolean;
-    notes: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-}>;
-export declare const listarLancamentosFiado: (ledgerId: string) => Promise<{
-    id: string;
-    description: string;
-    createdAt: Date;
-    updatedAt: Date;
-    restaurantId: string;
-    type: "DEBIT" | "CREDIT";
-    amount: number;
-    orderId: number | null;
-    bankAccountId: string | null;
-    ledgerId: string;
-}[]>;
-export declare const registrarDebitoFiado: (input: {
-    ledgerId: string;
-    restaurantId: string;
-    orderId: number;
-    amount: number;
-    description: string;
-}) => Promise<{
-    id: string;
-    description: string;
-    createdAt: Date;
-    updatedAt: Date;
-    restaurantId: string;
-    type: "DEBIT" | "CREDIT";
-    amount: number;
-    orderId: number | null;
-    bankAccountId: string | null;
-    ledgerId: string;
-}>;
-export declare const registrarPagamentoFiado: (input: {
-    ledgerId: string;
-    restaurantId: string;
-    bankAccountId?: string;
-    amount: number;
-    description: string;
-}) => Promise<{
-    id: string;
-    description: string;
-    createdAt: Date;
-    updatedAt: Date;
-    restaurantId: string;
-    type: "DEBIT" | "CREDIT";
-    amount: number;
-    orderId: number | null;
-    bankAccountId: string | null;
-    ledgerId: string;
-}>;
-export declare const criarExtratoImportado: (input: {
-    restaurantId: string;
-    bankAccountId: string;
-    fileName: string;
-    periodStart?: string;
-    periodEnd?: string;
-    totalEntries: number;
-}) => Promise<{
-    id: string;
-    createdAt: Date;
-    updatedAt: Date;
-    restaurantId: string;
-    bankAccountId: string;
-    fileName: string;
-    periodStart: string | null;
-    periodEnd: string | null;
-    totalEntries: number;
-    matchedEntries: number;
-}>;
-export declare const listarExtratosPorConta: (bankAccountId: string) => Promise<{
-    id: string;
-    createdAt: Date;
-    updatedAt: Date;
-    restaurantId: string;
-    bankAccountId: string;
-    fileName: string;
-    periodStart: string | null;
-    periodEnd: string | null;
-    totalEntries: number;
-    matchedEntries: number;
-}[]>;
-export declare const criarLinhasExtrato: (entries: Array<Omit<typeof bankStatementEntriesTable.$inferInsert, "id" | "createdAt" | "updatedAt">>) => Promise<{
-    id: string;
-    description: string;
-    status: "PENDING" | "MATCHED" | "IGNORED";
-    createdAt: Date;
-    updatedAt: Date;
-    restaurantId: string;
-    amount: number;
-    statementId: string;
-    entryDate: string;
-    matchedTransactionId: string | null;
-}[]>;
-export declare const listarLinhasExtrato: (statementId: string) => Promise<{
-    id: string;
-    description: string;
-    status: "PENDING" | "MATCHED" | "IGNORED";
-    createdAt: Date;
-    updatedAt: Date;
-    restaurantId: string;
-    amount: number;
-    statementId: string;
-    entryDate: string;
-    matchedTransactionId: string | null;
-}[]>;
-export declare const vincularLinhaExtratoTransacao: (entryId: string, transactionId: string | null) => Promise<{
-    id: string;
-    statementId: string;
-    restaurantId: string;
-    entryDate: string;
-    description: string;
-    amount: number;
-    status: "PENDING" | "MATCHED" | "IGNORED";
-    matchedTransactionId: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-}>;
-export declare const ignorarLinhaExtrato: (entryId: string) => Promise<void>;
-export declare const pausarBot: (restaurantId: string, customerPhone: string) => Promise<void>;
-export declare const reativarBot: (restaurantId: string) => Promise<void>;
-export declare const buscarStatusHandoff: (restaurantId: string) => Promise<{
-    isBotPaused: boolean;
-    pausedAt: Date | null;
-    pausedForPhone: string | null;
-    conversationStatus: "BOT_ACTIVE" | "HUMAN_REQUIRED";
-}>;
-export interface CriarGastoMarketingInput {
-    restaurantId: string;
-    referenceMonth: string;
-    channel: "META_ADS" | "GOOGLE_ADS" | "OTHER";
-    amountSpent: number;
-    notes?: string;
-}
-export declare const criarGastoMarketing: (input: CriarGastoMarketingInput) => Promise<void>;
-export declare const listarGastosMarketing: (restaurantId: string) => Promise<{
-    id: string;
-    createdAt: Date;
-    updatedAt: Date;
-    restaurantId: string;
-    referenceMonth: string;
-    channel: "META_ADS" | "GOOGLE_ADS" | "OTHER";
-    amountSpent: number;
-    notes: string | null;
-}[]>;
-export declare const excluirGastoMarketing: (id: string) => Promise<void>;
 export {};

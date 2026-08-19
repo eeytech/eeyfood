@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  # App de Gestão (ERP Backoffice)
+  gestao:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: eeyfood-gestao
+    restart: always
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - NEXT_PUBLIC_APP_SLUG=gestao
+      - NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL}
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'     # Limita a 50% de 1 núcleo de CPU
+          memory: 512M     # Limita o consumo máximo de RAM a 512MB
+        reservations:
+          memory: 256M
+
+  # App de Vendas (Cardápio / Cliente)
+  vendas:
+    build:
+      context: .
+      dockerfile: Dockerfile.vendas
+    container_name: eeyfood-vendas
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=${DATABASE_URL}
+      - MERCADOPAGO_ACCESS_TOKEN=${MERCADOPAGO_ACCESS_TOKEN}
+      - NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL}
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'     # Limita a 50% de 1 núcleo de CPU
+          memory: 512M     # Limita o consumo máximo de RAM a 512MB
+        reservations:
+          memory: 256M
+
+  # Servidor WebSocket Real-Time
+  websocket:
+    build:
+      context: .
+      dockerfile: Dockerfile.websocket
+    container_name: eeyfood-websocket
+    restart: always
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - CORS_ORIGINS=${CORS_ORIGINS}
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'     # Limita a 25% de 1 núcleo de CPU
+          memory: 256M     # Limita o consumo máximo de RAM a 256MB
+        reservations:
+          memory: 128M
