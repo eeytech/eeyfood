@@ -27,6 +27,7 @@ export {
   buscarProdutosPorCategoria,
   buscarRestauranteComCardapioPorSlug,
   buscarRestaurantePorSlug,
+  buscarRestauranteUnico,
   buscarUltimoPedidoPorTelefone,
   criarPedido,
   db,

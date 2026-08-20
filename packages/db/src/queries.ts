@@ -368,16 +368,29 @@ const pedidoEstaAtivo = (status: OrderStatus) => {
   return status !== "FINISHED" && status !== "CANCELLED";
 };
 
+export const buscarRestauranteUnico = async (): Promise<Restaurant | null> => {
+  const [restaurant] = await db
+    .select()
+    .from(restaurantsTable)
+    .limit(1);
+
+  return restaurant ?? null;
+};
+
 export const buscarRestaurantePorSlug = async (
-  slug: string,
+  slug?: string,
 ): Promise<Restaurant | null> => {
+  if (!slug || slug === "default") {
+    return buscarRestauranteUnico();
+  }
+
   const [restaurant] = await db
     .select()
     .from(restaurantsTable)
     .where(eq(restaurantsTable.slug, slug))
     .limit(1);
 
-  return restaurant ?? null;
+  return restaurant ?? (await buscarRestauranteUnico());
 };
 
 const marcarCarrinhoAbandonadoComoConvertido = async ({

@@ -142,7 +142,7 @@ export const listarMesasGestao = async (slug: string): Promise<DiningTable[]> =>
 };
 
 export const buscarRestauranteParaGestao = async (
-  slug: string,
+  slug?: string,
 ): Promise<Restaurant | null> => {
   return buscarRestaurantePorSlug(slug);
 };

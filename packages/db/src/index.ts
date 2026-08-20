@@ -14,6 +14,7 @@ export {
   buscarRestauranteComCardapioPorSlug,
   buscarProximaRegraFidelidade,
   buscarRestaurantePorSlug,
+  buscarRestauranteUnico,
   criarPedido,
   despacharPedido,
   fecharComanda,

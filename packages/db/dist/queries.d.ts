@@ -88,7 +88,8 @@ export interface DespacharPedidoInput {
     orderId: number;
     courierId: string;
 }
-export declare const buscarRestaurantePorSlug: (slug: string) => Promise<Restaurant | null>;
+export declare const buscarRestauranteUnico: () => Promise<Restaurant | null>;
+export declare const buscarRestaurantePorSlug: (slug?: string) => Promise<Restaurant | null>;
 export declare const salvarCarrinhoAbandonado: (input: SalvarCarrinhoAbandonadoInput) => Promise<AbandonedCart | null>;
 export declare const buscarRestauranteComCardapioPorSlug: (slug: string) => Promise<(RestaurantComCategoriasEProdutos & {
     rating: number;
@@ -125,37 +126,37 @@ export declare const listarPedidosRecebimentoPorSlug: (slug: string) => Promise<
 export declare const listarCouriersPorSlug: (slug: string) => Promise<Courier[]>;
 export declare const buscarPedidoParaRastreamento: (orderId: number) => Promise<{
     id: number;
-    restaurantId: string;
     status: "PENDING" | "IN_PREPARATION" | "READY_FOR_PICKUP" | "OUT_FOR_DELIVERY" | "FINISHED" | "CANCELLED";
     deliveryFee: number;
     createdAt: Date;
     updatedAt: Date;
-    notes: string | null;
-    paidAt: Date | null;
+    restaurantId: string;
+    customerName: string;
+    customerPhone: string;
+    consumptionMethod: "TAKEAWAY" | "DINE_IN" | "DELIVERY";
+    paymentMethod: "MERCADO_PAGO" | "DINHEIRO" | "CARTAO_PRESENCIAL" | "PIX" | "VALE_ALIMENTACAO" | "VALE_REFEICAO" | "FIADO";
+    couponCode: string | null;
+    scheduledFor: Date | null;
     subtotal: number;
+    total: number;
     discountAmount: number;
     couponDiscountAmount: number;
     cashbackRedeemedAmount: number;
     cashbackEarnedAmount: number;
-    total: number;
     estimatedCost: number;
     estimatedProfit: number;
     paymentStatus: "PENDING" | "CANCELLED" | "PAID" | "FAILED" | "REFUNDED";
-    consumptionMethod: "TAKEAWAY" | "DINE_IN" | "DELIVERY";
-    paymentMethod: "MERCADO_PAGO" | "DINHEIRO" | "CARTAO_PRESENCIAL" | "PIX" | "VALE_ALIMENTACAO" | "VALE_REFEICAO" | "FIADO";
     changeFor: number | null;
+    notes: string | null;
     couponId: string | null;
-    couponCode: string | null;
     diningTableId: string | null;
     courierId: string | null;
     waiterId: string | null;
-    customerName: string;
-    customerPhone: string;
     deliveryAddress: string | null;
     deliveryLatitude: number | null;
     deliveryLongitude: number | null;
-    scheduledFor: Date | null;
     cashbackCreditedAt: Date | null;
+    paidAt: Date | null;
     dispatchedAt: Date | null;
     deliveredAt: Date | null;
     cancelledAt: Date | null;
@@ -216,12 +217,12 @@ export declare const buscarPedidoParaRastreamento: (orderId: number) => Promise<
     courier: {
         id: string;
         name: string;
-        restaurantId: string;
         phone: string;
         latitude: number | null;
         longitude: number | null;
         createdAt: Date;
         updatedAt: Date;
+        restaurantId: string;
         isActive: boolean;
         vehicleType: string | null;
         licensePlate: string | null;

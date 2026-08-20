@@ -140,8 +140,8 @@ const AdminSidebar = ({
               </p>
             )}
             {group.items.map((item) => {
-              const href = `/${slug}/${item.href}`;
-              const isActive = pathname === href;
+              const href = slug ? `/${slug}/${item.href}` : `/${item.href}`;
+              const isActive = pathname === href || pathname === `/${item.href}`;
               const Icon = item.icon;
 
               return (

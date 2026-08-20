@@ -112,13 +112,23 @@ const validarAgendamentoPedido = ({ consumptionMethod, scheduledFor, }) => {
 const pedidoEstaAtivo = (status) => {
     return status !== "FINISHED" && status !== "CANCELLED";
 };
+export const buscarRestauranteUnico = async () => {
+    const [restaurant] = await db
+        .select()
+        .from(restaurantsTable)
+        .limit(1);
+    return restaurant ?? null;
+};
 export const buscarRestaurantePorSlug = async (slug) => {
+    if (!slug || slug === "default") {
+        return buscarRestauranteUnico();
+    }
     const [restaurant] = await db
         .select()
         .from(restaurantsTable)
         .where(eq(restaurantsTable.slug, slug))
         .limit(1);
-    return restaurant ?? null;
+    return restaurant ?? (await buscarRestauranteUnico());
 };
 const marcarCarrinhoAbandonadoComoConvertido = async ({ orderId, restaurantId, sessionId, }) => {
     if (!sessionId) {

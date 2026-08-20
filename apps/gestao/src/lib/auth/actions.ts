@@ -99,7 +99,7 @@ export async function loginAction(
     };
   }
 
-  redirect(`/${redirectSlug}/pedidos`);
+  redirect("/pedidos");
 }
 
 export async function logoutAction(): Promise<void> {

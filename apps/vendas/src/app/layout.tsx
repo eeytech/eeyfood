@@ -7,7 +7,7 @@ import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
 import { PWARegister } from "@/components/pwa-register";
 import { Toaster } from "@/components/ui/sonner";
 
-import { CartProvider } from "./[slug]/menu/contexts/cart";
+import { CartProvider } from "./menu/contexts/cart";
 
 const inter = Inter({
   subsets: ["latin"],

@@ -1,157 +1,70 @@
-"use client";
-
-import { GlobeIcon, MessageCircleIcon, ShoppingBagIcon, UtensilsIcon } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
-import { toast } from "sonner";
+import { redirect } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { buscarRestauranteUnico } from "@/lib/db";
 
-const HomeContent = () => {
-  const [restaurantName, setRestaurantName] = useState("");
-  const router = useRouter();
-  const searchParams = useSearchParams();
+import ConsumptionMethodOption from "./components/consumption-method-option";
 
-  useEffect(() => {
-    const error = searchParams.get("error");
-    if (error === "not_found") {
-      toast.error("Restaurante não encontrado", {
-        description: "Verifique o nome e tente novamente.",
-      });
-      // Remove error from URL without refreshing
-      router.replace("/");
-    }
-  }, [searchParams, router]);
+export default async function HomePage() {
+  const restaurant = await buscarRestauranteUnico();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (restaurantName.trim()) {
-      // Simple slugification: lowercase, replace spaces with hyphens, remove special chars
-      const slug = restaurantName
-        .trim()
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "") // remove accents
-        .replace(/[^a-z0-9\s-]/g, "") // remove non-alphanumeric except spaces/hyphens
-        .replace(/\s+/g, "-") // replace spaces with -
-        .replace(/-+/g, "-"); // remove double hyphens
+  if (!restaurant) {
+    return (
+      <div className="flex h-screen items-center justify-center p-4">
+        <p className="text-center text-slate-500">Restaurante não configurado no banco de dados.</p>
+      </div>
+    );
+  }
 
-      router.push(`/${slug}`);
-    }
-  };
+  const availableMethods = [
+    restaurant.isDeliveryEnabled && { option: "DELIVERY" as const, buttonText: "Delivery", imageAlt: "Delivery", imageUrl: "/delivery.png" },
+    restaurant.isTakeawayEnabled && { option: "TAKEAWAY" as const, buttonText: "Para levar", imageAlt: "Para levar", imageUrl: "/takeaway.png" },
+    restaurant.isDineInEnabled && { option: "DINE_IN" as const, buttonText: "Para comer aqui", imageAlt: "Comer aqui", imageUrl: "/dine_in.png" },
+  ].filter(Boolean) as { option: "DELIVERY" | "TAKEAWAY" | "DINE_IN"; buttonText: string; imageAlt: string; imageUrl: string }[];
+
+  if (availableMethods.length === 1) {
+    return redirect(`/menu?consumptionMethod=${availableMethods[0].option}`);
+  }
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-50 via-slate-100 to-slate-200 p-6">
-      {/* Background decoration */}
-      <div className="pointer-events-none absolute left-0 top-0 h-full w-full select-none overflow-hidden opacity-[0.05]">
-        <div className="absolute left-[-5%] top-[-5%] h-[50%] w-[50%] rounded-full bg-destructive blur-[150px]" />
-        <div className="absolute bottom-[-5%] right-[-5%] h-[50%] w-[50%] rounded-full bg-primary blur-[150px]" />
+    <div className="mx-auto flex h-screen max-w-[1200px] flex-col items-center justify-center px-4 pt-8 sm:pt-20">
+      <div className="flex flex-col items-center gap-2">
+        <Image
+          src={restaurant.avatarImageUrl}
+          alt={restaurant.name}
+          width={72}
+          height={72}
+          className="rounded-2xl"
+        />
+        <h2 className="text-lg font-bold tracking-tight">{restaurant.name}</h2>
       </div>
 
-      <div className="z-10 w-full max-w-md space-y-6">
-        <div className="space-y-3 text-center">
-          <div className="mx-auto flex h-24 w-full items-center justify-center">
-            <Image
-              src="/logocomtexto.png"
-              alt="eeyFood Logo"
-              width={240}
-              height={100}
-              className="object-contain"
-              priority
-            />
-          </div>
-        </div>
-
-        <Card className="overflow-hidden rounded-[32px] border-none bg-white/70 shadow-[0_32px_64px_-15px_rgba(0,0,0,0.1)] backdrop-blur-2xl">
-          <CardHeader className="pb-1 pt-8 text-center">
-            <CardTitle className="text-xl font-bold text-slate-800">Acessar Cardápio</CardTitle>
-            <CardDescription className="px-6 text-sm text-slate-500">
-              Digite o nome do restaurante para visualizar as opções e fazer seu
-              pedido.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-8 pt-6">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2.5">
-                <Label
-                  htmlFor="restaurantName"
-                  className="ml-2 text-xs font-bold uppercase tracking-wider text-slate-500"
-                >
-                  Nome do Restaurante
-                </Label>
-                <div className="group relative">
-                  <Input
-                    id="restaurantName"
-                    placeholder="Ex: FSW Donalds"
-                    value={restaurantName}
-                    onChange={(e) => setRestaurantName(e.target.value)}
-                    required
-                    className="h-14 rounded-[16px] border-slate-200/60 bg-white/50 px-5 text-base shadow-sm transition-all duration-300 focus:border-primary/50 focus:bg-white focus:ring-[10px] focus:ring-primary/5"
-                  />
-                  <div className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 transition-colors group-focus-within:text-primary">
-                    <UtensilsIcon size={18} />
-                  </div>
-                </div>
-              </div>
-              <Button
-                type="submit"
-                className="h-14 w-full rounded-[16px] bg-destructive text-base font-bold shadow-lg shadow-destructive/20 transition-all duration-300 hover:scale-[1.02] hover:bg-destructive/95 active:scale-[0.98]"
-              >
-                Explorar Cardápio
-                <ShoppingBagIcon className="ml-2 h-5 w-5" />
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        <div className="flex flex-col items-center space-y-1 text-sm font-medium text-slate-400/80">
-          <p>
-            &copy; {new Date().getFullYear()} eeyFood. Todos os direitos
-            reservados.
-          </p>
-          <div className="flex items-center space-x-4">
-            <Link
-              href="https://eeytech.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center space-x-1.5 transition-colors hover:text-primary"
-            >
-              <GlobeIcon size={14} />
-              <span>www.eeytech.com</span>
-            </Link>
-            <Link
-              href="https://wa.me/5516988063477"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center space-x-1.5 transition-colors hover:text-green-600"
-            >
-              <MessageCircleIcon size={14} />
-              <span>WhatsApp</span>
-            </Link>
-          </div>
-        </div>
+      <div className="max-w-2xl space-y-1.5 pt-12 text-center sm:pt-20">
+        <h3 className="text-2xl font-bold tracking-tight sm:text-3xl">
+          Seja bem-vindo!
+        </h3>
+        <p className="text-base opacity-60">
+          Escolha como prefere aproveitar sua refeição. Estamos aqui para
+          oferecer praticidade e sabor em cada detalhe!
+        </p>
       </div>
-    </main>
-  );
-};
 
-const HomePage = () => {
-  return (
-    <Suspense>
-      <HomeContent />
-    </Suspense>
+      <div
+        className={`grid w-full gap-3 pt-10 sm:max-w-lg sm:gap-4 sm:pt-12 ${
+          availableMethods.length === 2 ? "grid-cols-2" : "grid-cols-3"
+        }`}
+      >
+        {availableMethods.map((method) => (
+          <ConsumptionMethodOption
+            key={method.option}
+            slug={restaurant.slug}
+            option={method.option}
+            buttonText={method.buttonText}
+            imageAlt={method.imageAlt}
+            imageUrl={method.imageUrl}
+          />
+        ))}
+      </div>
+    </div>
   );
-};
-
-export default HomePage;
+}
