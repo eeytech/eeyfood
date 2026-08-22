@@ -37,7 +37,7 @@ const RestaurantHeader = ({
       onOrdersClick();
       return;
     }
-    router.push(`/${slug}/orders`);
+    router.push("/orders");
   };
 
   const handleChamarGarcom = () => {

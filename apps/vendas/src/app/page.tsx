@@ -55,7 +55,6 @@ const RestaurantPage = async () => {
         {availableMethods.map((method) => (
           <ConsumptionMethodOption
             key={method.option}
-            slug={restaurant.slug}
             option={method.option}
             buttonText={method.buttonText}
             imageAlt={method.imageAlt}

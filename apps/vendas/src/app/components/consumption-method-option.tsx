@@ -6,7 +6,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import type { ConsumptionMethod } from "@/lib/db";
 
 interface ConsumptionMethodOptionProps {
-  slug: string;
   imageUrl: string;
   imageAlt: string;
   buttonText: string;
@@ -14,7 +13,6 @@ interface ConsumptionMethodOptionProps {
 }
 
 const ConsumptionMethodOption = ({
-  slug,
   imageAlt,
   imageUrl,
   buttonText,
@@ -32,7 +30,7 @@ const ConsumptionMethodOption = ({
           />
         </div>
         <Button variant="secondary" className="rounded-full" asChild>
-          <Link href={`/${slug}/menu?consumptionMethod=${option}`}>
+          <Link href={`/menu?consumptionMethod=${option}`}>
             {buttonText}
           </Link>
         </Button>
