@@ -1,54 +1,51 @@
 import { unstable_cache } from "next/cache";
+import { redirect } from "next/navigation";
 
-import { buscarRestauranteComCardapioPorSlug, buscarRestauranteUnico } from "@/lib/db";
+import { buscarRestauranteComCardapioPorSlug } from "@/lib/db";
 
 import RestaurantMenuPageContent from "./components/menu-page-content";
 
-const buscarMenuCached = () =>
+export const dynamic = "force-dynamic";
+
+const buscarMenuCached = (slug: string) =>
   unstable_cache(
-    async () => {
-      const restaurant = await buscarRestauranteUnico();
-      if (!restaurant) return null;
-      return buscarRestauranteComCardapioPorSlug(restaurant.slug);
-    },
-    ["restaurant-menu-single-store"],
-    { revalidate: 300, tags: ["restaurant-menu"] },
+    () => buscarRestauranteComCardapioPorSlug(slug),
+    ["restaurant-menu", slug],
+    { revalidate: 300, tags: [`restaurant-menu:${slug}`] },
   )();
 
 interface RestaurantMenuPageProps {
-  searchParams: Promise<{ consumptionMethod?: string; tableId?: string; mode?: string }>;
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ consumptionMethod: string; tableId?: string; mode?: string }>;
 }
 
-const isConsumptionMethodValid = (consumptionMethod?: string) => {
-  if (!consumptionMethod) return false;
+const isConsumptionMethodValid = (consumptionMethod: string) => {
   return ["DINE_IN", "TAKEAWAY", "DELIVERY"].includes(
     consumptionMethod.toUpperCase(),
   );
 };
 
 const RestaurantMenuPage = async ({
+  params,
   searchParams,
 }: RestaurantMenuPageProps) => {
+  const { slug } = await params;
   const { consumptionMethod, tableId, mode } = await searchParams;
 
-  const activeMethod = isConsumptionMethodValid(consumptionMethod)
-    ? (consumptionMethod!.toUpperCase() as "DINE_IN" | "TAKEAWAY" | "DELIVERY")
-    : "DELIVERY";
+  if (!isConsumptionMethodValid(consumptionMethod)) {
+    return redirect("/?error=not_found");
+  }
 
-  const restaurant = await buscarMenuCached();
+  const restaurant = await buscarMenuCached(slug);
 
   if (!restaurant) {
-    return (
-      <div className="flex h-screen items-center justify-center p-4">
-        <p className="text-center text-slate-500">Restaurante não encontrado no banco de dados.</p>
-      </div>
-    );
+    return redirect("/?error=not_found");
   }
 
   return (
     <RestaurantMenuPageContent
       restaurant={restaurant}
-      consumptionMethod={activeMethod}
+      consumptionMethod={consumptionMethod.toUpperCase() as "DINE_IN" | "TAKEAWAY" | "DELIVERY"}
       tableId={tableId}
       isKioskMode={mode === "totem"}
     />

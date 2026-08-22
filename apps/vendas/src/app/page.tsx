@@ -5,15 +5,13 @@ import { buscarRestauranteUnico } from "@/lib/db";
 
 import ConsumptionMethodOption from "./components/consumption-method-option";
 
-export default async function HomePage() {
+export const dynamic = "force-dynamic";
+
+const RestaurantPage = async () => {
   const restaurant = await buscarRestauranteUnico();
 
   if (!restaurant) {
-    return (
-      <div className="flex h-screen items-center justify-center p-4">
-        <p className="text-center text-slate-500">Restaurante não configurado no banco de dados.</p>
-      </div>
-    );
+    return redirect("/menu?consumptionMethod=DELIVERY");
   }
 
   const availableMethods = [
@@ -67,4 +65,6 @@ export default async function HomePage() {
       </div>
     </div>
   );
-}
+};
+
+export default RestaurantPage;

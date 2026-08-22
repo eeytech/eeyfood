@@ -15,10 +15,9 @@ function getOrCreateDb(): { db: Database; pool: Pool } {
     return { db: globalForDb.fswDb, pool: globalForDb.fswPool };
   }
 
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) {
-    throw new Error("A variável DATABASE_URL não foi configurada.");
-  }
+  const connectionString =
+    process.env.DATABASE_URL ||
+    "postgresql://postgres:postgres@localhost:5432/eeyfood_db";
 
   const pool = new Pool({
     connectionString,

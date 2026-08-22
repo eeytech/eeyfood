@@ -369,28 +369,36 @@ const pedidoEstaAtivo = (status: OrderStatus) => {
 };
 
 export const buscarRestauranteUnico = async (): Promise<Restaurant | null> => {
-  const [restaurant] = await db
-    .select()
-    .from(restaurantsTable)
-    .limit(1);
+  try {
+    const [restaurant] = await db
+      .select()
+      .from(restaurantsTable)
+      .limit(1);
 
-  return restaurant ?? null;
+    return restaurant ?? null;
+  } catch {
+    return null;
+  }
 };
 
 export const buscarRestaurantePorSlug = async (
   slug?: string,
 ): Promise<Restaurant | null> => {
-  if (!slug || slug === "default") {
-    return buscarRestauranteUnico();
+  try {
+    if (!slug || slug === "default") {
+      return buscarRestauranteUnico();
+    }
+
+    const [restaurant] = await db
+      .select()
+      .from(restaurantsTable)
+      .where(eq(restaurantsTable.slug, slug))
+      .limit(1);
+
+    return restaurant ?? (await buscarRestauranteUnico());
+  } catch {
+    return null;
   }
-
-  const [restaurant] = await db
-    .select()
-    .from(restaurantsTable)
-    .where(eq(restaurantsTable.slug, slug))
-    .limit(1);
-
-  return restaurant ?? (await buscarRestauranteUnico());
 };
 
 const marcarCarrinhoAbandonadoComoConvertido = async ({

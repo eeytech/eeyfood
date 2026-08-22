@@ -4,6 +4,8 @@ import { isValidPhoneNumber, normalizePhoneNumber } from "../menu/helpers/phone"
 import OrderList from "./components/order-list";
 import PhoneForm from "./components/phone-form";
 
+export const dynamic = "force-dynamic";
+
 interface OrdersPageProps {
   searchParams: Promise<{ phone: string }>;
 }

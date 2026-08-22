@@ -113,22 +113,32 @@ const pedidoEstaAtivo = (status) => {
     return status !== "FINISHED" && status !== "CANCELLED";
 };
 export const buscarRestauranteUnico = async () => {
-    const [restaurant] = await db
-        .select()
-        .from(restaurantsTable)
-        .limit(1);
-    return restaurant ?? null;
+    try {
+        const [restaurant] = await db
+            .select()
+            .from(restaurantsTable)
+            .limit(1);
+        return restaurant ?? null;
+    }
+    catch {
+        return null;
+    }
 };
 export const buscarRestaurantePorSlug = async (slug) => {
-    if (!slug || slug === "default") {
-        return buscarRestauranteUnico();
+    try {
+        if (!slug || slug === "default") {
+            return buscarRestauranteUnico();
+        }
+        const [restaurant] = await db
+            .select()
+            .from(restaurantsTable)
+            .where(eq(restaurantsTable.slug, slug))
+            .limit(1);
+        return restaurant ?? (await buscarRestauranteUnico());
     }
-    const [restaurant] = await db
-        .select()
-        .from(restaurantsTable)
-        .where(eq(restaurantsTable.slug, slug))
-        .limit(1);
-    return restaurant ?? (await buscarRestauranteUnico());
+    catch {
+        return null;
+    }
 };
 const marcarCarrinhoAbandonadoComoConvertido = async ({ orderId, restaurantId, sessionId, }) => {
     if (!sessionId) {

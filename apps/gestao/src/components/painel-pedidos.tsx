@@ -18,7 +18,7 @@ import {
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 
-import { dispatchOrderAction, getCouriersAction } from "@/app/[slug]/logistica-actions";
+import { dispatchOrderAction, getCouriersAction } from "@/app/(dashboard)/logistica-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {

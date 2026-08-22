@@ -37,7 +37,7 @@ import {
   registrarMovimentacaoCaixa,
   validarCupomPdv,
   type FinalizarVendaPdvInput,
-} from "@/app/[slug]/pdv/actions";
+} from "@/app/(dashboard)/pdv/actions";
 import { useCashDrawer } from "@/hooks/use-cash-drawer";
 import { useWebSerial, type ScaleProtocol } from "@/hooks/use-web-serial";
 import { Badge } from "@/components/ui/badge";

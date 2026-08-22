@@ -50,7 +50,7 @@ import {
   transferirItensComandaAction,
   transferirMesaAction,
   unirMesasAction,
-} from "@/app/[slug]/comandas/actions";
+} from "@/app/(dashboard)/comandas/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {

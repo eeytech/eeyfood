@@ -1,15 +1,19 @@
 import { ClockIcon, Settings2Icon } from "lucide-react";
 import { notFound } from "next/navigation";
 
-import { updateOperatingHoursAction, updateRestaurantStatusAction } from "@/app/[slug]/actions";
+import { updateOperatingHoursAction, updateRestaurantStatusAction } from "@/app/(dashboard)/actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { buscarAiSettingsPorSlug, buscarConfiguracoesRestaurante } from "@/lib/admin-queries";
 
-import { RestaurantDetailsForm } from "../[slug]/configuracoes/restaurant-details-form";
-import { RestaurantFeaturesForm } from "../[slug]/configuracoes/restaurant-features-form";
+import { RestaurantDetailsForm } from "./restaurant-details-form";
+import { RestaurantFeaturesForm } from "./restaurant-features-form";
+
+interface ConfiguracoesPageProps {
+  params: Promise<{ slug: string }>;
+}
 
 const daysOfWeek = [
   "Domingo",
@@ -21,10 +25,11 @@ const daysOfWeek = [
   "Sábado",
 ];
 
-const ConfiguracoesPage = async () => {
+const ConfiguracoesPage = async ({ params }: ConfiguracoesPageProps) => {
+  const { slug } = await params;
   const [config, aiSettings] = await Promise.all([
-    buscarConfiguracoesRestaurante(""),
-    buscarAiSettingsPorSlug(""),
+    buscarConfiguracoesRestaurante(slug),
+    buscarAiSettingsPorSlug(slug),
   ]);
 
   if (!config) {
@@ -32,15 +37,14 @@ const ConfiguracoesPage = async () => {
   }
 
   const { restaurant, operatingHours } = config;
-  const slug = restaurant.slug;
 
   return (
     <main className="space-y-4">
       <Card className="overflow-hidden border-white/80 bg-white/90">
         <CardHeader>
-          <CardTitle className="font-display text-xl">Configurações do Restaurante</CardTitle>
+          <CardTitle className="font-display text-xl">Configurações</CardTitle>
           <CardDescription className="text-sm">
-            Gerencie o status de funcionamento, módulos e os horários de atendimento do
+            Gerencie o status de funcionamento e os horários de atendimento do
             seu restaurante.
           </CardDescription>
         </CardHeader>

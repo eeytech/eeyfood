@@ -1,52 +1,45 @@
-import "./globals.css";
+import { Metadata } from "next";
+import { ReactNode } from "react";
 
-import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { MarketingScripts } from "@/components/marketing-scripts";
+import { buscarRestaurantePorSlug } from "@/lib/db";
 
-import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
-import { PWARegister } from "@/components/pwa-register";
-import { Toaster } from "@/components/ui/sonner";
+interface RestaurantLayoutProps {
+  children: ReactNode;
+  params: Promise<{ slug: string }>;
+}
 
-import { CartProvider } from "./menu/contexts/cart";
+export async function generateMetadata({
+  params,
+}: RestaurantLayoutProps): Promise<Metadata> {
+  const { slug } = await params;
+  const restaurant = await buscarRestaurantePorSlug(slug);
 
-const inter = Inter({
-  subsets: ["latin"],
-});
+  if (!restaurant) {
+    return {
+      title: "eeyFood - Cardápio Digital",
+    };
+  }
 
-export const metadata: Metadata = {
-  title: "eeyFood - Cardápio Digital",
-  description: "Experiência digital para pedidos!",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "eeyFood",
-  },
-  formatDetection: {
-    telephone: false,
-  },
-};
+  return {
+    title: `${restaurant.name} - Cardápio Digital`,
+    appleWebApp: {
+      title: restaurant.name,
+    },
+  };
+}
 
-export const viewport: Viewport = {
-  themeColor: "#ef4444",
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-};
-
-export default function RootLayout({
+export default async function RestaurantLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+  params,
+}: RestaurantLayoutProps) {
+  const { slug } = await params;
+  const restaurant = await buscarRestaurantePorSlug(slug);
+
   return (
-    <html lang="pt-BR">
-      <body className={`${inter.className} antialiased`}>
-        <PWARegister />
-        <PWAInstallPrompt />
-        <CartProvider>{children}</CartProvider>
-        <Toaster position="top-center" />
-      </body>
-    </html>
+    <>
+      {restaurant && <MarketingScripts restaurantId={restaurant.id} />}
+      {children}
+    </>
   );
 }

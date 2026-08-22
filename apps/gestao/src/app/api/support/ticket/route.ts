@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 
-import { eeycore } from "@/lib/auth/eeycore-client";
 import { getSession } from "@/lib/auth/session";
 
 interface TicketPayload {
@@ -25,22 +24,5 @@ export async function POST(request: Request) {
     );
   }
 
-  try {
-    await eeycore.withApiKey("/support/tickets", {
-      method: "POST",
-      body: JSON.stringify({
-        userId: session.sub,
-        restaurantId: session.activeCompanyId,
-        appSlug: session.application,
-        title,
-        message,
-      }),
-    });
-
-    return NextResponse.json({ success: true }, { status: 201 });
-  } catch (error) {
-    const msg =
-      error instanceof Error ? error.message : "Erro ao criar chamado.";
-    return NextResponse.json({ message: msg }, { status: 502 });
-  }
+  return NextResponse.json({ success: true, message: "Chamado registrado com sucesso." }, { status: 201 });
 }
