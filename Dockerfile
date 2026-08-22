@@ -37,6 +37,8 @@ ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 
 COPY --from=builder /app/apps/gestao/.next/standalone ./
+COPY --from=builder /app/packages/db/drizzle ./packages/db/drizzle
+COPY --from=builder /app/packages/db/dist ./packages/db/dist
 
 EXPOSE 3000
 CMD ["node", "apps/gestao/server.js"]
