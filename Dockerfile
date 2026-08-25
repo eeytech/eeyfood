@@ -40,6 +40,7 @@ COPY --from=builder /app/apps/gestao/.next/standalone ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/db/drizzle ./packages/db/drizzle
 COPY --from=builder /app/packages/db/dist ./packages/db/dist
+COPY --from=builder /app/packages/db/src ./packages/db/src
 
 EXPOSE 3040
 CMD ["node", "apps/gestao/server.js"]
