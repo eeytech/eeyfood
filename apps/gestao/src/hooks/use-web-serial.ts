@@ -65,7 +65,7 @@ export function useWebSerial(): UseWebSerialResult {
 
   const captureWeight = useCallback(
     async (protocol: ScaleProtocol, baudRate: number): Promise<number | null> => {
-      if (!isSupported || !navigator.serial) {
+      if (typeof window === "undefined" || !isSupported || !navigator?.serial) {
         setErrorMessage("Web Serial API não suportada neste navegador. Use Chrome/Edge.");
         setStatus("error");
         return null;

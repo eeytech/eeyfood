@@ -43,7 +43,7 @@ export function useCashDrawer(): UseCashDrawerResult {
   // Opens drawer via the thermal printer's serial (COM) port
   const openDrawerSerial = useCallback(
     async (pulseHex?: string | null): Promise<boolean> => {
-      if (!isSerialSupported || !navigator.serial) {
+      if (typeof window === "undefined" || !isSerialSupported || !navigator?.serial) {
         setDrawerError("Web Serial não suportada. Use Chrome/Edge.");
         setDrawerStatus("error");
         return false;
@@ -85,7 +85,7 @@ export function useCashDrawer(): UseCashDrawerResult {
   // Opens drawer via the thermal printer's USB port (WebUSB)
   const openDrawerUsb = useCallback(
     async (pulseHex?: string | null): Promise<boolean> => {
-      if (!isUsbSupported || !navigator.usb) {
+      if (typeof window === "undefined" || !isUsbSupported || !navigator?.usb) {
         setDrawerError("Web USB não suportada. Use Chrome/Edge.");
         setDrawerStatus("error");
         return false;
