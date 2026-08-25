@@ -1,12 +1,17 @@
+import "./globals.css";
+
 import { Metadata } from "next";
+import { Inter } from "next/font/google";
 import { ReactNode } from "react";
 
 import { MarketingScripts } from "@/components/marketing-scripts";
 import { buscarRestaurantePorSlug } from "@/lib/db";
 
+const inter = Inter({ subsets: ["latin"] });
+
 interface RestaurantLayoutProps {
   children: ReactNode;
-  params: Promise<{ slug: string }>;
+  params: Promise<{ slug?: string }>;
 }
 
 export async function generateMetadata({
@@ -37,9 +42,11 @@ export default async function RestaurantLayout({
   const restaurant = await buscarRestaurantePorSlug(slug);
 
   return (
-    <>
-      {restaurant && <MarketingScripts restaurantId={restaurant.id} />}
-      {children}
-    </>
+    <html lang="pt-BR" suppressHydrationWarning>
+      <body className={inter.className} suppressHydrationWarning>
+        {restaurant && <MarketingScripts restaurantId={restaurant.id} />}
+        {children}
+      </body>
+    </html>
   );
 }

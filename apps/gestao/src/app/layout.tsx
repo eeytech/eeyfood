@@ -25,9 +25,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
       <body
         className={`${manrope.variable} ${spaceGrotesk.variable} font-sans`}
+        suppressHydrationWarning
       >
         {children}
         <Toaster richColors position="top-right" />
