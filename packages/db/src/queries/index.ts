@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, gte, inArray, isNotNull, sql } from "drizzle-orm";
 
-import { db } from "./client";
-import { isRestaurantOpen } from "./restaurant-utils";
+import { db } from "../client";
+import { isRestaurantOpen } from "../restaurant-utils";
 import {
   abandonedCartsTable,
   couponsTable,
@@ -29,7 +29,7 @@ import {
   tableReservationsTable,
   waitingQueueTable,
   comandasAvulsasTable,
-} from "./schema";
+} from "../schema";
 import type {
   AbandonedCart,
   ComandaAvulsaComPedido,
@@ -60,7 +60,7 @@ import type {
   Waiter,
   WaitingQueueEntry,
   Wallet,
-} from "./types";
+} from "../types";
 
 export interface CriarPedidoInput {
   customerName: string;
