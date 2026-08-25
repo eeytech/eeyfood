@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-import { gerarInsightsIA } from "@/app/(dashboard)/relatorios/actions";
+import { gerarInsightsIA } from "../actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 

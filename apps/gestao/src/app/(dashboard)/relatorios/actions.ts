@@ -15,7 +15,6 @@ import {
   restaurantsTable,
   sql,
 } from "@fsw/db";
-import OpenAI from "openai";
 
 export interface InsightResult {
   markdown: string;
@@ -194,6 +193,7 @@ ${
 
 Escreva em português brasileiro. Seja direto, use dados quantitativos e justifique cada recomendação.`;
 
+  const { default: OpenAI } = await import("openai");
   const openai = new OpenAI({ apiKey: aiSettingsRow.openaiApiKey });
 
   const completion = await openai.chat.completions.create({
