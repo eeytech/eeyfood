@@ -1,13 +1,12 @@
 "use client";
 
-import autoTable from "jspdf-autotable";
 import { DownloadIcon } from "lucide-react";
-import { jsPDF } from "jspdf";
 
 import { Button } from "@/components/ui/button";
 import type { DashboardData } from "@/lib/admin-queries";
 
-type DocAT = jsPDF & { lastAutoTable: { finalY: number } };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type DocAT = any;
 
 const fmt = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
@@ -50,7 +49,9 @@ interface ExportPDFButtonProps {
 }
 
 const ExportPDFButton = ({ data, activeTab, from, to }: ExportPDFButtonProps) => {
-  const handleExport = () => {
+  const handleExport = async () => {
+    const { jsPDF } = await import("jspdf");
+    const { default: autoTable } = await import("jspdf-autotable");
     const doc = new jsPDF() as DocAT;
     const todayLabel = new Date().toLocaleDateString("pt-BR");
     const periodLabel = `${fmtDate(from)} — ${fmtDate(to)}`;
