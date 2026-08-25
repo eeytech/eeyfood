@@ -88,7 +88,7 @@ import {
   pizzaPricingRuleEnum,
   usersTable,
   userRoleEnum,
-} from "./schema.js";
+} from "./schema";
 
   // ...
 

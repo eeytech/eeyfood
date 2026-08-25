@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, gte, inArray, isNotNull, sql } from "drizzle-orm";
-import { db } from "./client.js";
-import { isRestaurantOpen } from "./restaurant-utils.js";
-import { abandonedCartsTable, couponsTable, couriersTable, deliveryFeeRulesTable, diningTablesTable, inventoryItemsTable, menuCategoriesTable, operatingHoursTable, orderProductOptionsTable, orderProductsTable, orderRatingsTable, ordersTable, productsTable, productionSectorsTable, productOptionGroupsTable, productOptionsTable, productToOptionGroupsTable, recipeItemsTable, restaurantsTable, stockMovementsTable, walletsTable, loyaltyRulesTable, waitersTable, tableReservationsTable, waitingQueueTable, comandasAvulsasTable, } from "./schema.js";
+import { db } from "./client";
+import { isRestaurantOpen } from "./restaurant-utils";
+import { abandonedCartsTable, couponsTable, couriersTable, deliveryFeeRulesTable, diningTablesTable, inventoryItemsTable, menuCategoriesTable, operatingHoursTable, orderProductOptionsTable, orderProductsTable, orderRatingsTable, ordersTable, productsTable, productionSectorsTable, productOptionGroupsTable, productOptionsTable, productToOptionGroupsTable, recipeItemsTable, restaurantsTable, stockMovementsTable, walletsTable, loyaltyRulesTable, waitersTable, tableReservationsTable, waitingQueueTable, comandasAvulsasTable, } from "./schema";
 const arredondarMoeda = (value) => {
     return Number(value.toFixed(2));
 };

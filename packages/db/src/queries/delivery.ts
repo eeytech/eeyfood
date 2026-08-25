@@ -1,8 +1,8 @@
 import { and, asc, eq } from "drizzle-orm";
 
-import { db } from "../client.js";
-import { couriersTable, courierTripsTable, deliveryFeeRulesTable, ordersTable } from "../schema.js";
-import type { CourierTrip, DeliveryFeeRule } from "../types.js";
+import { db } from "../client";
+import { couriersTable, courierTripsTable, deliveryFeeRulesTable, ordersTable } from "../schema";
+import type { CourierTrip, DeliveryFeeRule } from "../types";
 
 export interface CriarRegraFreteInput {
   restaurantId: string;

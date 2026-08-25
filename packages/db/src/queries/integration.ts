@@ -1,8 +1,8 @@
 import { and, eq, sql } from "drizzle-orm";
 
-import { db } from "../client.js";
-import { aiSettingsTable, marketingSpendTable, marketplaceIntegrationsTable } from "../schema.js";
-import type { MarketplaceIntegration, MarketplaceType } from "../types.js";
+import { db } from "../client";
+import { aiSettingsTable, marketingSpendTable, marketplaceIntegrationsTable } from "../schema";
+import type { MarketplaceIntegration, MarketplaceType } from "../types";
 
 export const buscarIntegracaoMarketplace = async (
   restaurantId: string,

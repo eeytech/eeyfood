@@ -1,6 +1,6 @@
 export { and, asc, desc, eq, gte, ilike, inArray, isNotNull, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 
-export { db, pool } from "./client.js";
+export { db, pool } from "./client";
 export {
   adicionarItensComanda,
   atualizarStatusPagamentoPedido,
@@ -32,11 +32,11 @@ export {
   unirMesas,
   buscarProdutosPorCategoria,
   buscarUltimoPedidoPorTelefone,
-} from "./queries.js";
+} from "./queries";
 export type {
   TransferirItensInput,
   UnirMesasInput,
-} from "./queries.js";
+} from "./queries";
 export type {
   AdicionarItensComandaInput,
   AbrirComandaMesaInput,
@@ -45,7 +45,7 @@ export type {
   FecharComandaInput,
   SalvarCarrinhoAbandonadoInput,
   ValidarBeneficiosPedidoInput,
-} from "./queries.js";
+} from "./queries";
 export {
   criarTransacaoFinanceira,
   atualizarStatusTransacao,
@@ -70,7 +70,7 @@ export {
   listarLinhasExtrato,
   vincularLinhaExtratoTransacao,
   ignorarLinhaExtrato,
-} from "./queries/financial.js";
+} from "./queries/financial";
 export {
   buscarRegrasFreteAtivas,
   criarRegraFrete,
@@ -81,8 +81,8 @@ export {
   registrarComprovanteEntrega,
   criarViagemMotoboy,
   concluirViagemMotoboy,
-} from "./queries/delivery.js";
-export type { CriarRegraFreteInput, CriarViagemMotoboyInput } from "./queries/delivery.js";
+} from "./queries/delivery";
+export type { CriarRegraFreteInput, CriarViagemMotoboyInput } from "./queries/delivery";
 export {
   buscarIntegracaoMarketplace,
   salvarIntegracaoMarketplace,
@@ -92,9 +92,9 @@ export {
   criarGastoMarketing,
   listarGastosMarketing,
   excluirGastoMarketing,
-} from "./queries/integration.js";
-export type { CriarGastoMarketingInput } from "./queries/integration.js";
-export { isRestaurantOpen, getNextOpeningTime } from "./restaurant-utils.js";
+} from "./queries/integration";
+export type { CriarGastoMarketingInput } from "./queries/integration";
+export { isRestaurantOpen, getNextOpeningTime } from "./restaurant-utils";
 export {
   abandonedCartStatusEnum,
   abandonedCartsRelations,
@@ -236,7 +236,7 @@ export {
   usersTable,
   usersRelations,
   userRoleEnum,
-} from "./schema.js";
+} from "./schema";
 export type {
   AbandonedCart,
   BankAccount,
@@ -377,5 +377,5 @@ export type {
   User,
   NewUser,
   UserRole,
-} from "./types.js";
+} from "./types";
 

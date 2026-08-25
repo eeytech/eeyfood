@@ -1,4 +1,4 @@
-import type { AbandonedCart, ComandaAvulsaComPedido, ConsumptionMethod, Courier, MarketplaceType, MesaComanda, Order, OrderComItens, OrderProduct, OrderProductItemStatus, OrderStatus, PaymentMethod, PaymentStatus, PedidoBeneficiosValidado, PedidoRecebimento, Product, ProductComRestaurante, ProductionSector, ProductOption, ProductOptionGroup, Restaurant, RestaurantComCategoriasEProdutos, TableReservation, Waiter, WaitingQueueEntry } from "./types.js";
+import type { AbandonedCart, ComandaAvulsaComPedido, ConsumptionMethod, Courier, MarketplaceType, MesaComanda, Order, OrderComItens, OrderProduct, OrderProductItemStatus, OrderStatus, PaymentMethod, PaymentStatus, PedidoBeneficiosValidado, PedidoRecebimento, Product, ProductComRestaurante, ProductionSector, ProductOption, ProductOptionGroup, Restaurant, RestaurantComCategoriasEProdutos, TableReservation, Waiter, WaitingQueueEntry } from "./types";
 export interface CriarPedidoInput {
     customerName: string;
     customerPhone: string;

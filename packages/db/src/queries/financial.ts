@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, gte, sql } from "drizzle-orm";
 
-import { db } from "../client.js";
+import { db } from "../client";
 import {
   bankAccountsTable,
   bankStatementEntriesTable,
@@ -11,9 +11,9 @@ import {
   financialTransactionsTable,
   fiscalSettingsTable,
   ordersTable,
-} from "../schema.js";
-import type { FinancialCategory, FinancialTransaction, TransactionStatus } from "../types.js";
-import { buscarRestaurantePorSlug } from "../queries.js";
+} from "../schema";
+import type { FinancialCategory, FinancialTransaction, TransactionStatus } from "../types";
+import { buscarRestaurantePorSlug } from "../queries";
 
 export const listarCategoriasFinanceirasPorSlug = async (
   slug: string,
