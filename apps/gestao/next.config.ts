@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [{ hostname: "u9a6wmr3as.ufs.sh" }],
   },
-  serverExternalPackages: ["sharp", "mercadopago", "pg", "openai", "jspdf", "jspdf-autotable"],
+  serverExternalPackages: ["sharp", "mercadopago", "pg"],
   outputFileTracingRoot: path.join(__dirname, "../../"),
 };
 
