@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "(find .next -mindepth 1 -maxdepth 1 ! -name 'cache' -exec rm -rf {} + 2>/dev/null || true) && next build && mkdir -p .next/standalone/apps/gestao/.next && cp -r .next/static .next/standalone/apps/gestao/.next/static && (cp -r public .next/standalone/apps/gestao/public || mkdir -p .next/standalone/apps/gestao/public)",
+    "build": "next build && mkdir -p .next/standalone/apps/gestao/.next && cp -r .next/static .next/standalone/apps/gestao/.next/static && (cp -r public .next/standalone/apps/gestao/public || mkdir -p .next/standalone/apps/gestao/public)",
     "start": "HOSTNAME=0.0.0.0 node .next/standalone/apps/gestao/server.js",
     "lint": "eslint . --ignore-pattern .next --ignore-pattern node_modules"
   },
