@@ -14,7 +14,7 @@
     "jsx": "preserve",
     "incremental": true,
     "paths": {
-      "@fsw/db": ["./packages/db/dist/index.d.ts"]
+      "@fsw/db": ["./packages/db/src/index.ts"]
     }
   }
 }
