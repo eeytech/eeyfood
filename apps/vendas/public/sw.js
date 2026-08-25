@@ -3,6 +3,7 @@ const ASSETS_TO_CACHE = [
   "/",
   "/dine_in.png",
   "/takeaway.png",
+  "/delivery.png",
 ];
 
 self.addEventListener("install", (event) => {
