@@ -7,11 +7,11 @@ const __dirname = path.dirname(__filename);
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  transpilePackages: ["react-leaflet", "leaflet"],
+  transpilePackages: ["@fsw/db", "react-leaflet", "leaflet"],
   images: {
     remotePatterns: [{ hostname: "u9a6wmr3as.ufs.sh" }],
   },
-  serverExternalPackages: ["@fsw/db", "drizzle-orm", "pg", "sharp", "mercadopago", "openai"],
+  serverExternalPackages: ["sharp", "mercadopago", "pg", "openai"],
   outputFileTracingRoot: path.join(__dirname, "../../"),
 };
 
