@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 
-import { buscarRestaurantePorSlug, type ConsumptionMethod, criarPedido, type PaymentMethod } from "@/lib/db";
+import { buscarRestaurantePorSlug, criarPedido } from "@/lib/db";
+import type { ConsumptionMethod, PaymentMethod } from "@/lib/db";
 import { notificarNovoPedido } from "@/lib/notificar-novo-pedido";
 
 import { normalizePhoneNumber } from "../helpers/phone";

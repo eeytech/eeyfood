@@ -1,8 +1,5 @@
-import {
-  atualizarStatusItemPedido,
-  buscarPedidoRecebimentoPorId,
-  type OrderProductItemStatus,
-} from "@fsw/db";
+import { atualizarStatusItemPedido, buscarPedidoRecebimentoPorId } from "@fsw/db";
+import type { OrderProductItemStatus } from "@fsw/db";
 import { NextResponse } from "next/server";
 
 import { notificarItemAtualizado } from "@/lib/notificar-item-atualizado";

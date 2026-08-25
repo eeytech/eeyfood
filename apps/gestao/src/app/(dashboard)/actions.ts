@@ -4,32 +4,8 @@ import OpenAI from "openai";
 import type { RestaurantStatus } from "@fsw/db";
 import { buscarGruposAdicionaisDoRestaurante, buscarProdutoComOpcionaisGestao } from "@/lib/admin-queries";
 import type { InventoryItemType, UnitOfMeasure } from "@fsw/db";
-import {
-  aiSettingsTable,
-  and,
-  buscarRestaurantePorSlug,
-  db,
-  eq,
-  financialCategoriesTable,
-  financialTransactionsTable,
-  inventoryBatchesTable,
-  inventoryItemsTable,
-  inventoryLossesTable,
-  menuCategoriesTable,
-  operatingHoursTable,
-  productOptionGroupsTable,
-  productOptionsTable,
-  productToOptionGroupsTable,
-  productsTable,
-  purchaseInvoicesTable,
-  recipeItemsTable,
-  restaurantsTable,
-  stockMovementsTable,
-  suppliersTable,
-  type InventoryItem,
-  type InventoryLossReason,
-  type RecipeItem,
-} from "@fsw/db";
+import { aiSettingsTable, and, buscarRestaurantePorSlug, db, eq, financialCategoriesTable, financialTransactionsTable, inventoryBatchesTable, inventoryItemsTable, inventoryLossesTable, menuCategoriesTable, operatingHoursTable, productOptionGroupsTable, productOptionsTable, productToOptionGroupsTable, productsTable, purchaseInvoicesTable, recipeItemsTable, restaurantsTable, stockMovementsTable, suppliersTable } from "@fsw/db";
+import type { InventoryItem, InventoryLossReason, RecipeItem } from "@fsw/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 

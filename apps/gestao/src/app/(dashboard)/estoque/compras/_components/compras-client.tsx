@@ -13,13 +13,8 @@ import {
 import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import {
-  confirmarImportacaoNFeAction,
-  criarFornecedorAction,
-  excluirFornecedorAction,
-  type MapeamentoItem,
-  parseXmlNFeAction,
-} from "@/app/(dashboard)/actions";
+import { confirmarImportacaoNFeAction, criarFornecedorAction, excluirFornecedorAction, parseXmlNFeAction } from "@/app/(dashboard)/actions";
+import type { MapeamentoItem } from "@/app/(dashboard)/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {

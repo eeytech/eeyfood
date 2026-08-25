@@ -1,6 +1,6 @@
 "use server";
 
-import { type ConsumptionMethod } from "@fsw/db";
+import type { ConsumptionMethod } from "@fsw/db";
 import { MercadoPagoConfig, Preference } from "mercadopago";
 import { headers } from "next/headers";
 

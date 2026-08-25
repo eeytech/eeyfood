@@ -4,14 +4,8 @@ import { PencilIcon, PlusIcon, Trash2Icon, XIcon } from "lucide-react";
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import {
-  addRecipeItemAction,
-  fetchInventoryItemsForRecipeAction,
-  fetchRecipeItemsAction,
-  removeRecipeItemAction,
-  updateRecipeItemAction,
-  type RecipeItemComInsumo,
-} from "@/app/(dashboard)/actions";
+import { addRecipeItemAction, fetchInventoryItemsForRecipeAction, fetchRecipeItemsAction, removeRecipeItemAction, updateRecipeItemAction } from "@/app/(dashboard)/actions";
+import type { RecipeItemComInsumo } from "@/app/(dashboard)/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

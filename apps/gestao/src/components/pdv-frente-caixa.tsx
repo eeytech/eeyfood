@@ -28,18 +28,11 @@ import {
   useTransition,
 } from "react";
 
-import {
-  abrirTurnoCaixa,
-  buscarPedidoPdvParaImpressao,
-  buscarSaldoCashbackPdv,
-  fecharTurnoCaixa,
-  finalizarVendaPdv,
-  registrarMovimentacaoCaixa,
-  validarCupomPdv,
-  type FinalizarVendaPdvInput,
-} from "@/app/(dashboard)/pdv/actions";
+import { abrirTurnoCaixa, buscarPedidoPdvParaImpressao, buscarSaldoCashbackPdv, fecharTurnoCaixa, finalizarVendaPdv, registrarMovimentacaoCaixa, validarCupomPdv } from "@/app/(dashboard)/pdv/actions";
+import type { FinalizarVendaPdvInput } from "@/app/(dashboard)/pdv/actions";
 import { useCashDrawer } from "@/hooks/use-cash-drawer";
-import { useWebSerial, type ScaleProtocol } from "@/hooks/use-web-serial";
+import { useWebSerial } from "@/hooks/use-web-serial";
+import type { ScaleProtocol } from "@/hooks/use-web-serial";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {

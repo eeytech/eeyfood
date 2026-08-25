@@ -1,28 +1,7 @@
 "use server";
 
-import {
-  and,
-  asc,
-  buscarRestaurantePorSlug,
-  buscarRegrasFreteAtivas,
-  companyVehiclesTable,
-  couriersTable,
-  criarRegraFrete,
-  atualizarRegraFrete,
-  excluirRegraFrete,
-  db,
-  despacharPedido,
-  eq,
-  inArray,
-  isNotNull,
-  listarCouriersPorSlug,
-  menuCategoriesTable,
-  ordersTable,
-  orderProductsTable,
-  productsTable,
-  restaurantsTable,
-  type CriarRegraFreteInput,
-} from "@fsw/db";
+import { and, asc, buscarRestaurantePorSlug, buscarRegrasFreteAtivas, companyVehiclesTable, couriersTable, criarRegraFrete, atualizarRegraFrete, excluirRegraFrete, db, despacharPedido, eq, inArray, isNotNull, listarCouriersPorSlug, menuCategoriesTable, ordersTable, orderProductsTable, productsTable, restaurantsTable } from "@fsw/db";
+import type { CriarRegraFreteInput } from "@fsw/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 

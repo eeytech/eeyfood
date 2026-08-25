@@ -1,10 +1,5 @@
-import {
-  atualizarStatusPagamentoPedido,
-  atualizarStatusPedido,
-  buscarPedidoRecebimentoPorId,
-  type OrderStatus,
-  type PaymentStatus,
-} from "@fsw/db";
+import { atualizarStatusPagamentoPedido, atualizarStatusPedido, buscarPedidoRecebimentoPorId } from "@fsw/db";
+import type { OrderStatus, PaymentStatus } from "@fsw/db";
 import { NextResponse } from "next/server";
 
 import { notificarAtualizacaoPedido } from "@/lib/notificar-atualizacao-pedido";

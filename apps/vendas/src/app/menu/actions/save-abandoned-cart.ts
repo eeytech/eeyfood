@@ -1,6 +1,7 @@
 "use server";
 
-import { type PaymentMethod, salvarCarrinhoAbandonado } from "@/lib/db";
+import { salvarCarrinhoAbandonado } from "@/lib/db";
+import type { PaymentMethod } from "@/lib/db";
 
 interface SaveAbandonedCartInput {
   sessionId: string;

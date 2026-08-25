@@ -2,7 +2,8 @@
 
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
-import { db, eq, or, isNull, restaurantsTable, usersTable, type UserRole } from "@fsw/db";
+import { db, eq, or, isNull, restaurantsTable, usersTable } from "@fsw/db";
+import type { UserRole } from "@fsw/db";
 
 export async function listarUsuariosAction(restaurantSlug: string) {
   const [restaurant] = await db
