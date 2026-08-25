@@ -1,5 +1,6 @@
 "use server";
 
+import OpenAI from "openai";
 import {
   aiSettingsTable,
   and,
@@ -193,7 +194,6 @@ ${
 
 Escreva em português brasileiro. Seja direto, use dados quantitativos e justifique cada recomendação.`;
 
-  const { default: OpenAI } = await import("openai");
   const openai = new OpenAI({ apiKey: aiSettingsRow.openaiApiKey });
 
   const completion = await openai.chat.completions.create({

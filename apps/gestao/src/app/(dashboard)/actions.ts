@@ -1,5 +1,6 @@
 "use server";
 
+import OpenAI from "openai";
 import type { RestaurantStatus } from "@fsw/db";
 import { buscarGruposAdicionaisDoRestaurante, buscarProdutoComOpcionaisGestao } from "@/lib/admin-queries";
 import type { InventoryItemType, UnitOfMeasure } from "@fsw/db";
@@ -1232,7 +1233,6 @@ export const generateProductAiAction = async (
   }
 
   try {
-    const { OpenAI } = await import("openai");
     const openai = new OpenAI({ apiKey: aiSettings.openaiApiKey });
 
     const response = await openai.chat.completions.create({

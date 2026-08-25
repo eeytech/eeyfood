@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build && mkdir -p .next/standalone/apps/gestao/.next && cp -r .next/static .next/standalone/apps/gestao/.next/static && (cp -r public .next/standalone/apps/gestao/public || mkdir -p .next/standalone/apps/gestao/public)",
+    "build": "next build && node -e \"const fs=require('fs'); fs.mkdirSync('.next/standalone/apps/gestao/.next', {recursive: true}); fs.cpSync('.next/static', '.next/standalone/apps/gestao/.next/static', {recursive: true}); if(fs.existsSync('public')){ fs.cpSync('public', '.next/standalone/apps/gestao/public', {recursive: true}); } else { fs.mkdirSync('.next/standalone/apps/gestao/public', {recursive: true}); }\"",
     "start": "HOSTNAME=0.0.0.0 node .next/standalone/apps/gestao/server.js",
     "lint": "eslint . --ignore-pattern .next --ignore-pattern node_modules"
   },
