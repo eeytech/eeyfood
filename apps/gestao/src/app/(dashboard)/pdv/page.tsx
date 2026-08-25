@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import PdvFrenteCaixa from "@/components/pdv-frente-caixa";
+import PdvFrenteCaixaClient from "@/components/pdv-frente-caixa-client";
 import { buscarCardapioGestao } from "@/lib/admin-queries";
 import { buscarTurnoAtivoPdv } from "./actions";
 
@@ -23,7 +23,7 @@ const PdvPage = async ({ params }: PdvPageProps) => {
   }
 
   return (
-    <PdvFrenteCaixa
+    <PdvFrenteCaixaClient
       slug={slug}
       restaurantName={cardapio.restaurant.name}
       isCashbackEnabled={cardapio.restaurant.isCashbackEnabled}

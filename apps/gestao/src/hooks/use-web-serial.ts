@@ -58,11 +58,14 @@ export function useWebSerial(): UseWebSerialResult {
   const portRef = useRef<SerialPort | null>(null);
 
   const isSupported =
-    typeof navigator !== "undefined" && "serial" in navigator;
+    typeof window !== "undefined" &&
+    typeof navigator !== "undefined" &&
+    "serial" in navigator &&
+    Boolean(navigator.serial);
 
   const captureWeight = useCallback(
     async (protocol: ScaleProtocol, baudRate: number): Promise<number | null> => {
-      if (!isSupported) {
+      if (!isSupported || !navigator.serial) {
         setErrorMessage("Web Serial API não suportada neste navegador. Use Chrome/Edge.");
         setStatus("error");
         return null;
