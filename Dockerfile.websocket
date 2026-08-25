@@ -9,7 +9,7 @@ RUN npm ci
 COPY apps/websocket ./apps/websocket
 
 ENV NODE_ENV=production
-ENV PORT=4000
+ENV PORT=3030
 
-EXPOSE 4000
+EXPOSE 3030
 CMD ["npx", "tsx", "apps/websocket/src/server.ts"]
