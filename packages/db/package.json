@@ -18,7 +18,8 @@
     "lint": "tsc -p tsconfig.json --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "npx tsx src/migrate.ts",
-    "db:seed": "npx tsx src/seed.ts"
+    "db:seed": "npx tsx src/seed.ts",
+    "db:vacuum": "npx tsx src/vacuum.ts"
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",

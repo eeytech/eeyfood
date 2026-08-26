@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import { sql } from "drizzle-orm";
 import { db } from "./client";
 import {
   abandonedCartsTable,
@@ -81,59 +82,16 @@ const main = async () => {
 
     process.stdout.write("🧹 Limpando banco de dados...\n");
 
-    await tx.delete(orderProductOptionsTable);
-    await tx.delete(orderProductsTable);
-    await tx.delete(orderRatingsTable);
-    await tx.delete(stockMovementsTable);
-    await tx.delete(recipeItemsTable);
-    await tx.delete(inventoryLossesTable);
-    await tx.delete(bankStatementEntriesTable);
-    await tx.delete(customerLedgerEntriesTable);
-    await tx.delete(cashMovementsTable);
-    await tx.delete(tipClosingsTable);
-    await tx.delete(courierTripsTable);
-    await tx.delete(productOptionsTable);
-    await tx.delete(productToOptionGroupsTable);
-    await tx.delete(productSizePricesTable);
-    await tx.delete(inventoryBatchesTable);
-    await tx.delete(financialTransactionsTable);
-    await tx.delete(bankStatementsTable);
-    await tx.delete(ordersTable);
-    await tx.delete(comandasAvulsasTable);
-    await tx.delete(abandonedCartsTable);
-    await tx.delete(loyaltyRulesTable);
-    await tx.delete(purchaseInvoicesTable);
-    await tx.delete(inventoryItemsTable);
-    await tx.delete(financialClosingsTable);
-    await tx.delete(cashRegisterShiftsTable);
-    await tx.delete(customerLedgersTable);
-    await tx.delete(bankAccountsTable);
-    await tx.delete(financialCategoriesTable);
-    await tx.delete(tableReservationsTable);
-    await tx.delete(waitingQueueTable);
-    await tx.delete(commissionRulesTable);
-    await tx.delete(productOptionGroupsTable);
-    await tx.delete(loyaltyPrizesTable);
-    await tx.delete(walletsTable);
-    await tx.delete(couponsTable);
-    await tx.delete(customerInteractionsTable);
-    await tx.delete(customersTable);
-    await tx.delete(marketingSpendTable);
-    await tx.delete(waitersTable);
-    await tx.delete(couriersTable);
-    await tx.delete(companyVehiclesTable);
-    await tx.delete(deliveryFeeRulesTable);
-    await tx.delete(marketplaceIntegrationsTable);
-    await tx.delete(productsTable);
-    await tx.delete(productionSectorsTable);
-    await tx.delete(operatingHoursTable);
-    await tx.delete(diningTablesTable);
-    await tx.delete(menuCategoriesTable);
-    await tx.delete(aiSettingsTable);
-    await tx.delete(fiscalSettingsTable);
-    await tx.delete(marketingSettingsTable);
-    await tx.delete(usersTable);
-    await tx.delete(restaurantsTable);
+    const tablenamesResult = await tx.execute<{ tablename: string }>(
+      sql`SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename NOT LIKE '__drizzle%'`
+    );
+    const tableNames = tablenamesResult.rows
+      .map((r) => `"${r.tablename}"`)
+      .join(", ");
+
+    if (tableNames.length > 0) {
+      await tx.execute(sql.raw(`TRUNCATE TABLE ${tableNames} RESTART IDENTITY CASCADE;`));
+    }
 
     process.stdout.write("✅ Banco limpo.\n");
 
