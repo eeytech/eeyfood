@@ -6,6 +6,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+        - NEXT_PUBLIC_APP_SLUG=${NEXT_PUBLIC_APP_SLUG}
+        - NEXT_PUBLIC_ADMIN_API_URL=${NEXT_PUBLIC_ADMIN_API_URL}
+        - NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL}
+        - NEXT_PUBLIC_VENDAS_URL=${NEXT_PUBLIC_VENDAS_URL}
     container_name: eeyfood-gestao
     restart: always
     ports:
@@ -30,6 +36,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.vendas
+      args:
+        - NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL}
     container_name: eeyfood-vendas
     restart: always
     ports:
