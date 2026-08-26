@@ -17,6 +17,9 @@ services:
     restart: always
     ports:
       - "3001:3000"
+    labels:
+      - "coolify.managed=true"
+      - "coolify.domain=https://www.gestao.fswdonalds.eeytech.com,https://www.gestao.fswdonalds.eeytech.com.br,https://gestao.fswdonalds.eeytech.com,https://gestao.fswdonalds.eeytech.com.br"
     environment:
       - NODE_ENV=production
       - PORT=3000
@@ -44,6 +47,9 @@ services:
     restart: always
     ports:
       - "3000:3000"
+    labels:
+      - "coolify.managed=true"
+      - "coolify.domain=https://www.fswdonalds.eeytech.com,https://www.fswdonalds.eeytech.com.br,https://fswdonalds.eeytech.com,https://fswdonalds.eeytech.com.br"
     environment:
       - NODE_ENV=production
       - PORT=3000
@@ -67,6 +73,9 @@ services:
     restart: always
     ports:
       - "4000:4000"
+    labels:
+      - "coolify.managed=true"
+      - "coolify.domain=https://www.websocket.fswdonalds.eeytech.com,https://www.websocket.fswdonalds.eeytech.com.br,https://websocket.fswdonalds.eeytech.com,https://websocket.fswdonalds.eeytech.com.br"
     environment:
       - NODE_ENV=production
       - PORT=4000
