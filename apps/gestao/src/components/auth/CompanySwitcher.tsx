@@ -44,8 +44,8 @@ export function CompanySwitcher({
         throw new Error("Não foi possível trocar de unidade.");
       }
 
-      const { slug } = (await response.json()) as { slug: string };
-      window.location.href = `/${slug}/pedidos`;
+      await response.json();
+      window.location.href = "/pedidos";
     } catch {
       setIsSwitching(false);
     }
