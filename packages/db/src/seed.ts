@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { db } from "./client";
+import { db } from "./client.js";
 import {
   abandonedCartsTable,
   aiSettingsTable,
@@ -55,7 +55,7 @@ import {
   waitersTable,
   waitingQueueTable,
   walletsTable,
-} from "./schema";
+} from "./schema.js";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 

@@ -13,7 +13,7 @@ import {
   ordersTable,
 } from "../schema";
 import type { FinancialCategory, FinancialTransaction, TransactionStatus } from "../types";
-import { buscarRestaurantePorSlug } from "./index";
+import { buscarRestaurantePorSlug } from "./index.js";
 
 export const listarCategoriasFinanceirasPorSlug = async (
   slug: string,
