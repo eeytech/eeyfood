@@ -18,7 +18,8 @@ COPY . .
 ARG NEXT_PUBLIC_WEBSOCKET_URL
 
 ENV NEXT_PUBLIC_WEBSOCKET_URL=$NEXT_PUBLIC_WEBSOCKET_URL
-ENV NODE_OPTIONS="--max-old-space-size=1536"
+ENV NEXT_PRIVATE_WORKERS=1
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 
 RUN npm run build -w @fsw/db && npm run build -w @fsw/vendas
 
