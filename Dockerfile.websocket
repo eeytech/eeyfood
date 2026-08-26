@@ -6,7 +6,7 @@ COPY . .
 RUN npm ci
 
 ENV NODE_ENV=production
-ENV PORT=3030
+ENV PORT=4000
 
-EXPOSE 3030
+EXPOSE 4000
 CMD ["npx", "tsx", "apps/websocket/src/server.ts"]
