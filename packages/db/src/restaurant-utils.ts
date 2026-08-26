@@ -1,4 +1,4 @@
-import { OperatingHours, RestaurantStatus } from "./types.js";
+import { OperatingHours, RestaurantStatus } from "./types";
 
 export const isRestaurantOpen = (
   status: RestaurantStatus,
