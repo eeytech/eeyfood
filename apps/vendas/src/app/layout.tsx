@@ -1,6 +1,8 @@
 import "./globals.css";
 
 import { Metadata } from "next";
+
+export const dynamic = "force-dynamic";
 import { Inter } from "next/font/google";
 import { ReactNode } from "react";
 

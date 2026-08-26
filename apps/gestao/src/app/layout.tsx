@@ -1,6 +1,8 @@
 import "./globals.css";
 
 import type { Metadata } from "next";
+
+export const dynamic = "force-dynamic";
 import { Manrope, Space_Grotesk } from "next/font/google";
 import { Toaster } from "sonner";
 

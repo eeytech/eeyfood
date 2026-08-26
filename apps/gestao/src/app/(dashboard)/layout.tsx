@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { buscarRestauranteUnico } from "@fsw/db";
 
+export const dynamic = "force-dynamic";
+
 import AdminSidebar from "@/components/admin-sidebar";
 import { getSession } from "@/lib/auth/session";
 
