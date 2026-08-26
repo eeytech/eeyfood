@@ -1,5 +1,9 @@
 version: '3.8'
 
+networks:
+  coolify:
+    external: true
+
 services:
   # App de Gestão (ERP Backoffice)
   gestao:
@@ -19,6 +23,9 @@ services:
       - "3001:3000"
     expose:
       - "3000"
+    networks:
+      - default
+      - coolify
     labels:
       - "coolify.managed=true"
       - "coolify.port=3000"
@@ -52,6 +59,9 @@ services:
       - "3000:3000"
     expose:
       - "3000"
+    networks:
+      - default
+      - coolify
     labels:
       - "coolify.managed=true"
       - "coolify.port=3000"
@@ -81,6 +91,9 @@ services:
       - "4000:4000"
     expose:
       - "4000"
+    networks:
+      - default
+      - coolify
     labels:
       - "coolify.managed=true"
       - "coolify.port=4000"
