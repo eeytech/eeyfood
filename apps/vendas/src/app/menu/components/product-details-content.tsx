@@ -487,7 +487,7 @@ const ProductDetailsContent = ({
             )}
 
             {/* Observações */}
-            <div className="mt-5 space-y-2 pb-48 lg:pb-6">
+            <div className="mt-5 space-y-2 pb-6">
               <Label htmlFor="comment" className="text-base font-semibold text-slate-950">
                 Observações
               </Label>
@@ -504,9 +504,9 @@ const ProductDetailsContent = ({
           </ScrollArea>
         </div>
 
-        {/* FOOTER — fixed on mobile, inline on desktop */}
+        {/* FOOTER */}
         <div
-          className="fixed bottom-0 left-0 w-full border-t border-slate-200 bg-white/95 p-4 backdrop-blur-sm lg:relative lg:border-none lg:bg-transparent lg:p-6 lg:pt-0"
+          className="shrink-0 border-t border-slate-200 bg-white/95 p-4 backdrop-blur-sm sm:p-6 sm:pt-4"
           style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}
         >
           <div className="mx-auto max-w-screen-xl space-y-2 lg:max-w-none">

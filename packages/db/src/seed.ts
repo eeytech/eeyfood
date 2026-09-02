@@ -354,12 +354,13 @@ const main = async () => {
       ])
       .returning();
 
-    const [grpPonto, grpAdicionais, grpBebida] = await tx
+    const [grpPonto, grpAdicionais, grpBebida, grpBorda] = await tx
       .insert(productOptionGroupsTable)
       .values([
         { restaurantId: restaurant.id, name: "Ponto do Hambúrguer", minOptions: 1, maxOptions: 1, displayOrder: 1 },
         { restaurantId: restaurant.id, name: "Ingredientes Adicionais", minOptions: 0, maxOptions: 5, displayOrder: 2 },
         { restaurantId: restaurant.id, name: "Bebida Acompanhante", minOptions: 0, maxOptions: 1, displayOrder: 3 },
+        { restaurantId: restaurant.id, name: "Borda Recheada", minOptions: 0, maxOptions: 1, displayOrder: 4 },
       ])
       .returning();
 
@@ -378,6 +379,12 @@ const main = async () => {
       { productOptionGroupId: grpAdicionais.id, name: "Ovo Frito", price: 3.5, displayOrder: 3 },
       { productOptionGroupId: grpAdicionais.id, name: "Molho BBQ", price: 2.0, displayOrder: 4 },
       { productOptionGroupId: grpAdicionais.id, name: "Jalapeño", price: 2.0, displayOrder: 5 },
+    ]);
+
+    await tx.insert(productOptionsTable).values([
+      { productOptionGroupId: grpBorda.id, name: "Catupiry Original", price: 8.0, displayOrder: 1 },
+      { productOptionGroupId: grpBorda.id, name: "Cheddar Cremoso", price: 8.0, displayOrder: 2 },
+      { productOptionGroupId: grpBorda.id, name: "Chocolate ao Leite", price: 10.0, displayOrder: 3 },
     ]);
 
     const [optCocaBebida] = await tx
@@ -402,6 +409,11 @@ const main = async () => {
       ,
       ,
       prodPizzaCalabresa,
+      prodPizzaMargherita,
+      prodPizzaQuatroQueijos,
+      prodPizzaFrangoCatupiry,
+      prodPizzaPepperoni,
+      prodPizzaPortuguesa,
     ] = await tx
       .insert(productsTable)
       .values([
@@ -602,13 +614,93 @@ const main = async () => {
           menuCategoryId: catPizzas.id,
           productionSectorId: sectorQuente.id,
           name: "Pizza Calabresa",
-          description: "Molho de tomate artesanal, mozzarella, calabresa fatiada e cebola.",
-          price: 0,
-          costPrice: 0,
+          description: "Molho de tomate artesanal, mozzarella, calabresa fatiada, cebola e azeitonas pretas.",
+          price: 49.9,
+          costPrice: 15.0,
           imageUrl:
-            "https://u9a6wmr3as.ufs.sh/f/jppBrbk0cChQBH21ijzEVXRoycAtrP9vH45bZ6WDl3QF0a1M",
-          ingredients: ["Massa artesanal", "Molho de tomate", "Mozzarella", "Calabresa", "Cebola"],
+            "https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?w=500&auto=format&fit=crop",
+          ingredients: ["Massa artesanal", "Molho de tomate", "Mozzarella", "Calabresa", "Cebola", "Azeitonas pretas"],
           sku: "PIZ-001",
+          trackInventory: false,
+          stockQuantity: 0,
+          lowStockThreshold: 0,
+        },
+        {
+          restaurantId: restaurant.id,
+          menuCategoryId: catPizzas.id,
+          productionSectorId: sectorQuente.id,
+          name: "Pizza Margherita",
+          description: "Molho de tomate artesanal, mozzarella fresca, fatias de tomate, manjericão fresco e azeite.",
+          price: 45.9,
+          costPrice: 13.5,
+          imageUrl:
+            "https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?w=500&auto=format&fit=crop",
+          ingredients: ["Massa artesanal", "Molho de tomate", "Mozzarella", "Tomate fatiado", "Manjericão fresco", "Azeite de oliva"],
+          sku: "PIZ-002",
+          trackInventory: false,
+          stockQuantity: 0,
+          lowStockThreshold: 0,
+        },
+        {
+          restaurantId: restaurant.id,
+          menuCategoryId: catPizzas.id,
+          productionSectorId: sectorQuente.id,
+          name: "Pizza Quatro Queijos",
+          description: "Molho de tomate, mozzarella, provolone, gorgonzola cremoso e requeijão catupiry.",
+          price: 54.9,
+          costPrice: 18.0,
+          imageUrl:
+            "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=500&auto=format&fit=crop",
+          ingredients: ["Massa artesanal", "Molho de tomate", "Mozzarella", "Provolone", "Gorgonzola", "Catupiry"],
+          sku: "PIZ-003",
+          trackInventory: false,
+          stockQuantity: 0,
+          lowStockThreshold: 0,
+        },
+        {
+          restaurantId: restaurant.id,
+          menuCategoryId: catPizzas.id,
+          productionSectorId: sectorQuente.id,
+          name: "Pizza Frango com Catupiry",
+          description: "Molho de tomate artesanal, mozzarella, peito de frango desfiado temperado e requeijão catupiry.",
+          price: 52.9,
+          costPrice: 16.5,
+          imageUrl:
+            "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=500&auto=format&fit=crop",
+          ingredients: ["Massa artesanal", "Molho de tomate", "Mozzarella", "Frango desfiado", "Catupiry", "Milho"],
+          sku: "PIZ-004",
+          trackInventory: false,
+          stockQuantity: 0,
+          lowStockThreshold: 0,
+        },
+        {
+          restaurantId: restaurant.id,
+          menuCategoryId: catPizzas.id,
+          productionSectorId: sectorQuente.id,
+          name: "Pizza Pepperoni",
+          description: "Molho de tomate artesanal, mozzarella abundante e rodelas crocantes de pepperoni especial.",
+          price: 56.9,
+          costPrice: 19.0,
+          imageUrl:
+            "https://images.unsplash.com/photo-1628840042765-356cda07504e?w=500&auto=format&fit=crop",
+          ingredients: ["Massa artesanal", "Molho de tomate", "Mozzarella", "Pepperoni"],
+          sku: "PIZ-005",
+          trackInventory: false,
+          stockQuantity: 0,
+          lowStockThreshold: 0,
+        },
+        {
+          restaurantId: restaurant.id,
+          menuCategoryId: catPizzas.id,
+          productionSectorId: sectorQuente.id,
+          name: "Pizza Portuguesa",
+          description: "Molho de tomate, mozzarella, presunto cozido, ovos cozidos, cebola, ervilha e azeitonas.",
+          price: 49.9,
+          costPrice: 15.5,
+          imageUrl:
+            "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=500&auto=format&fit=crop",
+          ingredients: ["Massa artesanal", "Molho de tomate", "Mozzarella", "Presunto", "Ovos", "Cebola", "Ervilha"],
+          sku: "PIZ-006",
           trackInventory: false,
           stockQuantity: 0,
           lowStockThreshold: 0,
@@ -619,6 +711,16 @@ const main = async () => {
     await tx.insert(productSizePricesTable).values([
       { productId: prodPizzaCalabresa.id, name: "Média (8 fatias)", price: 49.9, isDefault: false },
       { productId: prodPizzaCalabresa.id, name: "Grande (12 fatias)", price: 64.9, isDefault: true },
+      { productId: prodPizzaMargherita.id, name: "Média (8 fatias)", price: 45.9, isDefault: false },
+      { productId: prodPizzaMargherita.id, name: "Grande (12 fatias)", price: 59.9, isDefault: true },
+      { productId: prodPizzaQuatroQueijos.id, name: "Média (8 fatias)", price: 54.9, isDefault: false },
+      { productId: prodPizzaQuatroQueijos.id, name: "Grande (12 fatias)", price: 69.9, isDefault: true },
+      { productId: prodPizzaFrangoCatupiry.id, name: "Média (8 fatias)", price: 52.9, isDefault: false },
+      { productId: prodPizzaFrangoCatupiry.id, name: "Grande (12 fatias)", price: 67.9, isDefault: true },
+      { productId: prodPizzaPepperoni.id, name: "Média (8 fatias)", price: 56.9, isDefault: false },
+      { productId: prodPizzaPepperoni.id, name: "Grande (12 fatias)", price: 71.9, isDefault: true },
+      { productId: prodPizzaPortuguesa.id, name: "Média (8 fatias)", price: 49.9, isDefault: false },
+      { productId: prodPizzaPortuguesa.id, name: "Grande (12 fatias)", price: 64.9, isDefault: true },
     ]);
 
     await tx.insert(productToOptionGroupsTable).values([
@@ -630,6 +732,12 @@ const main = async () => {
       { productId: prodComboClassico.id, productOptionGroupId: grpPonto.id },
       { productId: prodComboClassico.id, productOptionGroupId: grpBebida.id },
       { productId: prodComboFrango.id, productOptionGroupId: grpBebida.id },
+      { productId: prodPizzaCalabresa.id, productOptionGroupId: grpBorda.id },
+      { productId: prodPizzaMargherita.id, productOptionGroupId: grpBorda.id },
+      { productId: prodPizzaQuatroQueijos.id, productOptionGroupId: grpBorda.id },
+      { productId: prodPizzaFrangoCatupiry.id, productOptionGroupId: grpBorda.id },
+      { productId: prodPizzaPepperoni.id, productOptionGroupId: grpBorda.id },
+      { productId: prodPizzaPortuguesa.id, productOptionGroupId: grpBorda.id },
     ]);
 
     process.stdout.write("✅ [C] Cardápio criado.\n");
@@ -1541,6 +1649,7 @@ main()
     process.stdout.write("\n🎉 Seed concluído com sucesso! Banco de dados populado.\n");
   })
   .catch((error: unknown) => {
+    console.error(error);
     process.stderr.write(`\n❌ Falha ao executar seed: ${String(error)}\n`);
     process.exitCode = 1;
   });

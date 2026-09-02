@@ -156,7 +156,7 @@ const PizzaBuilderSheet = ({
           </SheetTitle>
         </SheetHeader>
 
-        <div className="flex flex-auto flex-col overflow-y-auto px-5 py-4 pb-32 space-y-6">
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-6">
           {/* Fraction selector */}
           <div>
             <p className="mb-2 text-sm font-semibold text-slate-700">Quantos sabores?</p>
@@ -301,7 +301,7 @@ const PizzaBuilderSheet = ({
 
         {/* Footer */}
         <div
-          className="fixed bottom-0 left-0 w-full border-t border-slate-200 bg-white/95 p-4 backdrop-blur-sm"
+          className="shrink-0 border-t border-slate-200 bg-white/95 p-4 backdrop-blur-sm"
           style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}
         >
           <div className="mb-3 flex items-center justify-between">
