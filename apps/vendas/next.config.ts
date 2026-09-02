@@ -9,7 +9,10 @@ const nextConfig: NextConfig = {
   output: "standalone",
   transpilePackages: ["@fsw/db"],
   images: {
-    remotePatterns: [{ hostname: "u9a6wmr3as.ufs.sh" }],
+    remotePatterns: [
+      { hostname: "u9a6wmr3as.ufs.sh" },
+      { hostname: "images.unsplash.com" },
+    ],
   },
   serverExternalPackages: ["sharp", "mercadopago", "pg"],
   outputFileTracingRoot: path.join(__dirname, "../../"),
