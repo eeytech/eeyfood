@@ -535,12 +535,12 @@ export declare const restaurantsTable: import("drizzle-orm/pg-core").PgTableWith
             generated: undefined;
         }, {}, {}>;
         deliveryFee: import("drizzle-orm/pg-core").PgColumn<{
-            name: "deliveryFee";
+            name: string;
             tableName: "Restaurant";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -552,12 +552,12 @@ export declare const restaurantsTable: import("drizzle-orm/pg-core").PgTableWith
             generated: undefined;
         }, {}, {}>;
         minimumOrderValue: import("drizzle-orm/pg-core").PgColumn<{
-            name: "minimumOrderValue";
+            name: string;
             tableName: "Restaurant";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -569,12 +569,12 @@ export declare const restaurantsTable: import("drizzle-orm/pg-core").PgTableWith
             generated: undefined;
         }, {}, {}>;
         freeDeliveryThreshold: import("drizzle-orm/pg-core").PgColumn<{
-            name: "freeDeliveryThreshold";
+            name: string;
             tableName: "Restaurant";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: false;
             hasDefault: false;
             isPrimaryKey: false;
@@ -1209,12 +1209,12 @@ export declare const diningTablesTable: import("drizzle-orm/pg-core").PgTableWit
             generated: undefined;
         }, {}, {}>;
         minimumConsumption: import("drizzle-orm/pg-core").PgColumn<{
-            name: "minimumConsumption";
+            name: string;
             tableName: "DiningTable";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -1369,12 +1369,12 @@ export declare const productsTable: import("drizzle-orm/pg-core").PgTableWithCol
             generated: undefined;
         }, {}, {}>;
         price: import("drizzle-orm/pg-core").PgColumn<{
-            name: "price";
+            name: string;
             tableName: "Product";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: false;
             isPrimaryKey: false;
@@ -1386,12 +1386,12 @@ export declare const productsTable: import("drizzle-orm/pg-core").PgTableWithCol
             generated: undefined;
         }, {}, {}>;
         costPrice: import("drizzle-orm/pg-core").PgColumn<{
-            name: "costPrice";
+            name: string;
             tableName: "Product";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -1875,12 +1875,12 @@ export declare const productSizePricesTable: import("drizzle-orm/pg-core").PgTab
             generated: undefined;
         }, {}, {}>;
         price: import("drizzle-orm/pg-core").PgColumn<{
-            name: "price";
+            name: string;
             tableName: "ProductSizePrice";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: false;
             isPrimaryKey: false;
@@ -2372,12 +2372,12 @@ export declare const marketingSpendTable: import("drizzle-orm/pg-core").PgTableW
             generated: undefined;
         }, {}, {}>;
         amountSpent: import("drizzle-orm/pg-core").PgColumn<{
-            name: "amountSpent";
+            name: string;
             tableName: "MarketingSpend";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: false;
             isPrimaryKey: false;
@@ -2481,12 +2481,12 @@ export declare const financialTransactionsTable: import("drizzle-orm/pg-core").P
             generated: undefined;
         }, {}, {}>;
         amount: import("drizzle-orm/pg-core").PgColumn<{
-            name: "amount";
+            name: string;
             tableName: "FinancialTransaction";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: false;
             isPrimaryKey: false;
@@ -2760,12 +2760,12 @@ export declare const couponsTable: import("drizzle-orm/pg-core").PgTableWithColu
             generated: undefined;
         }, {}, {}>;
         discountValue: import("drizzle-orm/pg-core").PgColumn<{
-            name: "discountValue";
+            name: string;
             tableName: "Coupon";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: false;
             isPrimaryKey: false;
@@ -2777,12 +2777,12 @@ export declare const couponsTable: import("drizzle-orm/pg-core").PgTableWithColu
             generated: undefined;
         }, {}, {}>;
         minimumOrderValue: import("drizzle-orm/pg-core").PgColumn<{
-            name: "minimumOrderValue";
+            name: string;
             tableName: "Coupon";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -2794,12 +2794,12 @@ export declare const couponsTable: import("drizzle-orm/pg-core").PgTableWithColu
             generated: undefined;
         }, {}, {}>;
         maxDiscountAmount: import("drizzle-orm/pg-core").PgColumn<{
-            name: "maxDiscountAmount";
+            name: string;
             tableName: "Coupon";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: false;
             hasDefault: false;
             isPrimaryKey: false;
@@ -3005,12 +3005,12 @@ export declare const walletsTable: import("drizzle-orm/pg-core").PgTableWithColu
             generated: undefined;
         }, {}, {}>;
         balance: import("drizzle-orm/pg-core").PgColumn<{
-            name: "balance";
+            name: string;
             tableName: "Wallet";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -3022,12 +3022,12 @@ export declare const walletsTable: import("drizzle-orm/pg-core").PgTableWithColu
             generated: undefined;
         }, {}, {}>;
         creditBalance: import("drizzle-orm/pg-core").PgColumn<{
-            name: "creditBalance";
+            name: string;
             tableName: "Wallet";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -3039,12 +3039,12 @@ export declare const walletsTable: import("drizzle-orm/pg-core").PgTableWithColu
             generated: undefined;
         }, {}, {}>;
         points: import("drizzle-orm/pg-core").PgColumn<{
-            name: "points";
+            name: string;
             tableName: "Wallet";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -3056,12 +3056,12 @@ export declare const walletsTable: import("drizzle-orm/pg-core").PgTableWithColu
             generated: undefined;
         }, {}, {}>;
         totalEarned: import("drizzle-orm/pg-core").PgColumn<{
-            name: "totalEarned";
+            name: string;
             tableName: "Wallet";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -3073,12 +3073,12 @@ export declare const walletsTable: import("drizzle-orm/pg-core").PgTableWithColu
             generated: undefined;
         }, {}, {}>;
         totalRedeemed: import("drizzle-orm/pg-core").PgColumn<{
-            name: "totalRedeemed";
+            name: string;
             tableName: "Wallet";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -3216,12 +3216,12 @@ export declare const loyaltyRulesTable: import("drizzle-orm/pg-core").PgTableWit
             generated: undefined;
         }, {}, {}>;
         minOrderValue: import("drizzle-orm/pg-core").PgColumn<{
-            name: "minOrderValue";
+            name: string;
             tableName: "LoyaltyRule";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -3563,12 +3563,12 @@ export declare const abandonedCartsTable: import("drizzle-orm/pg-core").PgTableW
             generated: undefined;
         }, {}, {}>;
         subtotal: import("drizzle-orm/pg-core").PgColumn<{
-            name: "subtotal";
+            name: string;
             tableName: "AbandonedCart";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -3580,12 +3580,12 @@ export declare const abandonedCartsTable: import("drizzle-orm/pg-core").PgTableW
             generated: undefined;
         }, {}, {}>;
         total: import("drizzle-orm/pg-core").PgColumn<{
-            name: "total";
+            name: string;
             tableName: "AbandonedCart";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -4279,12 +4279,12 @@ export declare const deliveryFeeRulesTable: import("drizzle-orm/pg-core").PgTabl
             generated: undefined;
         }, {}, {}>;
         fee: import("drizzle-orm/pg-core").PgColumn<{
-            name: "fee";
+            name: string;
             tableName: "DeliveryFeeRule";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: false;
             isPrimaryKey: false;
@@ -4296,12 +4296,12 @@ export declare const deliveryFeeRulesTable: import("drizzle-orm/pg-core").PgTabl
             generated: undefined;
         }, {}, {}>;
         minimumOrderValue: import("drizzle-orm/pg-core").PgColumn<{
-            name: "minimumOrderValue";
+            name: string;
             tableName: "DeliveryFeeRule";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -4313,12 +4313,12 @@ export declare const deliveryFeeRulesTable: import("drizzle-orm/pg-core").PgTabl
             generated: undefined;
         }, {}, {}>;
         freeDeliveryThreshold: import("drizzle-orm/pg-core").PgColumn<{
-            name: "freeDeliveryThreshold";
+            name: string;
             tableName: "DeliveryFeeRule";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: false;
             hasDefault: false;
             isPrimaryKey: false;
@@ -4717,12 +4717,12 @@ export declare const courierTripsTable: import("drizzle-orm/pg-core").PgTableWit
             generated: undefined;
         }, {}, {}>;
         commissionAmount: import("drizzle-orm/pg-core").PgColumn<{
-            name: "commissionAmount";
+            name: string;
             tableName: "CourierTrip";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -5054,12 +5054,12 @@ export declare const ordersTable: import("drizzle-orm/pg-core").PgTableWithColum
             generated: undefined;
         }, {}, {}>;
         subtotal: import("drizzle-orm/pg-core").PgColumn<{
-            name: "subtotal";
+            name: string;
             tableName: "Order";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -5071,12 +5071,12 @@ export declare const ordersTable: import("drizzle-orm/pg-core").PgTableWithColum
             generated: undefined;
         }, {}, {}>;
         discountAmount: import("drizzle-orm/pg-core").PgColumn<{
-            name: "discountAmount";
+            name: string;
             tableName: "Order";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -5088,12 +5088,12 @@ export declare const ordersTable: import("drizzle-orm/pg-core").PgTableWithColum
             generated: undefined;
         }, {}, {}>;
         couponDiscountAmount: import("drizzle-orm/pg-core").PgColumn<{
-            name: "couponDiscountAmount";
+            name: string;
             tableName: "Order";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -5105,12 +5105,12 @@ export declare const ordersTable: import("drizzle-orm/pg-core").PgTableWithColum
             generated: undefined;
         }, {}, {}>;
         cashbackRedeemedAmount: import("drizzle-orm/pg-core").PgColumn<{
-            name: "cashbackRedeemedAmount";
+            name: string;
             tableName: "Order";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -5122,12 +5122,12 @@ export declare const ordersTable: import("drizzle-orm/pg-core").PgTableWithColum
             generated: undefined;
         }, {}, {}>;
         cashbackEarnedAmount: import("drizzle-orm/pg-core").PgColumn<{
-            name: "cashbackEarnedAmount";
+            name: string;
             tableName: "Order";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -5139,12 +5139,12 @@ export declare const ordersTable: import("drizzle-orm/pg-core").PgTableWithColum
             generated: undefined;
         }, {}, {}>;
         deliveryFee: import("drizzle-orm/pg-core").PgColumn<{
-            name: "deliveryFee";
+            name: string;
             tableName: "Order";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -5156,12 +5156,12 @@ export declare const ordersTable: import("drizzle-orm/pg-core").PgTableWithColum
             generated: undefined;
         }, {}, {}>;
         total: import("drizzle-orm/pg-core").PgColumn<{
-            name: "total";
+            name: string;
             tableName: "Order";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: false;
             isPrimaryKey: false;
@@ -5173,12 +5173,12 @@ export declare const ordersTable: import("drizzle-orm/pg-core").PgTableWithColum
             generated: undefined;
         }, {}, {}>;
         estimatedCost: import("drizzle-orm/pg-core").PgColumn<{
-            name: "estimatedCost";
+            name: string;
             tableName: "Order";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -5190,12 +5190,12 @@ export declare const ordersTable: import("drizzle-orm/pg-core").PgTableWithColum
             generated: undefined;
         }, {}, {}>;
         estimatedProfit: import("drizzle-orm/pg-core").PgColumn<{
-            name: "estimatedProfit";
+            name: string;
             tableName: "Order";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -5275,12 +5275,12 @@ export declare const ordersTable: import("drizzle-orm/pg-core").PgTableWithColum
             generated: undefined;
         }, {}, {}>;
         changeFor: import("drizzle-orm/pg-core").PgColumn<{
-            name: "changeFor";
+            name: string;
             tableName: "Order";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: false;
             hasDefault: false;
             isPrimaryKey: false;
@@ -5785,12 +5785,12 @@ export declare const ordersTable: import("drizzle-orm/pg-core").PgTableWithColum
             generated: undefined;
         }, {}, {}>;
         serviceFeeAmount: import("drizzle-orm/pg-core").PgColumn<{
-            name: "serviceFeeAmount";
+            name: string;
             tableName: "Order";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -6033,12 +6033,12 @@ export declare const orderProductsTable: import("drizzle-orm/pg-core").PgTableWi
             generated: undefined;
         }, {}, {}>;
         price: import("drizzle-orm/pg-core").PgColumn<{
-            name: "price";
+            name: string;
             tableName: "OrderProduct";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: false;
             isPrimaryKey: false;
@@ -6050,12 +6050,12 @@ export declare const orderProductsTable: import("drizzle-orm/pg-core").PgTableWi
             generated: undefined;
         }, {}, {}>;
         unitCost: import("drizzle-orm/pg-core").PgColumn<{
-            name: "unitCost";
+            name: string;
             tableName: "OrderProduct";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -6067,12 +6067,12 @@ export declare const orderProductsTable: import("drizzle-orm/pg-core").PgTableWi
             generated: undefined;
         }, {}, {}>;
         lineTotal: import("drizzle-orm/pg-core").PgColumn<{
-            name: "lineTotal";
+            name: string;
             tableName: "OrderProduct";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -6479,12 +6479,12 @@ export declare const productOptionsTable: import("drizzle-orm/pg-core").PgTableW
             generated: undefined;
         }, {}, {}>;
         price: import("drizzle-orm/pg-core").PgColumn<{
-            name: "price";
+            name: string;
             tableName: "ProductOption";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -6639,12 +6639,12 @@ export declare const orderProductOptionsTable: import("drizzle-orm/pg-core").PgT
             generated: undefined;
         }, {}, {}>;
         priceSnapshot: import("drizzle-orm/pg-core").PgColumn<{
-            name: "priceSnapshot";
+            name: string;
             tableName: "OrderProductOption";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: false;
             isPrimaryKey: false;
@@ -7027,12 +7027,12 @@ export declare const inventoryItemsTable: import("drizzle-orm/pg-core").PgTableW
             generated: undefined;
         }, {}, {}>;
         unitCost: import("drizzle-orm/pg-core").PgColumn<{
-            name: "unitCost";
+            name: string;
             tableName: "InventoryItem";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: false;
             hasDefault: false;
             isPrimaryKey: false;
@@ -7701,12 +7701,12 @@ export declare const purchaseInvoicesTable: import("drizzle-orm/pg-core").PgTabl
             generated: undefined;
         }, {}, {}>;
         totalAmount: import("drizzle-orm/pg-core").PgColumn<{
-            name: "totalAmount";
+            name: string;
             tableName: "PurchaseInvoice";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -7954,12 +7954,12 @@ export declare const inventoryBatchesTable: import("drizzle-orm/pg-core").PgTabl
             generated: undefined;
         }, {}, {}>;
         unitCost: import("drizzle-orm/pg-core").PgColumn<{
-            name: "unitCost";
+            name: string;
             tableName: "InventoryBatch";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: false;
             hasDefault: false;
             isPrimaryKey: false;
@@ -8114,12 +8114,12 @@ export declare const inventoryLossesTable: import("drizzle-orm/pg-core").PgTable
             generated: undefined;
         }, {}, {}>;
         financialLoss: import("drizzle-orm/pg-core").PgColumn<{
-            name: "financialLoss";
+            name: string;
             tableName: "InventoryLoss";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -8240,12 +8240,12 @@ export declare const financialClosingsTable: import("drizzle-orm/pg-core").PgTab
             generated: undefined;
         }, {}, {}>;
         grossRevenue: import("drizzle-orm/pg-core").PgColumn<{
-            name: "grossRevenue";
+            name: string;
             tableName: "FinancialClosing";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -8257,12 +8257,12 @@ export declare const financialClosingsTable: import("drizzle-orm/pg-core").PgTab
             generated: undefined;
         }, {}, {}>;
         estimatedCost: import("drizzle-orm/pg-core").PgColumn<{
-            name: "estimatedCost";
+            name: string;
             tableName: "FinancialClosing";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -8274,12 +8274,12 @@ export declare const financialClosingsTable: import("drizzle-orm/pg-core").PgTab
             generated: undefined;
         }, {}, {}>;
         estimatedProfit: import("drizzle-orm/pg-core").PgColumn<{
-            name: "estimatedProfit";
+            name: string;
             tableName: "FinancialClosing";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -8451,12 +8451,12 @@ export declare const cashRegisterShiftsTable: import("drizzle-orm/pg-core").PgTa
             generated: undefined;
         }, {}, {}>;
         openingAmount: import("drizzle-orm/pg-core").PgColumn<{
-            name: "openingAmount";
+            name: string;
             tableName: "CashRegisterShift";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -8468,12 +8468,12 @@ export declare const cashRegisterShiftsTable: import("drizzle-orm/pg-core").PgTa
             generated: undefined;
         }, {}, {}>;
         expectedClosingAmount: import("drizzle-orm/pg-core").PgColumn<{
-            name: "expectedClosingAmount";
+            name: string;
             tableName: "CashRegisterShift";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: false;
             hasDefault: false;
             isPrimaryKey: false;
@@ -8485,12 +8485,12 @@ export declare const cashRegisterShiftsTable: import("drizzle-orm/pg-core").PgTa
             generated: undefined;
         }, {}, {}>;
         actualClosingAmount: import("drizzle-orm/pg-core").PgColumn<{
-            name: "actualClosingAmount";
+            name: string;
             tableName: "CashRegisterShift";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: false;
             hasDefault: false;
             isPrimaryKey: false;
@@ -8502,12 +8502,12 @@ export declare const cashRegisterShiftsTable: import("drizzle-orm/pg-core").PgTa
             generated: undefined;
         }, {}, {}>;
         closingDifference: import("drizzle-orm/pg-core").PgColumn<{
-            name: "closingDifference";
+            name: string;
             tableName: "CashRegisterShift";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: false;
             hasDefault: false;
             isPrimaryKey: false;
@@ -8662,12 +8662,12 @@ export declare const cashMovementsTable: import("drizzle-orm/pg-core").PgTableWi
             generated: undefined;
         }, {}, {}>;
         amount: import("drizzle-orm/pg-core").PgColumn<{
-            name: "amount";
+            name: string;
             tableName: "CashMovement";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: false;
             isPrimaryKey: false;
@@ -9091,12 +9091,12 @@ export declare const tipClosingsTable: import("drizzle-orm/pg-core").PgTableWith
             generated: undefined;
         }, {}, {}>;
         amount: import("drizzle-orm/pg-core").PgColumn<{
-            name: "amount";
+            name: string;
             tableName: "TipClosing";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: false;
             isPrimaryKey: false;
@@ -9867,12 +9867,12 @@ export declare const bankAccountsTable: import("drizzle-orm/pg-core").PgTableWit
             generated: undefined;
         }, {}, {}>;
         currentBalance: import("drizzle-orm/pg-core").PgColumn<{
-            name: "currentBalance";
+            name: string;
             tableName: "BankAccount";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -10289,12 +10289,12 @@ export declare const customerLedgersTable: import("drizzle-orm/pg-core").PgTable
             generated: undefined;
         }, {}, {}>;
         creditLimit: import("drizzle-orm/pg-core").PgColumn<{
-            name: "creditLimit";
+            name: string;
             tableName: "CustomerLedger";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -10306,12 +10306,12 @@ export declare const customerLedgersTable: import("drizzle-orm/pg-core").PgTable
             generated: undefined;
         }, {}, {}>;
         debtBalance: import("drizzle-orm/pg-core").PgColumn<{
-            name: "debtBalance";
+            name: string;
             tableName: "CustomerLedger";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -10500,12 +10500,12 @@ export declare const customerLedgerEntriesTable: import("drizzle-orm/pg-core").P
             generated: undefined;
         }, {}, {}>;
         amount: import("drizzle-orm/pg-core").PgColumn<{
-            name: "amount";
+            name: string;
             tableName: "CustomerLedgerEntry";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: false;
             isPrimaryKey: false;
@@ -10837,12 +10837,12 @@ export declare const bankStatementEntriesTable: import("drizzle-orm/pg-core").Pg
             generated: undefined;
         }, {}, {}>;
         amount: import("drizzle-orm/pg-core").PgColumn<{
-            name: "amount";
+            name: string;
             tableName: "BankStatementEntry";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: false;
             isPrimaryKey: false;
@@ -11337,12 +11337,12 @@ export declare const customersTable: import("drizzle-orm/pg-core").PgTableWithCo
             generated: undefined;
         }, {}, {}>;
         avgTicket: import("drizzle-orm/pg-core").PgColumn<{
-            name: "avgTicket";
+            name: string;
             tableName: "Customer";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
@@ -11371,12 +11371,12 @@ export declare const customersTable: import("drizzle-orm/pg-core").PgTableWithCo
             generated: undefined;
         }, {}, {}>;
         totalSpent: import("drizzle-orm/pg-core").PgColumn<{
-            name: "totalSpent";
+            name: string;
             tableName: "Customer";
-            dataType: "number";
-            columnType: "PgDoublePrecision";
+            dataType: "string";
+            columnType: "PgNumeric";
             data: number;
-            driverParam: string | number;
+            driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;

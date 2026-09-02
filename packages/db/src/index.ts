@@ -94,7 +94,8 @@ export {
   excluirGastoMarketing,
 } from "./queries/integration";
 export type { CriarGastoMarketingInput } from "./queries/integration";
-export { isRestaurantOpen, getNextOpeningTime } from "./restaurant-utils";
+export { isRestaurantOpen, getNextOpeningTime, getBrazilTime } from "./restaurant-utils";
+export type { RestaurantOpenStatus } from "./restaurant-utils";
 export {
   abandonedCartStatusEnum,
   abandonedCartsRelations,

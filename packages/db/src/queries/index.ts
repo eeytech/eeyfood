@@ -684,7 +684,7 @@ const carregarContextoPedidoCalculado = async (
     ).orderBy(desc(loyaltyRulesTable.minOrderValue)),
   ]);
 
-  const isOpen = isRestaurantOpen(restaurant.status, operatingHours);
+  const { isOpen } = isRestaurantOpen(restaurant.status, operatingHours);
 
   if (!isOpen && !isScheduled) {
     throw new Error(

@@ -135,7 +135,7 @@ const FinishOrderSheet = ({
   const needsChangeField = paymentMethod === "DINHEIRO";
   const allowsScheduling = consumptionMethod !== "DINE_IN";
   const schedulingLabel = getSchedulingLabel(consumptionMethod);
-  const isOpen = isRestaurantOpen(restaurant.status, restaurant.operatingHours);
+  const { isOpen } = isRestaurantOpen(restaurant.status, restaurant.operatingHours);
   const isActionDisabled = !isOpen && fulfillmentTiming !== "SCHEDULED";
 
   // When benefits are available (phone validated), use them fully.

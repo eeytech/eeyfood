@@ -16,8 +16,8 @@ const getBrazilTime = () => {
 
   for (const part of parts) {
     if (part.type === "weekday") dayOfWeekStr = part.value;
-    if (part.type === "hour") hours = parseInt(part.value);
-    if (part.type === "minute") minutes = parseInt(part.value);
+    if (part.type === "hour") hours = parseInt(part.value, 10) % 24;
+    if (part.type === "minute") minutes = parseInt(part.value, 10);
   }
 
   const weekdays = [
@@ -44,8 +44,25 @@ export const isRestaurantOpen = (
   const { dayOfWeek, hours, minutes } = getBrazilTime();
   const currentTime = hours * 60 + minutes;
 
-  const todayHours = operatingHours.find((h) => h.dayOfWeek === dayOfWeek);
+  // 1. Verificar se o turno de ontem estendeu após a meia-noite e ainda está ativo agora
+  const yesterdayDay = (dayOfWeek + 6) % 7;
+  const yesterdayHours = operatingHours.find((h) => h.dayOfWeek === yesterdayDay);
+  if (yesterdayHours) {
+    const [yOpenH, yOpenM] = yesterdayHours.openTime.split(":").map(Number);
+    const [yCloseH, yCloseM] = yesterdayHours.closeTime.split(":").map(Number);
+    const yOpenMinutes = yOpenH * 60 + yOpenM;
+    const yCloseMinutes = yCloseH * 60 + yCloseM;
 
+    if (yCloseMinutes < yOpenMinutes && currentTime <= yCloseMinutes) {
+      return {
+        isOpen: true,
+        closeTime: yesterdayHours.closeTime,
+      };
+    }
+  }
+
+  // 2. Verificar o turno de hoje
+  const todayHours = operatingHours.find((h) => h.dayOfWeek === dayOfWeek);
   if (!todayHours) return { isOpen: false };
 
   const [openH, openM] = todayHours.openTime.split(":").map(Number);
@@ -54,14 +71,19 @@ export const isRestaurantOpen = (
   const openTimeMinutes = openH * 60 + openM;
   const closeTimeMinutes = closeH * 60 + closeM;
 
-  let isOpen = false;
-
-  // Handle shifts that cross midnight
+  // Se o turno de hoje cruza a meia-noite (ex: 18:00 às 02:00 ou 11:00 às 00:00)
   if (closeTimeMinutes < openTimeMinutes) {
-    isOpen = currentTime >= openTimeMinutes || currentTime <= closeTimeMinutes;
-  } else {
-    isOpen = currentTime >= openTimeMinutes && currentTime <= closeTimeMinutes;
+    if (currentTime >= openTimeMinutes) {
+      return {
+        isOpen: true,
+        closeTime: todayHours.closeTime,
+      };
+    }
+    return { isOpen: false };
   }
+
+  // Turno normal no mesmo dia (ex: 11:00 às 23:00)
+  const isOpen = currentTime >= openTimeMinutes && currentTime <= closeTimeMinutes;
 
   return { 
     isOpen, 
