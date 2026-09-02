@@ -64,6 +64,7 @@ interface PedidoOfflineConcluido {
 
 const formatScheduledDate = (value: string) =>
   new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
@@ -108,7 +109,6 @@ const FinishOrderSheet = ({
         : "TAKEAWAY";
 
   const abandonedCartSessionIdRef = useRef(createAbandonedCartSessionId());
-  // Used by the debounce auto-validate to always call the latest closure
   const validateBenefitsRef = useRef<(() => Promise<void>) | null>(null);
 
   const form = useForm<FormSchema>({
