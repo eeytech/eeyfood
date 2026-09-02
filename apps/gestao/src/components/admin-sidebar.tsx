@@ -127,7 +127,7 @@ const AdminSidebar = ({
         isCollapsed={isCollapsed}
       />
 
-      <nav className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden p-2">
+      <nav className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden p-2 no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         {navigationGroups.map((group, groupIndex) => (
           <div
             key={group.label}

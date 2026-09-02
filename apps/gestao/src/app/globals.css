@@ -100,4 +100,13 @@
     font-family: var(--font-space-grotesk), sans-serif;
     font-variation-settings: "wght" 600;
   }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }
+
