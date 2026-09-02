@@ -25,7 +25,7 @@ const RestaurantPage = async () => {
   }
 
   return (
-    <div className="mx-auto flex h-screen max-w-[1200px] flex-col items-center justify-center px-4 pt-8 sm:pt-20">
+    <div className="mx-auto flex min-h-screen max-w-[1200px] flex-col items-center justify-center px-3 py-8 sm:px-4 sm:py-16">
       <div className="flex flex-col items-center gap-2">
         <Image
           src={restaurant.avatarImageUrl}
@@ -37,18 +37,18 @@ const RestaurantPage = async () => {
         <h2 className="text-lg font-bold tracking-tight">{restaurant.name}</h2>
       </div>
 
-      <div className="max-w-2xl space-y-1.5 pt-12 text-center sm:pt-20">
+      <div className="max-w-2xl space-y-1.5 pt-8 text-center sm:pt-14">
         <h3 className="text-2xl font-bold tracking-tight sm:text-3xl">
           Seja bem-vindo!
         </h3>
-        <p className="text-base opacity-60">
+        <p className="text-sm opacity-60 sm:text-base">
           Escolha como prefere aproveitar sua refeição. Estamos aqui para
           oferecer praticidade e sabor em cada detalhe!
         </p>
       </div>
 
       <div
-        className={`grid w-full gap-3 pt-10 sm:max-w-lg sm:gap-4 sm:pt-12 ${
+        className={`grid w-full gap-2 pt-8 sm:max-w-lg sm:gap-4 sm:pt-10 ${
           availableMethods.length === 2 ? "grid-cols-2" : "grid-cols-3"
         }`}
       >
