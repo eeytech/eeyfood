@@ -8,6 +8,7 @@ import { ReactNode } from "react";
 
 import { MarketingScripts } from "@/components/marketing-scripts";
 import { buscarRestaurantePorSlug } from "@/lib/db";
+import { CartProvider } from "./menu/contexts/cart";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -46,8 +47,10 @@ export default async function RestaurantLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body className={inter.className} suppressHydrationWarning>
-        {restaurant && <MarketingScripts restaurantId={restaurant.id} />}
-        {children}
+        <CartProvider>
+          {restaurant && <MarketingScripts restaurantId={restaurant.id} />}
+          {children}
+        </CartProvider>
       </body>
     </html>
   );

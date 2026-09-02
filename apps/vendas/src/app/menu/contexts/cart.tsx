@@ -48,7 +48,7 @@ export const CartContext = createContext<ICartContext>({
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const { slug } = useParams<{ slug: string }>();
-  const storageKey = slug ? `cart_${slug}` : null;
+  const storageKey = slug ? `cart_${slug}` : "cart_vendas";
   // Prevents the save effect from overwriting localStorage before the load effect applies
   const isFirstRender = useRef(true);
 
