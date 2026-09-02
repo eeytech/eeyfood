@@ -15,8 +15,12 @@ const CartProductItem = ({ product }: CartItemProps) => {
     useContext(CartContext);
 
   const optionsTotal =
-    product.selectedOptions?.reduce((acc, opt) => acc + opt.price, 0) || 0;
-  const unitPrice = product.price + optionsTotal;
+    product.selectedOptions?.reduce(
+      (acc, opt) => acc + (typeof opt.price === "number" ? opt.price : Number(opt.price || 0)),
+      0,
+    ) || 0;
+  const prodPrice = typeof product.price === "number" ? product.price : Number(product.price || 0);
+  const unitPrice = prodPrice + optionsTotal;
 
   return (
     <div className="flex w-full flex-col gap-2 rounded-xl border border-slate-100 bg-white p-2 shadow-sm max-w-full">

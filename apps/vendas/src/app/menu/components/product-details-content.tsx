@@ -150,8 +150,12 @@ const ProductDetailsContent = ({
   }, [selectedOptions, optionCounts, optionGroups]);
 
   const unitPrice = useMemo(() => {
-    const optionsTotal = selectedOptionsList.reduce((acc, opt) => acc + opt.price, 0);
-    return product.price + optionsTotal;
+    const optionsTotal = selectedOptionsList.reduce(
+      (acc, opt) => acc + (typeof opt.price === "number" ? opt.price : Number(opt.price || 0)),
+      0,
+    );
+    const prodPrice = typeof product.price === "number" ? product.price : Number(product.price || 0);
+    return prodPrice + optionsTotal;
   }, [product.price, selectedOptionsList]);
 
   const handleAddToCart = () => {
@@ -197,7 +201,7 @@ const ProductDetailsContent = ({
       selectedOptions: selectedOptionsList.map((o) => ({
         id: o.id,
         name: o.name,
-        price: o.price,
+        price: typeof o.price === "number" ? o.price : Number(o.price || 0),
       })),
     });
 
@@ -403,7 +407,7 @@ const ProductDetailsContent = ({
                               {option.description && (
                                 <p className="mt-0.5 text-xs text-slate-500">{option.description}</p>
                               )}
-                              {option.price > 0 && (
+                              {Number(option.price) > 0 && (
                                 <p className={`mt-0.5 text-xs font-medium ${isSelected ? "text-destructive" : "text-slate-500"}`}>
                                   + {formatCurrency(option.price)}
                                 </p>

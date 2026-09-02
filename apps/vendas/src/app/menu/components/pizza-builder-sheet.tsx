@@ -73,16 +73,20 @@ const PizzaBuilderSheet = ({
 
   const computedPrice = useMemo(() => {
     if (!product) return 0;
-    const borderPrice = selectedBorder?.price ?? 0;
+    const borderPrice = selectedBorder?.price
+      ? (typeof selectedBorder.price === "number" ? selectedBorder.price : Number(selectedBorder.price || 0))
+      : 0;
+    const prodPrice = typeof product.price === "number" ? product.price : Number(product.price || 0);
 
     if (fraction === "inteira" || !flavor2) {
-      return product.price + borderPrice;
+      return prodPrice + borderPrice;
     }
 
+    const flav2Price = typeof flavor2.price === "number" ? flavor2.price : Number(flavor2.price || 0);
     const basePrice =
       pizzaPricingRule === "MAX"
-        ? Math.max(product.price, flavor2.price)
-        : (product.price + flavor2.price) / 2;
+        ? Math.max(prodPrice, flav2Price)
+        : (prodPrice + flav2Price) / 2;
 
     return basePrice + borderPrice;
   }, [product, flavor2, fraction, selectedBorder, pizzaPricingRule]);
@@ -90,7 +94,9 @@ const PizzaBuilderSheet = ({
   const primaryProduct = useMemo(() => {
     if (!product) return null;
     if (fraction === "inteira" || !flavor2) return product;
-    return pizzaPricingRule === "MAX" && flavor2.price > product.price ? flavor2 : product;
+    const prodPrice = typeof product.price === "number" ? product.price : Number(product.price || 0);
+    const flav2Price = typeof flavor2.price === "number" ? flavor2.price : Number(flavor2.price || 0);
+    return pizzaPricingRule === "MAX" && flav2Price > prodPrice ? flavor2 : product;
   }, [product, flavor2, fraction, pizzaPricingRule]);
 
   const handleAddToCart = () => {
@@ -112,7 +118,11 @@ const PizzaBuilderSheet = ({
         : undefined;
 
     const optionsForCart = selectedBorder
-      ? [{ id: selectedBorder.id, name: selectedBorder.name, price: selectedBorder.price }]
+      ? [{
+          id: selectedBorder.id,
+          name: selectedBorder.name,
+          price: typeof selectedBorder.price === "number" ? selectedBorder.price : Number(selectedBorder.price || 0),
+        }]
       : [];
 
     const cartItemId = `pizza-${primaryProduct.id}-${fraction}-${flavor2?.id ?? ""}-${selectedBorder?.id ?? ""}`;
@@ -120,7 +130,7 @@ const PizzaBuilderSheet = ({
     addProduct({
       id: primaryProduct.id,
       name: `Pizza — ${flavorLabel}`,
-      price: computedPrice - (selectedBorder?.price ?? 0),
+      price: computedPrice - (selectedBorder?.price ? Number(selectedBorder.price) : 0),
       imageUrl: primaryProduct.imageUrl,
       cartItemId,
       quantity,
@@ -275,7 +285,7 @@ const PizzaBuilderSheet = ({
                       {opt.description && (
                         <p className="text-xs text-slate-500">{opt.description}</p>
                       )}
-                      {opt.price > 0 && (
+                      {Number(opt.price) > 0 && (
                         <p className="text-xs font-medium text-orange-600">+ {formatCurrency(opt.price)}</p>
                       )}
                     </div>

@@ -214,8 +214,10 @@ interface ContextoPedidoCalculado {
   recipeItems: RecipeItemParaConsumo[];
 }
 
-const arredondarMoeda = (value: number) => {
-  return Number(value.toFixed(2));
+const arredondarMoeda = (value: number | string) => {
+  const num = typeof value === "number" ? value : Number(value || 0);
+  if (isNaN(num)) return 0;
+  return Number(num.toFixed(2));
 };
 
 const calcularDistanciaKm = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
@@ -728,11 +730,11 @@ const carregarContextoPedidoCalculado = async (
     const selectedOptions = (itemInput.selectedOptions || []).map((optId) => {
       const option = optionsMap.get(optId);
       if (!option) throw new Error("Opção selecionada não encontrada.");
-      return { id: option.id, name: option.name, price: option.price };
+      return { id: option.id, name: option.name, price: Number(option.price || 0) };
     });
 
     const optionsPrice = selectedOptions.reduce((acc, opt) => acc + opt.price, 0);
-    const unitPrice = currentProduct.price + optionsPrice;
+    const unitPrice = Number(currentProduct.price || 0) + optionsPrice;
     const lineTotal = arredondarMoeda(unitPrice * itemInput.quantity);
 
     return {
@@ -1016,11 +1018,20 @@ export const buscarProdutoDoRestaurante = async ({
   const groupMap = new Map<string, ProductOptionGroup & { options: ProductOption[] }>();
   for (const row of groupRows) {
     const g = groupMap.get(row.group.id) ?? { ...row.group, options: [] };
-    if (row.option) g.options.push(row.option);
+    if (row.option) {
+      g.options.push({
+        ...row.option,
+        price: Number(row.option.price || 0),
+      });
+    }
     groupMap.set(row.group.id, g);
   }
 
-  return { ...product, optionGroups: Array.from(groupMap.values()) } as any;
+  return {
+    ...product,
+    price: Number(product.price || 0),
+    optionGroups: Array.from(groupMap.values()),
+  } as any;
 };
 
 export const buscarPedidosPorTelefone = async (
