@@ -1,3 +1,4 @@
+import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { sql } from "drizzle-orm";
 import { db } from "./client";
@@ -333,7 +334,7 @@ const main = async () => {
 
     process.stdout.write("🍕 [C] Criando setores, cardápio e opcionais...\n");
 
-    const [sectorQuente, , sectorBar] = await tx
+    const [sectorQuente, sectorFria, sectorBar] = await tx
       .insert(productionSectorsTable)
       .values([
         { restaurantId: restaurant.id, name: "Cozinha Quente", color: "#ef4444", displayOrder: 1 },
@@ -342,7 +343,16 @@ const main = async () => {
       ])
       .returning();
 
-    const [catCombos, catLanches, catPizzas, catFritas, catBebidas, catSobremesas] = await tx
+    const [
+      catCombos,
+      catLanches,
+      catPizzas,
+      catFritas,
+      catBebidas,
+      catSobremesas,
+      catSorvetes,
+      catAcai,
+    ] = await tx
       .insert(menuCategoriesTable)
       .values([
         { restaurantId: restaurant.id, name: "Combos", displayOrder: 1 },
@@ -351,16 +361,33 @@ const main = async () => {
         { restaurantId: restaurant.id, name: "Fritas", displayOrder: 4 },
         { restaurantId: restaurant.id, name: "Bebidas", displayOrder: 5 },
         { restaurantId: restaurant.id, name: "Sobremesas", displayOrder: 6 },
+        { restaurantId: restaurant.id, name: "Sorvetes", displayOrder: 7 },
+        { restaurantId: restaurant.id, name: "Açaí", displayOrder: 8 },
       ])
       .returning();
 
-    const [grpPonto, grpAdicionais, grpBebida, grpBorda] = await tx
+    const [
+      grpPonto,
+      grpAdicionais,
+      grpBebida,
+      grpBorda,
+      grpSorveteSabor,
+      grpSorveteCalda,
+      grpAcaiTamanho,
+      grpAcaiTipo,
+      grpAcaiAdicionais,
+    ] = await tx
       .insert(productOptionGroupsTable)
       .values([
         { restaurantId: restaurant.id, name: "Ponto do Hambúrguer", minOptions: 1, maxOptions: 1, displayOrder: 1 },
         { restaurantId: restaurant.id, name: "Ingredientes Adicionais", minOptions: 0, maxOptions: 5, displayOrder: 2 },
         { restaurantId: restaurant.id, name: "Bebida Acompanhante", minOptions: 0, maxOptions: 1, displayOrder: 3 },
         { restaurantId: restaurant.id, name: "Borda Recheada", minOptions: 0, maxOptions: 1, displayOrder: 4 },
+        { restaurantId: restaurant.id, name: "Sabor do Sorvete", minOptions: 1, maxOptions: 1, displayOrder: 1 },
+        { restaurantId: restaurant.id, name: "Calda Opcional", minOptions: 0, maxOptions: 2, displayOrder: 2 },
+        { restaurantId: restaurant.id, name: "Tamanho do Copo", minOptions: 1, maxOptions: 1, displayOrder: 1 },
+        { restaurantId: restaurant.id, name: "Tipo do Açaí", minOptions: 1, maxOptions: 1, displayOrder: 2 },
+        { restaurantId: restaurant.id, name: "Adicionais e Coberturas", minOptions: 0, maxOptions: 8, displayOrder: 3 },
       ])
       .returning();
 
@@ -395,6 +422,47 @@ const main = async () => {
         { productOptionGroupId: grpBebida.id, name: "Água Mineral", price: 4.0, displayOrder: 3 },
       ])
       .returning();
+
+    // Opcionais para Sorvetes
+    await tx.insert(productOptionsTable).values([
+      { productOptionGroupId: grpSorveteSabor.id, name: "Baunilha de Madagascar", price: 0, displayOrder: 1 },
+      { productOptionGroupId: grpSorveteSabor.id, name: "Chocolate Belga", price: 0, displayOrder: 2 },
+      { productOptionGroupId: grpSorveteSabor.id, name: "Doce de Leite Havanna", price: 0, displayOrder: 3 },
+      { productOptionGroupId: grpSorveteSabor.id, name: "Flocos Crocante", price: 0, displayOrder: 4 },
+      { productOptionGroupId: grpSorveteSabor.id, name: "Morango com Pedaços", price: 0, displayOrder: 5 },
+    ]);
+
+    await tx.insert(productOptionsTable).values([
+      { productOptionGroupId: grpSorveteCalda.id, name: "Calda de Chocolate", price: 3.5, displayOrder: 1 },
+      { productOptionGroupId: grpSorveteCalda.id, name: "Calda de Caramelo Salgado", price: 3.5, displayOrder: 2 },
+      { productOptionGroupId: grpSorveteCalda.id, name: "Calda de Frutas Vermelhas", price: 3.5, displayOrder: 3 },
+    ]);
+
+    // Opcionais para Açaí (Tamanho, Tipo e Adicionais)
+    await tx.insert(productOptionsTable).values([
+      { productOptionGroupId: grpAcaiTamanho.id, name: "300 ml", price: 0, displayOrder: 1, description: "Copo de 300ml - Ideal para consumo individual" },
+      { productOptionGroupId: grpAcaiTamanho.id, name: "500 ml", price: 6.0, displayOrder: 2, description: "Copo de 500ml - Tamanho mais pedido" },
+      { productOptionGroupId: grpAcaiTamanho.id, name: "700 ml", price: 12.0, displayOrder: 3, description: "Copo de 700ml - Para quem ama muito açaí" },
+    ]);
+
+    await tx.insert(productOptionsTable).values([
+      { productOptionGroupId: grpAcaiTipo.id, name: "Açaí Tradicional", price: 0, displayOrder: 1, description: "Batido cremoso com xarope de guaraná" },
+      { productOptionGroupId: grpAcaiTipo.id, name: "Açaí Zero Açúcar", price: 0, displayOrder: 2, description: "Sem adição de açúcar ou xarope, puro sabor" },
+      { productOptionGroupId: grpAcaiTipo.id, name: "Açaí com Banana", price: 0, displayOrder: 3, description: "Batido cremoso com banana fresca" },
+      { productOptionGroupId: grpAcaiTipo.id, name: "Açaí com Morango", price: 1.5, displayOrder: 4, description: "Batido cremoso com morangos frescos" },
+    ]);
+
+    await tx.insert(productOptionsTable).values([
+      { productOptionGroupId: grpAcaiAdicionais.id, name: "Leite em Pó (Ninho)", price: 3.0, displayOrder: 1, description: "Porção generosa de Leite Ninho" },
+      { productOptionGroupId: grpAcaiAdicionais.id, name: "Granola Tradicional Crocante", price: 2.5, displayOrder: 2, description: "Granola crocante com castanhas e uva passa" },
+      { productOptionGroupId: grpAcaiAdicionais.id, name: "Banana Fatiada", price: 2.5, displayOrder: 3, description: "Fatias frescas de banana nanica" },
+      { productOptionGroupId: grpAcaiAdicionais.id, name: "Morango Fresco", price: 4.0, displayOrder: 4, description: "Morangos frescos fatiados na hora" },
+      { productOptionGroupId: grpAcaiAdicionais.id, name: "Nutella Original", price: 6.0, displayOrder: 5, description: "Porção generosa de Nutella pura" },
+      { productOptionGroupId: grpAcaiAdicionais.id, name: "Leite Condensado", price: 2.5, displayOrder: 6, description: "Cobertura cremosa de leite condensado" },
+      { productOptionGroupId: grpAcaiAdicionais.id, name: "Paçoca de Amendoim", price: 2.0, displayOrder: 7, description: "Paçoca rolha esfarelada" },
+      { productOptionGroupId: grpAcaiAdicionais.id, name: "Gotas de Chocolate Nobre", price: 3.0, displayOrder: 8, description: "Gotas crocantes de chocolate ao leite" },
+      { productOptionGroupId: grpAcaiAdicionais.id, name: "Calda de Maracujá com Sementes", price: 2.5, displayOrder: 9, description: "Calda artesanal agridoce de maracujá" },
+    ]);
 
     const [
       prodBigCraft,
@@ -708,6 +776,274 @@ const main = async () => {
       ])
       .returning();
 
+    // ── Sobremesas Adicionais ──
+    const [
+      prodTridentMenta,
+      prodTridentMelancia,
+      prodHallsPreto,
+      prodHallsMorango,
+      prodKitKat,
+      prodBarraChocolate,
+      prodBrownieNutella,
+    ] = await tx
+      .insert(productsTable)
+      .values([
+        {
+          restaurantId: restaurant.id,
+          menuCategoryId: catSobremesas.id,
+          productionSectorId: sectorBar.id,
+          name: "Trident Menta",
+          description: "Goma de mascar Trident sabor menta fresca, sem açúcar (embalagem com 5 unidades).",
+          price: 3.5,
+          costPrice: 1.2,
+          imageUrl: "https://images.unsplash.com/photo-1582293041079-7814c2f12063?w=500&auto=format&fit=crop",
+          ingredients: ["Goma base", "Edulcorantes", "Aroma de menta"],
+          sku: "SOB-002",
+          trackInventory: true,
+          stockQuantity: 80,
+          lowStockThreshold: 15,
+        },
+        {
+          restaurantId: restaurant.id,
+          menuCategoryId: catSobremesas.id,
+          productionSectorId: sectorBar.id,
+          name: "Trident Melancia",
+          description: "Goma de mascar Trident sabor melancia fresca, sem açúcar (embalagem com 5 unidades).",
+          price: 3.5,
+          costPrice: 1.2,
+          imageUrl: "https://images.unsplash.com/photo-1582293041079-7814c2f12063?w=500&auto=format&fit=crop",
+          ingredients: ["Goma base", "Edulcorantes", "Aroma de melancia"],
+          sku: "SOB-003",
+          trackInventory: true,
+          stockQuantity: 60,
+          lowStockThreshold: 15,
+        },
+        {
+          restaurantId: restaurant.id,
+          menuCategoryId: catSobremesas.id,
+          productionSectorId: sectorBar.id,
+          name: "Halls Preto Extra Forte",
+          description: "Bala refrescante Halls mentol intenso extra forte para frescor imediato.",
+          price: 2.5,
+          costPrice: 0.9,
+          imageUrl: "https://images.unsplash.com/photo-1582293041079-7814c2f12063?w=500&auto=format&fit=crop",
+          ingredients: ["Açúcar", "Xarope de glicose", "Mentol"],
+          sku: "SOB-004",
+          trackInventory: true,
+          stockQuantity: 100,
+          lowStockThreshold: 20,
+        },
+        {
+          restaurantId: restaurant.id,
+          menuCategoryId: catSobremesas.id,
+          productionSectorId: sectorBar.id,
+          name: "Halls Morango",
+          description: "Bala refrescante Halls sabor morango com toque refrescante de mentol.",
+          price: 2.5,
+          costPrice: 0.9,
+          imageUrl: "https://images.unsplash.com/photo-1582293041079-7814c2f12063?w=500&auto=format&fit=crop",
+          ingredients: ["Açúcar", "Xarope de glicose", "Aroma de morango"],
+          sku: "SOB-005",
+          trackInventory: true,
+          stockQuantity: 90,
+          lowStockThreshold: 20,
+        },
+        {
+          restaurantId: restaurant.id,
+          menuCategoryId: catSobremesas.id,
+          productionSectorId: sectorBar.id,
+          name: "Chocolate KitKat 41,5g",
+          description: "Quatro fingers crocantes de wafer cobertos com delicioso chocolate ao leite Nestlé.",
+          price: 5.5,
+          costPrice: 2.3,
+          imageUrl: "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=500&auto=format&fit=crop",
+          ingredients: ["Açúcar", "Leite em pó", "Manteiga de cacau", "Massa de cacau", "Wafer"],
+          sku: "SOB-006",
+          trackInventory: true,
+          stockQuantity: 70,
+          lowStockThreshold: 15,
+        },
+        {
+          restaurantId: restaurant.id,
+          menuCategoryId: catSobremesas.id,
+          productionSectorId: sectorBar.id,
+          name: "Barra de Chocolate ao Leite 80g",
+          description: "Deliciosa barra de chocolate ao leite nobre, cremosa e macia.",
+          price: 8.9,
+          costPrice: 3.5,
+          imageUrl: "https://images.unsplash.com/photo-1548907040-4baa42d10919?w=500&auto=format&fit=crop",
+          ingredients: ["Cacau", "Leite em pó", "Manteiga de cacau", "Açúcar"],
+          sku: "SOB-007",
+          trackInventory: true,
+          stockQuantity: 50,
+          lowStockThreshold: 10,
+        },
+        {
+          restaurantId: restaurant.id,
+          menuCategoryId: catSobremesas.id,
+          productionSectorId: sectorBar.id,
+          name: "Brownie com Nutella",
+          description: "Fatia generosa de brownie artesanal bem chocolatudo com recheio cremoso de Nutella.",
+          price: 15.0,
+          costPrice: 4.5,
+          imageUrl: "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=500&auto=format&fit=crop",
+          ingredients: ["Chocolate meio amargo", "Manteiga", "Ovos", "Farinha de trigo", "Nutella"],
+          sku: "SOB-008",
+          trackInventory: true,
+          stockQuantity: 30,
+          lowStockThreshold: 5,
+        },
+      ])
+      .returning();
+
+    // ── Sorvetes (Picolés e Potes) ──
+    const [
+      prodPicoleMorango,
+      prodPicoleNinhoNutella,
+      prodPicoleChocBelga,
+      prodPicoleLimao,
+      prodPoteSorvete500,
+      prodPoteSorvete1L,
+    ] = await tx
+      .insert(productsTable)
+      .values([
+        {
+          restaurantId: restaurant.id,
+          menuCategoryId: catSorvetes.id,
+          productionSectorId: sectorFria.id,
+          name: "Picolé de Morango Fruta",
+          description: "Picolé refrescante feito com pura fruta de morango selecionada, natural e leve.",
+          price: 6.0,
+          costPrice: 1.8,
+          imageUrl: "https://images.unsplash.com/photo-1505394033641-40c6ad1178d7?w=500&auto=format&fit=crop",
+          ingredients: ["Polpa de morango", "Água mineral", "Açúcar orgânico"],
+          sku: "SOR-001",
+          trackInventory: true,
+          stockQuantity: 60,
+          lowStockThreshold: 10,
+          isVegan: true,
+          isGlutenFree: true,
+        },
+        {
+          restaurantId: restaurant.id,
+          menuCategoryId: catSorvetes.id,
+          productionSectorId: sectorFria.id,
+          name: "Picolé Ninho com Nutella",
+          description: "Picolé cremoso artesanal de leite Ninho recheado com pura Nutella trufada.",
+          price: 9.5,
+          costPrice: 3.0,
+          imageUrl: "https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=500&auto=format&fit=crop",
+          ingredients: ["Leite Ninho", "Nutella", "Leite condensado", "Creme de leite"],
+          sku: "SOR-002",
+          trackInventory: true,
+          stockQuantity: 40,
+          lowStockThreshold: 10,
+        },
+        {
+          restaurantId: restaurant.id,
+          menuCategoryId: catSorvetes.id,
+          productionSectorId: sectorFria.id,
+          name: "Picolé Chocolate Belga",
+          description: "Picolé cremoso de chocolate nobre coberto com casquinha crocante e castanhas.",
+          price: 8.5,
+          costPrice: 2.8,
+          imageUrl: "https://images.unsplash.com/photo-1549395156-e0c1fe6fc7a5?w=500&auto=format&fit=crop",
+          ingredients: ["Chocolate belga", "Cacau", "Leite integral", "Castanha de caju"],
+          sku: "SOR-003",
+          trackInventory: true,
+          stockQuantity: 50,
+          lowStockThreshold: 10,
+        },
+        {
+          restaurantId: restaurant.id,
+          menuCategoryId: catSorvetes.id,
+          productionSectorId: sectorFria.id,
+          name: "Picolé de Limão Siciliano",
+          description: "Picolé cítrico e refrescante feito com suco fresco de limão siciliano.",
+          price: 6.0,
+          costPrice: 1.8,
+          imageUrl: "https://images.unsplash.com/photo-1505394033641-40c6ad1178d7?w=500&auto=format&fit=crop",
+          ingredients: ["Suco de limão siciliano", "Água mineral", "Açúcar"],
+          sku: "SOR-004",
+          trackInventory: true,
+          stockQuantity: 50,
+          lowStockThreshold: 10,
+          isVegan: true,
+          isGlutenFree: true,
+        },
+        {
+          restaurantId: restaurant.id,
+          menuCategoryId: catSorvetes.id,
+          productionSectorId: sectorFria.id,
+          name: "Pote de Sorvete Artesanal 500ml",
+          description: "Pote de 500ml de sorvete ultra cremoso artesanal. Escolha o sabor que você mais ama!",
+          price: 24.0,
+          costPrice: 8.0,
+          imageUrl: "https://images.unsplash.com/photo-1570197788417-0e82375c9371?w=500&auto=format&fit=crop",
+          ingredients: ["Leite integral", "Creme de leite fresco", "Açúcar"],
+          sku: "SOR-005",
+          trackInventory: true,
+          stockQuantity: 35,
+          lowStockThreshold: 8,
+        },
+        {
+          restaurantId: restaurant.id,
+          menuCategoryId: catSorvetes.id,
+          productionSectorId: sectorFria.id,
+          name: "Pote de Sorvete Família 1,5L",
+          description: "Pote família de 1,5 litro de sorvete cremoso nos sabores clássicos. Ideal para compartilhar.",
+          price: 46.0,
+          costPrice: 16.0,
+          imageUrl: "https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=500&auto=format&fit=crop",
+          ingredients: ["Leite integral", "Creme de leite", "Cacau", "Morango", "Baunilha"],
+          sku: "SOR-006",
+          trackInventory: true,
+          stockQuantity: 25,
+          lowStockThreshold: 5,
+        },
+      ])
+      .returning();
+
+    // ── Açaí ──
+    const [
+      prodAcaiCopo,
+      prodAcaiTigela,
+    ] = await tx
+      .insert(productsTable)
+      .values([
+        {
+          restaurantId: restaurant.id,
+          menuCategoryId: catAcai.id,
+          productionSectorId: sectorFria.id,
+          name: "Monte seu Açaí no Copo",
+          description: "Açaí artesanal premium batido na hora! Escolha o tamanho em ml, a base do seu açaí e adicione seus complementos favoritos.",
+          price: 16.0,
+          costPrice: 5.5,
+          imageUrl: "https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?w=500&auto=format&fit=crop",
+          ingredients: ["Polpa de açaí puro", "Xarope de guaraná"],
+          sku: "ACA-001",
+          trackInventory: false,
+          stockQuantity: 0,
+          lowStockThreshold: 0,
+        },
+        {
+          restaurantId: restaurant.id,
+          menuCategoryId: catAcai.id,
+          productionSectorId: sectorFria.id,
+          name: "Tigela Especial de Açaí 500ml",
+          description: "Tigela servida com 500ml de açaí cremoso, banana fresca fatiada, morangos, granola artesanal e muito leite Ninho.",
+          price: 26.0,
+          costPrice: 8.5,
+          imageUrl: "https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?w=500&auto=format&fit=crop",
+          ingredients: ["Polpa de açaí", "Banana", "Morango", "Granola artesanal", "Leite Ninho"],
+          sku: "ACA-002",
+          trackInventory: false,
+          stockQuantity: 0,
+          lowStockThreshold: 0,
+        },
+      ])
+      .returning();
+
     await tx.insert(productSizePricesTable).values([
       { productId: prodPizzaCalabresa.id, name: "Média (8 fatias)", price: 49.9, isDefault: false },
       { productId: prodPizzaCalabresa.id, name: "Grande (12 fatias)", price: 64.9, isDefault: true },
@@ -721,6 +1057,10 @@ const main = async () => {
       { productId: prodPizzaPepperoni.id, name: "Grande (12 fatias)", price: 71.9, isDefault: true },
       { productId: prodPizzaPortuguesa.id, name: "Média (8 fatias)", price: 49.9, isDefault: false },
       { productId: prodPizzaPortuguesa.id, name: "Grande (12 fatias)", price: 64.9, isDefault: true },
+      // Tamanhos do Açaí no Copo
+      { productId: prodAcaiCopo.id, name: "300 ml", price: 16.0, isDefault: true },
+      { productId: prodAcaiCopo.id, name: "500 ml", price: 22.0, isDefault: false },
+      { productId: prodAcaiCopo.id, name: "700 ml", price: 28.0, isDefault: false },
     ]);
 
     await tx.insert(productToOptionGroupsTable).values([
@@ -738,6 +1078,18 @@ const main = async () => {
       { productId: prodPizzaFrangoCatupiry.id, productOptionGroupId: grpBorda.id },
       { productId: prodPizzaPepperoni.id, productOptionGroupId: grpBorda.id },
       { productId: prodPizzaPortuguesa.id, productOptionGroupId: grpBorda.id },
+      // Sorvetes em Potes
+      { productId: prodPoteSorvete500.id, productOptionGroupId: grpSorveteSabor.id },
+      { productId: prodPoteSorvete500.id, productOptionGroupId: grpSorveteCalda.id },
+      { productId: prodPoteSorvete1L.id, productOptionGroupId: grpSorveteSabor.id },
+      { productId: prodPoteSorvete1L.id, productOptionGroupId: grpSorveteCalda.id },
+      // Açaí no Copo (tamanho, tipo e adicionais)
+      { productId: prodAcaiCopo.id, productOptionGroupId: grpAcaiTamanho.id },
+      { productId: prodAcaiCopo.id, productOptionGroupId: grpAcaiTipo.id },
+      { productId: prodAcaiCopo.id, productOptionGroupId: grpAcaiAdicionais.id },
+      // Tigela Especial de Açaí (tipo e adicionais)
+      { productId: prodAcaiTigela.id, productOptionGroupId: grpAcaiTipo.id },
+      { productId: prodAcaiTigela.id, productOptionGroupId: grpAcaiAdicionais.id },
     ]);
 
     process.stdout.write("✅ [C] Cardápio criado.\n");
