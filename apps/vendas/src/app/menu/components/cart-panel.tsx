@@ -77,9 +77,10 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
       {hasProducts && (
         <div className={variant === "sheet" ? "flex-1 overflow-hidden px-6 pt-4" : "min-h-0 flex-1 overflow-hidden px-0 pt-3"}>
           <ScrollArea
+            hideScrollbar={variant === "sidebar"}
             className={
               variant === "sidebar"
-                ? "h-full w-full [&>[data-radix-scroll-area-viewport]>div]:!block [&>[data-radix-scroll-area-viewport]>div]:!w-full [&>[data-radix-scroll-area-viewport]>div]:!min-w-0 [&>div>div]:!block [&>div>div]:!w-full [&>div>div]:!min-w-0"
+                ? "h-full w-full [&>[data-radix-scroll-area-viewport]>div]:!block [&>[data-radix-scroll-area-viewport]>div]:!w-full [&>[data-radix-scroll-area-viewport]>div]:!min-w-0 [&>div>div]:!block [&>div>div]:!w-full [&>div>div]:!min-w-0 [&>[data-radix-scroll-area-scrollbar]]:!hidden [&_[data-radix-scroll-area-scrollbar]]:!hidden [&>[data-radix-scroll-area-viewport]]:[scrollbar-width:none] [&>[data-radix-scroll-area-viewport]]:[-ms-overflow-style:none] [&>[data-radix-scroll-area-viewport]::-webkit-scrollbar]:!hidden"
                 : "h-full"
             }
           >
