@@ -3,16 +3,20 @@ import Image from "next/image";
 import { useContext } from "react";
 
 import { formatCurrency } from "@/helpers/format-currency";
+import { cn } from "@/lib/utils";
 
 import { CartContext, CartProduct } from "../contexts/cart";
 
 interface CartItemProps {
   product: CartProduct;
+  variant?: "sidebar" | "sheet";
 }
 
-const CartProductItem = ({ product }: CartItemProps) => {
+const CartProductItem = ({ product, variant = "sheet" }: CartItemProps) => {
   const { decreaseProductQuantity, increaseProductQuantity, removeProduct } =
     useContext(CartContext);
+
+  const isSidebar = variant === "sidebar";
 
   const optionsTotal =
     product.selectedOptions?.reduce(
@@ -23,9 +27,14 @@ const CartProductItem = ({ product }: CartItemProps) => {
   const unitPrice = prodPrice + optionsTotal;
 
   return (
-    <div className="flex w-full flex-col gap-2 rounded-xl border border-slate-100 bg-white p-2 shadow-sm max-w-full">
+    <div
+      className={cn(
+        "flex w-full flex-col gap-2 rounded-xl border border-slate-100 bg-white p-2 shadow-sm max-w-full",
+        isSidebar && "min-w-0 overflow-hidden p-2.5"
+      )}
+    >
       {/* Esquerda: Imagem e Informações */}
-      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+      <div className="flex min-w-0 flex-1 items-start gap-2.5 sm:gap-3">
         <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-slate-50 border border-slate-100 sm:h-14 sm:w-14">
           <Image
             src={product.imageUrl}
@@ -36,15 +45,25 @@ const CartProductItem = ({ product }: CartItemProps) => {
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <p className="truncate text-sm font-bold text-slate-900 leading-tight sm:text-sm">
+          <p
+            className={cn(
+              "text-sm font-bold text-slate-900 leading-tight",
+              isSidebar
+                ? "line-clamp-2 break-words leading-snug"
+                : "truncate sm:text-sm"
+            )}
+            title={product.name}
+          >
             {product.name}
           </p>
 
           {/* Opções */}
-          {(product.selectedOptions && product.selectedOptions.length > 0) && (
+          {product.selectedOptions && product.selectedOptions.length > 0 && (
             <div className="flex flex-wrap gap-x-1 text-xs text-slate-400 sm:text-xs">
               {product.selectedOptions?.slice(0, 1).map((opt) => (
-                <span key={opt.id} className="line-clamp-1 break-all">• {opt.name}</span>
+                <span key={opt.id} className="line-clamp-1 break-all">
+                  • {opt.name}
+                </span>
               ))}
               {(product.selectedOptions?.length ?? 0) > 1 && <span>...</span>}
             </div>
@@ -64,8 +83,13 @@ const CartProductItem = ({ product }: CartItemProps) => {
       </div>
 
       {/* Direita: Ações */}
-      <div className="flex w-full items-center justify-between gap-1.5">
-        <div className="flex items-center gap-0.5 rounded-lg border border-slate-200 bg-slate-50 p-0.5 sm:gap-1 sm:p-1">
+      <div
+        className={cn(
+          "flex w-full items-center justify-between gap-1.5",
+          isSidebar && "pt-1 border-t border-slate-50"
+        )}
+      >
+        <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-slate-200 bg-slate-50 p-0.5 sm:gap-1 sm:p-1">
           <button
             type="button"
             onClick={() => decreaseProductQuantity(product.cartItemId)}
@@ -92,8 +116,14 @@ const CartProductItem = ({ product }: CartItemProps) => {
         <button
           type="button"
           onClick={() => removeProduct(product.cartItemId)}
-          className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 active:bg-rose-50 active:text-rose-600 transition-colors sm:h-7 sm:w-7"
-          title="Remover"
+          className={cn(
+            "flex shrink-0 items-center justify-center rounded-full transition-colors",
+            isSidebar
+              ? "h-7 w-7 bg-slate-100 text-slate-500 hover:bg-rose-50 hover:text-rose-600 active:scale-90"
+              : "h-6 w-6 bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 active:bg-rose-50 active:text-rose-600 sm:h-7 sm:w-7"
+          )}
+          title="Remover item"
+          aria-label={`Remover ${product.name} do pedido`}
         >
           <TrashIcon size={14} />
         </button>

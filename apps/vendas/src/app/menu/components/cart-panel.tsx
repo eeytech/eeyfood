@@ -45,7 +45,7 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
       </div>
 
       {showFreeDelivery && (
-        <div className={variant === "sheet" ? "px-6 pb-2 pt-3" : "px-6 pb-1 pt-3"}>
+        <div className={variant === "sheet" ? "px-6 pb-2 pt-3" : "px-4 pb-1 pt-3"}>
           {freeDeliveryAchieved ? (
             <div className="flex items-center gap-2 rounded-2xl bg-emerald-50 px-4 py-3">
               <CheckCircle2Icon size={16} className="shrink-0 text-emerald-600" aria-hidden="true" />
@@ -76,10 +76,16 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
 
       {hasProducts && (
         <div className={variant === "sheet" ? "flex-1 overflow-hidden px-6 pt-4" : "min-h-0 flex-1 overflow-hidden px-0 pt-3"}>
-          <ScrollArea className={variant === "sidebar" ? "h-full" : "h-full"}>
-            <div className={variant === "sidebar" ? "space-y-2 px-6 pb-4" : "space-y-3 pr-4 pb-6"}>
+          <ScrollArea
+            className={
+              variant === "sidebar"
+                ? "h-full w-full [&>[data-radix-scroll-area-viewport]>div]:!block [&>[data-radix-scroll-area-viewport]>div]:!w-full [&>[data-radix-scroll-area-viewport]>div]:!min-w-0 [&>div>div]:!block [&>div>div]:!w-full [&>div>div]:!min-w-0"
+                : "h-full"
+            }
+          >
+            <div className={variant === "sidebar" ? "space-y-2.5 px-4 pb-4 w-full min-w-0" : "space-y-3 pr-4 pb-6"}>
               {products.map((product) => (
-                <CartProductItem key={product.cartItemId} product={product} />
+                <CartProductItem key={product.cartItemId} product={product} variant={variant} />
               ))}
             </div>
           </ScrollArea>
@@ -110,7 +116,7 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
         className={
           variant === "sheet"
             ? "mt-auto flex flex-col gap-4 border-t bg-white p-6 shadow-[0_-8px_30px_rgba(0,0,0,0.04)]"
-            : "mt-6 flex flex-col gap-4 border-t bg-slate-50/40 px-6 py-6"
+            : "mt-4 flex flex-col gap-3.5 border-t bg-slate-50/40 px-4 py-4"
         }
       >
         <div className="flex w-full items-center justify-between">
@@ -133,7 +139,7 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
   return (
     <>
       {variant === "sidebar" ? (
-        <Card className="flex h-full flex-col overflow-hidden border-white/70 bg-white/90 shadow-xl shadow-slate-200/60">
+        <Card className="flex h-full w-full min-w-0 flex-col overflow-hidden border-white/70 bg-white/90 shadow-xl shadow-slate-200/60">
           {content}
         </Card>
       ) : (
