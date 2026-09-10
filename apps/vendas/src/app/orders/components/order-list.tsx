@@ -3,7 +3,7 @@
 import { ChevronLeftIcon, MapPinIcon,ScrollTextIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useParams,useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -67,10 +67,9 @@ const ACTIVE_STATUSES: OrderStatus[] = [
 
 interface OrderCardProps {
   order: OrderComItens;
-  slug: string;
 }
 
-const OrderCard = ({ order, slug }: OrderCardProps) => (
+const OrderCard = ({ order }: OrderCardProps) => (
   <Card className="overflow-hidden rounded-[20px] border-slate-200 shadow-sm transition hover:shadow-md">
     <CardContent className="space-y-3.5 p-4">
       <div className="flex items-start justify-between gap-4">
@@ -132,7 +131,7 @@ const OrderCard = ({ order, slug }: OrderCardProps) => (
           className="w-full rounded-xl h-10 bg-blue-600 font-bold shadow-md shadow-blue-100 text-sm"
           asChild
         >
-          <Link href={`/${slug}/orders/${order.id}/tracking`}>
+          <Link href={`/orders/${order.id}/tracking`}>
             <MapPinIcon className="mr-2 h-3.5 w-3.5" />
             Rastrear Entrega
           </Link>
@@ -145,7 +144,7 @@ const OrderCard = ({ order, slug }: OrderCardProps) => (
           restaurantId={order.restaurantId}
           restaurantName={order.restaurant.name}
           customerName={order.customerName}
-          slug={slug}
+          slug={order.restaurant.slug}
         />
       )}
 
@@ -171,7 +170,6 @@ const OrderCard = ({ order, slug }: OrderCardProps) => (
 
 const OrderList = ({ orders, isSidePanel, onBackClick }: OrderListProps) => {
   const router = useRouter();
-  const { slug } = useParams<{ slug: string }>();
 
   const activeOrders = orders
     .filter((o) => ACTIVE_STATUSES.includes(o.status))
@@ -240,7 +238,7 @@ const OrderList = ({ orders, isSidePanel, onBackClick }: OrderListProps) => {
               </h3>
               <div className="grid gap-3.5 sm:grid-cols-1">
                 {activeOrders.map((order) => (
-                  <OrderCard key={order.id} order={order} slug={slug} />
+                  <OrderCard key={order.id} order={order} />
                 ))}
               </div>
             </div>
@@ -252,7 +250,7 @@ const OrderList = ({ orders, isSidePanel, onBackClick }: OrderListProps) => {
               </h3>
               <div className="grid gap-3.5 sm:grid-cols-1">
                 {pastOrders.map((order) => (
-                  <OrderCard key={order.id} order={order} slug={slug} />
+                  <OrderCard key={order.id} order={order} />
                 ))}
               </div>
             </div>

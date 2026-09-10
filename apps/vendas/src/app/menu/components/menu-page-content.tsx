@@ -77,6 +77,7 @@ const RestaurantMenuPageContent = ({
       <OrdersSheet
         open={ordersSheetIsOpen}
         onOpenChange={setOrdersSheetIsOpen}
+        restaurantSlug={restaurant.slug}
       />
     </div>
   );

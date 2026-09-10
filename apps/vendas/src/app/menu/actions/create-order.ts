@@ -124,7 +124,10 @@ export const createOrder = async (input: CreateOrderInput) => {
     deliveryLongitude: input.deliveryLongitude,
   });
 
-  revalidatePath(`/${input.slug}/orders`);
+  revalidatePath("/orders");
+  if (input.slug) {
+    revalidatePath(`/${input.slug}/orders`);
+  }
   // Não bloqueia resposta ao cliente — falha silenciosa é aceitável aqui
   notificarNovoPedido({ orderId: order.id, restaurantSlug: input.slug });
 

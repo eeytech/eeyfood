@@ -11,8 +11,13 @@ import type { Product } from "@/lib/db";
 import { getUpsellRecommendations } from "../actions/get-upsell-recommendations";
 import { CartContext } from "../contexts/cart";
 
-const CartRecommendations = () => {
-  const { slug } = useParams<{ slug: string }>();
+interface CartRecommendationsProps {
+  restaurantSlug?: string;
+}
+
+const CartRecommendations = ({ restaurantSlug }: CartRecommendationsProps) => {
+  const params = useParams<{ slug?: string }>();
+  const slug = restaurantSlug || params?.slug || "";
   const { products, addProduct } = useContext(CartContext);
   const [recommendations, setRecommendations] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);

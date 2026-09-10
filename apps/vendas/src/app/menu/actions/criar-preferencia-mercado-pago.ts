@@ -52,9 +52,9 @@ export const criarPreferenciaMercadoPago = async ({
         process.env.MERCADO_PAGO_WEBHOOK_URL ??
         `${origin}/api/webhooks/mercado-pago`,
       back_urls: {
-        success: `${origin}/${slug}/orders?${searchParams.toString()}`,
-        failure: `${origin}/${slug}/orders?${searchParams.toString()}`,
-        pending: `${origin}/${slug}/orders?${searchParams.toString()}`,
+        success: `${origin}/orders?${searchParams.toString()}`,
+        failure: `${origin}/orders?${searchParams.toString()}`,
+        pending: `${origin}/orders?${searchParams.toString()}`,
       },
       auto_return: "approved",
       metadata: {

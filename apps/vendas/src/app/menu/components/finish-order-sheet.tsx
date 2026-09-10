@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle2Icon, Loader2Icon } from "lucide-react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useContext, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -89,7 +89,7 @@ export const FinishOrderSheet = ({
   restaurant,
 }: FinishOrderSheetProps) => {
   const router = useRouter();
-  const { slug } = useParams<{ slug: string }>();
+  const slug = restaurant.slug;
   const { products, total, clearCart } = useContext(CartContext);
   const searchParams = useSearchParams();
 
@@ -358,7 +358,7 @@ export const FinishOrderSheet = ({
     if (!pedidoOfflineConcluido) return;
     handleSheetOpenChange(false);
     router.push(
-      `/${slug}/orders?phone=${normalizePhoneNumber(pedidoOfflineConcluido.phone)}`,
+      `/orders?phone=${normalizePhoneNumber(pedidoOfflineConcluido.phone)}`,
     );
   };
 

@@ -38,8 +38,12 @@ export const createOrderRating = async (input: CreateRatingInput) => {
       imageUrl: input.imageUrl,
     });
 
-    revalidatePath(`/${input.slug}/orders`);
-    revalidatePath(`/${input.slug}/menu`);
+    revalidatePath("/orders");
+    revalidatePath("/menu");
+    if (input.slug) {
+      revalidatePath(`/${input.slug}/orders`);
+      revalidatePath(`/${input.slug}/menu`);
+    }
 
     return { success: true };
   } catch (error) {

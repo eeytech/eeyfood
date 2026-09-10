@@ -95,7 +95,7 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
 
       {hasProducts && (
         <div className={variant === "sheet" ? "px-6 pt-2 pb-2 border-t" : "px-0 pt-0"}>
-          <CartRecommendations />
+          <CartRecommendations restaurantSlug={restaurant.slug} />
         </div>
       )}
 

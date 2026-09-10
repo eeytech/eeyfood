@@ -2,7 +2,7 @@
 
 import { BellRingIcon, ChevronLeftIcon, ScrollTextIcon } from "lucide-react";
 import Image from "next/image";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -12,7 +12,7 @@ import type { Restaurant } from "@/lib/db";
 import { chamarGarcomAction } from "../actions";
 
 interface RestaurantHeaderProps {
-  restaurant: Pick<Restaurant, "name" | "coverImageUrl">;
+  restaurant: Pick<Restaurant, "name" | "coverImageUrl" | "slug">;
   onOrdersClick?: () => void;
   consumptionMethod?: "DINE_IN" | "TAKEAWAY" | "DELIVERY";
   tableId?: string;
@@ -26,7 +26,6 @@ const RestaurantHeader = ({
   tableId,
   isKioskMode,
 }: RestaurantHeaderProps) => {
-  const { slug } = useParams<{ slug: string }>();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [calledAt, setCalledAt] = useState<Date | null>(null);
@@ -50,7 +49,7 @@ const RestaurantHeader = ({
     }
 
     startTransition(async () => {
-      const result = await chamarGarcomAction(slug, tableId);
+      const result = await chamarGarcomAction(restaurant.slug, tableId);
       if (result.success) {
         setCalledAt(new Date());
         toast.success("Garçom chamado! Ele virá em breve.");

@@ -353,7 +353,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
 
     handleSheetOpenChange(false);
     router.push(
-      `/${slug}/orders?phone=${normalizePhoneNumber(pedidoOfflineConcluido.phone)}`,
+      `/orders?phone=${normalizePhoneNumber(pedidoOfflineConcluido.phone)}`,
     );
   };
 
@@ -551,7 +551,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                 variant="outline"
                 onClick={() => {
                   handleSheetOpenChange(false);
-                  router.push(`/${slug}/menu?consumptionMethod=${consumptionMethod}`);
+                  router.push(`/menu?consumptionMethod=${consumptionMethod}`);
                 }}
               >
                 Fechar

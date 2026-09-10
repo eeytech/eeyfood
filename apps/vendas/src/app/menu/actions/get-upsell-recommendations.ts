@@ -1,12 +1,14 @@
 "use server";
 
-import { db, menuCategoriesTable,productsTable, restaurantsTable } from "@fsw/db";
+import { buscarRestauranteUnico, db, menuCategoriesTable, productsTable, restaurantsTable } from "@fsw/db";
 import { and, eq, inArray, notInArray } from "drizzle-orm";
 
 export const getUpsellRecommendations = async (slug: string, cartProductIds: string[]) => {
-  const restaurant = await db.query.restaurantsTable.findFirst({
-    where: eq(restaurantsTable.slug, slug),
-  });
+  const restaurant = slug
+    ? (await db.query.restaurantsTable.findFirst({
+        where: eq(restaurantsTable.slug, slug),
+      })) ?? (await buscarRestauranteUnico())
+    : await buscarRestauranteUnico();
 
   if (!restaurant) return [];
 

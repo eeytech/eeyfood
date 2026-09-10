@@ -101,8 +101,12 @@ export async function POST(request: Request) {
   });
 
   if (updatedOrder) {
-    revalidatePath(`/${updatedOrder.restaurantSlug}/menu`);
-    revalidatePath(`/${updatedOrder.restaurantSlug}/orders`);
+    revalidatePath("/menu");
+    revalidatePath("/orders");
+    if (updatedOrder.restaurantSlug) {
+      revalidatePath(`/${updatedOrder.restaurantSlug}/menu`);
+      revalidatePath(`/${updatedOrder.restaurantSlug}/orders`);
+    }
   }
 
   return NextResponse.json({

@@ -25,10 +25,12 @@ import PhoneFormSide from "./phone-form-side";
 interface OrdersSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  restaurantSlug?: string;
 }
 
-const OrdersSheet = ({ open, onOpenChange }: OrdersSheetProps) => {
-  const { slug } = useParams<{ slug: string }>();
+const OrdersSheet = ({ open, onOpenChange, restaurantSlug }: OrdersSheetProps) => {
+  const params = useParams<{ slug?: string }>();
+  const slug = restaurantSlug || params?.slug || "";
   const { addProduct, toggleCart } = useContext(CartContext);
   const [phone, setPhone] = useState<string | null>(null);
   const [orders, setOrders] = useState<OrderComItens[]>([]);

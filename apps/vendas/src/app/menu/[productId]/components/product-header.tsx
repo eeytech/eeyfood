@@ -2,7 +2,7 @@
 
 import { ChevronLeftIcon, ScrollTextIcon } from "lucide-react";
 import Image from "next/image";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 import { useState } from "react";
 
@@ -14,12 +14,11 @@ interface ProductHeaderProps {
 }
 
 const ProductHeader = ({ product }: ProductHeaderProps) => {
-  const { slug } = useParams<{ slug: string }>();
   const router = useRouter();
   const [isImageLoading, setIsImageLoading] = useState(true);
 
   const handleBackClick = () => router.back();
-  const handleOrdersClick = () => router.push(`/${slug}/orders`);
+  const handleOrdersClick = () => router.push("/orders");
 
   return (
     <div className="relative h-[300px] w-full bg-slate-50 lg:h-full lg:min-h-[600px]">

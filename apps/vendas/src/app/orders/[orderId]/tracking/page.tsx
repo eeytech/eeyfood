@@ -28,7 +28,7 @@ interface OrderTracking extends Order {
 }
 
 const TrackingPage = () => {
-  const { slug, orderId } = useParams<{ slug: string; orderId: string }>();
+  const { orderId } = useParams<{ orderId: string }>();
   const [order, setOrder] = useState<OrderTracking | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -58,7 +58,7 @@ const TrackingPage = () => {
       {/* Header */}
       <div className="flex items-center gap-3 border-b bg-white px-3 py-3 shadow-sm">
         <Button variant="ghost" size="icon" asChild className="rounded-full h-9 w-9">
-          <Link href={`/${slug}/orders`}>
+          <Link href="/orders">
             <ChevronLeftIcon size={20} />
           </Link>
         </Button>
