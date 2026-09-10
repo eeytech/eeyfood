@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, isNotNull, sql } from "drizzle-orm";
 
 import { db } from "../client";
 import { isRestaurantOpen } from "../restaurant-utils";
@@ -29,6 +29,7 @@ import {
   tableReservationsTable,
   waitingQueueTable,
   comandasAvulsasTable,
+  customerAddressesTable,
 } from "../schema";
 import type {
   AbandonedCart,
@@ -75,6 +76,7 @@ export interface CriarPedidoInput {
   couponCode?: string;
   useWalletBalance?: boolean;
   deliveryAddress?: string;
+  customerAddressId?: string;
   deliveryLatitude?: number;
   deliveryLongitude?: number;
   marketplaceOrderId?: string;
@@ -1299,6 +1301,7 @@ export const criarPedido = async (input: CriarPedidoInput): Promise<Order> => {
         scheduledFor,
         diningTableId: input.diningTableId,
         deliveryAddress: input.deliveryAddress,
+        customerAddressId: input.customerAddressId,
         deliveryLatitude: input.deliveryLatitude,
         deliveryLongitude: input.deliveryLongitude,
         marketplaceOrderId: input.marketplaceOrderId,
@@ -2604,5 +2607,100 @@ export const despacharPedido = async ({
     dispatchedAt: updatedOrder.dispatchedAt,
     restaurantSlug,
   };
+};
+
+export const buscarEnderecosClientePorTelefone = async (phone: string) => {
+  const normalizedPhone = normalizarTelefoneLead(phone);
+  if (!normalizedPhone) return [];
+
+  return db
+    .select()
+    .from(customerAddressesTable)
+    .where(eq(customerAddressesTable.customerPhone, normalizedPhone))
+    .orderBy(desc(customerAddressesTable.lastUsedAt));
+};
+
+export interface SalvarOuAtualizarEnderecoInput {
+  customerPhone: string;
+  street: string;
+  number: string;
+  neighborhood: string;
+  complement?: string | null;
+  reference?: string | null;
+  city?: string | null;
+  state?: string | null;
+}
+
+export const salvarOuAtualizarEnderecoCliente = async (
+  input: SalvarOuAtualizarEnderecoInput,
+) => {
+  const normalizedPhone = normalizarTelefoneLead(input.customerPhone);
+  if (!normalizedPhone) return null;
+
+  const street = input.street.trim();
+  const number = input.number.trim();
+  const neighborhood = input.neighborhood.trim();
+  const complement = input.complement?.trim() || null;
+  const reference = input.reference?.trim() || null;
+  const city = input.city?.trim() || null;
+  const state = input.state?.trim() || null;
+
+  const existing = await db
+    .select()
+    .from(customerAddressesTable)
+    .where(
+      and(
+        eq(customerAddressesTable.customerPhone, normalizedPhone),
+        ilike(customerAddressesTable.street, street),
+        ilike(customerAddressesTable.number, number),
+        ilike(customerAddressesTable.neighborhood, neighborhood),
+      ),
+    )
+    .limit(1);
+
+  if (existing.length > 0) {
+    const [updated] = await db
+      .update(customerAddressesTable)
+      .set({
+        complement: complement ?? existing[0].complement,
+        reference: reference ?? existing[0].reference,
+        city: city ?? existing[0].city,
+        state: state ?? existing[0].state,
+        lastUsedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(customerAddressesTable.id, existing[0].id))
+      .returning();
+    return updated;
+  }
+
+  const [created] = await db
+    .insert(customerAddressesTable)
+    .values({
+      customerPhone: normalizedPhone,
+      street,
+      number,
+      neighborhood,
+      complement,
+      reference,
+      city,
+      state,
+      lastUsedAt: new Date(),
+    })
+    .returning();
+
+  return created;
+};
+
+export const atualizarUsoEnderecoCliente = async (addressId: string) => {
+  const [updated] = await db
+    .update(customerAddressesTable)
+    .set({
+      lastUsedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(customerAddressesTable.id, addressId))
+    .returning();
+  return updated;
 };
 

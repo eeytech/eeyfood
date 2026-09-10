@@ -33,6 +33,12 @@ export const formSchema = z
     changeFor: z.string().trim().optional(),
     consumptionMethod: z.enum(["DINE_IN", "DELIVERY", "TAKEAWAY"]),
     diningTableId: z.string().uuid().optional(),
+    deliveryAddressMode: z.enum(["SAVED", "NEW"]).default("NEW"),
+    selectedAddressId: z.string().uuid().optional(),
+    street: z.string().trim().optional(),
+    number: z.string().trim().optional(),
+    neighborhood: z.string().trim().optional(),
+    complement: z.string().trim().optional(),
     deliveryAddress: z.string().trim().optional(),
   })
   .superRefine((values, context) => {
@@ -44,12 +50,40 @@ export const formSchema = z
       });
     }
 
-    if (values.consumptionMethod === "DELIVERY" && !values.deliveryAddress?.trim()) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["deliveryAddress"],
-        message: "Informe o endereço de entrega.",
-      });
+    if (values.consumptionMethod === "DELIVERY") {
+      if (values.deliveryAddressMode === "SAVED") {
+        if (!values.selectedAddressId) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["selectedAddressId"],
+            message: "Selecione o endereço de entrega.",
+          });
+        }
+      } else {
+        if (!values.street?.trim()) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["street"],
+            message: "Informe a rua / avenida.",
+          });
+        }
+
+        if (!values.number?.trim()) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["number"],
+            message: "Informe o número.",
+          });
+        }
+
+        if (!values.neighborhood?.trim()) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["neighborhood"],
+            message: "Informe o bairro.",
+          });
+        }
+      }
     }
 
     if (values.paymentMethod === "DINHEIRO" && values.changeFor) {

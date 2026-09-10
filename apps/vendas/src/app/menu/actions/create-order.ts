@@ -2,7 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 
-import { buscarRestaurantePorSlug, criarPedido } from "@/lib/db";
+import {
+  atualizarUsoEnderecoCliente,
+  buscarRestaurantePorSlug,
+  criarPedido,
+  salvarOuAtualizarEnderecoCliente,
+} from "@/lib/db";
 import type { ConsumptionMethod, PaymentMethod } from "@/lib/db";
 import { notificarNovoPedido } from "@/lib/notificar-novo-pedido";
 
@@ -26,6 +31,14 @@ interface CreateOrderInput {
   useWalletBalance?: boolean;
   diningTableId?: string;
   deliveryAddress?: string;
+  customerAddressId?: string;
+  deliveryAddressData?: {
+    street: string;
+    number: string;
+    neighborhood: string;
+    complement?: string;
+    reference?: string;
+  };
   deliveryLatitude?: number;
   deliveryLongitude?: number;
   slug: string;
@@ -59,9 +72,43 @@ export const createOrder = async (input: CreateOrderInput) => {
     throw new Error("Este método de consumo não está disponível neste restaurante no momento.");
   }
 
+  const normalizedCustomerPhone = normalizePhoneNumber(input.customerPhone);
+  let resolvedAddressId = input.customerAddressId;
+  let formattedDeliveryAddress = input.deliveryAddress;
+
+  if (input.consumptionMethod === "DELIVERY") {
+    if (input.deliveryAddressData) {
+      const { street, number, neighborhood, complement, reference } = input.deliveryAddressData;
+      const formatted = `${street}, ${number} - ${neighborhood}${complement ? ` (${complement})` : ""}`;
+      formattedDeliveryAddress = formatted;
+
+      try {
+        const savedAddress = await salvarOuAtualizarEnderecoCliente({
+          customerPhone: normalizedCustomerPhone,
+          street,
+          number,
+          neighborhood,
+          complement,
+          reference,
+        });
+        if (savedAddress) {
+          resolvedAddressId = savedAddress.id;
+        }
+      } catch (err) {
+        console.error("Falha ao salvar endereço do cliente:", err);
+      }
+    } else if (resolvedAddressId) {
+      try {
+        await atualizarUsoEnderecoCliente(resolvedAddressId);
+      } catch (err) {
+        console.error("Falha ao atualizar uso do endereço:", err);
+      }
+    }
+  }
+
   const order = await criarPedido({
     ...input,
-    customerPhone: normalizePhoneNumber(input.customerPhone),
+    customerPhone: normalizedCustomerPhone,
     changeFor:
       input.paymentMethod === "DINHEIRO" && input.changeFor
         ? input.changeFor
@@ -71,7 +118,8 @@ export const createOrder = async (input: CreateOrderInput) => {
     couponCode: input.couponCode?.trim().toUpperCase(),
     useWalletBalance: input.useWalletBalance,
     diningTableId: input.diningTableId,
-    deliveryAddress: input.deliveryAddress,
+    deliveryAddress: formattedDeliveryAddress,
+    customerAddressId: resolvedAddressId,
     deliveryLatitude: input.deliveryLatitude,
     deliveryLongitude: input.deliveryLongitude,
   });

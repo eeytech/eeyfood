@@ -16,11 +16,15 @@ export type {
   ProductOptionGroup,
   Restaurant,
   RestaurantComCategoriasEProdutos,
+  CustomerAddress,
   SalvarCarrinhoAbandonadoInput,
+  SalvarOuAtualizarEnderecoInput,
 } from "@fsw/db";
 export {
   atualizarStatusPagamentoPedido,
   atualizarStatusPedido,
+  atualizarUsoEnderecoCliente,
+  buscarEnderecosClientePorTelefone,
   buscarPedidosPorTelefone,
   buscarProximaRegraFidelidade,
   buscarProdutoDoRestaurante,
@@ -36,5 +40,6 @@ export {
   marketingSettingsTable,
   restaurantsTable,
   salvarCarrinhoAbandonado,
+  salvarOuAtualizarEnderecoCliente,
   validarBeneficiosPedido,
 } from "@fsw/db";

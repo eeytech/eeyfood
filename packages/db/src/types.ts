@@ -25,6 +25,7 @@ import {
   couponDiscountTypeEnum,
   couponsTable,
   couriersTable,
+  customerAddressesTable,
   customerLedgersTable,
   customerLedgerEntriesTable,
   deliveryFeeRulesTable,
@@ -155,6 +156,9 @@ export type NewLoyaltyRule = InferInsertModel<typeof loyaltyRulesTable>;
 
 export type AbandonedCart = InferSelectModel<typeof abandonedCartsTable>;
 export type NewAbandonedCart = InferInsertModel<typeof abandonedCartsTable>;
+
+export type CustomerAddress = InferSelectModel<typeof customerAddressesTable>;
+export type NewCustomerAddress = InferInsertModel<typeof customerAddressesTable>;
 
 export type Order = InferSelectModel<typeof ordersTable>;
 export type NewOrder = InferInsertModel<typeof ordersTable>;

@@ -32,6 +32,9 @@ export {
   unirMesas,
   buscarProdutosPorCategoria,
   buscarUltimoPedidoPorTelefone,
+  buscarEnderecosClientePorTelefone,
+  salvarOuAtualizarEnderecoCliente,
+  atualizarUsoEnderecoCliente,
 } from "./queries";
 export type {
   TransferirItensInput,
@@ -45,6 +48,7 @@ export type {
   FecharComandaInput,
   SalvarCarrinhoAbandonadoInput,
   ValidarBeneficiosPedidoInput,
+  SalvarOuAtualizarEnderecoInput,
 } from "./queries";
 export {
   criarTransacaoFinanceira,
@@ -121,6 +125,8 @@ export {
   couponsTable,
   couriersRelations,
   couriersTable,
+  customerAddressesRelations,
+  customerAddressesTable,
   customerLedgersRelations,
   customerLedgersTable,
   customerLedgerEntriesRelations,
@@ -247,6 +253,8 @@ export type {
   NewFiscalSettings,
   FiscalDocumentStatus,
   CustomerLedger,
+  CustomerAddress,
+  NewCustomerAddress,
   NewCustomerLedger,
   CustomerLedgerEntry,
   NewCustomerLedgerEntry,

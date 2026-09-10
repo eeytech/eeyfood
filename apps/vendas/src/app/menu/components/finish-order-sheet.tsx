@@ -21,6 +21,7 @@ import { formatCurrency } from "@/helpers/format-currency";
 import { isRestaurantOpen } from "@/helpers/restaurant-status";
 import type {
   ConsumptionMethod,
+  CustomerAddress,
   DiningTable,
   PaymentMethod,
   PedidoBeneficiosValidado,
@@ -33,6 +34,7 @@ import { criarPreferenciaMercadoPago } from "../actions/criar-preferencia-mercad
 import { getAvailableSchedulingSlots } from "../actions/get-scheduling-slots";
 import { getLoyaltyUpsell } from "../actions/get-loyalty-upsell";
 import type { LoyaltyUpsell } from "../actions/get-loyalty-upsell";
+import { getCustomerAddresses } from "../actions/get-customer-addresses";
 import { getTables } from "../actions/get-tables";
 import { saveAbandonedCart } from "../actions/save-abandoned-cart";
 import { validateOrderBenefits } from "../actions/validate-order-benefits";
@@ -81,7 +83,7 @@ const createAbandonedCartSessionId = () => {
   return `abandoned-cart-${Date.now().toString()}-${Math.random().toString(36).slice(2, 10)}`;
 };
 
-const FinishOrderSheet = ({
+export const FinishOrderSheet = ({
   open,
   onOpenChange,
   restaurant,
@@ -96,6 +98,8 @@ const FinishOrderSheet = ({
   const [useWalletBalance, setUseWalletBalance] = useState(false);
   const [benefits, setBenefits] = useState<PedidoBeneficiosValidado | null>(null);
   const [loyaltyUpsell, setLoyaltyUpsell] = useState<LoyaltyUpsell | null>(null);
+  const [customerAddresses, setCustomerAddresses] = useState<CustomerAddress[]>([]);
+  const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
   const [pedidoOfflineConcluido, setPedidoOfflineConcluido] =
     useState<PedidoOfflineConcluido | null>(null);
   const [schedulingSlots, setSchedulingSlots] = useState<SchedulingSlotGroup[]>([]);
@@ -123,6 +127,12 @@ const FinishOrderSheet = ({
       changeFor: "",
       consumptionMethod,
       diningTableId: undefined,
+      deliveryAddressMode: "NEW",
+      selectedAddressId: undefined,
+      street: "",
+      number: "",
+      neighborhood: "",
+      complement: "",
     },
   });
 
@@ -198,6 +208,43 @@ const FinishOrderSheet = ({
       setUseWalletBalance(false);
     }
   }, [watchedPhone]);
+
+  // Auto-fetch saved addresses when phone reaches 11 digits
+  useEffect(() => {
+    const digits = watchedPhone?.replace(/\D/g, "") ?? "";
+    if (digits.length !== 11 || !isValidPhoneNumber(watchedPhone)) {
+      setCustomerAddresses([]);
+      return;
+    }
+
+    let isMounted = true;
+    setIsLoadingAddresses(true);
+
+    getCustomerAddresses(watchedPhone)
+      .then((addresses) => {
+        if (!isMounted) return;
+        setCustomerAddresses(addresses);
+        if (addresses.length > 0) {
+          form.setValue("deliveryAddressMode", "SAVED");
+          const currentSelected = form.getValues("selectedAddressId");
+          if (!currentSelected || !addresses.some((a) => a.id === currentSelected)) {
+            form.setValue("selectedAddressId", addresses[0].id);
+          }
+        } else {
+          form.setValue("deliveryAddressMode", "NEW");
+        }
+      })
+      .catch((err) => {
+        console.error("Falha ao buscar endereços do cliente:", err);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingAddresses(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [watchedPhone, form]);
 
   // Reset only when the coupon is explicitly cleared
   const prevCouponCodeRef = useRef(watchedCouponCode);
@@ -285,6 +332,7 @@ const FinishOrderSheet = ({
       setBenefits(null);
       setUseWalletBalance(false);
       setTables([]);
+      setCustomerAddresses([]);
       form.reset({
         name: "",
         phone: "",
@@ -295,6 +343,12 @@ const FinishOrderSheet = ({
         changeFor: "",
         consumptionMethod,
         diningTableId: undefined,
+        deliveryAddressMode: "NEW",
+        selectedAddressId: undefined,
+        street: "",
+        number: "",
+        neighborhood: "",
+        complement: "",
       });
     }
     onOpenChange(nextOpen);
@@ -373,6 +427,35 @@ const FinishOrderSheet = ({
           ? Number(data.changeFor.replace(",", "."))
           : undefined;
 
+      let customerAddressId: string | undefined;
+      let deliveryAddressData:
+        | {
+            street: string;
+            number: string;
+            neighborhood: string;
+            complement?: string;
+          }
+        | undefined;
+      let formattedDeliveryAddress: string | undefined;
+
+      if (consumptionMethod === "DELIVERY") {
+        if (data.deliveryAddressMode === "SAVED" && data.selectedAddressId) {
+          customerAddressId = data.selectedAddressId;
+          const saved = customerAddresses.find((a) => a.id === data.selectedAddressId);
+          if (saved) {
+            formattedDeliveryAddress = `${saved.street}, ${saved.number} - ${saved.neighborhood}${saved.complement ? ` (${saved.complement})` : ""}`;
+          }
+        } else if (data.street && data.number && data.neighborhood) {
+          deliveryAddressData = {
+            street: data.street,
+            number: data.number,
+            neighborhood: data.neighborhood,
+            complement: data.complement || undefined,
+          };
+          formattedDeliveryAddress = `${data.street}, ${data.number} - ${data.neighborhood}${data.complement ? ` (${data.complement})` : ""}`;
+        }
+      }
+
       const order = await createOrder({
         consumptionMethod,
         paymentMethod: data.paymentMethod,
@@ -389,7 +472,9 @@ const FinishOrderSheet = ({
         couponCode: data.couponCode,
         useWalletBalance,
         diningTableId: data.diningTableId,
-        deliveryAddress: consumptionMethod === "DELIVERY" ? data.deliveryAddress : undefined,
+        deliveryAddress: formattedDeliveryAddress,
+        customerAddressId,
+        deliveryAddressData,
         products: products.map((product) => ({
           id: product.id,
           quantity: product.quantity,
@@ -491,6 +576,8 @@ const FinishOrderSheet = ({
                           schedulingSlots={schedulingSlots}
                           fulfillmentTiming={fulfillmentTiming}
                           isLoading={isLoading}
+                          customerAddresses={customerAddresses}
+                          isLoadingAddresses={isLoadingAddresses}
                         />
                       )}
 
@@ -610,23 +697,28 @@ const OrderSuccessView = ({
               </div>
             ) : null}
 
-            {pedidoOfflineConcluido.changeFor ? (
+            {pedidoOfflineConcluido.paymentMethod === "DINHEIRO" &&
+            pedidoOfflineConcluido.changeFor ? (
               <div className="rounded-2xl border bg-muted p-3 text-sm">
-                Troco solicitado para{" "}
-                <strong>{formatCurrency(pedidoOfflineConcluido.changeFor)}</strong>.
+                Troco solicitado para:{" "}
+                <strong>{formatCurrency(pedidoOfflineConcluido.changeFor)}</strong>
               </div>
             ) : null}
           </div>
         </div>
       </ScrollArea>
     </div>
-    <div className="flex flex-col gap-2.5 p-4 border-t bg-background">
-      <Button className="rounded-full h-10 text-sm" onClick={onViewOrders}>
-        Ver meus pedidos
+
+    <div className="flex flex-col gap-2 p-4 border-t">
+      <Button
+        className="h-10 w-full rounded-2xl text-sm font-semibold"
+        onClick={onViewOrders}
+      >
+        Acompanhar meus pedidos
       </Button>
       <Button
-        className="rounded-full h-10 text-sm"
-        variant="outline"
+        className="h-10 w-full rounded-2xl text-slate-500 font-medium text-sm"
+        variant="ghost"
         onClick={onClose}
       >
         Fechar

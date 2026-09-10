@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { boolean, date, doublePrecision, integer, jsonb, numeric, pgEnum, pgTable, serial, text, timestamp, uniqueIndex, uuid, } from "drizzle-orm/pg-core";
+import { boolean, date, doublePrecision, index, integer, jsonb, numeric, pgEnum, pgTable, serial, text, timestamp, uniqueIndex, uuid, } from "drizzle-orm/pg-core";
 const money = (name) => numeric(name, { precision: 10, scale: 2 }).$type();
 export const orderStatusEnum = pgEnum("OrderStatus", [
     "PENDING",
@@ -559,6 +559,22 @@ export const companyVehiclesTable = pgTable("CompanyVehicle", {
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
+export const customerAddressesTable = pgTable("CustomerAddress", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    customerPhone: text("customerPhone").notNull(),
+    street: text("street").notNull(),
+    number: text("number").notNull(),
+    neighborhood: text("neighborhood").notNull(),
+    complement: text("complement"),
+    reference: text("reference"),
+    city: text("city"),
+    state: text("state"),
+    lastUsedAt: timestamp("lastUsedAt").defaultNow().notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+}, (table) => ({
+    customerPhoneIndex: index("customer_address_phone_idx").on(table.customerPhone),
+}));
 export const ordersTable = pgTable("Order", {
     id: serial("id").primaryKey(),
     subtotal: money("subtotal").default(0).notNull(),
@@ -597,6 +613,7 @@ export const ordersTable = pgTable("Order", {
     customerName: text("customerName").notNull(),
     customerPhone: text("customerPhone").notNull(),
     deliveryAddress: text("deliveryAddress"),
+    customerAddressId: uuid("customerAddressId").references(() => customerAddressesTable.id, { onDelete: "set null" }),
     deliveryLatitude: doublePrecision("deliveryLatitude"),
     deliveryLongitude: doublePrecision("deliveryLongitude"),
     scheduledFor: timestamp("scheduledFor"),
@@ -1290,8 +1307,15 @@ export const ordersRelations = relations(ordersTable, ({ one, many }) => ({
         fields: [ordersTable.customerLedgerId],
         references: [customerLedgersTable.id],
     }),
+    customerAddress: one(customerAddressesTable, {
+        fields: [ordersTable.customerAddressId],
+        references: [customerAddressesTable.id],
+    }),
     orderProducts: many(orderProductsTable),
     stockMovements: many(stockMovementsTable),
+}));
+export const customerAddressesRelations = relations(customerAddressesTable, ({ many }) => ({
+    orders: many(ordersTable),
 }));
 export const orderProductsRelations = relations(orderProductsTable, ({ one, many }) => ({
     product: one(productsTable, {
