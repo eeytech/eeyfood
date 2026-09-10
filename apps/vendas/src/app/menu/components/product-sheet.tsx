@@ -18,7 +18,7 @@ interface ProductSheetProps {
   onOpenChange: (open: boolean) => void;
 }
 
-function ProductSheetSkeleton() {
+export function ProductSheetSkeleton() {
   return (
     <div className="flex h-full flex-col overflow-hidden bg-white">
       <div className="h-[160px] w-full animate-pulse bg-slate-200 sm:h-[200px]" />

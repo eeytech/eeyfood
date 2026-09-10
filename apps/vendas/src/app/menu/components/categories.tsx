@@ -3,6 +3,8 @@
 import type {
   MenuCategory,
   Product,
+  ProductOption,
+  ProductOptionGroup,
   RestaurantComCategoriasEProdutos,
 } from "@fsw/db";
 import { ClockIcon, SearchIcon, StarIcon } from "lucide-react";
@@ -23,6 +25,7 @@ import { CartContext } from "../contexts/cart";
 import { useIntersectionObserver } from "../hooks/use-intersection-observer";
 import CartPanel from "./cart-panel";
 import CartSheet from "./cart-sheet";
+import PizzaBuilderSheet from "./pizza-builder-sheet";
 import ProductSearch from "./product-search";
 import ProductSheet from "./product-sheet";
 import Products from "./products";
@@ -33,6 +36,10 @@ interface RestaurantCategoriesProps {
     ratingCount: number;
   };
 }
+
+type FullProduct = ProductComRestaurante & {
+  optionGroups?: (ProductOptionGroup & { options: ProductOption[] })[];
+};
 
 type MenuCategoryWithProducts = MenuCategory & { products: Product[] };
 
@@ -143,11 +150,19 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
     useState<ProductComRestaurante | null>(null);
   const [isSearchSheetOpen, setIsSearchSheetOpen] = useState(false);
   const [isLoadingSearchProduct, setIsLoadingSearchProduct] = useState(false);
+  const [isPizzaSheetOpen, setIsPizzaSheetOpen] = useState(false);
+  const [pizzaProduct, setPizzaProduct] = useState<FullProduct | null>(null);
+  const [pizzaCategoryId, setPizzaCategoryId] = useState("");
   const { products, total, toggleCart, totalQuantity } =
     useContext(CartContext);
 
   const { isOpen, closeTime } = isRestaurantOpen(restaurant.status, restaurant.operatingHours);
   const nextOpening = getNextOpeningTime(restaurant.operatingHours);
+
+  const getBorderGroup = (fullProduct: FullProduct) =>
+    fullProduct.optionGroups?.find((g) =>
+      g.name.toLowerCase().includes("borda"),
+    ) ?? undefined;
 
   const categoryIds = useMemo(
     () => restaurant.menuCategories.map((c) => c.id),
@@ -169,6 +184,20 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
   }, [searchQuery, isSearchActive, restaurant.menuCategories]);
 
   const handleSearchProductSelect = async (product: Product) => {
+    const category = restaurant.menuCategories.find(
+      (c) => c.id === product.menuCategoryId,
+    );
+
+    if (category?.isPizzaCategory) {
+      setIsPizzaSheetOpen(true);
+      setPizzaProduct(null);
+      setPizzaCategoryId(product.menuCategoryId);
+
+      const full = await fetchProductWithOptions(restaurant.slug, product.id);
+      setPizzaProduct((full ?? { ...product, restaurant }) as FullProduct);
+      return;
+    }
+
     setIsSearchSheetOpen(true);
     setIsLoadingSearchProduct(true);
     setSelectedSearchProduct(null);
@@ -420,6 +449,20 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
                   onOpenChange={(open) => {
                     setIsSearchSheetOpen(open);
                     if (!open) setSelectedSearchProduct(null);
+                  }}
+                />
+
+                <PizzaBuilderSheet
+                  isOpen={isPizzaSheetOpen}
+                  product={pizzaProduct}
+                  categoryId={pizzaCategoryId}
+                  restaurantSlug={restaurant.slug}
+                  pizzaPricingRule={(restaurant as unknown as { pizzaPricingRule: "MAX" | "AVERAGE" }).pizzaPricingRule ?? "MAX"}
+                  borderOptionGroup={pizzaProduct ? getBorderGroup(pizzaProduct) : undefined}
+                  restaurant={restaurant}
+                  onOpenChange={(open) => {
+                    setIsPizzaSheetOpen(open);
+                    if (!open) setPizzaProduct(null);
                   }}
                 />
               </>

@@ -145,6 +145,7 @@ const Products = ({ products, restaurant }: ProductsProps) => {
         restaurantSlug={restaurant.slug}
         pizzaPricingRule={(restaurant as unknown as { pizzaPricingRule: "MAX" | "AVERAGE" }).pizzaPricingRule ?? "MAX"}
         borderOptionGroup={pizzaProduct ? getBorderGroup(pizzaProduct) : undefined}
+        restaurant={restaurant}
         onOpenChange={(open) => {
           setIsPizzaSheetOpen(open);
           if (!open) setPizzaProduct(null);
