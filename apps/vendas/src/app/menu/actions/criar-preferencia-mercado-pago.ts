@@ -7,8 +7,8 @@ import { headers } from "next/headers";
 import { normalizePhoneNumber } from "../helpers/phone";
 
 interface CriarPreferenciaMercadoPagoInput {
-  orderId: number;
-  orderTotal: number;
+  orderId: number | string;
+  orderTotal: number | string;
   orderSummary: string;
   slug: string;
   consumptionMethod: ConsumptionMethod;
@@ -28,14 +28,26 @@ export const criarPreferenciaMercadoPago = async ({
     process.env.MERCADOPAGO_ACCESS_TOKEN;
 
   if (!accessToken) {
-    throw new Error("A chave do Mercado Pago nao foi configurada.");
+    throw new Error("A chave do Mercado Pago não foi configurada.");
   }
 
   const cabecalhos = await headers();
   const origin = cabecalhos.get("origin") ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
 
   if (!origin) {
-    throw new Error("Nao foi possivel determinar a URL base da aplicacao.");
+    throw new Error("Não foi possível determinar a URL base da aplicação.");
+  }
+
+  const rawTotal =
+    typeof orderTotal === "string"
+      ? orderTotal.replace(",", ".")
+      : String(orderTotal ?? 0);
+  const numericUnitPrice = Number(Number(rawTotal).toFixed(2));
+
+  if (Number.isNaN(numericUnitPrice) || numericUnitPrice <= 0) {
+    throw new Error(
+      `Valor total do pedido inválido para pagamento via Mercado Pago: ${orderTotal}`
+    );
   }
 
   const searchParams = new URLSearchParams();
@@ -47,40 +59,54 @@ export const criarPreferenciaMercadoPago = async ({
   });
 
   const preference = new Preference(client);
-  const response = await preference.create({
-    body: {
-      external_reference: String(orderId),
-      notification_url:
-        process.env.MERCADO_PAGO_WEBHOOK_URL ??
-        `${origin}/api/webhooks/mercado-pago`,
-      back_urls: {
-        success: `${origin}/orders?${searchParams.toString()}`,
-        failure: `${origin}/orders?${searchParams.toString()}`,
-        pending: `${origin}/orders?${searchParams.toString()}`,
-      },
-      auto_return: "approved",
-      metadata: {
-        orderId,
-        restaurantSlug: slug,
-      },
-      items: [
-        {
-          id: String(orderId),
-          title: `Pedido #${String(orderId)}`,
-          description: orderSummary,
-          quantity: 1,
-          currency_id: "BRL",
-          unit_price: orderTotal,
+
+  const notificationUrl =
+    process.env.MERCADO_PAGO_WEBHOOK_URL ??
+    (origin.startsWith("https://")
+      ? `${origin}/api/webhooks/mercado-pago`
+      : undefined);
+
+  try {
+    const response = await preference.create({
+      body: {
+        external_reference: String(orderId),
+        ...(notificationUrl ? { notification_url: notificationUrl } : {}),
+        back_urls: {
+          success: `${origin}/orders?${searchParams.toString()}`,
+          failure: `${origin}/orders?${searchParams.toString()}`,
+          pending: `${origin}/orders?${searchParams.toString()}`,
         },
-      ],
-    },
-  });
+        auto_return: "approved",
+        metadata: {
+          orderId: Number(orderId),
+          restaurantSlug: slug,
+        },
+        items: [
+          {
+            id: String(orderId),
+            title: `Pedido #${String(orderId)}`,
+            description: orderSummary?.trim() || `Pedido #${String(orderId)}`,
+            quantity: 1,
+            currency_id: "BRL",
+            unit_price: numericUnitPrice,
+          },
+        ],
+      },
+    });
 
-  const initPoint = response.init_point ?? response.sandbox_init_point;
+    const initPoint = response.init_point ?? response.sandbox_init_point;
 
-  if (!initPoint) {
-    throw new Error("O Mercado Pago nao retornou uma URL de pagamento.");
+    if (!initPoint) {
+      throw new Error("O Mercado Pago não retornou uma URL de pagamento.");
+    }
+
+    return { initPoint };
+  } catch (error) {
+    console.error("Erro ao criar preferência do Mercado Pago:", error);
+    if (error instanceof Error) {
+      throw new Error(error.message);
+    }
+    throw new Error("Não foi possível gerar o link de pagamento do Mercado Pago.");
   }
-
-  return { initPoint };
 };
+

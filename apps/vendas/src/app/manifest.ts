@@ -12,7 +12,7 @@ export default function manifest(): MetadataRoute.Manifest {
     icons: [
       {
         src: "/dine_in.png",
-        sizes: "512x512",
+        sizes: "any",
         type: "image/png",
       },
     ],

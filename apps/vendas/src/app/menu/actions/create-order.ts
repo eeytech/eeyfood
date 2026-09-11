@@ -131,5 +131,9 @@ export const createOrder = async (input: CreateOrderInput) => {
   // Não bloqueia resposta ao cliente — falha silenciosa é aceitável aqui
   notificarNovoPedido({ orderId: order.id, restaurantSlug: input.slug });
 
-  return order;
+  return {
+    ...order,
+    total: Number(order.total),
+  };
 };
+

@@ -484,7 +484,7 @@ export const FinishOrderSheet = ({
         slug,
       });
 
-      trackPurchase({ orderId: order.id, value: order.total });
+      trackPurchase({ orderId: Number(order.id), value: Number(order.total) });
 
       if (data.paymentMethod === "MERCADO_PAGO") {
         const orderSummary = products
@@ -493,8 +493,8 @@ export const FinishOrderSheet = ({
           .slice(0, 240);
 
         const { initPoint } = await criarPreferenciaMercadoPago({
-          orderId: order.id,
-          orderTotal: order.total,
+          orderId: Number(order.id),
+          orderTotal: Number(order.total),
           orderSummary,
           slug,
           consumptionMethod,
@@ -511,7 +511,7 @@ export const FinishOrderSheet = ({
       clearCart();
       setPedidoOfflineConcluido({
         phone: data.phone,
-        total: order.total,
+        total: Number(order.total),
         scheduledFor: order.scheduledFor
           ? new Date(order.scheduledFor).toISOString()
           : undefined,

@@ -447,8 +447,8 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
           .slice(0, 240);
 
         const { initPoint } = await criarPreferenciaMercadoPago({
-          orderId: order.id,
-          orderTotal: order.total,
+          orderId: Number(order.id),
+          orderTotal: Number(order.total),
           orderSummary,
           slug,
           consumptionMethod,
@@ -465,7 +465,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
       clearCart();
       setPedidoOfflineConcluido({
         phone: data.phone,
-        total: order.total,
+        total: Number(order.total),
         scheduledFor: order.scheduledFor
           ? new Date(order.scheduledFor).toISOString()
           : undefined,
