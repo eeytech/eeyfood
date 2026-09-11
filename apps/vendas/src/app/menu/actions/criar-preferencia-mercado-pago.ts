@@ -23,7 +23,9 @@ export const criarPreferenciaMercadoPago = async ({
   consumptionMethod,
   phone,
 }: CriarPreferenciaMercadoPagoInput) => {
-  const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+  const accessToken =
+    process.env.MERCADO_PAGO_ACCESS_TOKEN ??
+    process.env.MERCADOPAGO_ACCESS_TOKEN;
 
   if (!accessToken) {
     throw new Error("A chave do Mercado Pago nao foi configurada.");

@@ -57,7 +57,9 @@ const mapearStatusPagamento = (status: string | undefined) => {
 };
 
 export async function POST(request: Request) {
-  const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+  const accessToken =
+    process.env.MERCADO_PAGO_ACCESS_TOKEN ??
+    process.env.MERCADOPAGO_ACCESS_TOKEN;
 
   if (!accessToken) {
     throw new Error("A chave do Mercado Pago não foi configurada.");
