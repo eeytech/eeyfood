@@ -38,6 +38,7 @@ export {
   eq,
   listarMesasComandasPorSlug,
   marketingSettingsTable,
+  ordersTable,
   restaurantsTable,
   salvarCarrinhoAbandonado,
   salvarOuAtualizarEnderecoCliente,

@@ -4,12 +4,13 @@ import type { ConsumptionMethod } from "@fsw/db";
 import { MercadoPagoConfig, Preference } from "mercadopago";
 import { headers } from "next/headers";
 
+import { db, eq, ordersTable } from "@/lib/db";
 import { normalizePhoneNumber } from "../helpers/phone";
 
 interface CriarPreferenciaMercadoPagoInput {
   orderId: number | string;
-  orderTotal: number | string;
-  orderSummary: string;
+  orderTotal?: number | string;
+  orderSummary?: string;
   slug: string;
   consumptionMethod: ConsumptionMethod;
   phone: string;
@@ -23,6 +24,71 @@ export const criarPreferenciaMercadoPago = async ({
   consumptionMethod,
   phone,
 }: CriarPreferenciaMercadoPagoInput) => {
+  const numericOrderId = Number(orderId);
+
+  // Buscar pedido diretamente no banco para obter o total real e garantir integridade
+  let orderRecord: {
+    id: number;
+    total: number;
+    paymentStatus: string;
+    status: string;
+  } | null = null;
+
+  if (!Number.isNaN(numericOrderId)) {
+    try {
+      const [found] = await db
+        .select({
+          id: ordersTable.id,
+          total: ordersTable.total,
+          paymentStatus: ordersTable.paymentStatus,
+          status: ordersTable.status,
+        })
+        .from(ordersTable)
+        .where(eq(ordersTable.id, numericOrderId))
+        .limit(1);
+
+      if (found) {
+        orderRecord = found;
+      }
+    } catch (err) {
+      console.error("Aviso: Não foi possível buscar o pedido no banco antes da preferência:", err);
+    }
+  }
+
+  // Determinar o total oficial
+  const rawTotal =
+    orderRecord !== null
+      ? String(orderRecord.total ?? 0)
+      : typeof orderTotal === "string"
+        ? orderTotal.replace(",", ".")
+        : String(orderTotal ?? 0);
+
+  const numericUnitPrice = Number(Number(rawTotal).toFixed(2));
+
+  // Se o pedido tiver valor zero ou negativo (gratuito / 100% coberto por cupom ou cashback)
+  if (numericUnitPrice <= 0) {
+    if (orderRecord && orderRecord.paymentStatus !== "PAID") {
+      try {
+        await db
+          .update(ordersTable)
+          .set({
+            paymentStatus: "PAID",
+            updatedAt: new Date(),
+          })
+          .where(eq(ordersTable.id, numericOrderId));
+      } catch (err) {
+        console.error("Falha ao confirmar status de pedido gratuito:", err);
+      }
+    }
+    return { initPoint: null, isFree: true };
+  }
+
+  if (Number.isNaN(numericUnitPrice)) {
+    throw new Error(
+      `Valor total do pedido inválido para pagamento via Mercado Pago: ${orderTotal}`
+    );
+  }
+
   const accessToken =
     process.env.MERCADO_PAGO_ACCESS_TOKEN ??
     process.env.MERCADOPAGO_ACCESS_TOKEN;
@@ -36,18 +102,6 @@ export const criarPreferenciaMercadoPago = async ({
 
   if (!origin) {
     throw new Error("Não foi possível determinar a URL base da aplicação.");
-  }
-
-  const rawTotal =
-    typeof orderTotal === "string"
-      ? orderTotal.replace(",", ".")
-      : String(orderTotal ?? 0);
-  const numericUnitPrice = Number(Number(rawTotal).toFixed(2));
-
-  if (Number.isNaN(numericUnitPrice) || numericUnitPrice <= 0) {
-    throw new Error(
-      `Valor total do pedido inválido para pagamento via Mercado Pago: ${orderTotal}`
-    );
   }
 
   const searchParams = new URLSearchParams();

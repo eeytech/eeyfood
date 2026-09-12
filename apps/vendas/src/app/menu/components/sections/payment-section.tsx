@@ -47,6 +47,7 @@ interface PaymentSectionProps {
   needsChangeField: boolean;
   isActionDisabled: boolean;
   acceptMercadoPago: boolean;
+  isOrderFree?: boolean;
 }
 
 export const PaymentSection = ({
@@ -54,6 +55,7 @@ export const PaymentSection = ({
   needsChangeField,
   isActionDisabled,
   acceptMercadoPago,
+  isOrderFree,
 }: PaymentSectionProps) => {
   const visibleOptions = acceptMercadoPago
     ? paymentOptions
@@ -62,6 +64,21 @@ export const PaymentSection = ({
   return (
   <section aria-label="Pagamento">
     <SectionHeader icon={<HandCoinsIcon size={16} />} title="Pagamento" />
+    {isOrderFree && (
+      <div className="mb-3 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-3.5 flex items-center gap-2.5">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white font-bold text-xs">
+          ✓
+        </div>
+        <div>
+          <p className="text-xs font-bold text-emerald-900">
+            Pedido 100% coberto por benefícios/desconto
+          </p>
+          <p className="text-[11px] text-emerald-700">
+            Nenhum pagamento adicional é necessário. Clique em confirmar para concluir.
+          </p>
+        </div>
+      </div>
+    )}
     <div
       className={`space-y-3 transition-opacity duration-200 ${
         isActionDisabled ? "opacity-50 cursor-not-allowed" : ""

@@ -60,7 +60,7 @@ interface PedidoOfflineConcluido {
   phone: string;
   total: number;
   scheduledFor?: string;
-  paymentMethod: Extract<PaymentMethod, "DINHEIRO" | "CARTAO_PRESENCIAL">;
+  paymentMethod: PaymentMethod;
   changeFor?: number;
 }
 
@@ -486,13 +486,30 @@ export const FinishOrderSheet = ({
 
       trackPurchase({ orderId: Number(order.id), value: Number(order.total) });
 
+      const isOrderFree = Number(order.total) <= 0 || Boolean((order as { isFree?: boolean }).isFree);
+
+      if (isOrderFree) {
+        abandonedCartSessionIdRef.current = createAbandonedCartSessionId();
+        clearCart();
+        setPedidoOfflineConcluido({
+          phone: data.phone,
+          total: 0,
+          scheduledFor: order.scheduledFor
+            ? new Date(order.scheduledFor).toISOString()
+            : undefined,
+          paymentMethod: data.paymentMethod,
+          changeFor,
+        });
+        return;
+      }
+
       if (data.paymentMethod === "MERCADO_PAGO") {
         const orderSummary = products
           .map((product) => `${String(product.quantity)}x ${product.name}`)
           .join(", ")
           .slice(0, 240);
 
-        const { initPoint } = await criarPreferenciaMercadoPago({
+        const result = await criarPreferenciaMercadoPago({
           orderId: Number(order.id),
           orderTotal: Number(order.total),
           orderSummary,
@@ -501,9 +518,24 @@ export const FinishOrderSheet = ({
           phone: data.phone,
         });
 
+        if (result.isFree || !result.initPoint) {
+          abandonedCartSessionIdRef.current = createAbandonedCartSessionId();
+          clearCart();
+          setPedidoOfflineConcluido({
+            phone: data.phone,
+            total: 0,
+            scheduledFor: order.scheduledFor
+              ? new Date(order.scheduledFor).toISOString()
+              : undefined,
+            paymentMethod: data.paymentMethod,
+            changeFor,
+          });
+          return;
+        }
+
         abandonedCartSessionIdRef.current = createAbandonedCartSessionId();
         clearCart();
-        window.location.assign(initPoint);
+        window.location.assign(result.initPoint);
         return;
       }
 
@@ -607,6 +639,7 @@ export const FinishOrderSheet = ({
                         needsChangeField={needsChangeField}
                         isActionDisabled={isActionDisabled}
                         acceptMercadoPago={restaurant.acceptMercadoPago}
+                        isOrderFree={checkoutSummary.total <= 0}
                       />
 
                       <OrderSummarySection
@@ -635,7 +668,9 @@ export const FinishOrderSheet = ({
                   {isLoading ? (
                     <Loader2Icon className="animate-spin mr-2 h-4 w-4" />
                   ) : null}
-                  {paymentMethod === "MERCADO_PAGO" ? "Ir para Pagamento" : "Confirmar Pedido"}
+                  {paymentMethod === "MERCADO_PAGO" && checkoutSummary.total > 0
+                    ? "Ir para Pagamento"
+                    : "Confirmar Pedido"}
                 </Button>
                 <Button
                   className="w-full h-10 rounded-2xl text-slate-500 font-medium text-sm"
@@ -680,9 +715,11 @@ const OrderSuccessView = ({
           </SheetHeader>
           <div className="space-y-3 py-4">
             <div className="rounded-2xl border border-green-100 bg-green-50 p-3 text-sm text-green-900">
-              {pedidoOfflineConcluido.paymentMethod === "DINHEIRO"
-                ? "O pagamento será feito em dinheiro no balcão ou na entrega."
-                : "O pagamento será concluído na maquininha no balcão ou na entrega."}
+              {pedidoOfflineConcluido.total <= 0
+                ? "Pedido 100% coberto por benefícios/desconto. Nenhum pagamento adicional é necessário."
+                : pedidoOfflineConcluido.paymentMethod === "DINHEIRO"
+                  ? "O pagamento será feito em dinheiro no balcão ou na entrega."
+                  : "O pagamento será concluído na maquininha no balcão ou na entrega."}
             </div>
 
             <div className="rounded-2xl border bg-muted p-3 text-sm">

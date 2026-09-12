@@ -6,6 +6,9 @@ import {
   atualizarUsoEnderecoCliente,
   buscarRestaurantePorSlug,
   criarPedido,
+  db,
+  eq,
+  ordersTable,
   salvarOuAtualizarEnderecoCliente,
 } from "@/lib/db";
 import type { ConsumptionMethod, PaymentMethod } from "@/lib/db";
@@ -131,9 +134,25 @@ export const createOrder = async (input: CreateOrderInput) => {
   // Não bloqueia resposta ao cliente — falha silenciosa é aceitável aqui
   notificarNovoPedido({ orderId: order.id, restaurantSlug: input.slug });
 
+  const numTotal = Number(order.total);
+  const isFree = numTotal <= 0;
+
+  if (isFree && order.paymentStatus !== "PAID") {
+    try {
+      await db
+        .update(ordersTable)
+        .set({ paymentStatus: "PAID", updatedAt: new Date() })
+        .where(eq(ordersTable.id, order.id));
+      order.paymentStatus = "PAID";
+    } catch (error) {
+      console.error("Falha ao confirmar pagamento de pedido gratuito:", error);
+    }
+  }
+
   return {
     ...order,
-    total: Number(order.total),
+    total: numTotal,
+    isFree,
   };
 };
 

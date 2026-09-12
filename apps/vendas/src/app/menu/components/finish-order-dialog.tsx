@@ -144,7 +144,7 @@ interface PedidoOfflineConcluido {
   phone: string;
   total: number;
   scheduledFor?: string;
-  paymentMethod: Extract<PaymentMethod, "DINHEIRO" | "CARTAO_PRESENCIAL">;
+  paymentMethod: PaymentMethod;
   changeFor?: number;
 }
 
@@ -440,13 +440,30 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
         slug,
       });
 
+      const isOrderFree = Number(order.total) <= 0 || Boolean((order as { isFree?: boolean }).isFree);
+
+      if (isOrderFree) {
+        abandonedCartSessionIdRef.current = createAbandonedCartSessionId();
+        clearCart();
+        setPedidoOfflineConcluido({
+          phone: data.phone,
+          total: 0,
+          scheduledFor: order.scheduledFor
+            ? new Date(order.scheduledFor).toISOString()
+            : undefined,
+          paymentMethod: data.paymentMethod,
+          changeFor,
+        });
+        return;
+      }
+
       if (data.paymentMethod === "MERCADO_PAGO") {
         const orderSummary = products
           .map((product) => `${String(product.quantity)}x ${product.name}`)
           .join(", ")
           .slice(0, 240);
 
-        const { initPoint } = await criarPreferenciaMercadoPago({
+        const result = await criarPreferenciaMercadoPago({
           orderId: Number(order.id),
           orderTotal: Number(order.total),
           orderSummary,
@@ -455,9 +472,24 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
           phone: data.phone,
         });
 
+        if (result.isFree || !result.initPoint) {
+          abandonedCartSessionIdRef.current = createAbandonedCartSessionId();
+          clearCart();
+          setPedidoOfflineConcluido({
+            phone: data.phone,
+            total: 0,
+            scheduledFor: order.scheduledFor
+              ? new Date(order.scheduledFor).toISOString()
+              : undefined,
+            paymentMethod: data.paymentMethod,
+            changeFor,
+          });
+          return;
+        }
+
         abandonedCartSessionIdRef.current = createAbandonedCartSessionId();
         clearCart();
-        window.location.assign(initPoint);
+        window.location.assign(result.initPoint);
         return;
       }
 
@@ -505,9 +537,11 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                   </SheetHeader>
                   <div className="space-y-3 py-4">
                     <div className="rounded-2xl border border-green-100 bg-green-50 p-3 text-sm text-green-900">
-                      {pedidoOfflineConcluido.paymentMethod === "DINHEIRO"
-                        ? "O pagamento sera feito em dinheiro no balcao ou na entrega."
-                        : "O pagamento sera concluido na maquininha no balcao ou na entrega."}
+                      {pedidoOfflineConcluido.total <= 0
+                        ? "Pedido 100% coberto por benefícios/desconto. Nenhum pagamento adicional é necessário."
+                        : pedidoOfflineConcluido.paymentMethod === "DINHEIRO"
+                          ? "O pagamento sera feito em dinheiro no balcao ou na entrega."
+                          : "O pagamento sera concluido na maquininha no balcao ou na entrega."}
                     </div>
 
                     <div className="rounded-2xl border bg-muted p-3 text-sm">
@@ -842,6 +876,22 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                         )}
                       </div>
 
+                      {checkoutSummary.total <= 0 && (
+                        <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-3.5 flex items-center gap-2.5">
+                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white font-bold text-xs">
+                            ✓
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-emerald-900">
+                              Pedido 100% coberto por benefícios/desconto
+                            </p>
+                            <p className="text-[11px] text-emerald-700">
+                              Nenhum pagamento adicional é necessário. Clique em confirmar para concluir.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
                       <FormField
                         control={form.control}
                         name="paymentMethod"
@@ -973,7 +1023,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                   {isLoading ? (
                     <Loader2Icon className="animate-spin h-4 w-4 mr-2" />
                   ) : null}
-                  {paymentMethod === "MERCADO_PAGO"
+                  {paymentMethod === "MERCADO_PAGO" && checkoutSummary.total > 0
                     ? "Ir para pagamento"
                     : "Confirmar pedido"}
                 </Button>
