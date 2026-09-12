@@ -65,6 +65,10 @@ export const criarPreferenciaMercadoPago = async ({
 
   const numericUnitPrice = Number(Number(rawTotal).toFixed(2));
 
+  console.log(
+    `[criarPreferenciaMercadoPago] orderId: ${orderId}, orderTotal recebido: ${orderTotal}, orderRecord.total: ${orderRecord?.total}, rawTotal: ${rawTotal}, numericUnitPrice: ${numericUnitPrice}`,
+  );
+
   // Se o pedido tiver valor zero ou negativo (gratuito / 100% coberto por cupom ou cashback)
   if (numericUnitPrice <= 0) {
     if (orderRecord && orderRecord.paymentStatus !== "PAID") {

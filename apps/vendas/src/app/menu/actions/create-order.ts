@@ -137,6 +137,11 @@ export const createOrder = async (input: CreateOrderInput) => {
   const numTotal = Number(order.total);
   const isFree = numTotal <= 0;
 
+  console.log(
+    `[createOrder] Pedido #${order.id} criado. Total: ${order.total} (numTotal: ${numTotal}, isFree: ${isFree}, paymentMethod: ${input.paymentMethod}). Produtos:`,
+    JSON.stringify(input.products),
+  );
+
   if (isFree && order.paymentStatus !== "PAID") {
     try {
       await db
