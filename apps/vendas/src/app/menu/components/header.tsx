@@ -105,17 +105,6 @@ const RestaurantHeader = ({
           </div>
         </div>
       )}
-
-      <div className="absolute inset-x-0 bottom-10 z-10 mx-auto max-w-[1600px] px-5 sm:px-6 lg:px-8">
-        <div className="max-w-3xl">
-          <p className={`font-medium uppercase tracking-[0.28em] text-white/80 ${isKioskMode ? "text-sm" : "text-base"}`}>
-            Cardápio digital
-          </p>
-          <h1 className={`mt-3 font-semibold tracking-tight text-white drop-shadow-sm ${isKioskMode ? "text-3xl" : "text-4xl sm:text-5xl"}`}>
-            {restaurant.name}
-          </h1>
-        </div>
-      </div>
     </div>
   );
 };

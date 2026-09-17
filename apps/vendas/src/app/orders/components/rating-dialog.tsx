@@ -1,8 +1,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2Icon, StarIcon } from "lucide-react";
-import { useState } from "react";
+import { CheckCircle2Icon, Loader2Icon, StarIcon } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
@@ -33,11 +33,38 @@ interface RatingDialogProps {
   restaurantName: string;
   customerName: string;
   slug: string;
+  isRated?: boolean;
+  onRatingSuccess?: () => void;
 }
 
-export const RatingDialog = ({ orderId, restaurantId, restaurantName, customerName, slug }: RatingDialogProps) => {
+export const RatingDialog = ({
+  orderId,
+  restaurantId,
+  restaurantName,
+  customerName,
+  slug,
+  isRated = false,
+  onRatingSuccess,
+}: RatingDialogProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsLoading] = useState(false);
+  const [hasRated, setHasRated] = useState(isRated);
+
+  useEffect(() => {
+    setHasRated(isRated);
+  }, [isRated]);
+
+  useEffect(() => {
+    if (!hasRated && typeof window !== "undefined") {
+      try {
+        if (localStorage.getItem(`order_rated_${orderId}`) === "true") {
+          setHasRated(true);
+        }
+      } catch {
+        // Ignora falhas de acesso ao localStorage
+      }
+    }
+  }, [hasRated, orderId]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -59,13 +86,44 @@ export const RatingDialog = ({ orderId, restaurantId, restaurantName, customerNa
         comment: values.comment,
       });
       toast.success("Obrigado pela sua avaliação!");
+      setHasRated(true);
+      try {
+        localStorage.setItem(`order_rated_${orderId}`, "true");
+      } catch {
+        // Ignora falhas de acesso ao localStorage
+      }
       setIsOpen(false);
-    } catch {
+      onRatingSuccess?.();
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message.includes("já foi avaliado")) {
+        toast.info("Este pedido já foi avaliado.");
+        setHasRated(true);
+        try {
+          localStorage.setItem(`order_rated_${orderId}`, "true");
+        } catch {
+          // Ignora falhas de acesso ao localStorage
+        }
+        setIsOpen(false);
+        onRatingSuccess?.();
+        return;
+      }
       toast.error("Erro ao enviar avaliação. Tente novamente.");
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (hasRated) {
+    return (
+      <Button
+        disabled
+        className="w-full rounded-2xl bg-slate-100 text-slate-400 font-bold cursor-not-allowed border border-slate-200/80 shadow-none hover:bg-slate-100 transition-none"
+      >
+        <CheckCircle2Icon className="mr-2 h-4 w-4 text-emerald-500" />
+        Pedido Avaliado
+      </Button>
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>

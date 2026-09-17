@@ -260,6 +260,7 @@ export interface OrderComItens extends Order {
       orderProductOptions: OrderProductOption[];
     }
   >;
+  hasRating?: boolean;
 }
 
 export interface PedidoRecebimento extends Order {

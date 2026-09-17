@@ -1098,11 +1098,29 @@ export const buscarPedidosPorTelefone = async (
     optionsMap.set(opt.orderProductId, list);
   });
 
+  const ratings =
+    orderIds.length > 0
+      ? await db
+          .select({
+            orderId: orderRatingsTable.orderId,
+          })
+          .from(orderRatingsTable)
+          .where(
+            and(
+              inArray(orderRatingsTable.orderId, orderIds),
+              eq(orderRatingsTable.isActive, true),
+            ),
+          )
+      : [];
+
+  const ratedOrderIds = new Set(ratings.map((r) => r.orderId));
+
   const pedidosNormalizados = pedidos.map(({ order, restaurant, diningTable, courier }) => ({
     ...order,
     restaurant,
     diningTable: diningTable ? diningTable : null,
     courier: courier ? courier : null,
+    hasRating: ratedOrderIds.has(order.id),
   }));
 
   return agruparItensPorPedido(

@@ -118,6 +118,7 @@ export interface OrderComItens extends Order {
         product: Product;
         orderProductOptions: OrderProductOption[];
     }>;
+    hasRating?: boolean;
 }
 export interface PedidoRecebimento extends Order {
     restaurant: Pick<Restaurant, "id" | "name" | "slug">;

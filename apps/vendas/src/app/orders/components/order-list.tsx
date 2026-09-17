@@ -1,9 +1,10 @@
 "use client";
 
-import { ChevronLeftIcon, MapPinIcon,ScrollTextIcon } from "lucide-react";
+import { ChevronLeftIcon, MapPinIcon, ScrollTextIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -67,9 +68,11 @@ const ACTIVE_STATUSES: OrderStatus[] = [
 
 interface OrderCardProps {
   order: OrderComItens;
+  isRated?: boolean;
+  onRatingSuccess?: (orderId: number) => void;
 }
 
-const OrderCard = ({ order }: OrderCardProps) => (
+const OrderCard = ({ order, isRated, onRatingSuccess }: OrderCardProps) => (
   <Card className="overflow-hidden rounded-[20px] border-slate-200 shadow-sm transition hover:shadow-md">
     <CardContent className="space-y-3.5 p-4">
       <div className="flex items-start justify-between gap-4">
@@ -145,6 +148,8 @@ const OrderCard = ({ order }: OrderCardProps) => (
           restaurantName={order.restaurant.name}
           customerName={order.customerName}
           slug={order.restaurant.slug}
+          isRated={isRated ?? order.hasRating}
+          onRatingSuccess={() => onRatingSuccess?.(order.id)}
         />
       )}
 
@@ -170,6 +175,11 @@ const OrderCard = ({ order }: OrderCardProps) => (
 
 const OrderList = ({ orders, isSidePanel, onBackClick }: OrderListProps) => {
   const router = useRouter();
+  const [ratedOrderIds, setRatedOrderIds] = useState<Set<number>>(new Set());
+
+  const handleRatingSuccess = (orderId: number) => {
+    setRatedOrderIds((prev) => new Set(prev).add(orderId));
+  };
 
   const activeOrders = orders
     .filter((o) => ACTIVE_STATUSES.includes(o.status))
@@ -238,7 +248,12 @@ const OrderList = ({ orders, isSidePanel, onBackClick }: OrderListProps) => {
               </h3>
               <div className="grid gap-3.5 sm:grid-cols-1">
                 {activeOrders.map((order) => (
-                  <OrderCard key={order.id} order={order} />
+                  <OrderCard
+                    key={order.id}
+                    order={order}
+                    isRated={order.hasRating || ratedOrderIds.has(order.id)}
+                    onRatingSuccess={handleRatingSuccess}
+                  />
                 ))}
               </div>
             </div>
@@ -250,7 +265,12 @@ const OrderList = ({ orders, isSidePanel, onBackClick }: OrderListProps) => {
               </h3>
               <div className="grid gap-3.5 sm:grid-cols-1">
                 {pastOrders.map((order) => (
-                  <OrderCard key={order.id} order={order} />
+                  <OrderCard
+                    key={order.id}
+                    order={order}
+                    isRated={order.hasRating || ratedOrderIds.has(order.id)}
+                    onRatingSuccess={handleRatingSuccess}
+                  />
                 ))}
               </div>
             </div>
