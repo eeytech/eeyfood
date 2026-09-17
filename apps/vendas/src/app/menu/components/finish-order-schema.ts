@@ -42,12 +42,22 @@ export const formSchema = z
     deliveryAddress: z.string().trim().optional(),
   })
   .superRefine((values, context) => {
-    if (values.consumptionMethod === "DINE_IN" && !values.diningTableId) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["diningTableId"],
-        message: "Selecione a mesa para o seu pedido.",
-      });
+    if (values.consumptionMethod === "DINE_IN") {
+      if (!values.diningTableId) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["diningTableId"],
+          message: "Selecione a mesa para o seu pedido.",
+        });
+      }
+
+      if (values.paymentMethod === "MERCADO_PAGO") {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["paymentMethod"],
+          message: "Mercado Pago não está disponível para consumo no local.",
+        });
+      }
     }
 
     if (values.consumptionMethod === "DELIVERY") {

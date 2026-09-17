@@ -24,6 +24,10 @@ export const criarPreferenciaMercadoPago = async ({
   consumptionMethod,
   phone,
 }: CriarPreferenciaMercadoPagoInput) => {
+  if (consumptionMethod === "DINE_IN") {
+    throw new Error("Pagamento via Mercado Pago não está disponível para consumo no local.");
+  }
+
   const numericOrderId = Number(orderId);
 
   // Buscar pedido diretamente no banco para obter o total real e garantir integridade

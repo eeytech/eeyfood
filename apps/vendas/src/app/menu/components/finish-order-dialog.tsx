@@ -217,6 +217,15 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
   const [schedulingSlots, setSchedulingSlots] = useState<SchedulingSlotGroup[]>([]);
   const abandonedCartSessionIdRef = useRef(createAbandonedCartSessionId());
 
+  const consumptionMethod: ConsumptionMethod =
+    searchParams.get("consumptionMethod") === "DINE_IN"
+      ? "DINE_IN"
+      : searchParams.get("consumptionMethod") === "DELIVERY"
+        ? "DELIVERY"
+        : "TAKEAWAY";
+  const allowsScheduling = consumptionMethod !== "DINE_IN";
+  const schedulingLabel = getSchedulingLabel(consumptionMethod);
+
   const form = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -225,7 +234,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
       couponCode: "",
       fulfillmentTiming: "ASAP",
       scheduledFor: "",
-      paymentMethod: "MERCADO_PAGO",
+      paymentMethod: consumptionMethod === "DINE_IN" ? "DINHEIRO" : "MERCADO_PAGO",
       changeFor: "",
     },
   });
@@ -237,15 +246,6 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
   const fulfillmentTiming = form.watch("fulfillmentTiming");
   const watchedScheduledFor = form.watch("scheduledFor");
   const needsChangeField = paymentMethod === "DINHEIRO";
-
-  const consumptionMethod: ConsumptionMethod =
-    searchParams.get("consumptionMethod") === "DINE_IN"
-      ? "DINE_IN"
-      : searchParams.get("consumptionMethod") === "DELIVERY"
-        ? "DELIVERY"
-        : "TAKEAWAY";
-  const allowsScheduling = consumptionMethod !== "DINE_IN";
-  const schedulingLabel = getSchedulingLabel(consumptionMethod);
 
   const checkoutSummary = benefits ?? {
     subtotal: total,
@@ -278,6 +278,12 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
     setBenefits(null);
     setUseWalletBalance(false);
   }, [products, watchedPhone, watchedCouponCode]);
+
+  useEffect(() => {
+    if (consumptionMethod === "DINE_IN" && form.getValues("paymentMethod") === "MERCADO_PAGO") {
+      form.setValue("paymentMethod", "DINHEIRO");
+    }
+  }, [consumptionMethod, form]);
 
   useEffect(() => {
     if (!open || products.length === 0) {
@@ -900,7 +906,9 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                             <FormLabel className="text-sm">Forma de pagamento</FormLabel>
                             <FormControl>
                               <div className="grid gap-2.5">
-                                {paymentOptions.map((option) => (
+                                {paymentOptions
+                                  .filter((option) => consumptionMethod !== "DINE_IN" || option.value !== "MERCADO_PAGO")
+                                  .map((option) => (
                                   <button
                                     key={option.value}
                                     type="button"

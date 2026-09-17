@@ -112,6 +112,9 @@ export const FinishOrderSheet = ({
         ? "DELIVERY"
         : "TAKEAWAY";
 
+  const allowsMercadoPago =
+    restaurant.acceptMercadoPago && consumptionMethod !== "DINE_IN";
+
   const abandonedCartSessionIdRef = useRef(createAbandonedCartSessionId());
   const validateBenefitsRef = useRef<(() => Promise<void>) | null>(null);
 
@@ -123,7 +126,7 @@ export const FinishOrderSheet = ({
       couponCode: "",
       fulfillmentTiming: "ASAP",
       scheduledFor: "",
-      paymentMethod: restaurant.acceptMercadoPago ? "MERCADO_PAGO" : "DINHEIRO",
+      paymentMethod: allowsMercadoPago ? "MERCADO_PAGO" : "DINHEIRO",
       changeFor: "",
       consumptionMethod,
       diningTableId: undefined,
@@ -257,6 +260,13 @@ export const FinishOrderSheet = ({
       setUseWalletBalance(false);
     }
   }, [watchedCouponCode]);
+
+  // Se Mercado Pago não for permitido (ou for consumo no local), garante método alternativo
+  useEffect(() => {
+    if (!allowsMercadoPago && form.getValues("paymentMethod") === "MERCADO_PAGO") {
+      form.setValue("paymentMethod", "DINHEIRO");
+    }
+  }, [allowsMercadoPago, form]);
 
   // Keep ref to latest validate fn so the debounce always calls fresh closure
   // silent=true: auto-trigger failures don't show invasive toasts
@@ -638,7 +648,7 @@ export const FinishOrderSheet = ({
                         form={form}
                         needsChangeField={needsChangeField}
                         isActionDisabled={isActionDisabled}
-                        acceptMercadoPago={restaurant.acceptMercadoPago}
+                        acceptMercadoPago={allowsMercadoPago}
                         isOrderFree={checkoutSummary.total <= 0}
                       />
 

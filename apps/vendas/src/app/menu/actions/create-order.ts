@@ -62,8 +62,13 @@ export const createOrder = async (input: CreateOrderInput) => {
     throw new Error("Este restaurante não aceita uso de saldo cashback no momento.");
   }
 
-  if (input.paymentMethod === "MERCADO_PAGO" && !restaurant.acceptMercadoPago) {
-    throw new Error("Este restaurante não aceita pagamento via Mercado Pago no momento.");
+  if (input.paymentMethod === "MERCADO_PAGO") {
+    if (!restaurant.acceptMercadoPago) {
+      throw new Error("Este restaurante não aceita pagamento via Mercado Pago no momento.");
+    }
+    if (input.consumptionMethod === "DINE_IN") {
+      throw new Error("Pagamento via Mercado Pago não está disponível para consumo no local.");
+    }
   }
 
   const consumptionMethodAllowed =
