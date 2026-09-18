@@ -9,9 +9,14 @@ export const getOptionalStringValue = (value: FormDataEntryValue | null) => {
   return normalizedValue.length > 0 ? normalizedValue : undefined;
 };
 
-export const getNumberValue = (value: FormDataEntryValue | null) => {
+export const getNumberValue = (
+  value: FormDataEntryValue | null,
+  defaultValue = 0,
+) => {
   const normalizedValue = getStringValue(value).replace(",", ".");
-  return Number(normalizedValue);
+  if (!normalizedValue) return defaultValue;
+  const num = Number(normalizedValue);
+  return isNaN(num) ? defaultValue : num;
 };
 
 export const getBooleanValue = (value: FormDataEntryValue | null) => {
