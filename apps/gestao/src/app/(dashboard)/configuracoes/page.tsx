@@ -1,4 +1,4 @@
-import { ClockIcon, Settings2Icon } from "lucide-react";
+import { CalendarClockIcon, ClockIcon, Settings2Icon } from "lucide-react";
 import { notFound } from "next/navigation";
 
 import { updateOperatingHoursAction, updateRestaurantStatusAction } from "@/app/(dashboard)/actions";
@@ -8,6 +8,7 @@ import { SubmitButton } from "@/components/ui/submit-button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { buscarAiSettingsPorSlug, buscarConfiguracoesRestaurante } from "@/lib/admin-queries";
 
+import { OrderSchedulingForm } from "./order-scheduling-form";
 import { RestaurantDetailsForm } from "./restaurant-details-form";
 import { RestaurantFeaturesForm } from "./restaurant-features-form";
 
@@ -87,6 +88,7 @@ const ConfiguracoesPage = async ({ params }: ConfiguracoesPageProps) => {
               isTakeawayEnabled: restaurant.isTakeawayEnabled,
               isDineInEnabled: restaurant.isDineInEnabled,
               isBotActive: aiSettings?.isBotActive ?? false,
+              isOrderSchedulingEnabled: restaurant.isOrderSchedulingEnabled,
             }}
           />
         </TabsContent>
@@ -222,6 +224,32 @@ const ConfiguracoesPage = async ({ params }: ConfiguracoesPageProps) => {
                   Salvar Horários
                 </SubmitButton>
               </form>
+            </CardContent>
+          </Card>
+
+          <Card className="border-white/80 bg-white/90">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarClockIcon size={16} />
+                Agendamento de Pedidos
+              </CardTitle>
+              <CardDescription>
+                Configure a antecedência, intervalos dos horários e regras para agendamento (Delivery e Retirada).
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <OrderSchedulingForm
+                slug={slug}
+                initialValues={{
+                  isOrderSchedulingEnabled: restaurant.isOrderSchedulingEnabled,
+                  schedulingMinAdvanceMinutes: restaurant.schedulingMinAdvanceMinutes,
+                  schedulingSlotIntervalMinutes: restaurant.schedulingSlotIntervalMinutes,
+                  schedulingMaxDays: restaurant.schedulingMaxDays,
+                  schedulingHoursMode: restaurant.schedulingHoursMode,
+                  schedulingCustomStartTime: restaurant.schedulingCustomStartTime,
+                  schedulingCustomEndTime: restaurant.schedulingCustomEndTime,
+                }}
+              />
             </CardContent>
           </Card>
         </TabsContent>

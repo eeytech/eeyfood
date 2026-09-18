@@ -29,6 +29,7 @@ interface RestaurantFeaturesFormProps {
     isTakeawayEnabled: boolean;
     isDineInEnabled: boolean;
     isBotActive: boolean;
+    isOrderSchedulingEnabled: boolean;
   };
 }
 
@@ -67,6 +68,9 @@ export const RestaurantFeaturesForm = ({
     initialValues.isDineInEnabled,
   );
   const [isBotActive, setIsBotActive] = useState(initialValues.isBotActive);
+  const [isOrderSchedulingEnabled, setIsOrderSchedulingEnabled] = useState(
+    initialValues.isOrderSchedulingEnabled,
+  );
   const [isPending, startTransition] = useTransition();
 
   const handleConsumptionToggle = (
@@ -98,6 +102,7 @@ export const RestaurantFeaturesForm = ({
     if (isTakeawayEnabled) formData.append("isTakeawayEnabled", "on");
     if (isDineInEnabled) formData.append("isDineInEnabled", "on");
     if (isBotActive) formData.append("isBotActive", "on");
+    if (isOrderSchedulingEnabled) formData.append("isOrderSchedulingEnabled", "on");
 
     startTransition(async () => {
       try {
@@ -140,6 +145,14 @@ export const RestaurantFeaturesForm = ({
         "Exibe miniaturas de imagens ao lado de cada adicional no app do cliente.",
       checked: showOptionImages,
       onChange: setShowOptionImages,
+    },
+    {
+      id: "isOrderSchedulingEnabled",
+      label: "Agendamento de Pedidos",
+      description:
+        "Permite que clientes agendem data e hora para entrega ou retirada.",
+      checked: isOrderSchedulingEnabled,
+      onChange: setIsOrderSchedulingEnabled,
     },
   ];
 

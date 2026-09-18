@@ -263,6 +263,14 @@ export const restaurantsTable = pgTable("Restaurant", {
   scaleProtocol: text("scaleProtocol"), // "TOLEDO" | "FILIZOLA" | "ELGIN" | null
   scaleBaudRate: integer("scaleBaudRate").default(9600),
   drawerPulseHex: text("drawerPulseHex"), // hex bytes sent to printer to open drawer
+  // Order scheduling configuration
+  isOrderSchedulingEnabled: boolean("isOrderSchedulingEnabled").default(true).notNull(),
+  schedulingMinAdvanceMinutes: integer("schedulingMinAdvanceMinutes").default(45).notNull(),
+  schedulingSlotIntervalMinutes: integer("schedulingSlotIntervalMinutes").default(30).notNull(),
+  schedulingMaxDays: integer("schedulingMaxDays").default(3).notNull(),
+  schedulingHoursMode: text("schedulingHoursMode").default("OPERATING_HOURS").notNull(), // "OPERATING_HOURS" | "CUSTOM"
+  schedulingCustomStartTime: text("schedulingCustomStartTime").default("11:00"),
+  schedulingCustomEndTime: text("schedulingCustomEndTime").default("23:00"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });

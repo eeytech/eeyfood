@@ -146,10 +146,13 @@ export const FinishOrderSheet = ({
   const fulfillmentTiming = form.watch("fulfillmentTiming");
   const watchedScheduledFor = form.watch("scheduledFor");
   const needsChangeField = paymentMethod === "DINHEIRO";
-  const allowsScheduling = consumptionMethod !== "DINE_IN";
+  const allowsScheduling =
+    restaurant.isOrderSchedulingEnabled !== false && consumptionMethod !== "DINE_IN";
   const schedulingLabel = getSchedulingLabel(consumptionMethod);
   const { isOpen } = isRestaurantOpen(restaurant.status, restaurant.operatingHours);
-  const isActionDisabled = !isOpen && fulfillmentTiming !== "SCHEDULED";
+  const isActionDisabled = allowsScheduling
+    ? !isOpen && fulfillmentTiming !== "SCHEDULED"
+    : !isOpen;
 
   // When benefits are available (phone validated), use them fully.
   // Otherwise show the raw cart total + proactively fetched upsell rule.
@@ -167,8 +170,15 @@ export const FinishOrderSheet = ({
   };
 
   useEffect(() => {
+    if (!allowsScheduling && form.getValues("fulfillmentTiming") !== "ASAP") {
+      form.setValue("fulfillmentTiming", "ASAP");
+      form.setValue("scheduledFor", "");
+    }
+  }, [allowsScheduling, form]);
+
+  useEffect(() => {
     const fetchSlots = async () => {
-      if (fulfillmentTiming === "SCHEDULED" && schedulingSlots.length === 0) {
+      if (allowsScheduling && fulfillmentTiming === "SCHEDULED" && schedulingSlots.length === 0) {
         const slots = await getAvailableSchedulingSlots(slug);
         setSchedulingSlots(slots);
 
@@ -179,7 +189,7 @@ export const FinishOrderSheet = ({
     };
 
     void fetchSlots();
-  }, [fulfillmentTiming, slug, schedulingSlots.length, form]);
+  }, [allowsScheduling, fulfillmentTiming, slug, schedulingSlots.length, form]);
 
   // Fetch dining tables when sheet opens for DINE_IN orders
   useEffect(() => {
@@ -610,7 +620,7 @@ export const FinishOrderSheet = ({
                     <div className="space-y-8 py-6">
                       <IdentificationSection form={form} />
 
-                      {allowsScheduling && (
+                      {(consumptionMethod === "DELIVERY" || allowsScheduling) && (
                         <FulfillmentSection
                           form={form}
                           consumptionMethod={consumptionMethod}
@@ -620,6 +630,7 @@ export const FinishOrderSheet = ({
                           isLoading={isLoading}
                           customerAddresses={customerAddresses}
                           isLoadingAddresses={isLoadingAddresses}
+                          allowsScheduling={allowsScheduling}
                         />
                       )}
 
@@ -667,7 +678,9 @@ export const FinishOrderSheet = ({
                     role="alert"
                     className="rounded-xl bg-rose-50 p-2 text-center text-xs font-semibold text-rose-600 border border-rose-100 mb-1"
                   >
-                    O restaurante está fechado e não aceita pedidos imediatos. Agende para continuar.
+                    {allowsScheduling
+                      ? "O restaurante está fechado e não aceita pedidos imediatos. Agende para continuar."
+                      : "O restaurante está fechado no momento e não está aceitando pedidos."}
                   </p>
                 )}
                 <Button

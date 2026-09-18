@@ -337,7 +337,10 @@ const normalizarNomeLead = (name?: string) => {
 const validarAgendamentoPedido = ({
   consumptionMethod,
   scheduledFor,
-}: Pick<CriarPedidoInput, "consumptionMethod" | "scheduledFor">) => {
+  restaurant,
+}: Pick<CriarPedidoInput, "consumptionMethod" | "scheduledFor"> & {
+  restaurant?: Restaurant | null;
+}) => {
   if (!scheduledFor) {
     return null;
   }
@@ -346,9 +349,16 @@ const validarAgendamentoPedido = ({
     throw new Error("Pedidos no salão não podem ser agendados.");
   }
 
+  if (restaurant && restaurant.isOrderSchedulingEnabled === false) {
+    throw new Error("O agendamento de pedidos está desativado para este estabelecimento.");
+  }
+
   const now = new Date();
-  const minimumLeadTimeInMs = 15 * 60 * 1000;
-  const maximumWindowInMs = 30 * 24 * 60 * 60 * 1000;
+  const minLeadMinutes = restaurant?.schedulingMinAdvanceMinutes ?? 15;
+  // Margem de 2 minutos para compensar latência de envio
+  const minimumLeadTimeInMs = Math.max(5, minLeadMinutes - 2) * 60 * 1000;
+  const maxDays = restaurant?.schedulingMaxDays ?? 30;
+  const maximumWindowInMs = (maxDays + 1) * 24 * 60 * 60 * 1000;
   const scheduledTime = scheduledFor.getTime();
 
   if (Number.isNaN(scheduledTime)) {
@@ -357,12 +367,12 @@ const validarAgendamentoPedido = ({
 
   if (scheduledTime < now.getTime() + minimumLeadTimeInMs) {
     throw new Error(
-      "O agendamento precisa ter pelo menos 15 minutos de antecedência.",
+      `O agendamento precisa ter pelo menos ${minLeadMinutes} minutos de antecedência.`,
     );
   }
 
   if (scheduledTime > now.getTime() + maximumWindowInMs) {
-    throw new Error("O agendamento pode ser feito em até 30 dias.");
+    throw new Error(`O agendamento pode ser feito em até ${maxDays} dias.`);
   }
 
   return scheduledFor;
@@ -451,6 +461,7 @@ export const salvarCarrinhoAbandonado = async (
     ? validarAgendamentoPedido({
         consumptionMethod: input.consumptionMethod,
         scheduledFor: input.scheduledFor,
+        restaurant,
       })
     : null;
 
@@ -687,6 +698,12 @@ const carregarContextoPedidoCalculado = async (
   ]);
 
   const { isOpen } = isRestaurantOpen(restaurant.status, operatingHours);
+
+  if (isScheduled && restaurant.isOrderSchedulingEnabled === false) {
+    throw new Error(
+      "O agendamento de pedidos está desativado para este estabelecimento.",
+    );
+  }
 
   if (!isOpen && !isScheduled) {
     throw new Error(
@@ -1207,6 +1224,7 @@ export const criarPedido = async (input: CriarPedidoInput): Promise<Order> => {
   const scheduledFor = validarAgendamentoPedido({
     consumptionMethod: input.consumptionMethod,
     scheduledFor: input.scheduledFor,
+    restaurant: contexto.restaurant,
   });
   const estimatedProfit = arredondarMoeda(
     contexto.total - contexto.estimatedCost,

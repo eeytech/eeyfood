@@ -6,7 +6,7 @@ import { buscarGruposAdicionaisDoRestaurante, buscarProdutoComOpcionaisGestao } 
 import type { InventoryItemType, UnitOfMeasure } from "@fsw/db";
 import { aiSettingsTable, and, buscarRestaurantePorSlug, db, eq, financialCategoriesTable, financialTransactionsTable, inventoryBatchesTable, inventoryItemsTable, inventoryLossesTable, menuCategoriesTable, operatingHoursTable, productOptionGroupsTable, productOptionsTable, productToOptionGroupsTable, productsTable, purchaseInvoicesTable, recipeItemsTable, restaurantsTable, stockMovementsTable, suppliersTable } from "@fsw/db";
 import type { InventoryItem, InventoryLossReason, RecipeItem } from "@fsw/db";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 
 import {
@@ -131,6 +131,9 @@ const revalidateRestaurantPaths = (slug: string) => {
   revalidatePath(`/${slug}/relatorios`);
   revalidatePath(`/${slug}/configuracoes`);
   revalidatePath(`/${slug}/menu`, "page");
+  try {
+    revalidateTag(`restaurant-menu:${slug}`);
+  } catch {}
 };
 
 const getRestaurantOrThrow = async (slug: string) => {
@@ -755,6 +758,10 @@ export const updateRestaurantFeaturesAction = async (
     throw new Error("O estabelecimento deve manter pelo menos um método de consumo ativo.");
   }
 
+  const isOrderSchedulingEnabled = formData.has("isOrderSchedulingEnabled")
+    ? getBooleanValue(formData.get("isOrderSchedulingEnabled"))
+    : restaurant.isOrderSchedulingEnabled;
+
   await db
     .update(restaurantsTable)
     .set({
@@ -765,6 +772,7 @@ export const updateRestaurantFeaturesAction = async (
       isDeliveryEnabled,
       isTakeawayEnabled,
       isDineInEnabled,
+      isOrderSchedulingEnabled,
       updatedAt: new Date(),
     })
     .where(eq(restaurantsTable.id, restaurant.id));
@@ -776,6 +784,37 @@ export const updateRestaurantFeaturesAction = async (
       target: aiSettingsTable.restaurantId,
       set: { isBotActive, updatedAt: new Date() },
     });
+
+  revalidateRestaurantPaths(slug);
+};
+
+export const updateOrderSchedulingAction = async (
+  slug: string,
+  formData: FormData,
+) => {
+  const restaurant = await getRestaurantOrThrow(slug);
+
+  const isOrderSchedulingEnabled = getBooleanValue(formData.get("isOrderSchedulingEnabled"));
+  const schedulingMinAdvanceMinutes = Math.max(5, getNumberValue(formData.get("schedulingMinAdvanceMinutes"), 45));
+  const schedulingSlotIntervalMinutes = Math.max(5, getNumberValue(formData.get("schedulingSlotIntervalMinutes"), 30));
+  const schedulingMaxDays = Math.max(1, Math.min(30, getNumberValue(formData.get("schedulingMaxDays"), 3)));
+  const schedulingHoursMode = getStringValue(formData.get("schedulingHoursMode")) === "CUSTOM" ? "CUSTOM" : "OPERATING_HOURS";
+  const schedulingCustomStartTime = getStringValue(formData.get("schedulingCustomStartTime")) || "11:00";
+  const schedulingCustomEndTime = getStringValue(formData.get("schedulingCustomEndTime")) || "23:00";
+
+  await db
+    .update(restaurantsTable)
+    .set({
+      isOrderSchedulingEnabled,
+      schedulingMinAdvanceMinutes,
+      schedulingSlotIntervalMinutes,
+      schedulingMaxDays,
+      schedulingHoursMode,
+      schedulingCustomStartTime,
+      schedulingCustomEndTime,
+      updatedAt: new Date(),
+    })
+    .where(eq(restaurantsTable.id, restaurant.id));
 
   revalidateRestaurantPaths(slug);
 };
