@@ -32,7 +32,7 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
 
   const content = (
     <>
-      <div className={variant === "sheet" ? "flex flex-col gap-1 px-6 pt-0" : "flex flex-col gap-1 px-4 pt-6"}>
+      <div className={variant === "sheet" ? "flex flex-col gap-1 px-6 pt-0 shrink-0" : "flex flex-col gap-1 px-4 pt-6 shrink-0"}>
         <div className="flex items-center gap-2">
           <ShoppingBagIcon size={18} className="text-primary" aria-hidden="true" />
           <h3 className="text-lg font-bold tracking-tight text-slate-900">Seu pedido</h3>
@@ -45,7 +45,7 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
       </div>
 
       {showFreeDelivery && (
-        <div className={variant === "sheet" ? "px-6 pb-2 pt-3" : "px-4 pb-1 pt-3"}>
+        <div className={variant === "sheet" ? "px-6 pb-2 pt-3 shrink-0" : "px-4 pb-1 pt-3 shrink-0"}>
           {freeDeliveryAchieved ? (
             <div className="flex items-center gap-2 rounded-2xl bg-emerald-50 px-4 py-3">
               <CheckCircle2Icon size={16} className="shrink-0 text-emerald-600" aria-hidden="true" />
@@ -75,14 +75,9 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
       )}
 
       {hasProducts && (
-        <div className={variant === "sheet" ? "flex-1 overflow-hidden px-6 pt-4" : "min-h-0 flex-1 overflow-hidden px-0 pt-3"}>
+        <div className={variant === "sheet" ? "flex-1 min-h-0 overflow-hidden px-6 pt-4" : "min-h-0 flex-1 overflow-hidden px-0 pt-3"}>
           <ScrollArea
-            hideScrollbar={variant === "sidebar"}
-            className={
-              variant === "sidebar"
-                ? "h-full w-full [&>[data-radix-scroll-area-viewport]>div]:!block [&>[data-radix-scroll-area-viewport]>div]:!w-full [&>[data-radix-scroll-area-viewport]>div]:!min-w-0 [&>div>div]:!block [&>div>div]:!w-full [&>div>div]:!min-w-0 [&>[data-radix-scroll-area-scrollbar]]:!hidden [&_[data-radix-scroll-area-scrollbar]]:!hidden [&>[data-radix-scroll-area-viewport]]:[scrollbar-width:none] [&>[data-radix-scroll-area-viewport]]:[-ms-overflow-style:none] [&>[data-radix-scroll-area-viewport]::-webkit-scrollbar]:!hidden"
-                : "h-full"
-            }
+            className="h-full w-full [&>[data-radix-scroll-area-viewport]>div]:!block [&>[data-radix-scroll-area-viewport]>div]:!w-full [&>[data-radix-scroll-area-viewport]>div]:!min-w-0"
           >
             <div className={variant === "sidebar" ? "space-y-2.5 px-4 pb-4 w-full min-w-0" : "space-y-3 pr-4 pb-6"}>
               {products.map((product) => (
@@ -94,7 +89,7 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
       )}
 
       {hasProducts && (
-        <div className={variant === "sheet" ? "px-6 pt-2 pb-2 border-t" : "px-0 pt-0"}>
+        <div className={variant === "sheet" ? "px-6 pt-2 pb-2 border-t shrink-0" : "px-0 pt-0 shrink-0"}>
           <CartRecommendations restaurantSlug={restaurant.slug} />
         </div>
       )}
@@ -116,8 +111,8 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
       <div
         className={
           variant === "sheet"
-            ? "mt-auto flex flex-col gap-4 border-t bg-white p-6 shadow-[0_-8px_30px_rgba(0,0,0,0.04)]"
-            : "mt-4 flex flex-col gap-3.5 border-t bg-slate-50/40 px-4 py-4"
+            ? "mt-auto shrink-0 flex flex-col gap-4 border-t bg-white p-6 shadow-[0_-8px_30px_rgba(0,0,0,0.04)]"
+            : "mt-auto shrink-0 flex flex-col gap-3.5 border-t bg-slate-50/40 px-4 py-4"
         }
       >
         <div className="flex w-full items-center justify-between">
@@ -140,7 +135,7 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
   return (
     <>
       {variant === "sidebar" ? (
-        <Card className="flex h-full w-full min-w-0 flex-col overflow-hidden border-white/70 bg-white/90 shadow-xl shadow-slate-200/60">
+        <Card className="flex h-full max-h-[calc(100vh-2rem)] w-full min-w-0 flex-col overflow-hidden border-white/70 bg-white/90 shadow-xl shadow-slate-200/60">
           {content}
         </Card>
       ) : (

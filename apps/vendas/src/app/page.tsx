@@ -16,7 +16,7 @@ const RestaurantPage = async () => {
 
   const availableMethods = [
     restaurant.isDeliveryEnabled && { option: "DELIVERY" as const, buttonText: "Delivery", imageAlt: "Delivery", imageUrl: "/delivery.png" },
-    restaurant.isTakeawayEnabled && { option: "TAKEAWAY" as const, buttonText: "Para retirar", imageAlt: "Para retirar", imageUrl: "/takeaway.png" },
+    restaurant.isTakeawayEnabled && { option: "TAKEAWAY" as const, buttonText: "Para retirada", imageAlt: "Para retirada", imageUrl: "/takeaway.png" },
     restaurant.isDineInEnabled && { option: "DINE_IN" as const, buttonText: "Consumo no local", imageAlt: "Consumo no local", imageUrl: "/dine_in.png" },
   ].filter(Boolean) as { option: "DELIVERY" | "TAKEAWAY" | "DINE_IN"; buttonText: string; imageAlt: string; imageUrl: string }[];
 

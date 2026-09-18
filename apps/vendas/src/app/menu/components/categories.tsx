@@ -495,7 +495,7 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
 
           {/* Desktop cart panel */}
           <aside className="hidden lg:block min-w-0">
-            <div className="sticky top-4 flex max-h-[calc(100vh-2rem)] flex-col min-w-0">
+            <div className="sticky top-4 flex h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)] flex-col min-w-0">
               <CartPanel restaurant={restaurant} variant="sidebar" />
             </div>
           </aside>

@@ -7,6 +7,7 @@ import { Inter } from "next/font/google";
 import { ReactNode } from "react";
 
 import { MarketingScripts } from "@/components/marketing-scripts";
+import { Toaster } from "@/components/ui/sonner";
 import { buscarRestaurantePorSlug } from "@/lib/db";
 import { CartProvider } from "./menu/contexts/cart";
 
@@ -50,6 +51,7 @@ export default async function RestaurantLayout({
         <CartProvider>
           {restaurant && <MarketingScripts restaurantId={restaurant.id} />}
           {children}
+          <Toaster />
         </CartProvider>
       </body>
     </html>
