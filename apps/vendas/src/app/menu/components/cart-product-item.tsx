@@ -57,21 +57,33 @@ const CartProductItem = ({ product, variant = "sheet" }: CartItemProps) => {
             {product.name}
           </p>
 
-          {/* Opções */}
+          {/* Opções selecionadas */}
           {product.selectedOptions && product.selectedOptions.length > 0 && (
-            <div className="flex flex-wrap gap-x-1 text-xs text-slate-400 sm:text-xs">
-              {product.selectedOptions?.slice(0, 1).map((opt) => (
-                <span key={opt.id} className="line-clamp-1 break-all">
-                  • {opt.name}
-                </span>
-              ))}
-              {(product.selectedOptions?.length ?? 0) > 1 && <span>...</span>}
+            <div className="flex flex-col gap-0.5 text-xs text-slate-500 pt-0.5">
+              {(() => {
+                const counts = new Map<string, { name: string; count: number }>();
+                for (const opt of product.selectedOptions) {
+                  const key = opt.id || opt.name;
+                  const existing = counts.get(key);
+                  if (existing) {
+                    existing.count += 1;
+                  } else {
+                    counts.set(key, { name: opt.name, count: 1 });
+                  }
+                }
+
+                return Array.from(counts.entries()).map(([key, item]) => (
+                  <p key={key} className="break-words leading-tight">
+                    • {item.count > 1 ? `${item.count}x ` : ""}{item.name}
+                  </p>
+                ));
+              })()}
             </div>
           )}
 
           {/* Observações/Notas */}
           {product.notes && (
-            <p className="text-xs text-slate-500 italic line-clamp-2 break-words sm:text-xs">
+            <p className="text-xs text-slate-500 italic break-words leading-tight pt-0.5">
               {product.notes}
             </p>
           )}

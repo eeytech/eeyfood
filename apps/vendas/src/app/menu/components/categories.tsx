@@ -9,7 +9,7 @@ import type {
 } from "@fsw/db";
 import { ClockIcon, SearchIcon, StarIcon } from "lucide-react";
 import Image from "next/image";
-import { useContext, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -175,6 +175,36 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
     !isSearchActive,
   );
 
+  // Auto-scroll mobile horizontal category bar to keep the active category in view / centered
+  useEffect(() => {
+    if (isSearchActive || !activeCategoryId) return;
+
+    const button = document.getElementById(
+      `mobile-category-btn-${activeCategoryId}`,
+    );
+    if (!button) return;
+
+    const scrollContainer = button.closest(
+      "[data-radix-scroll-area-viewport]",
+    ) as HTMLElement | null;
+
+    if (scrollContainer) {
+      const containerRect = scrollContainer.getBoundingClientRect();
+      const buttonRect = button.getBoundingClientRect();
+
+      const targetScrollLeft =
+        scrollContainer.scrollLeft +
+        (buttonRect.left - containerRect.left) -
+        containerRect.width / 2 +
+        buttonRect.width / 2;
+
+      scrollContainer.scrollTo({
+        left: Math.max(0, targetScrollLeft),
+        behavior: "smooth",
+      });
+    }
+  }, [activeCategoryId, isSearchActive]);
+
   const searchResults = useMemo<MenuCategoryWithProducts["products"]>(() => {
     if (!isSearchActive) return [];
     const q = searchQuery.toLowerCase();
@@ -334,11 +364,12 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
 
                 return (
                   <Button
+                    id={`mobile-category-btn-${category.id}`}
                     onClick={() => handleNavClick(category.id)}
                     key={category.id}
                     variant={isActive ? "default" : "secondary"}
                     size="sm"
-                    className="rounded-full px-4"
+                    className="rounded-full px-4 shrink-0 transition-all duration-300"
                     aria-current={isActive ? "page" : undefined}
                   >
                     {category.name}
@@ -446,6 +477,13 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
                   product={selectedSearchProduct}
                   isOpen={isSearchSheetOpen}
                   isLoading={isLoadingSearchProduct}
+                  categoryName={
+                    selectedSearchProduct
+                      ? restaurant.menuCategories.find(
+                          (c) => c.id === selectedSearchProduct.menuCategoryId,
+                        )?.name
+                      : undefined
+                  }
                   onOpenChange={(open) => {
                     setIsSearchSheetOpen(open);
                     if (!open) setSelectedSearchProduct(null);

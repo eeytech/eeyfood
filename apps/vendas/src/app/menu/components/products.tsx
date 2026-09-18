@@ -132,6 +132,7 @@ const Products = ({ products, restaurant }: ProductsProps) => {
         product={selectedProduct}
         isOpen={isSheetOpen}
         isLoading={isLoadingProduct}
+        categoryName={selectedProduct ? getCategoryForProduct(selectedProduct)?.name : undefined}
         onOpenChange={(open) => {
           setIsSheetOpen(open);
           if (!open) setSelectedProduct(null);

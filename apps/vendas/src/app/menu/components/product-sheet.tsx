@@ -16,6 +16,7 @@ interface ProductSheetProps {
   isOpen: boolean;
   isLoading?: boolean;
   onOpenChange: (open: boolean) => void;
+  categoryName?: string;
 }
 
 export function ProductSheetSkeleton() {
@@ -51,6 +52,7 @@ const ProductSheet = ({
   isOpen,
   isLoading,
   onOpenChange,
+  categoryName,
 }: ProductSheetProps) => {
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
@@ -74,6 +76,7 @@ const ProductSheet = ({
           <ProductDetailsContent
             product={product}
             onAddToCart={() => onOpenChange(false)}
+            categoryName={categoryName}
           />
         ) : null}
       </SheetContent>

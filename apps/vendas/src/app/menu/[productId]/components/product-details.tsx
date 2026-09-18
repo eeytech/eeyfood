@@ -11,7 +11,11 @@ interface ProductDetailsProps {
 const ProductDetails = ({ product }: ProductDetailsProps) => {
   return (
     <div className="relative z-50 flex-auto overflow-hidden bg-white lg:mt-0 lg:rounded-none">
-      <ProductDetailsContent product={product} showImage={false} />
+      <ProductDetailsContent
+        product={product}
+        showImage={false}
+        categoryName={(product as unknown as { menuCategory?: { name?: string } }).menuCategory?.name}
+      />
     </div>
   );
 };

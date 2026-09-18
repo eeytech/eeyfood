@@ -12,7 +12,7 @@ import {
   SearchIcon,
 } from "lucide-react";
 import Image from "next/image";
-import { useContext, useMemo, useRef, useState } from "react";
+import { useCallback, useContext, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -28,18 +28,97 @@ import { CartContext } from "../contexts/cart";
 
 interface ProductWithModifier extends ProductComRestaurante {
   optionGroups?: (ProductOptionGroup & { options: ProductOption[] })[];
+  menuCategory?: { id: string; name: string };
 }
 
 interface ProductDetailsContentProps {
   product: ProductWithModifier;
   onAddToCart?: () => void;
   showImage?: boolean;
+  categoryName?: string;
+}
+
+function isBeverageOptionGroup(group: { name: string; options?: { name: string }[] }) {
+  const nameLower = group.name.toLowerCase();
+  const beverageNameKeywords = [
+    "bebida",
+    "refrigerante",
+    "refri",
+    "suco",
+    "drink",
+    "refrigerantes",
+    "bebidas",
+    "sucos",
+    "drinks",
+  ];
+  if (beverageNameKeywords.some((kw) => nameLower.includes(kw))) {
+    return true;
+  }
+
+  if (group.options && group.options.length > 0) {
+    const beverageOptionKeywords = [
+      "coca",
+      "pepsi",
+      "guaraná",
+      "guarana",
+      "fanta",
+      "sprite",
+      "suco",
+      "água",
+      "agua",
+      "refrigerante",
+      "refri",
+      "soda",
+      "schweppes",
+      "chá",
+      "cha",
+      "matte",
+      "mate",
+      "cerveja",
+      "heineken",
+      "chopp",
+    ];
+
+    const hasDrinkOptions = group.options.some((opt) =>
+      beverageOptionKeywords.some((kw) => opt.name.toLowerCase().includes(kw)),
+    );
+
+    if (
+      hasDrinkOptions &&
+      (nameLower.includes("acompanha") ||
+        nameLower.includes("escolha") ||
+        nameLower.includes("combo") ||
+        nameLower.includes("opção") ||
+        nameLower.includes("opcao"))
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function isComboProduct(
+  product: { name: string; description?: string | null; menuCategoryId?: string },
+  categoryName?: string,
+  categoryObjName?: string,
+) {
+  const name = product.name.toLowerCase();
+  const desc = (product.description || "").toLowerCase();
+  const cat = (categoryName || categoryObjName || "").toLowerCase();
+
+  return (
+    name.includes("combo") ||
+    desc.includes("combo") ||
+    cat.includes("combo")
+  );
 }
 
 const ProductDetailsContent = ({
   product,
   onAddToCart,
   showImage = true,
+  categoryName,
 }: ProductDetailsContentProps) => {
   const { toggleCart, addProduct } = useContext(CartContext);
   const [quantity, setQuantity] = useState<number>(1);
@@ -60,7 +139,59 @@ const ProductDetailsContent = ({
   const groupRefs = useRef<Map<string, HTMLElement>>(new Map());
   const shakeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const optionGroups = useMemo(() => product.optionGroups || [], [product.optionGroups]);
+  const isCombo = useMemo(() => {
+    return isComboProduct(
+      product,
+      categoryName,
+      product.menuCategory?.name,
+    );
+  }, [product, categoryName]);
+
+  const isFamilyIceCream = useMemo(() => {
+    const name = product.name.toLowerCase();
+    return (
+      (name.includes("sorvete") || name.includes("pote")) &&
+      (name.includes("família") ||
+        name.includes("familia") ||
+        name.includes("1,5l") ||
+        name.includes("1.5l") ||
+        name.includes("1,5 l") ||
+        name.includes("1.5 l"))
+    );
+  }, [product.name]);
+
+  const optionGroups = useMemo(() => {
+    const rawGroups = product.optionGroups || [];
+    return rawGroups.map((group) => {
+      const isBeverage = isBeverageOptionGroup(group);
+      const isAccompaniment =
+        group.name.toLowerCase().includes("acompanhante") && isBeverage;
+
+      // Para casos de combo que tenham refrigerante/bebida ou qualquer grupo de "Bebida Acompanhante":
+      // a escolha da bebida deve ser obrigatória (minOptions >= 1)
+      if ((isCombo && isBeverage) || isAccompaniment) {
+        const enforcedMin = Math.max(group.minOptions || 0, 1);
+        const enforcedMax = Math.max(group.maxOptions || 0, enforcedMin);
+        return {
+          ...group,
+          minOptions: enforcedMin,
+          maxOptions: enforcedMax,
+        };
+      }
+
+      // Para Pote de Sorvete Família 1,5L:
+      // Escolher até 2 sabores, sendo pelo menos 1 obrigatório e 2 o máximo
+      if (isFamilyIceCream && group.name.toLowerCase().includes("sabor")) {
+        return {
+          ...group,
+          minOptions: 1,
+          maxOptions: 2,
+        };
+      }
+
+      return group;
+    });
+  }, [product.optionGroups, isCombo, isFamilyIceCream]);
   const showOptionImages = product.restaurant.showOptionImages;
 
   const { isOpen } = isRestaurantOpen(
@@ -158,13 +289,29 @@ const ProductDetailsContent = ({
     return prodPrice + optionsTotal;
   }, [product.price, selectedOptionsList]);
 
-  const handleAddToCart = () => {
-    // Find the first required group where the customer hasn't met the minimum selection
-    const firstIncompleteGroup = optionGroups.find((group) => {
-      const selected = selectedOptions[group.id] || [];
-      return group.minOptions > 0 && selected.length < group.minOptions;
-    });
+  const getGroupSelectedCount = useCallback(
+    (groupId: string, isRadio: boolean) => {
+      if (isRadio) {
+        return (selectedOptions[groupId] || []).length;
+      }
+      const counts = optionCounts[groupId];
+      if (counts && Object.keys(counts).length > 0) {
+        return Object.values(counts).reduce((sum, n) => sum + n, 0);
+      }
+      return (selectedOptions[groupId] || []).length;
+    },
+    [selectedOptions, optionCounts],
+  );
 
+  const firstIncompleteGroup = useMemo(() => {
+    return optionGroups.find((group) => {
+      const isRadio = group.maxOptions === 1;
+      const count = getGroupSelectedCount(group.id, isRadio);
+      return group.minOptions > 0 && count < group.minOptions;
+    });
+  }, [optionGroups, getGroupSelectedCount]);
+
+  const handleAddToCart = () => {
     if (firstIncompleteGroup) {
       toast.warning(`Selecione uma opção em "${firstIncompleteGroup.name}"`);
 
@@ -328,7 +475,7 @@ const ProductDetailsContent = ({
             {filteredGroups.map((group) => {
               const isRadio = group.maxOptions === 1;
               const expanded = isGroupExpanded(group.id);
-              const groupSelectedCount = (selectedOptions[group.id] || []).length;
+              const groupSelectedCount = getGroupSelectedCount(group.id, isRadio);
               const isGroupComplete = group.minOptions > 0 && groupSelectedCount >= group.minOptions;
               const isShaking = shakingGroupId === group.id;
 
@@ -528,6 +675,11 @@ const ProductDetailsContent = ({
                 </p>
               );
             })()}
+            {firstIncompleteGroup && (
+              <p className="rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-center text-xs font-semibold text-amber-800">
+                Selecione uma opção em &ldquo;{firstIncompleteGroup.name}&rdquo; para adicionar à sacola
+              </p>
+            )}
             <Button
               className="h-12 w-full rounded-xl text-base font-bold shadow-lg shadow-destructive/20 transition hover:scale-[1.01] active:scale-[0.99]"
               onClick={handleAddToCart}

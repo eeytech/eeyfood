@@ -263,14 +263,15 @@ const main = async () => {
             { restaurantId: restaurant.id, name: "Açaí", displayOrder: 8 },
         ])
             .returning();
-        const [grpPonto, grpAdicionais, grpBebida, grpBorda, grpSorveteSabor, grpSorveteCalda, grpAcaiTamanho, grpAcaiTipo, grpAcaiAdicionais,] = await tx
+        const [grpPonto, grpAdicionais, grpBebida, grpBorda, grpSorveteSabor, grpSorveteSaborFamilia, grpSorveteCalda, grpAcaiTamanho, grpAcaiTipo, grpAcaiAdicionais,] = await tx
             .insert(productOptionGroupsTable)
             .values([
             { restaurantId: restaurant.id, name: "Ponto do Hambúrguer", minOptions: 1, maxOptions: 1, displayOrder: 1 },
             { restaurantId: restaurant.id, name: "Ingredientes Adicionais", minOptions: 0, maxOptions: 5, displayOrder: 2 },
-            { restaurantId: restaurant.id, name: "Bebida Acompanhante", minOptions: 0, maxOptions: 1, displayOrder: 3 },
+            { restaurantId: restaurant.id, name: "Bebida Acompanhante", minOptions: 1, maxOptions: 1, displayOrder: 3 },
             { restaurantId: restaurant.id, name: "Borda Recheada", minOptions: 0, maxOptions: 1, displayOrder: 4 },
             { restaurantId: restaurant.id, name: "Sabor do Sorvete", minOptions: 1, maxOptions: 1, displayOrder: 1 },
+            { restaurantId: restaurant.id, name: "Sabores do Sorvete (Escolha até 2)", minOptions: 1, maxOptions: 2, displayOrder: 1 },
             { restaurantId: restaurant.id, name: "Calda Opcional", minOptions: 0, maxOptions: 2, displayOrder: 2 },
             { restaurantId: restaurant.id, name: "Tamanho do Copo", minOptions: 1, maxOptions: 1, displayOrder: 1 },
             { restaurantId: restaurant.id, name: "Tipo do Açaí", minOptions: 1, maxOptions: 1, displayOrder: 2 },
@@ -312,6 +313,13 @@ const main = async () => {
             { productOptionGroupId: grpSorveteSabor.id, name: "Doce de Leite Havanna", price: 0, displayOrder: 3 },
             { productOptionGroupId: grpSorveteSabor.id, name: "Flocos Crocante", price: 0, displayOrder: 4 },
             { productOptionGroupId: grpSorveteSabor.id, name: "Morango com Pedaços", price: 0, displayOrder: 5 },
+        ]);
+        await tx.insert(productOptionsTable).values([
+            { productOptionGroupId: grpSorveteSaborFamilia.id, name: "Baunilha de Madagascar", price: 0, displayOrder: 1 },
+            { productOptionGroupId: grpSorveteSaborFamilia.id, name: "Chocolate Belga", price: 0, displayOrder: 2 },
+            { productOptionGroupId: grpSorveteSaborFamilia.id, name: "Doce de Leite Havanna", price: 0, displayOrder: 3 },
+            { productOptionGroupId: grpSorveteSaborFamilia.id, name: "Flocos Crocante", price: 0, displayOrder: 4 },
+            { productOptionGroupId: grpSorveteSaborFamilia.id, name: "Morango com Pedaços", price: 0, displayOrder: 5 },
         ]);
         await tx.insert(productOptionsTable).values([
             { productOptionGroupId: grpSorveteCalda.id, name: "Calda de Chocolate", price: 3.5, displayOrder: 1 },
@@ -897,7 +905,7 @@ const main = async () => {
             // Sorvetes em Potes
             { productId: prodPoteSorvete500.id, productOptionGroupId: grpSorveteSabor.id },
             { productId: prodPoteSorvete500.id, productOptionGroupId: grpSorveteCalda.id },
-            { productId: prodPoteSorvete1L.id, productOptionGroupId: grpSorveteSabor.id },
+            { productId: prodPoteSorvete1L.id, productOptionGroupId: grpSorveteSaborFamilia.id },
             { productId: prodPoteSorvete1L.id, productOptionGroupId: grpSorveteCalda.id },
             // Açaí no Copo (tamanho, tipo e adicionais)
             { productId: prodAcaiCopo.id, productOptionGroupId: grpAcaiTamanho.id },

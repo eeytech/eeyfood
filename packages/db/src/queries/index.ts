@@ -990,6 +990,7 @@ export const buscarProdutoDoRestaurante = async ({
           operatingHours: true,
         },
       },
+      menuCategory: true,
     },
   });
 
