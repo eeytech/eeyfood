@@ -89,8 +89,8 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
       )}
 
       {hasProducts && (
-        <div className={variant === "sheet" ? "px-6 pt-2 pb-2 border-t shrink-0" : "px-0 pt-0 shrink-0"}>
-          <CartRecommendations restaurantSlug={restaurant.slug} />
+        <div className={variant === "sheet" ? "pt-2 pb-1 border-t shrink-0" : "pt-2 pb-1 border-t border-slate-100 shrink-0"}>
+          <CartRecommendations restaurantSlug={restaurant.slug} variant={variant} />
         </div>
       )}
 
