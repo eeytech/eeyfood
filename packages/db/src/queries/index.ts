@@ -390,7 +390,8 @@ export const buscarRestauranteUnico = async (): Promise<Restaurant | null> => {
       .limit(1);
 
     return restaurant ?? null;
-  } catch {
+  } catch (err) {
+    console.error("❌ Erro em buscarRestauranteUnico:", err);
     return null;
   }
 };
@@ -410,7 +411,8 @@ export const buscarRestaurantePorSlug = async (
       .limit(1);
 
     return restaurant ?? (await buscarRestauranteUnico());
-  } catch {
+  } catch (err) {
+    console.error("❌ Erro em buscarRestaurantePorSlug:", err);
     return null;
   }
 };
@@ -855,145 +857,166 @@ const carregarContextoPedidoCalculado = async (
 };
 
 export const buscarRestauranteComCardapioPorSlug = async (
-  slug: string,
+  slug?: string,
 ): Promise<(RestaurantComCategoriasEProdutos & { rating: number; ratingCount: number }) | null> => {
-  const restaurant = await buscarRestaurantePorSlug(slug);
+  try {
+    const restaurant = await buscarRestaurantePorSlug(slug);
 
-  if (!restaurant) {
+    if (!restaurant) {
+      console.warn("⚠️ [buscarRestauranteComCardapioPorSlug] Restaurante não encontrado:", slug);
+      return null;
+    }
+
+    // Buscar estatísticas de avaliação (protegido contra erro de tabela ou dados)
+    let rating = 0;
+    let ratingCount = 0;
+    try {
+      const ratings = await db
+        .select({
+          avgStars: sql<number>`avg(${orderRatingsTable.stars})`,
+          count: sql<number>`count(*)`,
+        })
+        .from(orderRatingsTable)
+        .where(
+          and(
+            eq(orderRatingsTable.restaurantId, restaurant.id),
+            eq(orderRatingsTable.isActive, true),
+          ),
+        );
+
+      rating = Number(ratings[0]?.avgStars || 0);
+      ratingCount = Number(ratings[0]?.count || 0);
+    } catch (e) {
+      console.warn("⚠️ [buscarRestauranteComCardapioPorSlug] Erro ao carregar avaliações:", e);
+    }
+
+    // Contar produtos ativos por categoria
+    let categoryCountMap = new Map<string, number>();
+    try {
+      const categoryProductCounts = await db
+        .select({
+          categoryId: menuCategoriesTable.id,
+          activeCount: sql<number>`count(case when ${productsTable.isActive} = true then 1 end)`.as('activeCount'),
+        })
+        .from(menuCategoriesTable)
+        .leftJoin(productsTable, eq(productsTable.menuCategoryId, menuCategoriesTable.id))
+        .where(
+          and(
+            eq(menuCategoriesTable.restaurantId, restaurant.id),
+            eq(menuCategoriesTable.isActive, true),
+          ),
+        )
+        .groupBy(menuCategoriesTable.id);
+
+      categoryCountMap = new Map(
+        categoryProductCounts.map((cc) => [cc.categoryId, cc.activeCount]),
+      );
+    } catch (e) {
+      console.warn("⚠️ [buscarRestauranteComCardapioPorSlug] Erro ao contar produtos por categoria:", e);
+    }
+
+    // Buscar bestsellers por categoria usando window function (protegido)
+    const topSellerIds = new Set<string>();
+    try {
+      const bestsellersRaw = await db
+        .select({
+          productId: orderProductsTable.productId,
+          categoryId: productsTable.menuCategoryId,
+          totalQuantity: sql<number>`sum(${orderProductsTable.quantity})`.as('totalQuantity'),
+          rowNumber: sql<number>`row_number() over (partition by ${productsTable.menuCategoryId} order by sum(${orderProductsTable.quantity}) desc, ${productsTable.id})`.as('rowNumber'),
+        })
+        .from(orderProductsTable)
+        .innerJoin(ordersTable, eq(ordersTable.id, orderProductsTable.orderId))
+        .innerJoin(productsTable, eq(productsTable.id, orderProductsTable.productId))
+        .where(eq(ordersTable.restaurantId, restaurant.id))
+        .groupBy(orderProductsTable.productId, productsTable.menuCategoryId, productsTable.id);
+
+      for (const product of bestsellersRaw) {
+        const activeCount = categoryCountMap.get(product.categoryId) || 0;
+        const limit = activeCount <= 5 ? 1 : 3;
+        if (product.rowNumber <= limit) {
+          topSellerIds.add(product.productId);
+        }
+      }
+    } catch (e) {
+      console.warn("⚠️ [buscarRestauranteComCardapioPorSlug] Erro ao buscar bestsellers:", e);
+    }
+
+    let operatingHours: any[] = [];
+    try {
+      operatingHours = await db
+        .select()
+        .from(operatingHoursTable)
+        .where(eq(operatingHoursTable.restaurantId, restaurant.id))
+        .orderBy(asc(operatingHoursTable.dayOfWeek));
+    } catch (e) {
+      console.warn("⚠️ [buscarRestauranteComCardapioPorSlug] Erro ao buscar horários:", e);
+    }
+
+    const rows = await db
+      .select({
+        category: menuCategoriesTable,
+        product: productsTable,
+      })
+      .from(menuCategoriesTable)
+      .leftJoin(
+        productsTable,
+        and(
+          eq(productsTable.menuCategoryId, menuCategoriesTable.id),
+          eq(productsTable.isActive, true),
+        ),
+      )
+      .where(
+        and(
+          eq(menuCategoriesTable.restaurantId, restaurant.id),
+          eq(menuCategoriesTable.isActive, true),
+        ),
+      )
+      .orderBy(
+        asc(menuCategoriesTable.displayOrder),
+        asc(menuCategoriesTable.name),
+        asc(productsTable.name),
+      );
+
+    const categoriesMap = new Map<
+      string,
+      RestaurantComCategoriasEProdutos["menuCategories"][number]
+    >();
+
+    for (const row of rows) {
+      const currentCategory = categoriesMap.get(row.category.id) ?? {
+        ...row.category,
+        products: [],
+      };
+
+      if (row.product) {
+        currentCategory.products.push({
+          ...row.product,
+          isBestseller: topSellerIds.has(row.product.id),
+        } as any);
+      }
+
+      categoriesMap.set(row.category.id, currentCategory);
+    }
+
+    return {
+      ...restaurant,
+      menuCategories: Array.from(categoriesMap.values()),
+      operatingHours,
+      rating,
+      ratingCount,
+    };
+  } catch (error) {
+    console.error("❌ Erro em buscarRestauranteComCardapioPorSlug:", error);
     return null;
   }
-
-  // Buscar estatísticas de avaliação
-  const ratings = await db
-    .select({
-      avgStars: sql<number>`avg(${orderRatingsTable.stars})`,
-      count: sql<number>`count(*)`,
-    })
-    .from(orderRatingsTable)
-    .where(
-      and(
-        eq(orderRatingsTable.restaurantId, restaurant.id),
-        eq(orderRatingsTable.isActive, true),
-      ),
-    );
-
-  const rating = Number(ratings[0]?.avgStars || 0);
-  const ratingCount = Number(ratings[0]?.count || 0);
-
-  // Contar produtos ativos por categoria
-  const categoryProductCounts = await db
-    .select({
-      categoryId: menuCategoriesTable.id,
-      activeCount: sql<number>`count(case when ${productsTable.isActive} = true then 1 end)`.as('activeCount'),
-    })
-    .from(menuCategoriesTable)
-    .leftJoin(productsTable, eq(productsTable.menuCategoryId, menuCategoriesTable.id))
-    .where(
-      and(
-        eq(menuCategoriesTable.restaurantId, restaurant.id),
-        eq(menuCategoriesTable.isActive, true),
-      ),
-    )
-    .groupBy(menuCategoriesTable.id);
-
-  const categoryCountMap = new Map(
-    categoryProductCounts.map((cc) => [cc.categoryId, cc.activeCount]),
-  );
-
-  // Buscar bestsellers por categoria usando window function
-  // A consulta agrupa produtos por categoria, soma as vendas,
-  // e ordena por quantidade vendida dentro de cada categoria
-  const bestsellersRaw = await db
-    .select({
-      productId: orderProductsTable.productId,
-      categoryId: productsTable.menuCategoryId,
-      totalQuantity: sql<number>`sum(${orderProductsTable.quantity})`.as('totalQuantity'),
-      rowNumber: sql<number>`row_number() over (partition by ${productsTable.menuCategoryId} order by sum(${orderProductsTable.quantity}) desc, ${productsTable.id})`.as('rowNumber'),
-    })
-    .from(orderProductsTable)
-    .innerJoin(ordersTable, eq(ordersTable.id, orderProductsTable.orderId))
-    .innerJoin(productsTable, eq(productsTable.id, orderProductsTable.productId))
-    .where(eq(ordersTable.restaurantId, restaurant.id))
-    .groupBy(orderProductsTable.productId, productsTable.menuCategoryId, productsTable.id);
-
-  // Determinar bestsellers baseado nas regras de negócio:
-  // - Categorias com ≤5 produtos: TOP 1
-  // - Categorias com >5 produtos: TOP 3
-  const topSellerIds = new Set<string>();
-  for (const product of bestsellersRaw) {
-    const activeCount = categoryCountMap.get(product.categoryId) || 0;
-    const limit = activeCount <= 5 ? 1 : 3;
-    if (product.rowNumber <= limit) {
-      topSellerIds.add(product.productId);
-    }
-  }
-
-  const operatingHours = await db
-    .select()
-    .from(operatingHoursTable)
-    .where(eq(operatingHoursTable.restaurantId, restaurant.id))
-    .orderBy(asc(operatingHoursTable.dayOfWeek));
-
-  const rows = await db
-    .select({
-      category: menuCategoriesTable,
-      product: productsTable,
-    })
-    .from(menuCategoriesTable)
-    .leftJoin(
-      productsTable,
-      and(
-        eq(productsTable.menuCategoryId, menuCategoriesTable.id),
-        eq(productsTable.isActive, true),
-      ),
-    )
-    .where(
-      and(
-        eq(menuCategoriesTable.restaurantId, restaurant.id),
-        eq(menuCategoriesTable.isActive, true),
-      ),
-    )
-    .orderBy(
-      asc(menuCategoriesTable.displayOrder),
-      asc(menuCategoriesTable.name),
-      asc(productsTable.name),
-    );
-
-  const categoriesMap = new Map<
-    string,
-    RestaurantComCategoriasEProdutos["menuCategories"][number]
-  >();
-
-  for (const row of rows) {
-    const currentCategory = categoriesMap.get(row.category.id) ?? {
-      ...row.category,
-      products: [],
-    };
-
-    if (row.product) {
-      currentCategory.products.push({
-        ...row.product,
-        isBestseller: topSellerIds.has(row.product.id),
-      } as any);
-    }
-
-    categoriesMap.set(row.category.id, currentCategory);
-  }
-
-  return {
-    ...restaurant,
-    menuCategories: Array.from(categoriesMap.values()),
-    operatingHours,
-    rating,
-    ratingCount,
-  };
 };
 
 export const buscarProdutoDoRestaurante = async ({
   slug,
   productId,
 }: {
-  slug: string;
+  slug?: string;
   productId: string;
 }): Promise<(ProductComRestaurante & { optionGroups: (ProductOptionGroup & { options: ProductOption[] })[] }) | null> => {
   const product = await db.query.productsTable.findFirst({
@@ -1011,7 +1034,7 @@ export const buscarProdutoDoRestaurante = async ({
     },
   });
 
-  if (!product || product.restaurant.slug !== slug) {
+  if (!product || (slug && slug !== "default" && product.restaurant.slug !== slug)) {
     return null;
   }
 

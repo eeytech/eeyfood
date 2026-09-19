@@ -8,21 +8,22 @@ import { ReactNode } from "react";
 
 import { MarketingScripts } from "@/components/marketing-scripts";
 import { Toaster } from "@/components/ui/sonner";
-import { buscarRestaurantePorSlug } from "@/lib/db";
+import { buscarRestaurantePorSlug, buscarRestauranteUnico } from "@/lib/db";
 import { CartProvider } from "./menu/contexts/cart";
 
 const inter = Inter({ subsets: ["latin"] });
 
 interface RestaurantLayoutProps {
   children: ReactNode;
-  params: Promise<{ slug?: string }>;
+  params?: Promise<{ slug?: string }>;
 }
 
 export async function generateMetadata({
   params,
 }: RestaurantLayoutProps): Promise<Metadata> {
-  const { slug } = await params;
-  const restaurant = await buscarRestaurantePorSlug(slug);
+  const resolvedParams = params ? await params : undefined;
+  const slug = resolvedParams?.slug;
+  const restaurant = slug ? await buscarRestaurantePorSlug(slug) : await buscarRestauranteUnico();
 
   if (!restaurant) {
     return {
@@ -42,8 +43,9 @@ export default async function RestaurantLayout({
   children,
   params,
 }: RestaurantLayoutProps) {
-  const { slug } = await params;
-  const restaurant = await buscarRestaurantePorSlug(slug);
+  const resolvedParams = params ? await params : undefined;
+  const slug = resolvedParams?.slug;
+  const restaurant = slug ? await buscarRestaurantePorSlug(slug) : await buscarRestauranteUnico();
 
   return (
     <html lang="pt-BR" suppressHydrationWarning>

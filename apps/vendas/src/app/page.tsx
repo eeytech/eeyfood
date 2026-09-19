@@ -1,5 +1,4 @@
 import Image from "next/image";
-import { redirect } from "next/navigation";
 
 import { buscarRestauranteUnico } from "@/lib/db";
 
@@ -11,18 +10,65 @@ const RestaurantPage = async () => {
   const restaurant = await buscarRestauranteUnico();
 
   if (!restaurant) {
-    return redirect("/menu?consumptionMethod=DELIVERY");
+    return (
+      <div className="mx-auto flex min-h-screen max-w-[600px] flex-col items-center justify-center px-4 text-center">
+        <h2 className="text-2xl font-bold tracking-tight">Restaurante não encontrado</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Não foi possível carregar os dados do restaurante. Por favor, verifique as configurações do sistema ou tente novamente mais tarde.
+        </p>
+      </div>
+    );
   }
 
   const availableMethods = [
-    restaurant.isDeliveryEnabled && { option: "DELIVERY" as const, buttonText: "Delivery", imageAlt: "Delivery", imageUrl: "/delivery.png" },
-    restaurant.isTakeawayEnabled && { option: "TAKEAWAY" as const, buttonText: "Para retirada", imageAlt: "Para retirada", imageUrl: "/takeaway.png" },
-    restaurant.isDineInEnabled && { option: "DINE_IN" as const, buttonText: "Consumo no local", imageAlt: "Consumo no local", imageUrl: "/dine_in.png" },
-  ].filter(Boolean) as { option: "DELIVERY" | "TAKEAWAY" | "DINE_IN"; buttonText: string; imageAlt: string; imageUrl: string }[];
+    restaurant.isDeliveryEnabled && {
+      option: "DELIVERY" as const,
+      buttonText: "Delivery",
+      imageAlt: "Delivery",
+      imageUrl: "/delivery.png",
+    },
+    restaurant.isTakeawayEnabled && {
+      option: "TAKEAWAY" as const,
+      buttonText: "Para retirada",
+      imageAlt: "Para retirada",
+      imageUrl: "/takeaway.png",
+    },
+    restaurant.isDineInEnabled && {
+      option: "DINE_IN" as const,
+      buttonText: "Consumo no local",
+      imageAlt: "Consumo no local",
+      imageUrl: "/dine_in.png",
+    },
+  ].filter(Boolean) as {
+    option: "DELIVERY" | "TAKEAWAY" | "DINE_IN";
+    buttonText: string;
+    imageAlt: string;
+    imageUrl: string;
+  }[];
 
-  if (availableMethods.length === 1) {
-    return redirect(`/menu?consumptionMethod=${availableMethods[0].option}`);
-  }
+  const methods =
+    availableMethods.length > 0
+      ? availableMethods
+      : [
+          {
+            option: "DELIVERY" as const,
+            buttonText: "Delivery",
+            imageAlt: "Delivery",
+            imageUrl: "/delivery.png",
+          },
+          {
+            option: "TAKEAWAY" as const,
+            buttonText: "Para retirada",
+            imageAlt: "Para retirada",
+            imageUrl: "/takeaway.png",
+          },
+          {
+            option: "DINE_IN" as const,
+            buttonText: "Consumo no local",
+            imageAlt: "Consumo no local",
+            imageUrl: "/dine_in.png",
+          },
+        ];
 
   return (
     <div className="mx-auto flex min-h-screen max-w-[1200px] flex-col items-center justify-center px-3 py-8 sm:px-4 sm:py-16">
@@ -49,10 +95,14 @@ const RestaurantPage = async () => {
 
       <div
         className={`grid w-full gap-2 pt-8 sm:max-w-lg sm:gap-4 sm:pt-10 ${
-          availableMethods.length === 2 ? "grid-cols-2" : "grid-cols-3"
+          methods.length === 1
+            ? "grid-cols-1"
+            : methods.length === 2
+            ? "grid-cols-2"
+            : "grid-cols-3"
         }`}
       >
-        {availableMethods.map((method) => (
+        {methods.map((method) => (
           <ConsumptionMethodOption
             key={method.option}
             option={method.option}

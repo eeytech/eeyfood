@@ -6,7 +6,7 @@ import ProductDetails from "./components/product-details";
 import ProductHeader from "./components/product-header";
 
 interface ProductPageProps {
-  params: Promise<{ slug: string; productId: string }>;
+  params: Promise<{ slug?: string; productId: string }>;
 }
 
 const ProductPage = async ({ params }: ProductPageProps) => {
@@ -14,7 +14,7 @@ const ProductPage = async ({ params }: ProductPageProps) => {
   const product = await buscarProdutoDoRestaurante({ slug, productId });
 
   if (!product) {
-    return redirect("/?error=not_found");
+    return redirect("/menu?consumptionMethod=DELIVERY");
   }
 
   return (
