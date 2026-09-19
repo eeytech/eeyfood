@@ -110,7 +110,14 @@ function isComboProduct(
   return (
     name.includes("combo") ||
     desc.includes("combo") ||
-    cat.includes("combo")
+    cat.includes("combo") ||
+    desc.includes("bebida à escolha") ||
+    desc.includes("bebida a escolha") ||
+    name.includes("bebida à escolha") ||
+    name.includes("bebida a escolha") ||
+    (name.includes("frango crispy") && (desc.includes("fritas") || desc.includes("bebida") || cat.includes("combo"))) ||
+    desc.includes("frango crispy + fritas pequenas") ||
+    name.includes("frango crispy + fritas pequenas")
   );
 }
 
@@ -168,7 +175,7 @@ const ProductDetailsContent = ({
         group.name.toLowerCase().includes("acompanhante") && isBeverage;
 
       // Para casos de combo que tenham refrigerante/bebida ou qualquer grupo de "Bebida Acompanhante":
-      // a escolha da bebida deve ser obrigatória (minOptions >= 1)
+      // a escolha da bebida deve ser obrigatória (minOptions >= 1) e não deve ser cobrada (preço = 0, já faz parte do combo)
       if ((isCombo && isBeverage) || isAccompaniment) {
         const enforcedMin = Math.max(group.minOptions || 0, 1);
         const enforcedMax = Math.max(group.maxOptions || 0, enforcedMin);
@@ -176,6 +183,11 @@ const ProductDetailsContent = ({
           ...group,
           minOptions: enforcedMin,
           maxOptions: enforcedMax,
+          options: (group.options || []).map((option) => ({
+            ...option,
+            price: 0,
+            isIncludedInCombo: true,
+          })),
         };
       }
 
@@ -554,11 +566,15 @@ const ProductDetailsContent = ({
                               {option.description && (
                                 <p className="mt-0.5 text-xs text-slate-500">{option.description}</p>
                               )}
-                              {Number(option.price) > 0 && (
+                              {Number(option.price) > 0 ? (
                                 <p className={`mt-0.5 text-xs font-medium ${isSelected ? "text-destructive" : "text-slate-500"}`}>
                                   + {formatCurrency(option.price)}
                                 </p>
-                              )}
+                              ) : (option as any).isIncludedInCombo || ((isCombo && isBeverageOptionGroup(group)) || (group.name.toLowerCase().includes("acompanhante") && isBeverageOptionGroup(group))) ? (
+                                <p className="mt-0.5 text-xs font-semibold text-emerald-600">
+                                  Incluso no combo
+                                </p>
+                              ) : null}
                             </div>
 
                             {/* Selector */}

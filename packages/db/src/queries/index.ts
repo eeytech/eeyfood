@@ -653,6 +653,8 @@ const carregarContextoPedidoCalculado = async (
     operatingHours,
     productsWithPrices,
     optionsRaw,
+    menuCategoriesRaw,
+    optionGroupsRaw,
     allRecipeItems,
     walletRaw,
     feeRulesRaw,
@@ -669,6 +671,8 @@ const carregarContextoPedidoCalculado = async (
     allOptionIds.length > 0
       ? db.select().from(productOptionsTable).where(inArray(productOptionsTable.id, allOptionIds))
       : Promise.resolve([] as (typeof productOptionsTable.$inferSelect)[]),
+    db.select().from(menuCategoriesTable).where(eq(menuCategoriesTable.restaurantId, restaurant.id)),
+    db.select().from(productOptionGroupsTable).where(eq(productOptionGroupsTable.restaurantId, restaurant.id)),
     db.select({
       productId: recipeItemsTable.productId,
       inventoryItemId: recipeItemsTable.inventoryItemId,
@@ -717,6 +721,8 @@ const carregarContextoPedidoCalculado = async (
 
   const productsMap = new Map<string, Product>(productsWithPrices.map((p) => [p.id, p]));
   const optionsMap = new Map<string, ProductOption>(optionsRaw.map((o) => [o.id, o]));
+  const categoriesMap = new Map(menuCategoriesRaw.map((c) => [c.id, c]));
+  const optionGroupsMap = new Map(optionGroupsRaw.map((g) => [g.id, g]));
   const wallet = walletRaw[0] ?? null;
 
   // Verificar disponibilidade de insumos via Ficha Técnica
@@ -750,10 +756,38 @@ const carregarContextoPedidoCalculado = async (
       throw new Error(`Estoque insuficiente para o produto ${currentProduct.name}.`);
     }
 
+    const category = currentProduct.menuCategoryId ? categoriesMap.get(currentProduct.menuCategoryId) : null;
+    const isCombo =
+      (category?.name || "").toLowerCase().includes("combo") ||
+      currentProduct.name.toLowerCase().includes("combo") ||
+      (currentProduct.description || "").toLowerCase().includes("combo") ||
+      (currentProduct.description || "").toLowerCase().includes("bebida à escolha") ||
+      (currentProduct.description || "").toLowerCase().includes("bebida a escolha") ||
+      (currentProduct.name.toLowerCase().includes("frango crispy") && (currentProduct.description || "").toLowerCase().includes("fritas")) ||
+      (currentProduct.description || "").toLowerCase().includes("frango crispy + fritas pequenas");
+
     const selectedOptions = (itemInput.selectedOptions || []).map((optId) => {
       const option = optionsMap.get(optId);
       if (!option) throw new Error("Opção selecionada não encontrada.");
-      return { id: option.id, name: option.name, price: Number(option.price || 0) };
+
+      const group = option.productOptionGroupId ? optionGroupsMap.get(option.productOptionGroupId) : null;
+      const groupName = (group?.name || "").toLowerCase();
+      const optionName = option.name.toLowerCase();
+
+      const isBeverage =
+        groupName.includes("bebida") ||
+        groupName.includes("refrigerante") ||
+        groupName.includes("refri") ||
+        groupName.includes("suco") ||
+        groupName.includes("acompanhante") ||
+        optionName.includes("coca") ||
+        optionName.includes("suco") ||
+        optionName.includes("água") ||
+        optionName.includes("agua");
+
+      const optPrice = (isCombo && isBeverage) ? 0 : Number(option.price || 0);
+
+      return { id: option.id, name: option.name, price: optPrice };
     });
 
     const optionsPrice = selectedOptions.reduce((acc, opt) => acc + opt.price, 0);

@@ -419,9 +419,9 @@ const main = async () => {
     const [optCocaBebida] = await tx
       .insert(productOptionsTable)
       .values([
-        { productOptionGroupId: grpBebida.id, name: "Coca-Cola Lata", price: 6.0, displayOrder: 1 },
-        { productOptionGroupId: grpBebida.id, name: "Suco de Laranja", price: 9.0, displayOrder: 2 },
-        { productOptionGroupId: grpBebida.id, name: "Água Mineral", price: 4.0, displayOrder: 3 },
+        { productOptionGroupId: grpBebida.id, name: "Coca-Cola Lata", price: 0, displayOrder: 1 },
+        { productOptionGroupId: grpBebida.id, name: "Suco de Laranja", price: 0, displayOrder: 2 },
+        { productOptionGroupId: grpBebida.id, name: "Água Mineral", price: 0, displayOrder: 3 },
       ])
       .returning();
 
