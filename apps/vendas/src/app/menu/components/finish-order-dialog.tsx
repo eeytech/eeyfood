@@ -377,6 +377,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
       const validatedBenefits = await validateOrderBenefits({
         customerPhone: watchedPhone,
         slug,
+        consumptionMethod,
         couponCode: watchedCouponCode,
         useWalletBalance: nextUseWalletBalance,
         products: products.map((product) => ({
@@ -964,6 +965,13 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                             {formatCurrency(checkoutSummary.subtotal)}
                           </span>
                         </div>
+
+                        {checkoutSummary.deliveryFee !== undefined && checkoutSummary.deliveryFee > 0 && (
+                          <div className="mt-1.5 flex items-center justify-between text-slate-500">
+                            <span>Taxa de entrega</span>
+                            <span>{formatCurrency(checkoutSummary.deliveryFee)}</span>
+                          </div>
+                        )}
 
                         {checkoutSummary.couponDiscountAmount > 0 ? (
                           <div className="mt-1.5 flex items-center justify-between text-emerald-700">

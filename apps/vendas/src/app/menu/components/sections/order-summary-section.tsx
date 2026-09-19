@@ -12,6 +12,7 @@ interface NextLoyaltyRule {
 
 export interface CheckoutSummary {
   subtotal: number;
+  deliveryFee?: number;
   couponDiscountAmount: number;
   cashbackRedeemedAmount: number;
   total: number;
@@ -47,6 +48,13 @@ export const OrderSummarySection = ({ checkoutSummary, isCashbackEnabled }: Orde
           <span className="text-slate-500">Subtotal</span>
           <span className="font-semibold">{formatCurrency(checkoutSummary.subtotal)}</span>
         </div>
+
+        {checkoutSummary.deliveryFee !== undefined && checkoutSummary.deliveryFee > 0 && (
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-slate-500">Taxa de Entrega</span>
+            <span className="font-semibold">{formatCurrency(checkoutSummary.deliveryFee)}</span>
+          </div>
+        )}
 
         {checkoutSummary.couponDiscountAmount > 0 && (
           <div className="flex items-center justify-between text-sm text-emerald-600 font-medium">

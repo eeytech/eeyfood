@@ -154,15 +154,24 @@ export const FinishOrderSheet = ({
     ? !isOpen && fulfillmentTiming !== "SCHEDULED"
     : !isOpen;
 
+  const defaultDeliveryFee =
+    consumptionMethod === "DELIVERY"
+      ? (restaurant.freeDeliveryThreshold !== null &&
+         restaurant.freeDeliveryThreshold !== undefined &&
+         total >= Number(restaurant.freeDeliveryThreshold)
+          ? 0
+          : Number(restaurant.deliveryFee ?? 0))
+      : 0;
+
   // When benefits are available (phone validated), use them fully.
   // Otherwise show the raw cart total + proactively fetched upsell rule.
   const checkoutSummary = benefits ?? {
     subtotal: total,
-    deliveryFee: 0,
+    deliveryFee: defaultDeliveryFee,
     discountAmount: 0,
     couponDiscountAmount: 0,
     cashbackRedeemedAmount: 0,
-    total,
+    total: total + defaultDeliveryFee,
     cashbackEarnedAmount: 0,
     appliedCoupon: null,
     wallet: null,
@@ -401,6 +410,7 @@ export const FinishOrderSheet = ({
       const validatedBenefits = await validateOrderBenefits({
         customerPhone: watchedPhone,
         slug,
+        consumptionMethod,
         couponCode: watchedCouponCode,
         useWalletBalance: nextUseWalletBalance,
         products: products.map((product) => ({

@@ -572,9 +572,10 @@ const resolverCupomAplicado = async ({
     throw new Error("Este cupom expirou.");
   }
 
-  if (subtotal < coupon.minimumOrderValue) {
+  const couponMinOrder = Number(coupon.minimumOrderValue || 0);
+  if (subtotal < couponMinOrder) {
     throw new Error(
-      `Este cupom exige pedido minimo de R$ ${coupon.minimumOrderValue
+      `Este cupom exige pedido minimo de R$ ${couponMinOrder
         .toFixed(2)
         .replace(".", ",")}.`,
     );
@@ -605,14 +606,15 @@ const resolverCupomAplicado = async ({
     );
   }
 
+  const numDiscountValue = Number(coupon.discountValue || 0);
   const grossDiscount =
     coupon.discountType === "PERCENTAGE"
-      ? subtotal * (coupon.discountValue / 100)
-      : coupon.discountValue;
+      ? subtotal * (numDiscountValue / 100)
+      : numDiscountValue;
 
   const discountWithCap =
     coupon.maxDiscountAmount !== null
-      ? Math.min(grossDiscount, coupon.maxDiscountAmount)
+      ? Math.min(grossDiscount, Number(coupon.maxDiscountAmount))
       : grossDiscount;
 
   return {
@@ -621,7 +623,7 @@ const resolverCupomAplicado = async ({
       code: coupon.code,
       description: coupon.description,
       discountType: coupon.discountType,
-      discountValue: coupon.discountValue,
+      discountValue: numDiscountValue,
     },
     discountAmount: arredondarMoeda(Math.min(discountWithCap, subtotal)),
   };
@@ -762,8 +764,8 @@ const carregarContextoPedidoCalculado = async (
       productId: currentProduct.id,
       productNameSnapshot: currentProduct.name,
       quantity: itemInput.quantity,
-      price: currentProduct.price,
-      unitCost: currentProduct.costPrice,
+      price: Number(currentProduct.price || 0),
+      unitCost: Number(currentProduct.costPrice || 0),
       lineTotal,
       notes: itemInput.notes,
       currentProduct,
@@ -793,7 +795,7 @@ const carregarContextoPedidoCalculado = async (
       ? arredondarMoeda(Math.min(wallet.balance, totalAfterCoupon))
       : 0;
 
-  let deliveryFee = restaurant.deliveryFee ?? 0;
+  let deliveryFee = Number(restaurant.deliveryFee ?? 0);
 
   if (input.consumptionMethod === "DELIVERY" && feeRulesRaw.length > 0) {
     const lat = (input as ValidarBeneficiosPedidoInput).deliveryLatitude;
@@ -810,23 +812,25 @@ const carregarContextoPedidoCalculado = async (
       : feeRulesRaw[0];
 
     if (matchedRule) {
-      deliveryFee = matchedRule.freeDeliveryThreshold !== null && subtotal >= matchedRule.freeDeliveryThreshold
+      deliveryFee = matchedRule.freeDeliveryThreshold !== null && subtotal >= Number(matchedRule.freeDeliveryThreshold)
         ? 0
-        : matchedRule.fee;
+        : Number(matchedRule.fee);
     }
   } else if (input.consumptionMethod === "DELIVERY") {
-    if (restaurant.freeDeliveryThreshold !== null && subtotal >= (restaurant.freeDeliveryThreshold ?? Infinity)) {
+    if (restaurant.freeDeliveryThreshold !== null && subtotal >= (Number(restaurant.freeDeliveryThreshold) ?? Infinity)) {
       deliveryFee = 0;
     }
   } else {
     deliveryFee = 0;
   }
 
-  const discountAmount = arredondarMoeda(couponDiscountAmount + cashbackRedeemedAmount);
-  const total = arredondarMoeda(Math.max(subtotal + deliveryFee - discountAmount, 0));
+  deliveryFee = arredondarMoeda(deliveryFee);
 
-  const applicableRule = loyaltyRules.find((rule) => subtotal >= rule.minOrderValue);
-  const cashbackPercent = applicableRule ? applicableRule.cashbackPercent : restaurant.cashbackPercent;
+  const discountAmount = arredondarMoeda(Number(couponDiscountAmount) + Number(cashbackRedeemedAmount));
+  const total = arredondarMoeda(Math.max(Number(subtotal) + Number(deliveryFee) - Number(discountAmount), 0));
+
+  const applicableRule = loyaltyRules.find((rule) => subtotal >= Number(rule.minOrderValue));
+  const cashbackPercent = applicableRule ? Number(applicableRule.cashbackPercent) : Number(restaurant.cashbackPercent || 0);
   const cashbackEarnedAmount = arredondarMoeda(total * (cashbackPercent / 100));
 
   const nextLoyaltyRule = [...loyaltyRules].reverse().find((rule) => rule.minOrderValue > subtotal);
@@ -1846,7 +1850,7 @@ export const adicionarItensComanda = async ({
       }, 0),
     );
     const total = arredondarMoeda(
-      subtotal + order.deliveryFee - order.discountAmount,
+      Number(subtotal) + Number(order.deliveryFee ?? 0) - Number(order.discountAmount ?? 0),
     );
     const estimatedProfit = arredondarMoeda(total - estimatedCost);
 

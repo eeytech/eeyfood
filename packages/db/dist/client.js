@@ -1,6 +1,8 @@
 import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
+import { Pool, types } from "pg";
 import * as schema from "./schema";
+// Parse PostgreSQL numeric/decimal (OID 1700) as float so money/numeric fields return numbers instead of strings
+types.setTypeParser(1700, (val) => (val === null || val === undefined ? null : parseFloat(val)));
 const globalForDb = globalThis;
 function getOrCreateDb() {
     if (globalForDb.fswDb && globalForDb.fswPool) {
