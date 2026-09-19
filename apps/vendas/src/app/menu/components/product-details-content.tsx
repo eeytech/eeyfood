@@ -570,7 +570,7 @@ const ProductDetailsContent = ({
                                 <p className={`mt-0.5 text-xs font-medium ${isSelected ? "text-destructive" : "text-slate-500"}`}>
                                   + {formatCurrency(option.price)}
                                 </p>
-                              ) : (option as any).isIncludedInCombo || ((isCombo && isBeverageOptionGroup(group)) || (group.name.toLowerCase().includes("acompanhante") && isBeverageOptionGroup(group))) ? (
+                              ) : isCombo && isBeverageOptionGroup(group) ? (
                                 <p className="mt-0.5 text-xs font-semibold text-emerald-600">
                                   Incluso no combo
                                 </p>
