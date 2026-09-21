@@ -8,6 +8,8 @@ import {
   LogOutIcon,
   PackageCheckIcon,
   UtensilsCrossedIcon,
+  Volume2Icon,
+  VolumeXIcon,
   WifiIcon,
   WifiOffIcon,
 } from "lucide-react";
@@ -74,29 +76,49 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
   const [loadingItemIds, setLoadingItemIds] = useState<string[]>([]);
   const [exitingOrderIds, setExitingOrderIds] = useState<Set<number>>(new Set());
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const [audioEnabled, setAudioEnabled] = useState(false);
 
   const websocketUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL ?? "http://localhost:4000";
 
   const initAudio = () => {
     if (!audioCtxRef.current) {
-      audioCtxRef.current = new AudioContext();
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext })
+          .webkitAudioContext;
+      audioCtxRef.current = new AudioCtx();
     }
+    if (audioCtxRef.current.state === "suspended") {
+      void audioCtxRef.current.resume();
+    }
+    setAudioEnabled(true);
   };
 
   const playBip = () => {
     if (!audioCtxRef.current) return;
     try {
       const ctx = audioCtxRef.current;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(880, ctx.currentTime);
-      gain.gain.setValueAtTime(0.25, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.25);
+      if (ctx.state === "suspended") {
+        void ctx.resume();
+      }
+      // Alerta sonoro duplo nítido para cozinha (880Hz -> 1174Hz)
+      const playTone = (freq: number, startTime: number, duration: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, startTime);
+        gain.gain.setValueAtTime(0, startTime);
+        gain.gain.linearRampToValueAtTime(0.3, startTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+        osc.start(startTime);
+        osc.stop(startTime + duration);
+      };
+
+      const t = ctx.currentTime;
+      playTone(880, t, 0.16);
+      playTone(1174, t + 0.20, 0.28);
     } catch {
       // ignore audio errors
     }
@@ -153,7 +175,17 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
       const data = (await response.json()) as PedidoRecebimento[];
       if (Array.isArray(data)) {
         const kdsOrders = data.filter((o) => KDS_STATUSES.includes(o.status as OrderStatus));
-        setOrders(kdsOrders);
+        setOrders((current) => {
+          const hasNew = kdsOrders.some(
+            (incoming) =>
+              incoming.status === "PENDING" &&
+              !current.some((existing) => existing.id === incoming.id),
+          );
+          if (hasNew) {
+            playBip();
+          }
+          return kdsOrders;
+        });
       }
     } catch {
       // ignore network errors
@@ -333,7 +365,10 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
         : (sectors.find((s) => s.id === selectedSectorId)?.name ?? "Setor");
 
   return (
-    <div className="flex min-h-screen w-full flex-col overflow-hidden bg-slate-950 text-white select-none">
+    <div
+      className="flex min-h-screen w-full flex-col overflow-hidden bg-slate-950 text-white select-none"
+      onClick={initAudio}
+    >
       {/* Header */}
       <header className="flex shrink-0 flex-col gap-3 border-b border-white/10 bg-slate-900/80 px-5 py-3">
         <div className="flex items-center justify-between">
@@ -373,6 +408,24 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
                   socketConnected ? "bg-emerald-500" : "bg-rose-500",
                 )}
               />
+            </div>
+
+            <div
+              className={cn(
+                "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium cursor-pointer transition-colors",
+                audioEnabled
+                  ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
+                  : "bg-amber-500/15 text-amber-300 border border-amber-500/30 animate-pulse",
+              )}
+              onClick={(e) => {
+                e.stopPropagation();
+                initAudio();
+              }}
+            >
+              {audioEnabled ? <Volume2Icon size={14} /> : <VolumeXIcon size={14} />}
+              <span className="hidden sm:inline">
+                {audioEnabled ? "Som Ativo" : "Ativar Som"}
+              </span>
             </div>
 
             <button
