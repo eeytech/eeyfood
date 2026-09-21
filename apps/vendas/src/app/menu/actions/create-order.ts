@@ -21,6 +21,7 @@ interface CreateOrderInput {
   customerPhone: string;
   products: Array<{
     id: string;
+    name?: string;
     quantity: number;
     selectedOptions?: string[];
     notes?: string;

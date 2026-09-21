@@ -194,6 +194,9 @@ const PizzaBuilderSheet = ({
         : product.name;
 
     const noteParts: string[] = [];
+    if (fraction === "meio-a-meio" && flavor2) {
+      noteParts.push(`1/2 ${product.name} + 1/2 ${flavor2.name}`);
+    }
     if (comment.trim()) {
       noteParts.push(comment.trim());
     }

@@ -94,17 +94,37 @@ export const ThermalPrintLayout = React.forwardRef<
           <span>ITEM</span>
           <span>QTD</span>
         </div>
-        {order.orderProducts.map((item) => (
-          <React.Fragment key={item.id}>
-            <div className="flex justify-between mb-1">
-              <span className="max-w-[70%]">{item.product.name}</span>
-              <span>{item.quantity}x</span>
-            </div>
-            {item.notes && (
-              <div className="text-[10px] italic mb-2">- Obs: {item.notes}</div>
-            )}
-          </React.Fragment>
-        ))}
+        {order.orderProducts.map((item) => {
+          const optionCounts = new Map<string, { name: string; count: number }>();
+          if (item.orderProductOptions) {
+            for (const opt of item.orderProductOptions) {
+              const key = opt.productOptionId || opt.nameSnapshot;
+              const existing = optionCounts.get(key);
+              if (existing) {
+                existing.count += 1;
+              } else {
+                optionCounts.set(key, { name: opt.nameSnapshot, count: 1 });
+              }
+            }
+          }
+
+          return (
+            <React.Fragment key={item.id}>
+              <div className="flex justify-between mb-0.5">
+                <span className="max-w-[75%] font-medium">{item.productNameSnapshot || item.product.name}</span>
+                <span>{item.quantity}x</span>
+              </div>
+              {Array.from(optionCounts.entries()).map(([key, opt]) => (
+                <div key={key} className="text-[10px] text-slate-700 pl-2">
+                  • {opt.count > 1 ? `${opt.count}x ` : ""}{opt.name}
+                </div>
+              ))}
+              {item.notes && (
+                <div className="text-[10px] italic pl-2 mb-1">- Obs: {item.notes}</div>
+              )}
+            </React.Fragment>
+          );
+        })}
       </div>
 
       {!isProduction && (

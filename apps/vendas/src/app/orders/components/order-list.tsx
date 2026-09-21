@@ -107,19 +107,47 @@ const OrderCard = ({ order, isRated, onRatingSuccess }: OrderCardProps) => (
         {order.orderProducts.map((orderProduct) => (
           <div
             key={orderProduct.id}
-            className="flex items-center justify-between gap-4"
+            className="flex items-start justify-between gap-4"
           >
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600">
+            <div className="flex items-start gap-2.5 min-w-0 flex-1">
+              <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600">
                 {orderProduct.quantity}
               </div>
-              <p className="text-sm text-slate-700">
-                {orderProduct.product.name}
-              </p>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-slate-900">
+                  {orderProduct.productNameSnapshot || orderProduct.product.name}
+                </p>
+                {orderProduct.orderProductOptions && orderProduct.orderProductOptions.length > 0 && (
+                  <div className="mt-0.5 flex flex-col gap-0.5 text-xs text-slate-500">
+                    {(() => {
+                      const counts = new Map<string, { name: string; count: number }>();
+                      for (const opt of orderProduct.orderProductOptions) {
+                        const key = opt.productOptionId || opt.nameSnapshot;
+                        const existing = counts.get(key);
+                        if (existing) {
+                          existing.count += 1;
+                        } else {
+                          counts.set(key, { name: opt.nameSnapshot, count: 1 });
+                        }
+                      }
+                      return Array.from(counts.entries()).map(([key, item]) => (
+                        <p key={key} className="break-words leading-tight">
+                          • {item.count > 1 ? `${item.count}x ` : ""}{item.name}
+                        </p>
+                      ));
+                    })()}
+                  </div>
+                )}
+                {orderProduct.notes && (
+                  <p className="mt-0.5 text-xs italic text-slate-500">
+                    Obs: {orderProduct.notes}
+                  </p>
+                )}
+              </div>
             </div>
-            <p className="text-sm font-medium text-slate-900">
+            <p className="text-sm font-medium text-slate-900 shrink-0">
               {formatCurrency(
-                orderProduct.product.price * orderProduct.quantity,
+                orderProduct.lineTotal ?? (orderProduct.price * orderProduct.quantity),
               )}
             </p>
           </div>

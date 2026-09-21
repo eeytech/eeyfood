@@ -470,13 +470,35 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
             </div>
             ${order.orderProducts
               .map(
-                (item) => `
-              <div class="flex justify-between">
-                <span>${item.product.name}</span>
+                (item) => {
+                  const optionCounts = new Map<string, { name: string; count: number }>();
+                  if (item.orderProductOptions) {
+                    for (const opt of item.orderProductOptions) {
+                      const key = opt.productOptionId || opt.nameSnapshot;
+                      const existing = optionCounts.get(key);
+                      if (existing) {
+                        existing.count += 1;
+                      } else {
+                        optionCounts.set(key, { name: opt.nameSnapshot, count: 1 });
+                      }
+                    }
+                  }
+                  const optionsHtml = Array.from(optionCounts.values())
+                    .map(
+                      (opt) =>
+                        `<div style="font-size: 10px; margin-left: 6px; color: #222;">• ${opt.count > 1 ? `${opt.count}x ` : ""}${opt.name}</div>`,
+                    )
+                    .join("");
+
+                  return `
+              <div class="flex justify-between" style="margin-top: 4px;">
+                <span class="font-bold">${item.productNameSnapshot || item.product.name}</span>
                 <span>${item.quantity}x</span>
               </div>
-              ${item.notes ? `<div style="font-size: 10px; font-style: italic; margin-bottom: 4px;">- Obs: ${item.notes}</div>` : ""}
-            `,
+              ${optionsHtml}
+              ${item.notes ? `<div style="font-size: 10px; font-style: italic; margin-left: 6px; margin-bottom: 2px;">- Obs: ${item.notes}</div>` : ""}
+            `;
+                },
               )
               .join("")}
           </div>
@@ -873,23 +895,48 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                             </button>
 
                             {isExpanded && (
-                              <div className="space-y-1 pt-1">
+                              <div className="space-y-1.5 pt-1">
                                 {order.orderProducts.map((orderProduct) => (
                                   <div
                                     key={orderProduct.id}
-                                    className="flex items-center justify-between rounded-lg border bg-background/70 px-3 py-1.5"
+                                    className="flex items-start justify-between gap-2 rounded-lg border bg-background/70 p-2.5"
                                   >
-                                    <div className="min-w-0">
-                                      <p className="truncate text-sm font-medium">
-                                        {orderProduct.product.name}
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-sm font-semibold text-slate-900 leading-snug break-words">
+                                        {orderProduct.productNameSnapshot || orderProduct.product.name}
                                       </p>
+
+                                      {/* Opções selecionadas (ponto da carne, bebidas, sabores, caldas, acompanhamentos, bordas, etc.) */}
+                                      {orderProduct.orderProductOptions && orderProduct.orderProductOptions.length > 0 && (
+                                        <div className="mt-1 flex flex-col gap-0.5 text-xs text-slate-600">
+                                          {(() => {
+                                            const counts = new Map<string, { name: string; count: number }>();
+                                            for (const opt of orderProduct.orderProductOptions) {
+                                              const key = opt.productOptionId || opt.nameSnapshot;
+                                              const existing = counts.get(key);
+                                              if (existing) {
+                                                existing.count += 1;
+                                              } else {
+                                                counts.set(key, { name: opt.nameSnapshot, count: 1 });
+                                              }
+                                            }
+
+                                            return Array.from(counts.entries()).map(([key, item]) => (
+                                              <p key={key} className="break-words leading-tight">
+                                                • {item.count > 1 ? `${item.count}x ` : ""}{item.name}
+                                              </p>
+                                            ));
+                                          })()}
+                                        </div>
+                                      )}
+
                                       {orderProduct.notes && (
-                                        <p className="text-xs italic text-amber-600/80">
-                                          {orderProduct.notes}
+                                        <p className="mt-1 text-xs italic text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 inline-block">
+                                          Obs: {orderProduct.notes}
                                         </p>
                                       )}
                                     </div>
-                                    <span className="ml-3 shrink-0 text-xs font-semibold text-muted-foreground">
+                                    <span className="ml-2 shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-xs font-bold text-slate-700">
                                       {String(orderProduct.quantity)}×
                                     </span>
                                   </div>

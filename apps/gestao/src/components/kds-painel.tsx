@@ -499,12 +499,23 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
                                 isItemReady ? "text-emerald-300 line-through" : "text-white/90",
                               )}
                             >
-                              {item.product.name}
+                              {item.productNameSnapshot || item.product.name}
                             </p>
                             {item.orderProductOptions.length > 0 && (
-                              <p className="mt-0.5 text-[11px] text-slate-400">
-                                {item.orderProductOptions.map((o) => o.nameSnapshot).join(", ")}
-                              </p>
+                              <div className="mt-0.5 flex flex-col gap-0.5 text-[11px] text-slate-300">
+                                {(() => {
+                                  const counts = new Map<string, { name: string; count: number }>();
+                                  for (const opt of item.orderProductOptions) {
+                                    const key = opt.productOptionId || opt.nameSnapshot;
+                                    const existing = counts.get(key);
+                                    if (existing) existing.count += 1;
+                                    else counts.set(key, { name: opt.nameSnapshot, count: 1 });
+                                  }
+                                  return Array.from(counts.entries()).map(([k, opt]) => (
+                                    <span key={k}>• {opt.count > 1 ? `${opt.count}x ` : ""}{opt.name}</span>
+                                  ));
+                                })()}
+                              </div>
                             )}
                             {item.notes && (
                               <p className="mt-0.5 text-[11px] italic text-amber-400/90">

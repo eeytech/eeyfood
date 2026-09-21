@@ -83,6 +83,7 @@ export interface CriarPedidoInput {
   marketplaceType?: MarketplaceType;
   products: Array<{
     id: string;
+    name?: string;
     quantity: number;
     selectedOptions?: string[]; // IDs de ProductOption
     notes?: string;
@@ -100,6 +101,7 @@ export interface ValidarBeneficiosPedidoInput {
   deliveryLongitude?: number;
   products: Array<{
     id: string;
+    name?: string;
     quantity: number;
     selectedOptions?: string[];
     notes?: string;
@@ -796,7 +798,7 @@ const carregarContextoPedidoCalculado = async (
 
     return {
       productId: currentProduct.id,
-      productNameSnapshot: currentProduct.name,
+      productNameSnapshot: itemInput.name?.trim() || currentProduct.name,
       quantity: itemInput.quantity,
       price: Number(currentProduct.price || 0),
       unitCost: Number(currentProduct.costPrice || 0),
@@ -1407,18 +1409,46 @@ export const criarPedido = async (input: CriarPedidoInput): Promise<Order> => {
       })
       .returning();
 
-    await tx.insert(orderProductsTable).values(
-      contexto.itens.map((item) => ({
-        productId: item.productId,
-        orderId: order.id,
-        quantity: item.quantity,
-        price: item.price,
-        unitCost: item.unitCost,
-        lineTotal: item.lineTotal,
-        productNameSnapshot: item.productNameSnapshot,
-        notes: item.notes,
-      })),
-    );
+    const insertedOrderProducts = await tx
+      .insert(orderProductsTable)
+      .values(
+        contexto.itens.map((item) => ({
+          productId: item.productId,
+          orderId: order.id,
+          quantity: item.quantity,
+          price: item.price,
+          unitCost: item.unitCost,
+          lineTotal: item.lineTotal,
+          productNameSnapshot: item.productNameSnapshot,
+          notes: item.notes,
+        })),
+      )
+      .returning({ id: orderProductsTable.id });
+
+    const orderProductOptionsToInsert: Array<{
+      orderProductId: string;
+      productOptionId: string;
+      nameSnapshot: string;
+      priceSnapshot: number;
+    }> = [];
+
+    insertedOrderProducts.forEach((inserted, index) => {
+      const item = contexto.itens[index];
+      if (item?.selectedOptions && item.selectedOptions.length > 0) {
+        for (const opt of item.selectedOptions) {
+          orderProductOptionsToInsert.push({
+            orderProductId: inserted.id,
+            productOptionId: opt.id,
+            nameSnapshot: opt.name,
+            priceSnapshot: opt.price,
+          });
+        }
+      }
+    });
+
+    if (orderProductOptionsToInsert.length > 0) {
+      await tx.insert(orderProductOptionsTable).values(orderProductOptionsToInsert);
+    }
 
     for (const item of contexto.itens) {
       if (!item.currentProduct.trackInventory) {

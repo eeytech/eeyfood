@@ -507,6 +507,7 @@ export const FinishOrderSheet = ({
         deliveryAddressData,
         products: products.map((product) => ({
           id: product.id,
+          name: product.name,
           quantity: product.quantity,
           selectedOptions: product.selectedOptions?.map((opt) => opt.id),
           notes: product.notes,

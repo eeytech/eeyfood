@@ -660,7 +660,13 @@ const PdvFrenteCaixa = ({
           <div class="dashed"></div>
           <div class="mb">
             <div class="row bold"><span>ITEM</span><span>QTD</span></div>
-            ${order.orderProducts.map((item) => `<div class="row"><span>${item.product.name}</span><span>${item.quantity}x</span></div>`).join("")}
+            ${order.orderProducts.map((item) => {
+              const optionsHtml = item.orderProductOptions && item.orderProductOptions.length > 0
+                ? item.orderProductOptions.map((o) => `<div style="font-size:10px;padding-left:8px;color:#333;">• ${o.nameSnapshot}</div>`).join("")
+                : "";
+              const notesHtml = item.notes ? `<div style="font-size:10px;font-style:italic;padding-left:8px;">- Obs: ${item.notes}</div>` : "";
+              return `<div class="row" style="margin-top:3px;"><span class="bold">${item.productNameSnapshot || item.product.name}</span><span>${item.quantity}x</span></div>${optionsHtml}${notesHtml}`;
+            }).join("")}
           </div>
           <div class="dashed"></div>
           <div style="display:flex;flex-direction:column;gap:4px;">

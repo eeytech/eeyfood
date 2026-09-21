@@ -1238,9 +1238,14 @@ const ComandaDigital = ({
                                       className="h-4 w-4 shrink-0 cursor-pointer rounded accent-amber-500"
                                     />
                                     <div className="min-w-0 flex-1">
-                                      <p className="truncate text-sm font-medium text-slate-950">
-                                        {item.product.name}
+                                      <p className="text-sm font-medium text-slate-950">
+                                        {item.productNameSnapshot || item.product.name}
                                       </p>
+                                      {item.orderProductOptions && item.orderProductOptions.length > 0 && (
+                                        <p className="text-[11px] text-slate-500">
+                                          {item.orderProductOptions.map((o) => o.nameSnapshot).join(", ")}
+                                        </p>
+                                      )}
                                       <p className="text-xs text-muted-foreground">
                                         {String(item.quantity)} × {formatCurrency(item.price)}
                                       </p>
@@ -1548,7 +1553,12 @@ const ComandaDigital = ({
                               className="flex items-center gap-2.5 rounded-lg border bg-slate-50/80 px-3 py-2"
                             >
                               <div className="min-w-0 flex-1">
-                                <p className="truncate text-sm font-medium">{item.product.name}</p>
+                                <p className="text-sm font-medium">{item.productNameSnapshot || item.product.name}</p>
+                                {item.orderProductOptions && item.orderProductOptions.length > 0 && (
+                                  <p className="text-[11px] text-slate-500">
+                                    {item.orderProductOptions.map((o) => o.nameSnapshot).join(", ")}
+                                  </p>
+                                )}
                                 <p className="text-xs text-muted-foreground">
                                   {String(item.quantity)} × {formatCurrency(item.price)}
                                 </p>
