@@ -5,6 +5,7 @@ import {
   BellRingIcon,
   ChefHatIcon,
   Clock3Icon,
+  LogOutIcon,
   SparklesIcon,
   UserIcon,
   Volume2Icon,
@@ -15,6 +16,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 
+import { logoutAction } from "@/lib/auth/actions";
 import { cn } from "@/lib/utils";
 
 interface SenhaPainelProps {
@@ -67,6 +69,7 @@ const SenhaPainel = ({ slug, restaurantName, initialOrders }: SenhaPainelProps) 
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [newlyReadyIds, setNewlyReadyIds] = useState<Set<number>>(new Set());
   const [socketConnected, setSocketConnected] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [currentTime, setCurrentTime] = useState("");
   const [displayMode, setDisplayMode] = useState<DisplayMode>("NAME_AND_NUMBER");
 
@@ -103,6 +106,7 @@ const SenhaPainel = ({ slug, restaurantName, initialOrders }: SenhaPainelProps) 
 
   // Relógio digital em tempo real
   useEffect(() => {
+    setMounted(true);
     const updateClock = () => {
       const now = new Date();
       setCurrentTime(
@@ -196,8 +200,9 @@ const SenhaPainel = ({ slug, restaurantName, initialOrders }: SenhaPainelProps) 
   useEffect(() => {
     const socket = io(websocketUrl, {
       transports: ["websocket", "polling"],
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 2500,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 5000,
+      timeout: 8000,
     });
 
     const handleConnect = () => {
@@ -326,7 +331,7 @@ const SenhaPainel = ({ slug, restaurantName, initialOrders }: SenhaPainelProps) 
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 rounded-xl bg-slate-800/60 px-3 py-1.5 border border-white/5 font-mono text-sm font-semibold text-slate-200">
             <Clock3Icon size={14} className="text-amber-400" />
-            <span>{currentTime || "--:--:--"}</span>
+            <span suppressHydrationWarning>{mounted && currentTime ? currentTime : "--:--:--"}</span>
           </div>
 
           <div
@@ -375,6 +380,21 @@ const SenhaPainel = ({ slug, restaurantName, initialOrders }: SenhaPainelProps) 
               {audioEnabled ? "Áudio Ativo" : "Ativar Som"}
             </span>
           </div>
+
+          <button
+            type="button"
+            title="Desconectar do painel da TV"
+            onClick={async (e) => {
+              e.stopPropagation();
+              if (window.confirm("Deseja desconectar e sair desta TV?")) {
+                await logoutAction();
+              }
+            }}
+            className="flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-800/80 px-3 py-1 text-xs font-semibold text-slate-300 transition-colors hover:border-rose-500/50 hover:bg-rose-500/20 hover:text-rose-300 cursor-pointer"
+          >
+            <LogOutIcon size={13} />
+            <span className="hidden sm:inline">Sair</span>
+          </button>
         </div>
       </header>
 

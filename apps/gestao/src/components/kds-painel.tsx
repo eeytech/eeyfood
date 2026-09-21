@@ -5,6 +5,7 @@ import {
   CheckCircle2Icon,
   ChefHatIcon,
   Clock3Icon,
+  LogOutIcon,
   PackageCheckIcon,
   UtensilsCrossedIcon,
   WifiIcon,
@@ -14,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 
+import { logoutAction } from "@/lib/auth/actions";
 import { cn } from "@/lib/utils";
 
 interface KdsPainelProps {
@@ -66,6 +68,7 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
     initialOrders.filter((o) => KDS_STATUSES.includes(o.status as OrderStatus)),
   );
   const [socketConnected, setSocketConnected] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const [loadingOrderIds, setLoadingOrderIds] = useState<number[]>([]);
   const [loadingItemIds, setLoadingItemIds] = useState<string[]>([]);
@@ -135,6 +138,7 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
   };
 
   useEffect(() => {
+    setMounted(true);
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
   }, []);
@@ -159,8 +163,9 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
   useEffect(() => {
     const socket = io(websocketUrl, {
       transports: ["websocket", "polling"],
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 2500,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 5000,
+      timeout: 8000,
     });
 
     const handleConnect = () => {
@@ -328,7 +333,7 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
         : (sectors.find((s) => s.id === selectedSectorId)?.name ?? "Setor");
 
   return (
-    <div className="flex min-h-[calc(100vh-2.5rem)] flex-col overflow-hidden rounded-xl bg-slate-950 text-white">
+    <div className="flex min-h-screen w-full flex-col overflow-hidden bg-slate-950 text-white select-none">
       {/* Header */}
       <header className="flex shrink-0 flex-col gap-3 border-b border-white/10 bg-slate-900/80 px-5 py-3">
         <div className="flex items-center justify-between">
@@ -369,6 +374,21 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
                 )}
               />
             </div>
+
+            <button
+              type="button"
+              title="Desconectar do KDS da Cozinha"
+              onClick={async (e) => {
+                e.stopPropagation();
+                if (window.confirm("Deseja desconectar e sair do painel KDS?")) {
+                  await logoutAction();
+                }
+              }}
+              className="flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-800/80 px-3 py-1 text-xs font-semibold text-slate-300 transition-colors hover:border-rose-500/50 hover:bg-rose-500/20 hover:text-rose-300 cursor-pointer"
+            >
+              <LogOutIcon size={13} />
+              <span className="hidden sm:inline">Sair</span>
+            </button>
           </div>
         </div>
 
@@ -614,8 +634,11 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
                     <div className="mb-3 flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         <Clock3Icon size={13} className={getTimerClass(elapsed)} />
-                        <span className={cn("font-mono text-sm", getTimerClass(elapsed))}>
-                          {formatElapsed(elapsed)}
+                        <span
+                          suppressHydrationWarning
+                          className={cn("font-mono text-sm", getTimerClass(elapsed))}
+                        >
+                          {mounted ? formatElapsed(elapsed) : "--:--"}
                         </span>
                       </div>
                       <span className="text-xs text-slate-600">

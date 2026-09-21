@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { buscarRestauranteUnico } from "@fsw/db";
 
@@ -15,6 +16,23 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
 
   if (!session) {
     redirect("/login");
+  }
+
+  const headerList = await headers();
+  const pathname = headerList.get("x-pathname") || "";
+  const isTvRoute =
+    pathname === "/senha" ||
+    pathname.startsWith("/senha/") ||
+    pathname === "/kds" ||
+    pathname.startsWith("/kds/");
+
+  // Telas de TV / perfis dedicados ocupam 100% da tela sem sidebar nem bordas de backoffice
+  if (session.role === "KITCHEN" || session.role === "PANEL" || isTvRoute) {
+    return (
+      <div className="h-screen w-screen overflow-hidden bg-slate-950 text-white">
+        {children}
+      </div>
+    );
   }
 
   const restaurant = await buscarRestauranteUnico();

@@ -8,6 +8,7 @@ import {
   eq,
   isNull,
   or,
+  sql,
   usersTable,
 } from "@fsw/db";
 import type { UserRole } from "@fsw/db";
@@ -79,6 +80,14 @@ export async function criarUsuarioAction(
 
     const isSuperAdmin = role === "SUPER_ADMIN";
 
+    if (role === "PANEL") {
+      try {
+        await db.execute(sql`ALTER TYPE "public"."UserRole" ADD VALUE IF NOT EXISTS 'PANEL'`);
+      } catch {
+        // ignore if already present or permission
+      }
+    }
+
     await db.insert(usersTable).values({
       name,
       email,
@@ -147,6 +156,14 @@ export async function atualizarUsuarioAction(params: {
 
     if (password && password.trim().length >= 6) {
       updateData.passwordHash = await bcrypt.hash(password.trim(), 10);
+    }
+
+    if (role === "PANEL") {
+      try {
+        await db.execute(sql`ALTER TYPE "public"."UserRole" ADD VALUE IF NOT EXISTS 'PANEL'`);
+      } catch {
+        // ignore if already present or permission
+      }
     }
 
     await db

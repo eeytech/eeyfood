@@ -29,7 +29,7 @@ export declare const bankAccountTypeEnum: import("drizzle-orm/pg-core").PgEnum<[
 export declare const bankStatementEntryStatusEnum: import("drizzle-orm/pg-core").PgEnum<["PENDING", "MATCHED", "IGNORED"]>;
 export declare const conversationStatusEnum: import("drizzle-orm/pg-core").PgEnum<["BOT_ACTIVE", "HUMAN_REQUIRED"]>;
 export declare const marketingChannelEnum: import("drizzle-orm/pg-core").PgEnum<["META_ADS", "GOOGLE_ADS", "OTHER"]>;
-export declare const userRoleEnum: import("drizzle-orm/pg-core").PgEnum<["SUPER_ADMIN", "ADMIN", "MANAGER", "WAITER", "KITCHEN"]>;
+export declare const userRoleEnum: import("drizzle-orm/pg-core").PgEnum<["SUPER_ADMIN", "ADMIN", "MANAGER", "WAITER", "KITCHEN", "PANEL"]>;
 export declare const usersTable: import("drizzle-orm/pg-core").PgTableWithColumns<{
     name: "User";
     schema: undefined;
@@ -107,14 +107,14 @@ export declare const usersTable: import("drizzle-orm/pg-core").PgTableWithColumn
             tableName: "User";
             dataType: "string";
             columnType: "PgEnumColumn";
-            data: "SUPER_ADMIN" | "ADMIN" | "MANAGER" | "WAITER" | "KITCHEN";
+            data: "SUPER_ADMIN" | "ADMIN" | "MANAGER" | "WAITER" | "KITCHEN" | "PANEL";
             driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
             isAutoincrement: false;
             hasRuntimeDefault: false;
-            enumValues: ["SUPER_ADMIN", "ADMIN", "MANAGER", "WAITER", "KITCHEN"];
+            enumValues: ["SUPER_ADMIN", "ADMIN", "MANAGER", "WAITER", "KITCHEN", "PANEL"];
             baseColumn: never;
             identity: undefined;
             generated: undefined;

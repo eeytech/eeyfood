@@ -19,6 +19,7 @@ import {
   ShieldCheckIcon,
   SparklesIcon,
   Trash2Icon,
+  TvIcon,
   UserCheckIcon,
   UserIcon,
   UserPlusIcon,
@@ -104,6 +105,13 @@ const ROLE_CONFIG: Record<string, RoleConfig> = {
     badgeClass: "bg-amber-50 text-amber-800 border-amber-200/80 hover:bg-amber-100",
     icon: ChefHatIcon,
     description: "Visualiza pedidos no KDS, marca itens preparados e despacha pratos",
+  },
+  PANEL: {
+    label: "Painel de Senhas / TV Salão",
+    shortLabel: "TV de Senhas",
+    badgeClass: "bg-teal-50 text-teal-800 border-teal-200/80 hover:bg-teal-100",
+    icon: TvIcon,
+    description: "Exibe exclusivamente a tela de senhas na TV para chamada de clientes no salão",
   },
   ADMIN: {
     label: "Administrador de Restaurante",
@@ -468,6 +476,7 @@ export function UsuariosClient({ slug, users }: UsuariosClientProps) {
                   <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
                     <SelectItem value="ALL">Todos os cargos</SelectItem>
                     <SelectItem value="KITCHEN">Cozinha / KDS</SelectItem>
+                    <SelectItem value="PANEL">Painel de Senhas (TV)</SelectItem>
                     <SelectItem value="ADMIN">Administrador</SelectItem>
                     <SelectItem value="MANAGER">Gerente</SelectItem>
                     <SelectItem value="WAITER">Garçom</SelectItem>

@@ -38,14 +38,13 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL("/unauthorized", request.url));
     }
 
-    // Se o usuário for da Cozinha (KDS), restringir o acesso exclusivamente ao KDS, Painel de Senhas e APIs
     const userRole = String(payload.role ?? "");
+
+    // Se o usuário for da Cozinha (KDS), restringir o acesso exclusivamente ao KDS e APIs
     if (userRole === "KITCHEN") {
       const isAllowed =
         pathname === "/kds" ||
         pathname.startsWith("/kds/") ||
-        pathname === "/senha" ||
-        pathname.startsWith("/senha/") ||
         pathname.startsWith("/api/");
 
       if (!isAllowed) {
@@ -53,7 +52,20 @@ export async function middleware(request: NextRequest) {
       }
     }
 
+    // Se o usuário for do Painel de Senhas (TV Salão), restringir exclusivamente ao /senha e APIs
+    if (userRole === "PANEL") {
+      const isAllowed =
+        pathname === "/senha" ||
+        pathname.startsWith("/senha/") ||
+        pathname.startsWith("/api/");
+
+      if (!isAllowed) {
+        return NextResponse.redirect(new URL("/senha", request.url));
+      }
+    }
+
     const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-pathname", pathname);
     requestHeaders.set("x-user-id", String(payload.sub ?? ""));
     requestHeaders.set(
       "x-restaurant-id",
