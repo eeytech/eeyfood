@@ -88,9 +88,16 @@ const SenhaPainel = ({ slug, restaurantName, initialOrders }: SenhaPainelProps) 
     filterOrders(initialOrders),
   );
   const [allOrders, setAllOrders] = useState<PedidoRecebimento[]>(initialOrders);
+  const [lastSyncOk, setLastSyncOk] = useState(true);
 
-  const websocketUrl =
-    process.env.NEXT_PUBLIC_WEBSOCKET_URL ?? "http://localhost:4000";
+  const websocketUrl = (() => {
+    const raw = process.env.NEXT_PUBLIC_WEBSOCKET_URL?.trim();
+    if (!raw) return "http://localhost:4000";
+    if (raw.includes("websocket.eeytech.com") && !raw.includes("fswdonalds")) {
+      return raw.replace("websocket.eeytech.com", "websocket.fswdonalds.eeytech.com");
+    }
+    return raw;
+  })();
 
   // Inicialização do áudio com interação
   const initAudio = () => {
@@ -175,9 +182,13 @@ const SenhaPainel = ({ slug, restaurantName, initialOrders }: SenhaPainelProps) 
       const response = await fetch(`/api/pedidos?slug=${encodeURIComponent(slug)}`, {
         cache: "no-store",
       });
-      if (!response.ok) return;
+      if (!response.ok) {
+        setLastSyncOk(false);
+        return;
+      }
       const data = (await response.json()) as PedidoRecebimento[];
       if (Array.isArray(data)) {
+        setLastSyncOk(true);
         // Detecta pedidos que recém ficaram prontos
         data.forEach((newOrder) => {
           if (newOrder.status === READY_STATUS) {
@@ -192,7 +203,7 @@ const SenhaPainel = ({ slug, restaurantName, initialOrders }: SenhaPainelProps) 
         setColumns(filterOrders(data));
       }
     } catch {
-      // ignore network errors
+      setLastSyncOk(false);
     }
   };
 
@@ -200,9 +211,9 @@ const SenhaPainel = ({ slug, restaurantName, initialOrders }: SenhaPainelProps) 
   useEffect(() => {
     const socket = io(websocketUrl, {
       transports: ["websocket", "polling"],
-      reconnectionAttempts: 5,
-      reconnectionDelay: 5000,
-      timeout: 8000,
+      reconnectionAttempts: 2,
+      reconnectionDelay: 10000,
+      timeout: 5000,
     });
 
     const handleConnect = () => {
@@ -338,27 +349,33 @@ const SenhaPainel = ({ slug, restaurantName, initialOrders }: SenhaPainelProps) 
             title={
               socketConnected
                 ? "Canal de tempo real via WebSockets conectado"
-                : "Reconectando WebSocket (sincronização automática em segundo plano ativa)"
+                : lastSyncOk
+                  ? "Sincronização contínua em segundo plano ativa"
+                  : "Sem conexão com o servidor. Tentando restabelecer..."
             }
             className="flex items-center gap-2 rounded-full border border-white/10 bg-slate-800/80 px-3 py-1 text-xs"
           >
-            {socketConnected ? (
+            {socketConnected || lastSyncOk ? (
               <WifiIcon size={13} className="text-emerald-400" />
             ) : (
-              <WifiOffIcon size={13} className="text-amber-400" />
+              <WifiOffIcon size={13} className="text-rose-400" />
             )}
             <span
               className={cn(
                 "font-medium",
-                socketConnected ? "text-emerald-400" : "text-amber-300",
+                socketConnected || lastSyncOk ? "text-emerald-400" : "text-rose-400",
               )}
             >
-              {socketConnected ? "Sincronizado" : "Reconectando"}
+              {socketConnected || lastSyncOk ? "Sincronizado" : "Reconectando"}
             </span>
             <span
               className={cn(
-                "h-2 w-2 rounded-full animate-pulse",
-                socketConnected ? "bg-emerald-500" : "bg-amber-500",
+                "h-2 w-2 rounded-full",
+                socketConnected
+                  ? "bg-emerald-500"
+                  : lastSyncOk
+                    ? "bg-emerald-400 animate-pulse"
+                    : "bg-rose-500 animate-pulse",
               )}
             />
           </div>

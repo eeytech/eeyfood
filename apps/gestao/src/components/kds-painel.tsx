@@ -77,8 +77,16 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
   const [exitingOrderIds, setExitingOrderIds] = useState<Set<number>>(new Set());
   const audioCtxRef = useRef<AudioContext | null>(null);
   const [audioEnabled, setAudioEnabled] = useState(false);
+  const [lastSyncOk, setLastSyncOk] = useState(true);
 
-  const websocketUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL ?? "http://localhost:4000";
+  const websocketUrl = (() => {
+    const raw = process.env.NEXT_PUBLIC_WEBSOCKET_URL?.trim();
+    if (!raw) return "http://localhost:4000";
+    if (raw.includes("websocket.eeytech.com") && !raw.includes("fswdonalds")) {
+      return raw.replace("websocket.eeytech.com", "websocket.fswdonalds.eeytech.com");
+    }
+    return raw;
+  })();
 
   const initAudio = () => {
     if (!audioCtxRef.current) {
@@ -171,9 +179,13 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
       const response = await fetch(`/api/pedidos?slug=${encodeURIComponent(slug)}`, {
         cache: "no-store",
       });
-      if (!response.ok) return;
+      if (!response.ok) {
+        setLastSyncOk(false);
+        return;
+      }
       const data = (await response.json()) as PedidoRecebimento[];
       if (Array.isArray(data)) {
+        setLastSyncOk(true);
         const kdsOrders = data.filter((o) => KDS_STATUSES.includes(o.status as OrderStatus));
         setOrders((current) => {
           const hasNew = kdsOrders.some(
@@ -188,16 +200,16 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
         });
       }
     } catch {
-      // ignore network errors
+      setLastSyncOk(false);
     }
   };
 
   useEffect(() => {
     const socket = io(websocketUrl, {
       transports: ["websocket", "polling"],
-      reconnectionAttempts: 5,
-      reconnectionDelay: 5000,
-      timeout: 8000,
+      reconnectionAttempts: 2,
+      reconnectionDelay: 10000,
+      timeout: 5000,
     });
 
     const handleConnect = () => {
@@ -389,7 +401,7 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
               {displayOrders.length !== 1 ? "s" : ""}
             </span>
             <div className="flex items-center gap-1.5">
-              {socketConnected ? (
+              {socketConnected || lastSyncOk ? (
                 <WifiIcon size={13} className="text-emerald-400" />
               ) : (
                 <WifiOffIcon size={13} className="text-rose-400" />
@@ -397,15 +409,19 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
               <span
                 className={cn(
                   "text-xs",
-                  socketConnected ? "text-emerald-400" : "text-rose-400",
+                  socketConnected || lastSyncOk ? "text-emerald-400" : "text-rose-400",
                 )}
               >
-                {socketConnected ? "Sincronizado" : "Reconectando"}
+                {socketConnected || lastSyncOk ? "Sincronizado" : "Reconectando"}
               </span>
               <span
                 className={cn(
-                  "h-2 w-2 animate-pulse rounded-full",
-                  socketConnected ? "bg-emerald-500" : "bg-rose-500",
+                  "h-2 w-2 rounded-full",
+                  socketConnected
+                    ? "bg-emerald-500"
+                    : lastSyncOk
+                      ? "bg-emerald-400 animate-pulse"
+                      : "bg-rose-500 animate-pulse",
                 )}
               />
             </div>

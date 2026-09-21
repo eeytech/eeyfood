@@ -232,8 +232,14 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
   const [selectedCourierId, setSelectedCourierId] = useState<string>("");
   const [isDispatching, setIsDispatching] = useState(false);
 
-  const websocketUrl =
-    process.env.NEXT_PUBLIC_WEBSOCKET_URL ?? "http://localhost:4000";
+  const websocketUrl = (() => {
+    const raw = process.env.NEXT_PUBLIC_WEBSOCKET_URL?.trim();
+    if (!raw) return "http://localhost:4000";
+    if (raw.includes("websocket.eeytech.com") && !raw.includes("fswdonalds")) {
+      return raw.replace("websocket.eeytech.com", "websocket.fswdonalds.eeytech.com");
+    }
+    return raw;
+  })();
 
   const syncOrderById = async (orderId: number) => {
     const response = await fetch(`/api/pedidos/${String(orderId)}`, {
@@ -258,8 +264,9 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
   useEffect(() => {
     const socket = io(websocketUrl, {
       transports: ["websocket", "polling"],
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 2500,
+      reconnectionAttempts: 2,
+      reconnectionDelay: 10000,
+      timeout: 5000,
     });
 
     const handleConnect = () => {
