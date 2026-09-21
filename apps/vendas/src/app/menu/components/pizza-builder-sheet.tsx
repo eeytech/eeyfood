@@ -194,11 +194,8 @@ const PizzaBuilderSheet = ({
         : product.name;
 
     const noteParts: string[] = [];
-    if (fraction === "meio-a-meio" && flavor2) {
-      noteParts.push(`Meio a meio: ${product.name} / ${flavor2.name}`);
-    }
     if (comment.trim()) {
-      noteParts.push(noteParts.length > 0 ? `Obs: ${comment.trim()}` : comment.trim());
+      noteParts.push(comment.trim());
     }
     const notes = noteParts.length > 0 ? noteParts.join(" | ") : undefined;
 
