@@ -92,14 +92,26 @@ export async function loginAction(
       path: "/",
       maxAge: authConfig.cookie.maxAge,
     });
+
+    const destinationRoute =
+      user.role === "KITCHEN"
+        ? "/kds"
+        : user.role === "WAITER"
+          ? "/mesas"
+          : "/pedidos";
+
+    redirect(destinationRoute);
   } catch (error) {
+    // Next.js redirect lida internamente com uma exceção controlada, não deve ser capturada como erro de login
+    if (error && typeof error === "object" && "digest" in error) {
+      throw error;
+    }
+
     return {
       error:
         error instanceof Error ? error.message : "Erro ao efetuar login.",
     };
   }
-
-  redirect("/pedidos");
 }
 
 export async function logoutAction(): Promise<void> {

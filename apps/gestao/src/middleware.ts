@@ -38,9 +38,27 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL("/unauthorized", request.url));
     }
 
+    // Se o usuário for da Cozinha (KDS), restringir o acesso exclusivamente ao KDS, Painel de Senhas e APIs
+    const userRole = String(payload.role ?? "");
+    if (userRole === "KITCHEN") {
+      const isAllowed =
+        pathname === "/kds" ||
+        pathname.startsWith("/kds/") ||
+        pathname === "/senha" ||
+        pathname.startsWith("/senha/") ||
+        pathname.startsWith("/api/");
+
+      if (!isAllowed) {
+        return NextResponse.redirect(new URL("/kds", request.url));
+      }
+    }
+
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set("x-user-id", String(payload.sub ?? ""));
-    requestHeaders.set("x-restaurant-id", String(payload.companyId ?? payload.activeCompanyId ?? ""));
+    requestHeaders.set(
+      "x-restaurant-id",
+      String(payload.companyId ?? payload.activeCompanyId ?? ""),
+    );
     requestHeaders.set(
       "x-user-data",
       JSON.stringify({

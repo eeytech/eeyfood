@@ -39,7 +39,20 @@ interface AdminSidebarProps {
   companies: TokenCompany[];
   currentCompanyId: string;
   userPermissions: Record<string, string[]>;
+  userRole?: string;
+  userName?: string;
+  userEmail?: string;
 }
+
+const kitchenGroups = [
+  {
+    label: "Cozinha & KDS",
+    items: [
+      { href: "kds", label: "Painel KDS", icon: ConciergeBellIcon },
+      { href: "senha", label: "Painel de Senhas", icon: MonitorSmartphoneIcon },
+    ],
+  },
+];
 
 const navigationGroups = [
   {
@@ -96,10 +109,14 @@ const navigationGroups = [
 const AdminSidebar = ({
   companies,
   currentCompanyId,
+  userRole,
+  userName,
 }: AdminSidebarProps) => {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
+
+  const activeGroups = userRole === "KITCHEN" ? kitchenGroups : navigationGroups;
 
   return (
     <aside
@@ -128,7 +145,7 @@ const AdminSidebar = ({
       />
 
       <nav className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden p-2 no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-        {navigationGroups.map((group, groupIndex) => (
+        {activeGroups.map((group, groupIndex) => (
           <div
             key={group.label}
             className={cn("flex flex-col gap-0.5", groupIndex > 0 && "mt-3")}
@@ -166,23 +183,44 @@ const AdminSidebar = ({
       </nav>
 
       <div className="shrink-0 border-t border-white/10 p-2">
+        {/* User identification badge */}
+        {userName && (
+          <div
+            className={cn(
+              "mb-2 rounded-md bg-white/5 p-2 text-xs",
+              isCollapsed && "px-1 text-center",
+            )}
+          >
+            <p className="truncate font-medium text-white">{userName}</p>
+            <span className="text-[10px] font-semibold text-amber-400">
+              {userRole === "KITCHEN"
+                ? "Cozinha / KDS"
+                : userRole === "WAITER"
+                  ? "Garçom"
+                  : "Administrador"}
+            </span>
+          </div>
+        )}
+
         {showSupport && !isCollapsed ? (
           <div className="rounded-md border border-white/10 bg-slate-900 p-3">
             <SupportTicketForm onClose={() => setShowSupport(false)} />
           </div>
         ) : (
           <div className={cn("flex flex-col gap-1", isCollapsed && "items-center")}>
-            <button
-              onClick={() => setShowSupport(true)}
-              title={isCollapsed ? "Suporte" : undefined}
-              className={cn(
-                "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-100",
-                isCollapsed && "justify-center",
-              )}
-            >
-              <HeadphonesIcon size={15} className="shrink-0" />
-              {!isCollapsed && <span>Suporte</span>}
-            </button>
+            {userRole !== "KITCHEN" && (
+              <button
+                onClick={() => setShowSupport(true)}
+                title={isCollapsed ? "Suporte" : undefined}
+                className={cn(
+                  "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-100",
+                  isCollapsed && "justify-center",
+                )}
+              >
+                <HeadphonesIcon size={15} className="shrink-0" />
+                {!isCollapsed && <span>Suporte</span>}
+              </button>
+            )}
 
             <form action={logoutAction}>
               <button

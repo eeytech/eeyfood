@@ -29,6 +29,9 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
         companies={[]}
         currentCompanyId={restaurant?.id ?? ""}
         userPermissions={{}}
+        userRole={session.role}
+        userName={session.name}
+        userEmail={session.email}
       />
       <main className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-5">
         <div className="mx-auto max-w-[1600px]">{children}</div>
