@@ -5,6 +5,7 @@ import {
   CheckCircle2Icon,
   ChefHatIcon,
   Clock3Icon,
+  HelpCircleIcon,
   LogOutIcon,
   PackageCheckIcon,
   UtensilsCrossedIcon,
@@ -17,6 +18,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { logoutAction } from "@/lib/auth/actions";
 import { cn } from "@/lib/utils";
 
@@ -78,6 +86,7 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
   const audioCtxRef = useRef<AudioContext | null>(null);
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [lastSyncOk, setLastSyncOk] = useState(true);
+  const [legendOpen, setLegendOpen] = useState(false);
 
   const websocketUrl = (() => {
     const raw = process.env.NEXT_PUBLIC_WEBSOCKET_URL?.trim();
@@ -311,14 +320,64 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
     currentStatus: string,
   ) => {
     initAudio();
-    const nextStatus = currentStatus === "READY" ? "PENDING" : "READY";
+    if (loadingItemIds.includes(itemId)) return;
+
+    const nextStatus: "PENDING" | "READY" = currentStatus === "READY" ? "PENDING" : "READY";
+
+    // 1. Atualização otimista imediata na UI
+    setOrders((current) =>
+      current.map((order) => {
+        if (order.id !== orderId) return order;
+        return {
+          ...order,
+          orderProducts: order.orderProducts.map((item) =>
+            item.id === itemId
+              ? { ...item, itemStatus: nextStatus }
+              : item,
+          ),
+        };
+      }),
+    );
+
     try {
       setLoadingItemIds((prev) => [...prev, itemId]);
-      await fetch(`/api/pedidos/${String(orderId)}/itens/${itemId}`, {
+      const response = await fetch(`/api/pedidos/${String(orderId)}/itens/${itemId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ itemStatus: nextStatus }),
       });
+
+      if (!response.ok) {
+        // Reverte se a requisição falhar no servidor
+        setOrders((current) =>
+          current.map((order) => {
+            if (order.id !== orderId) return order;
+            return {
+              ...order,
+              orderProducts: order.orderProducts.map((item) =>
+                item.id === itemId
+                  ? { ...item, itemStatus: currentStatus as "PENDING" | "READY" }
+                  : item,
+              ),
+            };
+          }),
+        );
+      }
+    } catch {
+      // Reverte se houver erro de rede
+      setOrders((current) =>
+        current.map((order) => {
+          if (order.id !== orderId) return order;
+          return {
+            ...order,
+            orderProducts: order.orderProducts.map((item) =>
+              item.id === itemId
+                ? { ...item, itemStatus: currentStatus as "PENDING" | "READY" }
+                : item,
+            ),
+          };
+        }),
+      );
     } finally {
       setLoadingItemIds((prev) => prev.filter((id) => id !== itemId));
     }
@@ -444,6 +503,20 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
               </span>
             </div>
 
+            {/* Botão de Legenda */}
+            <button
+              type="button"
+              title="Guia e legenda de cores, tempos e status do KDS"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLegendOpen(true);
+              }}
+              className="flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-800/80 px-2.5 py-1 text-xs font-semibold text-slate-300 transition-colors hover:border-sky-500/50 hover:bg-sky-500/20 hover:text-sky-300 cursor-pointer"
+            >
+              <HelpCircleIcon size={13} className="text-sky-400" />
+              <span className="hidden sm:inline">Legenda</span>
+            </button>
+
             <button
               type="button"
               title="Desconectar do KDS da Cozinha"
@@ -533,13 +606,22 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
               const isLoading = loadingOrderIds.includes(order.id);
               const isPending = order.status === "PENDING";
               const ready = allItemsReady(order);
+              const isAllSectorItemsReady =
+                selectedSectorId !== null &&
+                !isExpedicao &&
+                order.orderProducts.length > 0 &&
+                order.orderProducts.every((i) => i.itemStatus === "READY");
 
               return (
                 <div
                   key={order.id}
                   className={cn(
                     "flex flex-col rounded-xl border bg-slate-900 transition-all duration-500",
-                    isPending ? "border-amber-500/30" : "border-sky-500/30",
+                    isAllSectorItemsReady
+                      ? "border-emerald-500/50 shadow-sm shadow-emerald-500/10"
+                      : isPending
+                        ? "border-amber-500/30"
+                        : "border-sky-500/30",
                     isExiting ? "scale-90 opacity-0" : "scale-100 opacity-100",
                   )}
                 >
@@ -670,14 +752,15 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
                               <button
                                 type="button"
                                 disabled={isItemLoading}
-                                onClick={() =>
-                                  handleToggleItem(order.id, item.id, item.itemStatus)
-                                }
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void handleToggleItem(order.id, item.id, item.itemStatus);
+                                }}
                                 className={cn(
-                                  "mt-0.5 rounded px-2 py-0.5 text-[10px] font-semibold transition-colors disabled:opacity-50",
+                                  "mt-0.5 rounded px-2.5 py-1 text-[11px] font-semibold transition-all cursor-pointer active:scale-95",
                                   isItemReady
-                                    ? "bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30"
-                                    : "bg-slate-600 text-slate-300 hover:bg-slate-500",
+                                    ? "bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/35"
+                                    : "bg-slate-700 text-slate-200 border border-slate-600 hover:bg-slate-600 hover:text-white",
                                 )}
                               >
                                 {isItemReady ? "Pronto ✓" : "Marcar"}
@@ -734,12 +817,34 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
                       </button>
                     ) : selectedSectorId !== null ? (
                       /* Sector mode: no order-level button (items are marked individually) */
-                      <div className="flex items-center justify-center gap-1.5 py-1 text-xs text-slate-600">
-                        <span>
-                          {order.orderProducts.filter((i) => i.itemStatus === "READY").length}/
-                          {order.orderProducts.length} itens prontos
-                        </span>
-                      </div>
+                      (() => {
+                        const readyCount = order.orderProducts.filter(
+                          (i) => i.itemStatus === "READY",
+                        ).length;
+                        const totalCount = order.orderProducts.length;
+                        const isSectorDone = totalCount > 0 && readyCount === totalCount;
+                        return (
+                          <div
+                            className={cn(
+                              "flex items-center justify-center gap-1.5 py-1 text-xs font-medium transition-colors",
+                              isSectorDone
+                                ? "text-emerald-400 font-semibold"
+                                : "text-slate-500",
+                            )}
+                          >
+                            {isSectorDone && (
+                              <CheckCircle2Icon size={13} className="text-emerald-400" />
+                            )}
+                            <span>
+                              {readyCount}/{totalCount}{" "}
+                              {readyCount === 1 && totalCount === 1
+                                ? "item pronto"
+                                : "itens prontos"}
+                              {isSectorDone ? " ✓" : ""}
+                            </span>
+                          </div>
+                        );
+                      })()
                     ) : (
                       /* All-sectors mode: original order-level advance */
                       isPending ? (
@@ -771,6 +876,212 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
           </div>
         )}
       </main>
+
+      {/* Modal de Legenda do KDS */}
+      <Dialog open={legendOpen} onOpenChange={setLegendOpen}>
+        <DialogContent className="max-w-2xl border-white/10 bg-slate-900 text-white sm:rounded-2xl max-h-[88vh] overflow-y-auto p-5 sm:p-6 shadow-2xl">
+          <DialogHeader className="border-b border-white/10 pb-3 text-left">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20 text-primary">
+                <ChefHatIcon size={20} />
+              </div>
+              <div>
+                <DialogTitle className="text-lg font-bold text-white">
+                  Guia &amp; Legenda do KDS
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-400">
+                  Referência rápida de tempos, cores, status e tipos de consumo no display da cozinha.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-5 pt-2 text-xs">
+            {/* Seção 1: Alertas de Tempo de Espera (SLA) */}
+            <div>
+              <div className="flex items-center gap-2 mb-2.5">
+                <Clock3Icon size={15} className="text-amber-400" />
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                  1. Alertas de Tempo Decorrido (SLA)
+                </h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div className="rounded-xl border border-white/10 bg-slate-950/60 p-3">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <Clock3Icon size={14} className="text-slate-500" />
+                    <span className="font-mono text-sm font-semibold text-slate-400">
+                      08:24
+                    </span>
+                  </div>
+                  <p className="font-bold text-slate-200">Normal (&lt; 15 min)</p>
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    Preparo dentro do tempo esperado para a cozinha.
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-3">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <Clock3Icon size={14} className="text-yellow-400" />
+                    <span className="font-mono text-sm font-bold text-yellow-400">
+                      18:40
+                    </span>
+                  </div>
+                  <p className="font-bold text-yellow-300">Atenção (15 a 25 min)</p>
+                  <p className="mt-1 text-[11px] text-yellow-200/80">
+                    Espera moderada. Priorize a finalização dos itens.
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-red-500/40 bg-red-500/15 p-3">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <Clock3Icon size={14} className="text-red-400 animate-pulse" />
+                    <span className="font-mono text-sm font-bold text-red-400 animate-pulse">
+                      27:12
+                    </span>
+                  </div>
+                  <p className="font-bold text-red-300">Crítico (&gt; 25 min)</p>
+                  <p className="mt-1 text-[11px] text-red-200/80">
+                    Tempo elevado! Risco iminente de reclamação de atraso.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Seção 2: Ciclo de Vida e Bordas dos Pedidos */}
+            <div>
+              <div className="flex items-center gap-2 mb-2.5">
+                <CheckCircle2Icon size={15} className="text-sky-400" />
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                  2. Ciclo de Vida &amp; Bordas dos Pedidos
+                </h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="rounded-full border border-amber-500/40 bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-300">
+                      Aguardando
+                    </span>
+                    <span className="text-[10px] text-slate-400">PENDING</span>
+                  </div>
+                  <p className="font-semibold text-white">Borda Amarela</p>
+                  <p className="mt-1 text-[11px] text-slate-300">
+                    Pedido recebido. Aguardando a equipe iniciar o preparo.
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-sky-500/40 bg-sky-500/10 p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="rounded-full border border-sky-500/40 bg-sky-500/20 px-2 py-0.5 text-[10px] font-bold text-sky-300">
+                      Em Produção
+                    </span>
+                    <span className="text-[10px] text-slate-400">IN_PREP</span>
+                  </div>
+                  <p className="font-semibold text-white">Borda Azul</p>
+                  <p className="mt-1 text-[11px] text-slate-300">
+                    Cozinha trabalhando ativamente na preparação dos itens.
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-emerald-500/50 bg-emerald-500/10 p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="rounded-full border border-emerald-500/40 bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                      Setor Concluído ✓
+                    </span>
+                    <span className="text-[10px] text-emerald-400">PRONTO</span>
+                  </div>
+                  <p className="font-semibold text-white">Borda Verde</p>
+                  <p className="mt-1 text-[11px] text-slate-300">
+                    Todos os itens da sua estação já foram marcados como prontos.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Seção 3: Tipos de Consumo */}
+            <div>
+              <div className="flex items-center gap-2 mb-2.5">
+                <UtensilsCrossedIcon size={15} className="text-emerald-400" />
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                  3. Tipos de Consumo (Tags no Cartão)
+                </h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div className="flex flex-col gap-1 rounded-xl border border-white/10 bg-slate-950/60 p-3">
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full border border-blue-500/40 bg-blue-500/15 px-2.5 py-0.5 text-[11px] font-medium text-blue-300">
+                      Salão
+                    </span>
+                    <span className="font-bold text-white text-xs">Mesa Local</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Servido na louça/bandeja diretamente para os garçons levarem à mesa.
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-1 rounded-xl border border-white/10 bg-slate-950/60 p-3">
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full border border-emerald-500/40 bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-medium text-emerald-300">
+                      Balcão
+                    </span>
+                    <span className="font-bold text-white text-xs">Retirada</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Cliente aguardando retirada. Embalado para entrega rápida ao balcão.
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-1 rounded-xl border border-white/10 bg-slate-950/60 p-3">
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full border border-amber-500/40 bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-medium text-amber-300">
+                      Entrega
+                    </span>
+                    <span className="font-bold text-white text-xs">Delivery</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Embalado termicamente e lacrado para despacho via motoboy.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Seção 4: Multi-marcas (Dark Kitchen) */}
+            <div className="rounded-xl border border-white/10 bg-slate-950/60 p-3.5">
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <div className="flex items-center gap-2">
+                  <PackageCheckIcon size={15} className="text-violet-400" />
+                  <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                    4. Dark Kitchen &amp; Multi-marcas Virtuais
+                  </h2>
+                </div>
+                <div className="rounded px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-violet-600 text-white">
+                  EXEMPLO DE MARCA
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Em cozinhas que preparam mais de uma marca virtual no mesmo espaço, a barra colorida superior identifica imediatamente de qual restaurante é aquele pedido, evitando enganos de embalagens, adesivos e itens.
+              </p>
+            </div>
+
+            {/* Seção 5: Modos de Operação */}
+            <div className="rounded-xl border border-white/10 bg-slate-950/60 p-3.5">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+                5. Abas de Filtro &amp; Modos de Trabalho
+              </h2>
+              <div className="space-y-2 text-[11px] text-slate-300">
+                <p>
+                  <strong className="text-white">• Abas por Setor (ex: Cozinha Quente, Bar):</strong> Fixe o tablet da estação na sua aba. Aparecem apenas os itens do seu setor e você clica em <span className="rounded bg-slate-700 px-1.5 py-0.5 text-[10px] font-semibold text-slate-200">Marcar</span> / <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300">Pronto ✓</span> individualmente em cada item com atualização instantânea.
+                </p>
+                <p>
+                  <strong className="text-white">• Aba Expedição:</strong> Centraliza a conferência de todos os setores. Permite despachar o pedido inteiro para retirada assim que todas as estações concluírem seus itens.
+                </p>
+                <p>
+                  <strong className="text-white">• Aba Todos:</strong> Visão panorâmica para a gerência ou cozinhas compactas com avanço direto em lote.
+                </p>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

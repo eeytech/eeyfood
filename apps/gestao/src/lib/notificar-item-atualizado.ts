@@ -11,7 +11,10 @@ export const notificarItemAtualizado = async ({
   restaurantSlug,
   itemStatus,
 }: NotificarItemAtualizadoInput) => {
-  const websocketServerUrl = process.env.WEBSOCKET_SERVER_URL;
+  const websocketServerUrl =
+    process.env.WEBSOCKET_SERVER_URL ||
+    process.env.NEXT_PUBLIC_WEBSOCKET_URL ||
+    process.env.WEBSOCKET_URL;
 
   if (!websocketServerUrl) {
     return;
