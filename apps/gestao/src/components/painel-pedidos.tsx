@@ -257,7 +257,9 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
 
   useEffect(() => {
     const socket = io(websocketUrl, {
-      transports: ["websocket"],
+      transports: ["websocket", "polling"],
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 2500,
     });
 
     const handleConnect = () => {
@@ -290,6 +292,7 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
 
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
+    socket.on("connect_error", handleDisconnect);
     socket.on("NEW_ORDER", handleNewOrder);
     socket.on("ORDER_UPDATED", handleOrderUpdated);
     socket.on("CALL_WAITER", handleCallWaiter);
@@ -299,6 +302,7 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
     return () => {
       socket.off("connect", handleConnect);
       socket.off("disconnect", handleDisconnect);
+      socket.off("connect_error", handleDisconnect);
       socket.off("NEW_ORDER", handleNewOrder);
       socket.off("ORDER_UPDATED", handleOrderUpdated);
       socket.off("CALL_WAITER", handleCallWaiter);

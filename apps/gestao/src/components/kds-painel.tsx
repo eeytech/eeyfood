@@ -139,8 +139,29 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
     return () => clearInterval(interval);
   }, []);
 
+  // Sincronização geral de fallback (usado se o WebSocket estiver desconectado)
+  const syncAllOrders = async () => {
+    try {
+      const response = await fetch(`/api/pedidos?slug=${encodeURIComponent(slug)}`, {
+        cache: "no-store",
+      });
+      if (!response.ok) return;
+      const data = (await response.json()) as PedidoRecebimento[];
+      if (Array.isArray(data)) {
+        const kdsOrders = data.filter((o) => KDS_STATUSES.includes(o.status as OrderStatus));
+        setOrders(kdsOrders);
+      }
+    } catch {
+      // ignore network errors
+    }
+  };
+
   useEffect(() => {
-    const socket = io(websocketUrl, { transports: ["websocket"] });
+    const socket = io(websocketUrl, {
+      transports: ["websocket", "polling"],
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 2500,
+    });
 
     const handleConnect = () => {
       setSocketConnected(true);
@@ -178,6 +199,7 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
 
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
+    socket.on("connect_error", handleDisconnect);
     socket.on("NEW_ORDER", handleNewOrder);
     socket.on("ORDER_UPDATED", handleOrderUpdated);
     socket.on("ITEM_UPDATED", handleItemUpdated);
@@ -185,6 +207,7 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
     return () => {
       socket.off("connect", handleConnect);
       socket.off("disconnect", handleDisconnect);
+      socket.off("connect_error", handleDisconnect);
       socket.off("NEW_ORDER", handleNewOrder);
       socket.off("ORDER_UPDATED", handleOrderUpdated);
       socket.off("ITEM_UPDATED", handleItemUpdated);
@@ -192,6 +215,18 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, websocketUrl]);
+
+  // Polling automático de segurança se o socket estiver desconectado
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!socketConnected) {
+        void syncAllOrders();
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [socketConnected, slug]);
 
   const handleAdvanceOrder = async (order: PedidoRecebimento) => {
     initAudio();
