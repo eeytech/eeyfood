@@ -1,4 +1,4 @@
-import { db, eq, restaurantsTable, walletsTable, and } from "@fsw/db";
+import { db, eq, walletsTable, and } from "@fsw/db";
 import {
   ArrowLeftIcon,
   MessageSquareIcon,
@@ -9,6 +9,7 @@ import {
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { buscarRestauranteParaGestao } from "@/lib/admin-queries";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -21,8 +22,10 @@ import {
 } from "@/components/ui/table";
 import { buscarClienteDetalheAction } from "../../crm-actions";
 
+export const dynamic = "force-dynamic";
+
 interface PageProps {
-  params: Promise<{ slug: string; customerId: string }>;
+  params: Promise<{ slug?: string; customerId: string }>;
 }
 
 const SEGMENT_LABELS: Record<string, string> = {
@@ -72,13 +75,11 @@ const STATUS_LABELS: Record<string, string> = {
 export default async function CustomerDetailPage({ params }: PageProps) {
   const { slug, customerId } = await params;
 
-  const restaurant = await db.query.restaurantsTable.findFirst({
-    where: eq(restaurantsTable.slug, slug),
-  });
+  const restaurant = await buscarRestauranteParaGestao(slug);
 
   if (!restaurant) notFound();
 
-  const { customer, orders } = await buscarClienteDetalheAction(slug, customerId);
+  const { customer, orders } = await buscarClienteDetalheAction(restaurant.slug, customerId);
 
   const walletData = await db.query.walletsTable.findFirst({
     where: and(

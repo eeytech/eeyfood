@@ -2,12 +2,12 @@ import {
   customersTable,
   db,
   eq,
-  restaurantsTable,
   sql,
 } from "@fsw/db";
 import { Users2Icon } from "lucide-react";
 import { notFound } from "next/navigation";
 
+import { buscarRestauranteParaGestao } from "@/lib/admin-queries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -17,8 +17,10 @@ import {
 import { CrmFilters } from "./crm-filters";
 import { CustomerTable } from "./customer-table";
 
+export const dynamic = "force-dynamic";
+
 interface PageProps {
-  params: Promise<{ slug: string }>;
+  params?: Promise<{ slug?: string }>;
   searchParams: Promise<{ segment?: string; search?: string; page?: string }>;
 }
 
@@ -48,18 +50,20 @@ async function getSegmentStats(restaurantId: string) {
 }
 
 export default async function CrmPage({ params, searchParams }: PageProps) {
-  const { slug } = await params;
+  const resolvedParams = params ? await params : undefined;
   const sp = await searchParams;
 
-  const restaurant = await db.query.restaurantsTable.findFirst({
-    where: eq(restaurantsTable.slug, slug),
-  });
+  const restaurant = await buscarRestauranteParaGestao(resolvedParams?.slug);
 
-  if (!restaurant) notFound();
+  if (!restaurant) {
+    notFound();
+  }
+
+  const restaurantSlug = restaurant.slug;
 
   const [stats, data] = await Promise.all([
     getSegmentStats(restaurant.id),
-    listarClientesCRMAction(slug, {
+    listarClientesCRMAction(restaurantSlug, {
       segment: sp.segment,
       search: sp.search,
       page: sp.page ? Number(sp.page) : 1,
@@ -68,7 +72,7 @@ export default async function CrmPage({ params, searchParams }: PageProps) {
 
   async function reclassify() {
     "use server";
-    await classificarClientesRFMAction(slug);
+    await classificarClientesRFMAction(restaurantSlug);
   }
 
   return (
@@ -111,7 +115,7 @@ export default async function CrmPage({ params, searchParams }: PageProps) {
         total={data.total}
         page={data.page}
         pageSize={data.pageSize}
-        slug={slug}
+        slug={restaurantSlug}
       />
     </div>
   );

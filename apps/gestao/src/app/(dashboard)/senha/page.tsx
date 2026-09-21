@@ -7,22 +7,22 @@ import { buscarRestauranteParaGestao } from "@/lib/admin-queries";
 export const dynamic = "force-dynamic";
 
 interface SenhaPageProps {
-  params: Promise<{ slug: string }>;
+  params?: Promise<{ slug?: string }>;
 }
 
 const SenhaPage = async ({ params }: SenhaPageProps) => {
-  const { slug } = await params;
-  const restaurant = await buscarRestauranteParaGestao(slug);
+  const resolvedParams = params ? await params : undefined;
+  const restaurant = await buscarRestauranteParaGestao(resolvedParams?.slug);
 
   if (!restaurant) {
     return notFound();
   }
 
-  const orders = await listarPedidosRecebimentoPorSlug(slug);
+  const orders = await listarPedidosRecebimentoPorSlug(restaurant.slug);
 
   return (
     <SenhaPainel
-      slug={slug}
+      slug={restaurant.slug}
       restaurantName={restaurant.name}
       initialOrders={orders}
     />

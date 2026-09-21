@@ -7,22 +7,23 @@ import { buscarRestauranteParaGestao } from "@/lib/admin-queries";
 export const dynamic = "force-dynamic";
 
 interface PedidosPageProps {
-  params: Promise<{ slug: string }>;
+  params?: Promise<{ slug?: string }>;
 }
 
 const PedidosPage = async ({ params }: PedidosPageProps) => {
-  const { slug } = await params;
-  const restaurant = await buscarRestauranteParaGestao(slug);
-  const orders = await listarPedidosRecebimentoPorSlug(slug);
+  const resolvedParams = params ? await params : undefined;
+  const restaurant = await buscarRestauranteParaGestao(resolvedParams?.slug);
 
   if (!restaurant) {
     return notFound();
   }
 
+  const orders = await listarPedidosRecebimentoPorSlug(restaurant.slug);
+
   return (
     <PainelPedidos
       initialOrders={orders}
-      slug={slug}
+      slug={restaurant.slug}
     />
   );
 };

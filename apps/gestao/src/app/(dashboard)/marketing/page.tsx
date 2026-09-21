@@ -1,4 +1,5 @@
-import { db, eq, marketingSettingsTable, restaurantsTable } from "@fsw/db";
+import { buscarRestauranteParaGestao } from "@/lib/admin-queries";
+import { db, eq, marketingSettingsTable } from "@fsw/db";
 import { BarChart2Icon } from "lucide-react";
 import { notFound } from "next/navigation";
 
@@ -6,18 +7,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { salvarMarketingSettingsAction } from "../marketing-actions";
 import { MarketingSettingsForm } from "./marketing-settings-form";
 
+export const dynamic = "force-dynamic";
+
 interface PageProps {
-  params: Promise<{ slug: string }>;
+  params?: Promise<{ slug?: string }>;
 }
 
 export default async function MarketingPage({ params }: PageProps) {
-  const { slug } = await params;
+  const resolvedParams = params ? await params : undefined;
+  const restaurant = await buscarRestauranteParaGestao(resolvedParams?.slug);
 
-  const restaurant = await db.query.restaurantsTable.findFirst({
-    where: eq(restaurantsTable.slug, slug),
-  });
+  if (!restaurant) {
+    notFound();
+  }
 
-  if (!restaurant) notFound();
+  const restaurantSlug = restaurant.slug;
 
   const settings = await db.query.marketingSettingsTable.findFirst({
     where: eq(marketingSettingsTable.restaurantId, restaurant.id),
@@ -25,7 +29,7 @@ export default async function MarketingPage({ params }: PageProps) {
 
   async function save(formData: FormData) {
     "use server";
-    return salvarMarketingSettingsAction(slug, formData);
+    return salvarMarketingSettingsAction(restaurantSlug, formData);
   }
 
   return (

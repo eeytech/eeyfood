@@ -2,15 +2,18 @@
 
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
-import { db, eq, or, isNull, restaurantsTable, usersTable } from "@fsw/db";
+import {
+  buscarRestaurantePorSlug,
+  db,
+  eq,
+  isNull,
+  or,
+  usersTable,
+} from "@fsw/db";
 import type { UserRole } from "@fsw/db";
 
-export async function listarUsuariosAction(restaurantSlug: string) {
-  const [restaurant] = await db
-    .select({ id: restaurantsTable.id })
-    .from(restaurantsTable)
-    .where(eq(restaurantsTable.slug, restaurantSlug))
-    .limit(1);
+export async function listarUsuariosAction(restaurantSlug?: string) {
+  const restaurant = await buscarRestaurantePorSlug(restaurantSlug);
 
   if (!restaurant) {
     throw new Error("Restaurante não encontrado.");
@@ -47,7 +50,7 @@ export async function criarUsuarioAction(
   const role = (formData.get("role")?.toString() ?? "ADMIN") as UserRole;
   const restaurantSlug = formData.get("restaurantSlug")?.toString();
 
-  if (!name || !email || !password || !restaurantSlug) {
+  if (!name || !email || !password) {
     return { error: "Todos os campos obrigatórios devem ser preenchidos." };
   }
 
@@ -66,11 +69,7 @@ export async function criarUsuarioAction(
       return { error: "Já existe um usuário cadastrado com este e-mail." };
     }
 
-    const [restaurant] = await db
-      .select({ id: restaurantsTable.id })
-      .from(restaurantsTable)
-      .where(eq(restaurantsTable.slug, restaurantSlug))
-      .limit(1);
+    const restaurant = await buscarRestaurantePorSlug(restaurantSlug);
 
     if (!restaurant) {
       return { error: "Restaurante de destino não encontrado." };
@@ -88,7 +87,10 @@ export async function criarUsuarioAction(
       restaurantId: isSuperAdmin ? null : restaurant.id,
     });
 
-    revalidatePath(`/${restaurantSlug}/configuracoes/usuarios`);
+    if (restaurant.slug) {
+      revalidatePath(`/${restaurant.slug}/configuracoes/usuarios`);
+    }
+    revalidatePath("/configuracoes/usuarios");
     return { success: true };
   } catch (error) {
     return {
@@ -101,12 +103,15 @@ export async function criarUsuarioAction(
 export async function alternarStatusUsuarioAction(
   userId: string,
   isActive: boolean,
-  restaurantSlug: string,
+  restaurantSlug?: string,
 ) {
   await db
     .update(usersTable)
     .set({ isActive, updatedAt: new Date() })
     .where(eq(usersTable.id, userId));
 
-  revalidatePath(`/${restaurantSlug}/configuracoes/usuarios`);
+  if (restaurantSlug) {
+    revalidatePath(`/${restaurantSlug}/configuracoes/usuarios`);
+  }
+  revalidatePath("/configuracoes/usuarios");
 }

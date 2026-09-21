@@ -2,7 +2,6 @@ import {
   customersTable,
   db,
   eq,
-  restaurantsTable,
 } from "@fsw/db";
 import {
   MegaphoneIcon,
@@ -11,32 +10,33 @@ import {
 } from "lucide-react";
 import { notFound } from "next/navigation";
 
+import { buscarRestauranteParaGestao } from "@/lib/admin-queries";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { dispararCampanhaAction } from "../marketing-actions";
 import { CampanhaForm } from "./campanha-form";
 
+export const dynamic = "force-dynamic";
+
 interface PageProps {
-  params: Promise<{ slug: string }>;
+  params?: Promise<{ slug?: string }>;
 }
 
 const SEGMENTS = [
   { value: "ALL", label: "Todos os clientes", color: "default" as const },
   { value: "NEW", label: "Novos", color: "default" as const },
   { value: "VIP", label: "VIP", color: "default" as const },
-  { value: "INACTIVE", label: "Inativos", color: "secondary" as const },
-  { value: "AT_RISK", label: "Em Risco", color: "destructive" as const },
-  { value: "RECOVERED", label: "Recuperados", color: "default" as const },
+  { value: "LOYAL", label: "Leais", color: "default" as const },
+  { value: "AT_RISK", label: "Em risco", color: "secondary" as const },
+  { value: "CHURNED", label: "Inativos", color: "destructive" as const },
 ];
 
 async function getSegmentCounts(restaurantId: string) {
-  const counts: Record<string, number> = { ALL: 0 };
+  const all = await db
+    .select({ segment: customersTable.segment })
+    .from(customersTable)
+    .where(eq(customersTable.restaurantId, restaurantId));
 
-  const all = await db.query.customersTable.findMany({
-    where: eq(customersTable.restaurantId, restaurantId),
-    columns: { segment: true },
-  });
-
-  counts.ALL = all.length;
+  const counts: Record<string, number> = { ALL: all.length };
   for (const { segment } of all) {
     counts[segment] = (counts[segment] ?? 0) + 1;
   }
@@ -45,19 +45,19 @@ async function getSegmentCounts(restaurantId: string) {
 }
 
 export default async function CampanhasPage({ params }: PageProps) {
-  const { slug } = await params;
+  const resolvedParams = params ? await params : undefined;
+  const restaurant = await buscarRestauranteParaGestao(resolvedParams?.slug);
 
-  const restaurant = await db.query.restaurantsTable.findFirst({
-    where: eq(restaurantsTable.slug, slug),
-  });
+  if (!restaurant) {
+    notFound();
+  }
 
-  if (!restaurant) notFound();
-
+  const restaurantSlug = restaurant.slug;
   const counts = await getSegmentCounts(restaurant.id);
 
   async function dispatch(formData: FormData) {
     "use server";
-    return dispararCampanhaAction(slug, formData);
+    return dispararCampanhaAction(restaurantSlug, formData);
   }
 
   return (
