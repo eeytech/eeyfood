@@ -115,3 +115,74 @@ export async function alternarStatusUsuarioAction(
   }
   revalidatePath("/configuracoes/usuarios");
 }
+
+export async function atualizarUsuarioAction(params: {
+  userId: string;
+  name: string;
+  role: UserRole;
+  password?: string;
+  restaurantSlug?: string;
+}): Promise<{ error?: string; success?: boolean }> {
+  const { userId, name, role, password, restaurantSlug } = params;
+
+  if (!name.trim()) {
+    return { error: "O nome do usuário não pode ficar vazio." };
+  }
+
+  if (password && password.trim().length < 6) {
+    return { error: "A nova senha deve ter pelo menos 6 caracteres." };
+  }
+
+  try {
+    const updateData: {
+      name: string;
+      role: UserRole;
+      updatedAt: Date;
+      passwordHash?: string;
+    } = {
+      name: name.trim(),
+      role,
+      updatedAt: new Date(),
+    };
+
+    if (password && password.trim().length >= 6) {
+      updateData.passwordHash = await bcrypt.hash(password.trim(), 10);
+    }
+
+    await db
+      .update(usersTable)
+      .set(updateData)
+      .where(eq(usersTable.id, userId));
+
+    if (restaurantSlug) {
+      revalidatePath(`/${restaurantSlug}/configuracoes/usuarios`);
+    }
+    revalidatePath("/configuracoes/usuarios");
+    return { success: true };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Erro ao atualizar usuário.",
+    };
+  }
+}
+
+export async function excluirUsuarioAction(
+  userId: string,
+  restaurantSlug?: string,
+): Promise<{ error?: string; success?: boolean }> {
+  try {
+    await db.delete(usersTable).where(eq(usersTable.id, userId));
+
+    if (restaurantSlug) {
+      revalidatePath(`/${restaurantSlug}/configuracoes/usuarios`);
+    }
+    revalidatePath("/configuracoes/usuarios");
+    return { success: true };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Erro ao excluir usuário.",
+    };
+  }
+}
