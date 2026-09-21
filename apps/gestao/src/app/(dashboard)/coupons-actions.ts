@@ -66,48 +66,107 @@ const parseFormData = (formData: FormData) => {
   });
 };
 
-export const createCouponAction = async (slug: string, formData: FormData) => {
-  const restaurant = await getRestaurantOrThrow(slug);
-  const parsedData = parseFormData(formData);
+export const createCouponAction = async (
+  slug: string,
+  formData: FormData,
+): Promise<{ error?: string; success?: boolean }> => {
+  try {
+    const restaurant = await getRestaurantOrThrow(slug);
+    const parsedData = parseFormData(formData);
 
-  if (!parsedData.success) {
-    throw new Error(parsedData.error.issues[0]?.message ?? "Dados inválidos.");
+    if (!parsedData.success) {
+      return {
+        error: parsedData.error.issues[0]?.message ?? "Dados inválidos.",
+      };
+    }
+
+    await db.insert(couponsTable).values({
+      ...parsedData.data,
+      restaurantId: restaurant.id,
+    });
+
+    revalidatePath(`/${slug}/cupons`);
+    return { success: true };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Erro ao criar cupom.",
+    };
   }
-
-  await db.insert(couponsTable).values({
-    ...parsedData.data,
-    restaurantId: restaurant.id,
-  });
-
-  revalidatePath(`/${slug}/cupons`);
 };
 
-export const updateCouponAction = async (slug: string, formData: FormData) => {
-  await getRestaurantOrThrow(slug);
-  const couponId = getStringValue(formData.get("couponId"));
+export const updateCouponAction = async (
+  slug: string,
+  formData: FormData,
+): Promise<{ error?: string; success?: boolean }> => {
+  try {
+    await getRestaurantOrThrow(slug);
+    const couponId = getStringValue(formData.get("couponId"));
 
-  if (!couponId) throw new Error("ID do cupom não informado.");
+    if (!couponId) {
+      return { error: "ID do cupom não informado." };
+    }
 
-  const parsedData = parseFormData(formData);
+    const parsedData = parseFormData(formData);
 
-  if (!parsedData.success) {
-    throw new Error(parsedData.error.issues[0]?.message ?? "Dados inválidos.");
+    if (!parsedData.success) {
+      return {
+        error: parsedData.error.issues[0]?.message ?? "Dados inválidos.",
+      };
+    }
+
+    await db
+      .update(couponsTable)
+      .set({ ...parsedData.data, updatedAt: new Date() })
+      .where(eq(couponsTable.id, couponId));
+
+    revalidatePath(`/${slug}/cupons`);
+    return { success: true };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Erro ao atualizar cupom.",
+    };
   }
-
-  await db
-    .update(couponsTable)
-    .set({ ...parsedData.data, updatedAt: new Date() })
-    .where(eq(couponsTable.id, couponId));
-
-  revalidatePath(`/${slug}/cupons`);
 };
 
-export const deleteCouponAction = async (slug: string, formData: FormData) => {
-  const couponId = getStringValue(formData.get("couponId"));
+export const alternarStatusCupomAction = async (
+  couponId: string,
+  isActive: boolean,
+  slug: string,
+): Promise<{ error?: string; success?: boolean }> => {
+  try {
+    await db
+      .update(couponsTable)
+      .set({ isActive, updatedAt: new Date() })
+      .where(eq(couponsTable.id, couponId));
 
-  if (!couponId) throw new Error("ID do cupom não informado.");
+    revalidatePath(`/${slug}/cupons`);
+    return { success: true };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Erro ao alterar status do cupom.",
+    };
+  }
+};
 
-  await db.delete(couponsTable).where(eq(couponsTable.id, couponId));
+export const deleteCouponAction = async (
+  slug: string,
+  formData: FormData,
+): Promise<{ error?: string; success?: boolean }> => {
+  try {
+    const couponId = getStringValue(formData.get("couponId"));
 
-  revalidatePath(`/${slug}/cupons`);
+    if (!couponId) {
+      return { error: "ID do cupom não informado." };
+    }
+
+    await db.delete(couponsTable).where(eq(couponsTable.id, couponId));
+
+    revalidatePath(`/${slug}/cupons`);
+    return { success: true };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Erro ao excluir cupom.",
+    };
+  }
 };

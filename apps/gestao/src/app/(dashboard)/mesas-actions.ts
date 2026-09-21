@@ -30,58 +30,119 @@ const getRestaurantOrThrow = async (slug: string) => {
   return restaurant;
 };
 
-export const createTableAction = async (slug: string, formData: FormData) => {
-  const restaurant = await getRestaurantOrThrow(slug);
+export const createTableAction = async (
+  slug: string,
+  formData: FormData,
+): Promise<{ error?: string; success?: boolean }> => {
+  try {
+    const restaurant = await getRestaurantOrThrow(slug);
 
-  const parsedData = tableSchema.safeParse({
-    name: getStringValue(formData.get("name")),
-    seats: getNumberValue(formData.get("seats")),
-    displayOrder: getNumberValue(formData.get("displayOrder")),
-    isActive: getBooleanValue(formData.get("isActive")),
-  });
+    const parsedData = tableSchema.safeParse({
+      name: getStringValue(formData.get("name")),
+      seats: getNumberValue(formData.get("seats")),
+      displayOrder: getNumberValue(formData.get("displayOrder")),
+      isActive: getBooleanValue(formData.get("isActive")),
+    });
 
-  if (!parsedData.success) {
-    throw new Error("Dados inválidos: " + JSON.stringify(parsedData.error.flatten()));
-  }
+    if (!parsedData.success) {
+      const errorMsg = parsedData.error.issues.map((i) => i.message).join(", ");
+      return { error: `Dados inválidos: ${errorMsg}` };
+    }
 
-  await db.insert(diningTablesTable).values({
-    ...parsedData.data,
-    restaurantId: restaurant.id,
-  });
-
-  revalidatePath(`/${slug}/mesas`);
-};
-
-export const updateTableAction = async (slug: string, formData: FormData) => {
-  await getRestaurantOrThrow(slug);
-  const tableId = getStringValue(formData.get("tableId"));
-
-  const parsedData = tableSchema.safeParse({
-    name: getStringValue(formData.get("name")),
-    seats: getNumberValue(formData.get("seats")),
-    displayOrder: getNumberValue(formData.get("displayOrder")),
-    isActive: getBooleanValue(formData.get("isActive")),
-  });
-
-  if (!parsedData.success) {
-    throw new Error("Dados inválidos.");
-  }
-
-  await db
-    .update(diningTablesTable)
-    .set({
+    await db.insert(diningTablesTable).values({
       ...parsedData.data,
-      updatedAt: new Date(),
-    })
-    .where(eq(diningTablesTable.id, tableId));
+      restaurantId: restaurant.id,
+    });
 
-  revalidatePath(`/${slug}/mesas`);
+    revalidatePath(`/${slug}/mesas`);
+    return { success: true };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Erro ao cadastrar mesa.",
+    };
+  }
 };
 
-export const deleteTableAction = async (slug: string, formData: FormData) => {
-  const tableId = getStringValue(formData.get("tableId"));
+export const updateTableAction = async (
+  slug: string,
+  formData: FormData,
+): Promise<{ error?: string; success?: boolean }> => {
+  try {
+    await getRestaurantOrThrow(slug);
+    const tableId = getStringValue(formData.get("tableId"));
 
-  await db.delete(diningTablesTable).where(eq(diningTablesTable.id, tableId));
+    if (!tableId) {
+      return { error: "Identificador da mesa não informado." };
+    }
 
-  revalidatePath(`/${slug}/mesas`);
+    const parsedData = tableSchema.safeParse({
+      name: getStringValue(formData.get("name")),
+      seats: getNumberValue(formData.get("seats")),
+      displayOrder: getNumberValue(formData.get("displayOrder")),
+      isActive: getBooleanValue(formData.get("isActive")),
+    });
+
+    if (!parsedData.success) {
+      const errorMsg = parsedData.error.issues.map((i) => i.message).join(", ");
+      return { error: `Dados inválidos: ${errorMsg}` };
+    }
+
+    await db
+      .update(diningTablesTable)
+      .set({
+        ...parsedData.data,
+        updatedAt: new Date(),
+      })
+      .where(eq(diningTablesTable.id, tableId));
+
+    revalidatePath(`/${slug}/mesas`);
+    return { success: true };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Erro ao atualizar mesa.",
+    };
+  }
+};
+
+export const alternarStatusMesaAction = async (
+  tableId: string,
+  isActive: boolean,
+  slug: string,
+): Promise<{ error?: string; success?: boolean }> => {
+  try {
+    await db
+      .update(diningTablesTable)
+      .set({ isActive, updatedAt: new Date() })
+      .where(eq(diningTablesTable.id, tableId));
+
+    revalidatePath(`/${slug}/mesas`);
+    return { success: true };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Erro ao alterar status da mesa.",
+    };
+  }
+};
+
+export const deleteTableAction = async (
+  slug: string,
+  formData: FormData,
+): Promise<{ error?: string; success?: boolean }> => {
+  try {
+    const tableId = getStringValue(formData.get("tableId"));
+
+    if (!tableId) {
+      return { error: "Identificador da mesa não informado." };
+    }
+
+    await db.delete(diningTablesTable).where(eq(diningTablesTable.id, tableId));
+
+    revalidatePath(`/${slug}/mesas`);
+    return { success: true };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Erro ao excluir mesa.",
+    };
+  }
 };

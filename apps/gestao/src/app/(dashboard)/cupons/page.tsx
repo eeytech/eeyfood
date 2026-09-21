@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import {
@@ -7,11 +8,17 @@ import {
 
 import { CuponsClient } from "./_components/cupons-client";
 
+export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Cupons de Desconto | Gestão",
+};
+
 interface CuponsPageProps {
   params: Promise<{ slug: string }>;
 }
 
-const CuponsPage = async ({ params }: CuponsPageProps) => {
+export default async function CuponsPage({ params }: CuponsPageProps) {
   const { slug } = await params;
   const restaurant = await buscarRestauranteParaGestao(slug);
 
@@ -21,11 +28,5 @@ const CuponsPage = async ({ params }: CuponsPageProps) => {
 
   const cupons = await listarCuponsGestao(slug);
 
-  return (
-    <main className="space-y-4">
-      <CuponsClient slug={slug} cupons={cupons} />
-    </main>
-  );
-};
-
-export default CuponsPage;
+  return <CuponsClient slug={slug} cupons={cupons} />;
+}

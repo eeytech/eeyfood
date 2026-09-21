@@ -69,65 +69,149 @@ const parseFormData = (formData: FormData) => {
   });
 };
 
-export const createLoyaltyRuleAction = async (slug: string, formData: FormData) => {
-  const restaurant = await getRestaurantOrThrow(slug);
-  const parsedData = parseFormData(formData);
+export const createLoyaltyRuleAction = async (
+  slug: string,
+  formData: FormData,
+): Promise<{ error?: string; success?: boolean }> => {
+  try {
+    const restaurant = await getRestaurantOrThrow(slug);
+    const parsedData = parseFormData(formData);
 
-  if (!parsedData.success) {
-    throw new Error(parsedData.error.issues[0]?.message ?? "Dados inválidos.");
-  }
+    if (!parsedData.success) {
+      return {
+        error: parsedData.error.issues[0]?.message ?? "Dados inválidos.",
+      };
+    }
 
-  const { criterionType, minOrderValue, menuCategoryId, productId, startsAt, endsAt, ...rest } = parsedData.data;
+    const {
+      criterionType,
+      minOrderValue,
+      menuCategoryId,
+      productId,
+      startsAt,
+      endsAt,
+      ...rest
+    } = parsedData.data;
 
-  await db.insert(loyaltyRulesTable).values({
-    ...rest,
-    restaurantId: restaurant.id,
-    minOrderValue: criterionType === "minOrderValue" ? (minOrderValue ?? 0) : 0,
-    menuCategoryId: criterionType === "category" ? menuCategoryId : undefined,
-    productId: criterionType === "product" ? productId : undefined,
-    startsAt: startsAt ?? null,
-    endsAt: endsAt ?? null,
-  });
-
-  revalidatePath(`/${slug}/cashback`);
-};
-
-export const updateLoyaltyRuleAction = async (slug: string, formData: FormData) => {
-  await getRestaurantOrThrow(slug);
-  const ruleId = getStringValue(formData.get("ruleId"));
-
-  if (!ruleId) throw new Error("ID da regra não informado.");
-
-  const parsedData = parseFormData(formData);
-
-  if (!parsedData.success) {
-    throw new Error(parsedData.error.issues[0]?.message ?? "Dados inválidos.");
-  }
-
-  const { criterionType, minOrderValue, menuCategoryId, productId, startsAt, endsAt, ...rest } = parsedData.data;
-
-  await db
-    .update(loyaltyRulesTable)
-    .set({
+    await db.insert(loyaltyRulesTable).values({
       ...rest,
+      restaurantId: restaurant.id,
       minOrderValue: criterionType === "minOrderValue" ? (minOrderValue ?? 0) : 0,
-      menuCategoryId: criterionType === "category" ? menuCategoryId : null,
-      productId: criterionType === "product" ? productId : null,
+      menuCategoryId: criterionType === "category" ? menuCategoryId : undefined,
+      productId: criterionType === "product" ? productId : undefined,
       startsAt: startsAt ?? null,
       endsAt: endsAt ?? null,
-      updatedAt: new Date(),
-    })
-    .where(eq(loyaltyRulesTable.id, ruleId));
+    });
 
-  revalidatePath(`/${slug}/cashback`);
+    revalidatePath(`/${slug}/cashback`);
+    return { success: true };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Erro ao criar regra de cashback.",
+    };
+  }
 };
 
-export const deleteLoyaltyRuleAction = async (slug: string, formData: FormData) => {
-  const ruleId = getStringValue(formData.get("ruleId"));
+export const updateLoyaltyRuleAction = async (
+  slug: string,
+  formData: FormData,
+): Promise<{ error?: string; success?: boolean }> => {
+  try {
+    await getRestaurantOrThrow(slug);
+    const ruleId = getStringValue(formData.get("ruleId"));
 
-  if (!ruleId) throw new Error("ID da regra não informado.");
+    if (!ruleId) {
+      return { error: "ID da regra não informado." };
+    }
 
-  await db.delete(loyaltyRulesTable).where(eq(loyaltyRulesTable.id, ruleId));
+    const parsedData = parseFormData(formData);
 
-  revalidatePath(`/${slug}/cashback`);
+    if (!parsedData.success) {
+      return {
+        error: parsedData.error.issues[0]?.message ?? "Dados inválidos.",
+      };
+    }
+
+    const {
+      criterionType,
+      minOrderValue,
+      menuCategoryId,
+      productId,
+      startsAt,
+      endsAt,
+      ...rest
+    } = parsedData.data;
+
+    await db
+      .update(loyaltyRulesTable)
+      .set({
+        ...rest,
+        minOrderValue: criterionType === "minOrderValue" ? (minOrderValue ?? 0) : 0,
+        menuCategoryId: criterionType === "category" ? menuCategoryId : null,
+        productId: criterionType === "product" ? productId : null,
+        startsAt: startsAt ?? null,
+        endsAt: endsAt ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(loyaltyRulesTable.id, ruleId));
+
+    revalidatePath(`/${slug}/cashback`);
+    return { success: true };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Erro ao atualizar regra de cashback.",
+    };
+  }
+};
+
+export const alternarStatusLoyaltyRuleAction = async (
+  ruleId: string,
+  isActive: boolean,
+  slug: string,
+): Promise<{ error?: string; success?: boolean }> => {
+  try {
+    await db
+      .update(loyaltyRulesTable)
+      .set({ isActive, updatedAt: new Date() })
+      .where(eq(loyaltyRulesTable.id, ruleId));
+
+    revalidatePath(`/${slug}/cashback`);
+    return { success: true };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Erro ao alterar status da regra de cashback.",
+    };
+  }
+};
+
+export const deleteLoyaltyRuleAction = async (
+  slug: string,
+  formData: FormData,
+): Promise<{ error?: string; success?: boolean }> => {
+  try {
+    const ruleId = getStringValue(formData.get("ruleId"));
+
+    if (!ruleId) {
+      return { error: "ID da regra não informado." };
+    }
+
+    await db.delete(loyaltyRulesTable).where(eq(loyaltyRulesTable.id, ruleId));
+
+    revalidatePath(`/${slug}/cashback`);
+    return { success: true };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Erro ao excluir regra de cashback.",
+    };
+  }
 };

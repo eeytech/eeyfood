@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import {
@@ -8,11 +9,17 @@ import {
 
 import { CashbackClient } from "./_components/cashback-client";
 
+export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Regras de Cashback | Gestão",
+};
+
 interface CashbackPageProps {
   params: Promise<{ slug: string }>;
 }
 
-const CashbackPage = async ({ params }: CashbackPageProps) => {
+export default async function CashbackPage({ params }: CashbackPageProps) {
   const { slug } = await params;
   const restaurant = await buscarRestauranteParaGestao(slug);
 
@@ -26,15 +33,11 @@ const CashbackPage = async ({ params }: CashbackPageProps) => {
   ]);
 
   return (
-    <main className="space-y-4">
-      <CashbackClient
-        slug={slug}
-        regras={regras}
-        categorias={cardapio?.categories ?? []}
-        produtos={cardapio?.products ?? []}
-      />
-    </main>
+    <CashbackClient
+      slug={slug}
+      regras={regras}
+      categorias={cardapio?.categories ?? []}
+      produtos={cardapio?.products ?? []}
+    />
   );
-};
-
-export default CashbackPage;
+}
