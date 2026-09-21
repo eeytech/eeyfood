@@ -3,6 +3,7 @@
 import type { UserRole } from "@fsw/db";
 import {
   AlertCircleIcon,
+  BikeIcon,
   CheckCircle2Icon,
   ChefHatIcon,
   ChevronLeftIcon,
@@ -133,6 +134,13 @@ const ROLE_CONFIG: Record<string, RoleConfig> = {
     badgeClass: "bg-indigo-50 text-indigo-800 border-indigo-200/80 hover:bg-indigo-100",
     icon: UtensilsCrossedIcon,
     description: "Lançamento de pedidos em mesas, comandas e salão",
+  },
+  COURIER: {
+    label: "Entregador / Motoboy",
+    shortLabel: "Entregador",
+    badgeClass: "bg-cyan-50 text-cyan-800 border-cyan-200/80 hover:bg-cyan-100",
+    icon: BikeIcon,
+    description: "Acesso ao Painel de Entregas & Expedição para consulta de rotas e despacho de pedidos",
   },
   SUPER_ADMIN: {
     label: "Super Administrador (Global)",
@@ -477,6 +485,7 @@ export function UsuariosClient({ slug, users }: UsuariosClientProps) {
                     <SelectItem value="ALL">Todos os cargos</SelectItem>
                     <SelectItem value="KITCHEN">Cozinha / KDS</SelectItem>
                     <SelectItem value="PANEL">Painel de Senhas (TV)</SelectItem>
+                    <SelectItem value="COURIER">Entregador / Motoboy</SelectItem>
                     <SelectItem value="ADMIN">Administrador</SelectItem>
                     <SelectItem value="MANAGER">Gerente</SelectItem>
                     <SelectItem value="WAITER">Garçom</SelectItem>

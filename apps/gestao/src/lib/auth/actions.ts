@@ -98,9 +98,11 @@ export async function loginAction(
         ? "/senha"
         : user.role === "KITCHEN"
           ? "/kds"
-          : user.role === "WAITER"
-            ? "/mesas"
-            : "/pedidos";
+          : user.role === "COURIER"
+            ? "/entregas"
+            : user.role === "WAITER"
+              ? "/mesas"
+              : "/pedidos";
 
     redirect(destinationRoute);
   } catch (error) {

@@ -82,7 +82,7 @@ export function CustomerTable({ customers, total, page, pageSize, slug }: Custom
               return (
                 <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50">
                   <TableCell>
-                    <Link href={`/${slug}/crm/${c.id}`} className="font-medium hover:underline">
+                    <Link href={`/crm/${c.id}`} className="font-medium hover:underline">
                       {c.name}
                     </Link>
                   </TableCell>

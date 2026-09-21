@@ -96,7 +96,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
       {/* Back + header */}
       <div className="flex items-center gap-3">
         <Link
-          href={`/${slug}/crm`}
+          href="/crm"
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeftIcon className="h-4 w-4" />

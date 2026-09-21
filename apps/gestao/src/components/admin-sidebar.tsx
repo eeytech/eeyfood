@@ -3,6 +3,7 @@
 import {
   BarChart2Icon,
   BarChart3Icon,
+  BikeIcon,
   BoxesIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -54,6 +55,16 @@ const kitchenGroups = [
   },
 ];
 
+const courierGroups = [
+  {
+    label: "Entregas & Expedição",
+    items: [
+      { href: "entregas", label: "Painel de Entregas", icon: BikeIcon },
+      { href: "pedidos", label: "Pedidos", icon: ClipboardListIcon },
+    ],
+  },
+];
+
 const navigationGroups = [
   {
     label: "Operações",
@@ -62,6 +73,7 @@ const navigationGroups = [
       { href: "comandas", label: "Comandas", icon: UsersRoundIcon },
       { href: "mesas", label: "Mesas", icon: LayoutGridIcon },
       { href: "pedidos", label: "Pedidos", icon: ClipboardListIcon },
+      { href: "entregas", label: "Entregas", icon: BikeIcon },
       { href: "kds", label: "KDS", icon: ConciergeBellIcon },
     ],
   },
@@ -116,7 +128,12 @@ const AdminSidebar = ({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
 
-  const activeGroups = userRole === "KITCHEN" ? kitchenGroups : navigationGroups;
+  const activeGroups =
+    userRole === "KITCHEN"
+      ? kitchenGroups
+      : userRole === "COURIER"
+        ? courierGroups
+        : navigationGroups;
 
   return (
     <aside
@@ -197,7 +214,9 @@ const AdminSidebar = ({
                 ? "Cozinha / KDS"
                 : userRole === "WAITER"
                   ? "Garçom"
-                  : "Administrador"}
+                  : userRole === "COURIER"
+                    ? "Entregador"
+                    : "Administrador"}
             </span>
           </div>
         )}

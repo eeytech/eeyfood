@@ -80,9 +80,9 @@ export async function criarUsuarioAction(
 
     const isSuperAdmin = role === "SUPER_ADMIN";
 
-    if (role === "PANEL") {
+    if (role === "PANEL" || role === "COURIER") {
       try {
-        await db.execute(sql`ALTER TYPE "public"."UserRole" ADD VALUE IF NOT EXISTS 'PANEL'`);
+        await db.execute(sql`ALTER TYPE "public"."UserRole" ADD VALUE IF NOT EXISTS ${sql.raw(`'${role}'`)}`);
       } catch {
         // ignore if already present or permission
       }
@@ -158,9 +158,9 @@ export async function atualizarUsuarioAction(params: {
       updateData.passwordHash = await bcrypt.hash(password.trim(), 10);
     }
 
-    if (role === "PANEL") {
+    if (role === "PANEL" || role === "COURIER") {
       try {
-        await db.execute(sql`ALTER TYPE "public"."UserRole" ADD VALUE IF NOT EXISTS 'PANEL'`);
+        await db.execute(sql`ALTER TYPE "public"."UserRole" ADD VALUE IF NOT EXISTS ${sql.raw(`'${role}'`)}`);
       } catch {
         // ignore if already present or permission
       }

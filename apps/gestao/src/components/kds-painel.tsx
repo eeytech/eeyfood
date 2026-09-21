@@ -143,7 +143,7 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
 
   const changeSector = (sectorId: string | null) => {
     setSelectedSectorId(sectorId);
-    const url = sectorId ? `/${slug}/kds?setor=${sectorId}` : `/${slug}/kds`;
+    const url = sectorId ? `/kds?setor=${sectorId}` : "/kds";
     router.replace(url, { scroll: false });
   };
 
@@ -175,6 +175,12 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
       return current.map((o) => (o.id === order.id ? order : o));
     });
   };
+
+  useEffect(() => {
+    if (initialSectorId !== undefined) {
+      setSelectedSectorId(initialSectorId ?? null);
+    }
+  }, [initialSectorId]);
 
   useEffect(() => {
     setMounted(true);

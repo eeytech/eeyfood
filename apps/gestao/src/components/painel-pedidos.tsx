@@ -7,15 +7,17 @@ import {
   BadgeDollarSignIcon,
   BikeIcon,
   ChevronDownIcon,
-  Clock3Icon,
+  ClockIcon,
   Loader2Icon,
+  MapPinIcon,
   PackageCheckIcon,
   PrinterIcon,
   ReceiptTextIcon,
-  UtensilsCrossedIcon,
+  SearchIcon,
   XCircleIcon,
+  XIcon,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { io } from "socket.io-client";
 
 import { dispatchOrderAction, getCouriersAction } from "@/app/(dashboard)/logistica-actions";
@@ -35,6 +37,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -597,17 +600,32 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
     }
   };
 
-  const pendingOrdersCount = orders.filter(
-    (order) => order.status === "PENDING",
+
+  const countProducao = orders.filter((o) =>
+    VIEW_STATUSES.PRODUCAO.includes(o.status),
   ).length;
-  const paidOrdersCount = orders.filter(
-    (order) => order.paymentStatus === "PAID",
+  const countLogistica = orders.filter((o) =>
+    VIEW_STATUSES.LOGISTICA.includes(o.status),
   ).length;
-  const activeOrdersCount = orders.filter((order) =>
-    ["PENDING", "IN_PREPARATION", "READY_FOR_PICKUP", "OUT_FOR_DELIVERY"].includes(
-      order.status,
-    ),
+  const countHistorico = orders.filter((o) =>
+    VIEW_STATUSES.HISTORICO.includes(o.status),
   ).length;
+  const countGeral = orders.length;
+
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredOrders = useMemo(() => {
+    if (!searchQuery.trim()) return orders;
+    const q = searchQuery.toLowerCase().trim();
+    return orders.filter(
+      (order) =>
+        String(order.id).includes(q) ||
+        order.customerName.toLowerCase().includes(q) ||
+        (order.customerPhone && order.customerPhone.includes(q)) ||
+        (order.deliveryAddress &&
+          order.deliveryAddress.toLowerCase().includes(q)),
+    );
+  }, [orders, searchQuery]);
 
   const activeStatuses = VIEW_STATUSES[activeView];
   const activeColumns = KANBAN_COLUMNS.filter((col) =>
@@ -669,53 +687,6 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
         </DialogContent>
       </Dialog>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Card>
-          <CardContent className="flex items-center justify-between p-4">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Solicitados
-              </p>
-              <p className="mt-0.5 font-display text-2xl font-bold">
-                {pendingOrdersCount}
-              </p>
-            </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
-              <Clock3Icon className="text-primary" size={16} />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center justify-between p-4">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Pagos
-              </p>
-              <p className="mt-0.5 font-display text-2xl font-bold">
-                {paidOrdersCount}
-              </p>
-            </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100">
-              <BadgeDollarSignIcon className="text-emerald-600" size={16} />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center justify-between p-4">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Em operação
-              </p>
-              <p className="mt-0.5 font-display text-2xl font-bold">
-                {activeOrdersCount}
-              </p>
-            </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100">
-              <UtensilsCrossedIcon className="text-blue-600" size={16} />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       <section className="space-y-4">
         <Card className="border-white/80 bg-white/85">
@@ -745,19 +716,78 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
           </CardHeader>
         </Card>
 
-        <Tabs
-          value={activeView}
-          onValueChange={(v) => setActiveView(v as ActiveView)}
-        >
-          <TabsList>
-            <TabsTrigger value="PRODUCAO">Operação ativa</TabsTrigger>
-            <TabsTrigger value="LOGISTICA">Logística</TabsTrigger>
-            <TabsTrigger value="HISTORICO">Histórico</TabsTrigger>
-            <TabsTrigger value="GERAL">Visão geral</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
+            <Tabs
+              value={activeView}
+              onValueChange={(v) => setActiveView(v as ActiveView)}
+              className="w-auto"
+            >
+              <TabsList className="h-10 p-1 bg-slate-100/90 rounded-xl">
+                <TabsTrigger
+                  value="PRODUCAO"
+                  className="text-xs sm:text-sm gap-1.5 rounded-lg px-2.5 sm:px-3"
+                >
+                  <span>Operação ativa</span>
+                  <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">
+                    {countProducao}
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="LOGISTICA"
+                  className="text-xs sm:text-sm gap-1.5 rounded-lg px-2.5 sm:px-3"
+                >
+                  <span>Logística</span>
+                  <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">
+                    {countLogistica}
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="HISTORICO"
+                  className="text-xs sm:text-sm gap-1.5 rounded-lg px-2.5 sm:px-3"
+                >
+                  <span>Histórico</span>
+                  <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">
+                    {countHistorico}
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="GERAL"
+                  className="text-xs sm:text-sm gap-1.5 rounded-lg px-2.5 sm:px-3"
+                >
+                  <span>Visão geral</span>
+                  <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">
+                    {countGeral}
+                  </span>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
 
-        <div className={isGeral ? "overflow-x-auto pb-2" : ""}>
+          <div className="relative w-full sm:w-64">
+            <SearchIcon
+              size={14}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+            />
+            <Input
+              placeholder="Buscar #id, cliente, endereço..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-9 rounded-xl border-slate-200 bg-white pl-8 pr-8 text-xs placeholder:text-slate-400 focus:bg-white"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <XIcon size={12} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className={isGeral ? "overflow-x-auto pb-4" : ""}>
           <div
             className={cn(
               "grid gap-4",
@@ -765,11 +795,11 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                 ? "min-w-[1600px] grid-cols-6"
                 : activeColumns.length === 2
                   ? "grid-cols-1 md:grid-cols-2"
-                  : "grid-cols-1 md:grid-cols-3",
+                  : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
             )}
           >
             {activeColumns.map((column) => {
-              const ordersByColumn = orders
+              const ordersByColumn = filteredOrders
                 .filter((order) => order.status === column.status)
                 .sort(
                   (left, right) =>
@@ -779,12 +809,12 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
               return (
                 <div key={column.status} className="flex h-full flex-col gap-3">
                   <Card className="border-white/80 bg-slate-50/90">
-                    <CardHeader className="space-y-1 py-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <CardTitle className="text-base">
+                    <CardHeader className="space-y-1 py-2.5 px-3.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <CardTitle className="text-sm font-semibold text-slate-800">
                           {column.title}
                         </CardTitle>
-                        <Badge variant="secondary">
+                        <Badge variant="secondary" className="px-2 py-0 text-xs font-bold">
                           {String(ordersByColumn.length)}
                         </Badge>
                       </div>
@@ -793,10 +823,10 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
 
                   {ordersByColumn.length === 0 ? (
                     <Card className="border-dashed bg-white/60">
-                      <CardContent className="flex min-h-[120px] flex-col items-center justify-center gap-2 p-4 text-center">
+                      <CardContent className="flex min-h-[110px] flex-col items-center justify-center gap-1.5 p-4 text-center">
                         <PackageCheckIcon className="text-slate-400" size={18} />
-                        <p className="text-sm font-medium text-slate-900">
-                          Nenhum pedido aqui
+                        <p className="text-xs font-medium text-slate-600">
+                          {searchQuery ? "Nenhum pedido filtrado" : "Nenhum pedido aqui"}
                         </p>
                       </CardContent>
                     </Card>
@@ -813,85 +843,101 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                       return (
                         <Card
                           key={order.id}
-                          className="border-white/70 bg-white/95 backdrop-blur"
+                          className="border border-slate-200/80 bg-white/95 shadow-sm transition-all hover:border-slate-300 hover:shadow"
                         >
-                          <CardHeader className="space-y-2 pb-2">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-1">
-                                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                                    #{String(order.id)}
-                                  </p>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-5 w-5"
-                                    onClick={() =>
-                                      handlePrint(order, "PRODUCTION")
-                                    }
-                                    title="Imprimir Cozinha"
-                                  >
-                                    <PrinterIcon size={11} />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-5 w-5"
-                                    onClick={() =>
-                                      handlePrint(order, "DELIVERY")
-                                    }
-                                    title="Imprimir Cupom Cliente"
-                                  >
-                                    <ReceiptTextIcon size={11} />
-                                  </Button>
-                                </div>
-                                <p className="truncate font-display text-sm font-semibold">
-                                  {order.customerName}
-                                </p>
-                              </div>
-                              <div className="flex shrink-0 flex-wrap gap-1">
-                                <Badge
-                                  variant={getPaymentMethodVariant(
-                                    order.paymentMethod,
-                                    order.paymentStatus,
-                                  )}
-                                  className="text-xs"
+                          <CardHeader className="space-y-2.5 p-3.5 pb-2">
+                            {/* Linha 1: ID, Impressão e Status de Pagamento */}
+                            <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                              <div className="flex items-center gap-1">
+                                <span className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-[11px] font-bold text-slate-800">
+                                  #{String(order.id)}
+                                </span>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                                  onClick={() =>
+                                    handlePrint(order, "PRODUCTION")
+                                  }
+                                  title="Imprimir Cozinha"
                                 >
-                                  {getPaymentLabel(order.paymentMethod)}
-                                </Badge>
-                                <Badge
-                                  variant={getPaymentStatusVariant(
-                                    order.paymentStatus,
-                                  )}
-                                  className="text-xs"
+                                  <PrinterIcon size={12} />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                                  onClick={() =>
+                                    handlePrint(order, "DELIVERY")
+                                  }
+                                  title="Imprimir Cupom"
                                 >
-                                  {getPaymentStatusLabel(order.paymentStatus)}
-                                </Badge>
+                                  <ReceiptTextIcon size={12} />
+                                </Button>
                               </div>
+
+                              <Badge
+                                variant={getPaymentStatusVariant(
+                                  order.paymentStatus,
+                                )}
+                                className="px-2 py-0.5 text-[10px] font-bold"
+                              >
+                                {getPaymentStatusLabel(order.paymentStatus)}
+                              </Badge>
                             </div>
 
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg bg-secondary/55 px-3 py-2 text-xs">
-                              <span className="text-muted-foreground">
-                                {formatDateTime(order.createdAt)}
-                              </span>
-                              <span className="font-medium">
+                            {/* Linha 2: Nome do cliente e Método de consumo */}
+                            <div className="flex items-start justify-between gap-2 pt-0.5">
+                              <p className="min-w-0 flex-1 font-display text-sm font-bold text-slate-900 leading-snug break-words">
+                                {order.customerName}
+                              </p>
+                              <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
                                 {getConsumptionLabel(order.consumptionMethod)}
                               </span>
-                              <span className="font-semibold">
+                            </div>
+
+                            {/* Prévia do endereço para entregas */}
+                            {order.consumptionMethod === "DELIVERY" && order.deliveryAddress && (
+                              <p className="flex items-center gap-1 text-[11px] text-slate-600 line-clamp-1 break-words">
+                                <MapPinIcon size={11} className="shrink-0 text-slate-400" />
+                                <span className="truncate">{order.deliveryAddress}</span>
+                              </p>
+                            )}
+
+                            {/* Linha 3: Metadados (Horário, Total, Método e Entregador) */}
+                            <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-xs">
+                              <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">
+                                <ClockIcon size={10} className="text-slate-400" />
+                                {formatDateTime(order.createdAt)}
+                              </span>
+
+                              <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-900">
                                 {formatCurrency(order.total)}
                               </span>
+
+                              <Badge
+                                variant={getPaymentMethodVariant(
+                                  order.paymentMethod,
+                                  order.paymentStatus,
+                                )}
+                                className="px-2 py-0.5 text-[10px]"
+                              >
+                                {getPaymentLabel(order.paymentMethod)}
+                              </Badge>
+
                               {order.courier && (
-                                <span className="flex items-center gap-1 font-medium">
-                                  <BikeIcon size={12} />
-                                  {order.courier.name}
+                                <span className="inline-flex items-center gap-1 rounded-md border border-cyan-200/80 bg-cyan-50 px-2 py-0.5 text-[11px] font-medium text-cyan-800">
+                                  <BikeIcon size={11} />
+                                  <span className="truncate max-w-[90px]">{order.courier.name}</span>
                                 </span>
                               )}
                             </div>
 
+                            {/* Seção retrátil de itens */}
                             <button
                               type="button"
                               onClick={() => toggleOrderExpanded(order.id)}
-                              className="flex w-full items-center justify-between text-xs text-muted-foreground transition hover:text-slate-700"
+                              className="flex w-full items-center justify-between pt-1 text-xs font-medium text-slate-500 transition hover:text-slate-800"
                             >
                               <span>
                                 Ver itens ({order.orderProducts.length})
@@ -910,16 +956,16 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                                 {order.orderProducts.map((orderProduct) => (
                                   <div
                                     key={orderProduct.id}
-                                    className="flex items-start justify-between gap-2 rounded-lg border bg-background/70 p-2.5"
+                                    className="flex items-start justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50/70 p-2 text-xs"
                                   >
                                     <div className="min-w-0 flex-1">
-                                      <p className="text-sm font-semibold text-slate-900 leading-snug break-words">
+                                      <p className="font-semibold text-slate-900 leading-snug break-words">
                                         {orderProduct.productNameSnapshot || orderProduct.product.name}
                                       </p>
 
-                                      {/* Opções selecionadas (ponto da carne, bebidas, sabores, caldas, acompanhamentos, bordas, etc.) */}
+                                      {/* Opções selecionadas */}
                                       {orderProduct.orderProductOptions && orderProduct.orderProductOptions.length > 0 && (
-                                        <div className="mt-1 flex flex-col gap-0.5 text-xs text-slate-600">
+                                        <div className="mt-1 flex flex-col gap-0.5 text-[11px] text-slate-600">
                                           {(() => {
                                             const counts = new Map<string, { name: string; count: number }>();
                                             for (const opt of orderProduct.orderProductOptions) {
@@ -942,12 +988,12 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                                       )}
 
                                       {orderProduct.notes && (
-                                        <p className="mt-1 text-xs italic text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 inline-block">
+                                        <p className="mt-1 inline-block rounded bg-amber-50 px-1.5 py-0.5 text-[10px] italic text-amber-800 border border-amber-200/60 break-words">
                                           Obs: {orderProduct.notes}
                                         </p>
                                       )}
                                     </div>
-                                    <span className="ml-2 shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-xs font-bold text-slate-700">
+                                    <span className="ml-1.5 shrink-0 rounded bg-white px-1.5 py-0.5 text-[11px] font-bold text-slate-800 border border-slate-200">
                                       {String(orderProduct.quantity)}×
                                     </span>
                                   </div>
@@ -956,26 +1002,25 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                             )}
                           </CardHeader>
 
-                          <CardContent className="space-y-2 pt-0">
+                          <CardContent className="space-y-2 p-3.5 pt-0">
                             {order.paymentMethod === "DINHEIRO" &&
                             order.changeFor ? (
-                              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                              <div className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5">
                                 <div className="flex items-center gap-1.5 text-amber-900">
-                                  <BadgeDollarSignIcon size={13} />
-                                  <p className="text-xs font-medium">
-                                    Troco para{" "}
-                                    {formatCurrency(order.changeFor)}
+                                  <BadgeDollarSignIcon size={13} className="shrink-0" />
+                                  <p className="text-xs font-semibold">
+                                    Troco para {formatCurrency(order.changeFor)}
                                   </p>
                                 </div>
                               </div>
                             ) : null}
 
-                            <div className="space-y-1.5 rounded-xl border bg-slate-50 p-2">
+                            <div className="space-y-1.5 rounded-xl border border-slate-100 bg-slate-50/80 p-2">
                               {isOfflinePayment &&
                               order.paymentStatus !== "PAID" ? (
                                 <Button
                                   size="sm"
-                                  className="w-full"
+                                  className="h-8 w-full text-xs font-semibold"
                                   disabled={isLoading}
                                   onClick={() =>
                                     handleOrderPatch(order.id, {
@@ -985,20 +1030,20 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                                 >
                                   {isLoading ? (
                                     <Loader2Icon
-                                      className="animate-spin"
-                                      size={14}
+                                      className="mr-1.5 animate-spin"
+                                      size={12}
                                     />
                                   ) : null}
                                   Confirmar pagamento
                                 </Button>
                               ) : null}
 
-                              <div className="flex flex-wrap gap-1.5">
+                              <div className="flex items-center gap-1.5">
                                 {previousStatus ? (
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="flex-1"
+                                    className="h-8 flex-1 text-xs px-2 font-medium"
                                     disabled={isLoading}
                                     onClick={() =>
                                       handleOrderPatch(order.id, {
@@ -1006,15 +1051,15 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                                       })
                                     }
                                   >
-                                    <ArrowLeftIcon size={13} />
-                                    Voltar
+                                    <ArrowLeftIcon size={12} className="mr-1 shrink-0" />
+                                    <span>Voltar</span>
                                   </Button>
                                 ) : null}
 
                                 {nextStatus ? (
                                   <Button
                                     size="sm"
-                                    className="flex-1"
+                                    className="h-8 flex-1 text-xs px-2 font-semibold"
                                     disabled={isLoading}
                                     onClick={() =>
                                       handleOrderPatch(order.id, {
@@ -1022,10 +1067,12 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                                       })
                                     }
                                   >
-                                    <ArrowRightIcon size={13} />
-                                    {nextStatus === "OUT_FOR_DELIVERY"
-                                      ? "Despachar"
-                                      : "Avançar"}
+                                    <ArrowRightIcon size={12} className="mr-1 shrink-0" />
+                                    <span>
+                                      {nextStatus === "OUT_FOR_DELIVERY"
+                                        ? "Despachar"
+                                        : "Avançar"}
+                                    </span>
                                   </Button>
                                 ) : null}
 
@@ -1033,16 +1080,18 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                                   order.status,
                                 ) ? (
                                   <Button
-                                    variant="destructive"
-                                    size="sm"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 shrink-0 text-rose-500 hover:bg-rose-50 hover:text-rose-600"
                                     disabled={isLoading}
                                     onClick={() =>
                                       handleOrderPatch(order.id, {
                                         status: "CANCELLED",
                                       })
                                     }
+                                    title="Cancelar pedido"
                                   >
-                                    <XCircleIcon size={13} />
+                                    <XCircleIcon size={15} />
                                   </Button>
                                 ) : null}
                               </div>
