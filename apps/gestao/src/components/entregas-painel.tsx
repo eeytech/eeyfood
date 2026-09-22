@@ -2,8 +2,6 @@
 
 import type { Courier, OrderStatus, PedidoRecebimento } from "@fsw/db";
 import {
-  AlertCircleIcon,
-  ArrowRightIcon,
   BadgeDollarSignIcon,
   BikeIcon,
   CheckCircle2Icon,
@@ -22,7 +20,6 @@ import {
   UsersIcon,
   Volume2Icon,
   VolumeXIcon,
-  XCircleIcon,
   XIcon,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -87,6 +84,10 @@ export default function EntregasPainel({
   const [expandedOrders, setExpandedOrders] = useState<Set<number>>(new Set());
 
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const audioEnabledRef = useRef(audioEnabled);
+  useEffect(() => {
+    audioEnabledRef.current = audioEnabled;
+  }, [audioEnabled]);
 
   const enableAudio = () => {
     if (!audioCtxRef.current) {
@@ -104,7 +105,7 @@ export default function EntregasPainel({
   };
 
   const playBip = () => {
-    if (!audioEnabled || !audioCtxRef.current) return;
+    if (!audioEnabledRef.current || !audioCtxRef.current) return;
     try {
       const ctx = audioCtxRef.current;
       if (ctx.state === "suspended") void ctx.resume();
@@ -123,6 +124,9 @@ export default function EntregasPainel({
       // ignore
     }
   };
+
+  const playBipRef = useRef(playBip);
+  playBipRef.current = playBip;
 
   // Somente pedidos de entrega (DELIVERY)
   const deliveryOrders = useMemo(() => {
@@ -247,7 +251,7 @@ export default function EntregasPainel({
     socket.on("NEW_ORDER", (data: { orderId: number; restaurantSlug: string }) => {
       if (data.restaurantSlug === slug) {
         void syncOrderById(data.orderId);
-        playBip();
+        playBipRef.current();
       }
     });
 
@@ -255,7 +259,7 @@ export default function EntregasPainel({
       if (data.restaurantSlug === slug) {
         void syncOrderById(data.orderId);
         if (data.status === "READY_FOR_PICKUP") {
-          playBip();
+          playBipRef.current();
           toast.info(`Pedido #${data.orderId} está pronto para coleta!`);
         }
       }

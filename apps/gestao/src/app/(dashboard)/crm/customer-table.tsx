@@ -39,7 +39,7 @@ interface CustomerTableProps {
   slug: string;
 }
 
-export function CustomerTable({ customers, total, page, pageSize, slug }: CustomerTableProps) {
+export function CustomerTable({ customers, total, page, pageSize }: CustomerTableProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();

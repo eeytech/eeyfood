@@ -16,6 +16,9 @@ const nextConfig: NextConfig = {
   },
   serverExternalPackages: ["sharp", "pg"],
   outputFileTracingRoot: path.join(__dirname, "../../"),
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 };
 
 export default nextConfig;

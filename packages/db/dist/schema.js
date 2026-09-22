@@ -170,6 +170,7 @@ export const userRoleEnum = pgEnum("UserRole", [
     "WAITER",
     "KITCHEN",
     "PANEL",
+    "COURIER",
 ]);
 export const usersTable = pgTable("User", {
     id: uuid("id").defaultRandom().primaryKey(),
