@@ -68,6 +68,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -1955,10 +1956,11 @@ const ComandaDigital = ({
                   className="h-8 w-20"
                 />
               </div>
-              <Input
-                type="datetime-local"
+              <DatePicker
                 value={reservaForm.scheduledFor}
-                onChange={(e) => setReservaForm((f) => ({ ...f, scheduledFor: e.target.value }))}
+                onChange={(_, str) => setReservaForm((f) => ({ ...f, scheduledFor: str }))}
+                withTime
+                placeholder="Data e horário da reserva"
               />
               <Select
                 value={reservaForm.diningTableId}

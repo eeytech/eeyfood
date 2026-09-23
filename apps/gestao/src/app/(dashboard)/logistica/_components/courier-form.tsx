@@ -7,6 +7,7 @@ import {
   updateCourierAction,
 } from "@/app/(dashboard)/logistica-actions";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -277,11 +278,11 @@ export function CourierForm({ slug, defaultValues, onSuccess }: CourierFormProps
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="courier-cnh-vencimento">Vencimento</Label>
-            <Input
+            <DatePicker
               id="courier-cnh-vencimento"
               name="cnhVencimento"
-              type="date"
               defaultValue={defaultValues?.cnhVencimento ?? ""}
+              placeholder="Data de vencimento"
             />
           </div>
         </div>

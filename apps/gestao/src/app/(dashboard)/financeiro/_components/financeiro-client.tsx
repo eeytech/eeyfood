@@ -29,6 +29,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -546,12 +547,12 @@ function TransactionForm({
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="tx-dueDate">Vencimento</Label>
-          <Input
+          <DatePicker
             id="tx-dueDate"
             name="dueDate"
-            type="date"
             defaultValue={defaultDate}
             required
+            placeholder="Data de vencimento"
           />
         </div>
       </div>

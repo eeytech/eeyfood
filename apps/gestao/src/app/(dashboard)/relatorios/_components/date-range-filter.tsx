@@ -6,6 +6,7 @@ import { useCallback } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DatePicker } from "@/components/ui/date-picker";
 
 interface DateRangeFilterProps {
   from: string;
@@ -100,21 +101,20 @@ const DateRangeFilter = ({ from, to }: DateRangeFilterProps) => {
             </Button>
 
             <div className="flex items-center gap-1.5">
-              <CalendarIcon className="text-muted-foreground" size={14} />
-              <input
-                type="date"
-                defaultValue={from}
-                key={`from-${from}`}
-                className="h-8 rounded-full border border-input bg-white px-3 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
-                onChange={(e) => e.target.value && navigate(e.target.value, to)}
+              <DatePicker
+                value={from}
+                onChange={(_, str) => str && navigate(str, to)}
+                buttonClassName="h-8 rounded-full text-xs px-3 min-w-[140px]"
+                clearable={false}
+                placeholder="Data inicial"
               />
               <span className="text-xs text-muted-foreground">até</span>
-              <input
-                type="date"
-                defaultValue={to}
-                key={`to-${to}`}
-                className="h-8 rounded-full border border-input bg-white px-3 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
-                onChange={(e) => e.target.value && navigate(from, e.target.value)}
+              <DatePicker
+                value={to}
+                onChange={(_, str) => str && navigate(from, str)}
+                buttonClassName="h-8 rounded-full text-xs px-3 min-w-[140px]"
+                clearable={false}
+                placeholder="Data final"
               />
             </div>
           </div>

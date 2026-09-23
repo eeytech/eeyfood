@@ -49,6 +49,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -1198,15 +1199,13 @@ export function CuponsClient({ slug, cupons }: CuponsClientProps) {
                 <Label htmlFor="coupon-start" className="text-xs font-semibold text-slate-700">
                   Início da Vigência
                 </Label>
-                <Input
+                <DatePicker
                   id="coupon-start"
                   name="startsAt"
-                  type="datetime-local"
                   value={form.startsAt}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, startsAt: e.target.value }))
-                  }
-                  className="h-10 rounded-xl border-slate-200 bg-white text-xs text-slate-900 focus:border-slate-400"
+                  onChange={(_, str) => setForm((f) => ({ ...f, startsAt: str }))}
+                  withTime
+                  placeholder="Selecione início..."
                 />
               </div>
 
@@ -1214,15 +1213,13 @@ export function CuponsClient({ slug, cupons }: CuponsClientProps) {
                 <Label htmlFor="coupon-end" className="text-xs font-semibold text-slate-700">
                   Fim da Vigência
                 </Label>
-                <Input
+                <DatePicker
                   id="coupon-end"
                   name="endsAt"
-                  type="datetime-local"
                   value={form.endsAt}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, endsAt: e.target.value }))
-                  }
-                  className="h-10 rounded-xl border-slate-200 bg-white text-xs text-slate-900 focus:border-slate-400"
+                  onChange={(_, str) => setForm((f) => ({ ...f, endsAt: str }))}
+                  withTime
+                  placeholder="Selecione término..."
                 />
               </div>
 

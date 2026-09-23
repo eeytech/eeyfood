@@ -27,6 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -405,11 +406,11 @@ export function EstoqueClient({ slug, products, inventoryItems, lotes, perdas }:
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="batch-mfg">Fabricação</Label>
-                <Input id="batch-mfg" name="manufacturingDate" type="date" />
+                <DatePicker id="batch-mfg" name="manufacturingDate" placeholder="Data de fabricação" />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="batch-exp">Validade</Label>
-                <Input id="batch-exp" name="expirationDate" type="date" />
+                <DatePicker id="batch-exp" name="expirationDate" placeholder="Data de validade" />
               </div>
             </div>
             <div className="space-y-1.5">
