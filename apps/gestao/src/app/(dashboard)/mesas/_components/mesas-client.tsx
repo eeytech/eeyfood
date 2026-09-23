@@ -989,7 +989,7 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
                 htmlFor="create-mesa-name"
                 className="text-xs font-semibold text-slate-700"
               >
-                Nome ou Identificação da Mesa *
+                Nome ou Identificação da Mesa
               </Label>
               <Input
                 id="create-mesa-name"
@@ -1007,7 +1007,7 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
                   htmlFor="create-mesa-seats"
                   className="text-xs font-semibold text-slate-700"
                 >
-                  Capacidade (Lugares) *
+                  Capacidade (Lugares)
                 </Label>
                 <Input
                   id="create-mesa-seats"
@@ -1026,7 +1026,7 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
                   htmlFor="create-mesa-order"
                   className="text-xs font-semibold text-slate-700"
                 >
-                  Ordem de Exibição *
+                  Ordem de Exibição
                 </Label>
                 <Input
                   id="create-mesa-order"
@@ -1117,7 +1117,7 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
                 htmlFor="edit-mesa-name"
                 className="text-xs font-semibold text-slate-700"
               >
-                Nome ou Identificação da Mesa *
+                Nome ou Identificação da Mesa
               </Label>
               <Input
                 id="edit-mesa-name"
@@ -1134,7 +1134,7 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
                   htmlFor="edit-mesa-seats"
                   className="text-xs font-semibold text-slate-700"
                 >
-                  Capacidade (Lugares) *
+                  Capacidade (Lugares)
                 </Label>
                 <Input
                   id="edit-mesa-seats"
@@ -1153,7 +1153,7 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
                   htmlFor="edit-mesa-order"
                   className="text-xs font-semibold text-slate-700"
                 >
-                  Ordem de Exibição *
+                  Ordem de Exibição
                 </Label>
                 <Input
                   id="edit-mesa-order"

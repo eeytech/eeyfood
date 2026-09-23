@@ -91,7 +91,7 @@ export function InventoryFormDialog({
         <form onSubmit={handleSubmit} className="mt-2 space-y-4">
           {/* Nome */}
           <div className="space-y-1.5">
-            <Label htmlFor="inv-name">Nome *</Label>
+            <Label htmlFor="inv-name">Nome</Label>
             <Input
               id="inv-name"
               name="name"
@@ -115,7 +115,7 @@ export function InventoryFormDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Tipo */}
             <div className="space-y-1.5">
-              <Label htmlFor="inv-type">Tipo *</Label>
+              <Label htmlFor="inv-type">Tipo</Label>
               <select
                 id="inv-type"
                 name="type"
@@ -133,7 +133,7 @@ export function InventoryFormDialog({
 
             {/* Unidade de medida */}
             <div className="space-y-1.5">
-              <Label htmlFor="inv-unit">Unidade *</Label>
+              <Label htmlFor="inv-unit">Unidade</Label>
               <select
                 id="inv-unit"
                 name="unitOfMeasure"
@@ -164,7 +164,7 @@ export function InventoryFormDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Quantidade */}
             <div className="space-y-1.5">
-              <Label htmlFor="inv-qty">Quantidade atual *</Label>
+              <Label htmlFor="inv-qty">Quantidade atual</Label>
               <Input
                 id="inv-qty"
                 name="currentQuantity"

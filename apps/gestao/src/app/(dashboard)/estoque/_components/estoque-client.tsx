@@ -306,7 +306,7 @@ export function EstoqueClient({ slug, products, inventoryItems, lotes, perdas }:
             className="space-y-4"
           >
             <div className="space-y-1.5">
-              <Label htmlFor="loss-item">Insumo *</Label>
+              <Label htmlFor="loss-item">Insumo</Label>
               <select
                 id="loss-item"
                 name="inventoryItemId"
@@ -323,11 +323,11 @@ export function EstoqueClient({ slug, products, inventoryItems, lotes, perdas }:
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="loss-qty">Quantidade perdida *</Label>
+                <Label htmlFor="loss-qty">Quantidade perdida</Label>
                 <Input id="loss-qty" name="quantity" type="number" min="0.001" step="0.001" required placeholder="Ex.: 2.5" />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="loss-reason">Motivo *</Label>
+                <Label htmlFor="loss-reason">Motivo</Label>
                 <select
                   id="loss-reason"
                   name="reason"
@@ -377,7 +377,7 @@ export function EstoqueClient({ slug, products, inventoryItems, lotes, perdas }:
             className="space-y-4"
           >
             <div className="space-y-1.5">
-              <Label htmlFor="batch-item">Insumo *</Label>
+              <Label htmlFor="batch-item">Insumo</Label>
               <select
                 id="batch-item"
                 name="inventoryItemId"
@@ -394,7 +394,7 @@ export function EstoqueClient({ slug, products, inventoryItems, lotes, perdas }:
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="batch-qty">Quantidade *</Label>
+                <Label htmlFor="batch-qty">Quantidade</Label>
                 <Input id="batch-qty" name="quantity" type="number" min="0.001" step="0.001" required placeholder="Ex.: 10" />
               </div>
               <div className="space-y-1.5">

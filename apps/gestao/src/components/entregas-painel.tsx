@@ -462,7 +462,7 @@ export default function EntregasPainel({
 
             <div>
               <label className="text-xs font-semibold text-slate-700">
-                Entregador / Motoboy *
+                Entregador / Motoboy
               </label>
               <Select
                 value={dispatchCourierId}

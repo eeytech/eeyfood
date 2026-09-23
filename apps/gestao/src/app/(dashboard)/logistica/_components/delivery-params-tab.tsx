@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircle2Icon, PackageCheckIcon, TimerIcon, TruckIcon } from "lucide-react";
+import Link from "next/link";
 import { useState, useTransition } from "react";
 
 import { updateDeliveryParamsAction } from "@/app/(dashboard)/logistica-actions";
@@ -144,28 +145,27 @@ export function DeliveryParamsTab({ slug, restaurant }: DeliveryParamsTabProps) 
           </div>
 
           {/* ── Frete grátis ── */}
-          <div className="flex items-start gap-4 border-b px-5 py-5">
+          <div className="flex items-start gap-4 border-b bg-emerald-50/40 px-5 py-5">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
               <CheckCircle2Icon size={18} />
             </div>
             <div className="flex-1 space-y-1.5">
-              <Label
-                htmlFor="freeDeliveryThreshold"
-                className="text-sm font-semibold"
-              >
-                Frete Grátis a partir de
-              </Label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-slate-900">Frete Grátis</span>
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                  Centralizado em Fidelização
+                </span>
+              </div>
               <p className="text-xs text-muted-foreground">
-                Pedidos que atingirem este valor terão frete grátis
-                automaticamente. Deixe em branco para desativar.
+                As regras de bônus e o valor mínimo de pedido para frete grátis agora são configurados de forma centralizada na seção de Fidelização.
               </p>
-              <div className="mt-2 max-w-xs">
-                <CurrencyInput
-                  id="freeDeliveryThreshold"
-                  name="freeDeliveryThreshold"
-                  initialValue={restaurant.freeDeliveryThreshold}
-                  placeholder="Desativado"
-                />
+              <div className="pt-1">
+                <Link
+                  href="/frete"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:underline"
+                >
+                  Ir para Fidelização &gt; Frete &rarr;
+                </Link>
               </div>
             </div>
           </div>

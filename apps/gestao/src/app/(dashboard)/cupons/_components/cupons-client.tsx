@@ -1043,7 +1043,7 @@ export function CuponsClient({ slug, cupons }: CuponsClientProps) {
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2 space-y-1.5">
                 <Label htmlFor="coupon-code" className="text-xs font-semibold text-slate-700">
-                  Código do Cupom *
+                  Código do Cupom
                 </Label>
                 <Input
                   id="coupon-code"
@@ -1063,7 +1063,7 @@ export function CuponsClient({ slug, cupons }: CuponsClientProps) {
 
               <div className="col-span-2 space-y-1.5">
                 <Label htmlFor="coupon-desc" className="text-xs font-semibold text-slate-700">
-                  Descrição ou Nome da Campanha
+                  Descrição
                 </Label>
                 <Input
                   id="coupon-desc"
@@ -1079,7 +1079,7 @@ export function CuponsClient({ slug, cupons }: CuponsClientProps) {
 
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-slate-700">
-                  Tipo de Desconto *
+                  Tipo de Desconto
                 </Label>
                 <Select
                   name="discountType"
@@ -1103,7 +1103,7 @@ export function CuponsClient({ slug, cupons }: CuponsClientProps) {
 
               <div className="space-y-1.5">
                 <Label htmlFor="coupon-val" className="text-xs font-semibold text-slate-700">
-                  {form.discountType === "PERCENTAGE" ? "Valor (%) *" : "Valor (R$) *"}
+                  {form.discountType === "PERCENTAGE" ? "Valor (%)" : "Valor (R$)"}
                 </Label>
                 <Input
                   id="coupon-val"

@@ -963,7 +963,7 @@ export function UsuariosClient({ slug, users }: UsuariosClientProps) {
 
             <div className="space-y-1.5">
               <Label htmlFor="create-name" className="text-xs font-semibold text-slate-700">
-                Nome Completo *
+                Nome Completo
               </Label>
               <Input
                 id="create-name"
@@ -976,7 +976,7 @@ export function UsuariosClient({ slug, users }: UsuariosClientProps) {
 
             <div className="space-y-1.5">
               <Label htmlFor="create-email" className="text-xs font-semibold text-slate-700">
-                E-mail de Login *
+                E-mail de Login
               </Label>
               <Input
                 id="create-email"
@@ -990,7 +990,7 @@ export function UsuariosClient({ slug, users }: UsuariosClientProps) {
 
             <div className="space-y-1.5">
               <Label htmlFor="create-password" className="text-xs font-semibold text-slate-700">
-                Senha Inicial *
+                Senha Inicial
               </Label>
               <Input
                 id="create-password"
@@ -1006,7 +1006,7 @@ export function UsuariosClient({ slug, users }: UsuariosClientProps) {
             {/* Shadcn UI Select for Role */}
             <div className="space-y-1.5">
               <Label htmlFor="create-role" className="text-xs font-semibold text-slate-700">
-                Cargo / Nível de Permissão *
+                Cargo / Nível de Permissão
               </Label>
               <Select
                 value={selectedRole}
@@ -1115,7 +1115,7 @@ export function UsuariosClient({ slug, users }: UsuariosClientProps) {
 
             <div className="space-y-1.5">
               <Label htmlFor="edit-name" className="text-xs font-semibold text-slate-700">
-                Nome Completo *
+                Nome Completo
               </Label>
               <Input
                 id="edit-name"
@@ -1129,7 +1129,7 @@ export function UsuariosClient({ slug, users }: UsuariosClientProps) {
             {/* Shadcn UI Select for Role */}
             <div className="space-y-1.5">
               <Label htmlFor="edit-role" className="text-xs font-semibold text-slate-700">
-                Cargo / Nível de Permissão *
+                Cargo / Nível de Permissão
               </Label>
               <Select
                 value={editRole}

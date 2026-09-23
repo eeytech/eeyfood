@@ -390,14 +390,16 @@ export const updateDeliveryParamsAction = async (
 ) => {
   const restaurant = await getRestaurantOrThrow(slug);
 
-  const freeThresholdRaw = getStringValue(formData.get("freeDeliveryThreshold"));
+  const freeThresholdRaw = formData.has("freeDeliveryThreshold")
+    ? getStringValue(formData.get("freeDeliveryThreshold"))
+    : undefined;
 
   const parsedData = deliveryParamsSchema.safeParse({
     deliveryFee: parseFloat(getStringValue(formData.get("deliveryFee"))) || 0,
     minimumOrderValue:
       parseFloat(getStringValue(formData.get("minimumOrderValue"))) || 0,
     freeDeliveryThreshold:
-      freeThresholdRaw !== "" ? parseFloat(freeThresholdRaw) || 0 : null,
+      freeThresholdRaw !== undefined ? (freeThresholdRaw !== "" ? parseFloat(freeThresholdRaw) || 0 : null) : (restaurant.freeDeliveryThreshold != null ? Number(restaurant.freeDeliveryThreshold) : null),
     estimatedDeliveryTime:
       getOptionalStringValue(formData.get("estimatedDeliveryTime")),
   });

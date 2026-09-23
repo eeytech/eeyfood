@@ -40,7 +40,6 @@ interface RuleFormData {
   type: "RADIUS_KM" | "NEIGHBORHOOD" | "CEP_RANGE";
   fee: string;
   minimumOrderValue: string;
-  freeDeliveryThreshold: string;
   maxDistanceKm: string;
   neighborhood: string;
   cepFrom: string;
@@ -52,7 +51,6 @@ const defaultForm: RuleFormData = {
   type: "RADIUS_KM",
   fee: "0",
   minimumOrderValue: "0",
-  freeDeliveryThreshold: "",
   maxDistanceKm: "",
   neighborhood: "",
   cepFrom: "",
@@ -79,7 +77,6 @@ export function DeliveryFeeRulesTab({ slug, rules: initialRules }: DeliveryFeeRu
       type: rule.type,
       fee: String(rule.fee),
       minimumOrderValue: String(rule.minimumOrderValue),
-      freeDeliveryThreshold: rule.freeDeliveryThreshold != null ? String(rule.freeDeliveryThreshold) : "",
       maxDistanceKm: rule.maxDistanceKm != null ? String(rule.maxDistanceKm) : "",
       neighborhood: rule.neighborhood ?? "",
       cepFrom: rule.cepFrom ?? "",
@@ -150,7 +147,6 @@ export function DeliveryFeeRulesTab({ slug, rules: initialRules }: DeliveryFeeRu
                 <th className="px-4 py-3">Tipo</th>
                 <th className="px-4 py-3">Critério</th>
                 <th className="px-4 py-3">Taxa</th>
-                <th className="px-4 py-3">Frete grátis a partir de</th>
                 <th className="w-20 px-4 py-3 text-right">Ações</th>
               </tr>
             </thead>
@@ -171,11 +167,6 @@ export function DeliveryFeeRulesTab({ slug, rules: initialRules }: DeliveryFeeRu
                           : "—"}
                   </td>
                   <td className="px-4 py-3 font-semibold">{formatCurrency(rule.fee)}</td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {rule.freeDeliveryThreshold != null
-                      ? formatCurrency(rule.freeDeliveryThreshold)
-                      : "—"}
-                  </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1">
                       <Button
@@ -301,19 +292,6 @@ export function DeliveryFeeRulesTab({ slug, rules: initialRules }: DeliveryFeeRu
                     defaultValue={form.minimumOrderValue}
                   />
                 </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="freeDeliveryThreshold">Frete grátis a partir de (R$, opcional)</Label>
-                <Input
-                  id="freeDeliveryThreshold"
-                  name="freeDeliveryThreshold"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  defaultValue={form.freeDeliveryThreshold}
-                  placeholder="Deixe vazio para não aplicar"
-                />
               </div>
             </div>
 

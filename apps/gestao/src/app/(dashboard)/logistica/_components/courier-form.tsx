@@ -108,7 +108,7 @@ export function CourierForm({ slug, defaultValues, onSuccess }: CourierFormProps
         </p>
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label htmlFor="courier-name">Nome completo *</Label>
+            <Label htmlFor="courier-name">Nome completo</Label>
             <Input
               id="courier-name"
               name="name"
@@ -120,7 +120,7 @@ export function CourierForm({ slug, defaultValues, onSuccess }: CourierFormProps
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="courier-phone">Telefone / WhatsApp *</Label>
+              <Label htmlFor="courier-phone">Telefone / WhatsApp</Label>
               <Input
                 id="courier-phone"
                 name="phone"

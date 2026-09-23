@@ -173,7 +173,7 @@ export function ComprasClient({ slug, inventoryItems, fornecedores, notasCompra 
           </DialogHeader>
           <form onSubmit={handleSupplierCreate} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="companyName">Razão Social *</Label>
+              <Label htmlFor="companyName">Razão Social</Label>
               <Input id="companyName" name="companyName" placeholder="Nome da empresa" required />
             </div>
             <div className="grid gap-3 sm:grid-cols-2">

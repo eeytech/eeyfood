@@ -1065,7 +1065,7 @@ export function CashbackClient({
 
             <div className="space-y-1.5">
               <Label htmlFor="rule-name" className="text-xs font-semibold text-slate-700">
-                Nome da Regra *
+                Descrição
               </Label>
               <Input
                 id="rule-name"
@@ -1083,7 +1083,7 @@ export function CashbackClient({
                 htmlFor="rule-percent"
                 className="text-xs font-semibold text-slate-700"
               >
-                Percentual de Retorno (%) *
+                Percentual de Retorno (%)
               </Label>
               <Input
                 id="rule-percent"
@@ -1104,7 +1104,7 @@ export function CashbackClient({
 
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-slate-700">
-                Critério de Aplicação *
+                Critério de Aplicação
               </Label>
               <Select
                 name="criterionType"
@@ -1156,7 +1156,7 @@ export function CashbackClient({
             {form.criterionType === "category" && (
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-slate-700">
-                  Categoria Vinculada *
+                  Categoria Vinculada
                 </Label>
                 <Select
                   name="menuCategoryId"
@@ -1188,7 +1188,7 @@ export function CashbackClient({
             {form.criterionType === "product" && (
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-slate-700">
-                  Produto Vinculado *
+                  Produto Vinculado
                 </Label>
                 <Select
                   name="productId"

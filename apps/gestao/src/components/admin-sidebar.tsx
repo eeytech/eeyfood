@@ -98,6 +98,7 @@ const navigationGroups = [
     items: [
       { href: "cupons", label: "Cupons", icon: TagIcon },
       { href: "cashback", label: "Cashback", icon: CircleDollarSignIcon },
+      { href: "frete", label: "Frete", icon: TruckIcon },
     ],
   },
   {

@@ -40,7 +40,7 @@ export function VehicleForm({ slug, defaultValues, onSuccess }: VehicleFormProps
       {/* ── Identificação ── */}
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="vehicle-brand">Marca *</Label>
+          <Label htmlFor="vehicle-brand">Marca</Label>
           <Input
             id="vehicle-brand"
             name="brand"
@@ -50,7 +50,7 @@ export function VehicleForm({ slug, defaultValues, onSuccess }: VehicleFormProps
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="vehicle-model">Modelo *</Label>
+          <Label htmlFor="vehicle-model">Modelo</Label>
           <Input
             id="vehicle-model"
             name="model"
@@ -92,7 +92,7 @@ export function VehicleForm({ slug, defaultValues, onSuccess }: VehicleFormProps
         </p>
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label htmlFor="vehicle-plate">Placa *</Label>
+            <Label htmlFor="vehicle-plate">Placa</Label>
             <Input
               id="vehicle-plate"
               name="licensePlate"
