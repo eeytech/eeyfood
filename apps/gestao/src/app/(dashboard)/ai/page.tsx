@@ -1,4 +1,4 @@
-import { AlertTriangleIcon, BotIcon, MessageSquareIcon, SaveIcon, SparklesIcon, UserIcon } from "lucide-react";
+import { AlertTriangleIcon, BotIcon, ChevronDownIcon, KeyIcon, MessageSquareIcon, SaveIcon, SparklesIcon, UserIcon } from "lucide-react";
 import { notFound } from "next/navigation";
 
 import { updateAiSettingsAction } from "@/app/(dashboard)/ai-actions";
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { Textarea } from "@/components/ui/textarea";
 import { buscarAiSettingsPorSlug, buscarRestauranteParaGestao } from "@/lib/admin-queries";
+import { WhatsAppConnectionCard } from "./whatsapp-connection-card";
 
 interface AiSettingsPageProps {
   params: Promise<{ slug: string }>;
@@ -24,16 +25,16 @@ const AiSettingsPage = async ({ params }: AiSettingsPageProps) => {
   }
 
   return (
-    <main className="space-y-4">
-      <Card className="overflow-hidden border-white/80 bg-white/90">
+    <main className="space-y-6">
+      <Card className="overflow-hidden border-white/80 bg-white/90 shadow-sm">
         <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <CardTitle className="flex items-center gap-2 font-display text-3xl">
               <SparklesIcon className="text-primary" />
-              Inteligência Artificial e WhatsApp
+              Inteligência Artificial & WhatsApp
             </CardTitle>
             <CardDescription className="max-w-2xl text-base">
-              Configure seu robô de atendimento automático via WhatsApp usando a Evolution API e OpenAI.
+              Gerencie a conexão do WhatsApp do restaurante e configure seu atendente virtual com IA.
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
@@ -43,6 +44,12 @@ const AiSettingsPage = async ({ params }: AiSettingsPageProps) => {
           </div>
         </CardHeader>
       </Card>
+
+      {/* Card Visual de Conexão WhatsApp via QR Code */}
+      <WhatsAppConnectionCard
+        slug={slug}
+        initialInstanceName={aiSettings?.evolutionInstanceName}
+      />
 
       {aiSettings?.isBotPaused && (
         <Card className="border-amber-300 bg-amber-50">
@@ -80,11 +87,11 @@ const AiSettingsPage = async ({ params }: AiSettingsPageProps) => {
       )}
 
       <form action={updateAiSettingsAction.bind(null, slug)}>
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Card>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card className="shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-xl">
-                <BotIcon size={20} />
+                <BotIcon size={20} className="text-primary" />
                 Personalidade do Robô
               </CardTitle>
               <CardDescription>Defina como seu atendente virtual deve se comportar.</CardDescription>
@@ -107,26 +114,26 @@ const AiSettingsPage = async ({ params }: AiSettingsPageProps) => {
                   Dica: Peça para ele sempre ser cordial, listar o cardápio quando solicitado e capturar os itens do pedido.
                 </p>
               </div>
-              <label className="flex cursor-pointer items-center gap-3 rounded-2xl border bg-slate-50 px-4 py-3 text-sm font-medium">
+              <label className="flex cursor-pointer items-center gap-3 rounded-2xl border bg-slate-50 px-4 py-3 text-sm font-medium hover:bg-slate-100 transition-colors">
                 <input 
                   type="checkbox" 
                   name="isBotActive" 
                   defaultChecked={aiSettings?.isBotActive ?? false} 
-                  className="h-4 w-4" 
+                  className="h-4 w-4 rounded accent-primary" 
                 />
-                Ativar atendimento automático
+                Ativar atendimento automático com IA
               </label>
             </CardContent>
           </Card>
 
-          <div className="space-y-4">
-            <Card>
+          <div className="space-y-6">
+            <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-xl">
-                  <MessageSquareIcon size={20} />
-                  Integrações (OpenAI e WhatsApp)
+                  <KeyIcon size={20} className="text-rose-600" />
+                  Inteligência Artificial (OpenAI)
                 </CardTitle>
-                <CardDescription>Configure as chaves de API necessárias.</CardDescription>
+                <CardDescription>Configure a chave da OpenAI para habilitar respostas inteligentes do atendente virtual.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -137,36 +144,41 @@ const AiSettingsPage = async ({ params }: AiSettingsPageProps) => {
                     defaultValue={aiSettings?.openaiApiKey ?? ""} 
                     placeholder="sk-..." 
                   />
-                  <p className="text-[10px] text-muted-foreground">Necessária para o processamento de linguagem natural e transcrição.</p>
+                  <p className="text-[11px] text-muted-foreground">Necessária para o processamento de linguagem natural e transcrição de áudios no WhatsApp.</p>
                 </div>
-                <div className="space-y-2 border-t pt-2">
-                  <label className="text-sm font-medium text-blue-600">Evolution API Instance Name</label>
-                  <Input 
-                    name="evolutionInstanceName" 
-                    defaultValue={aiSettings?.evolutionInstanceName ?? ""} 
-                    placeholder="Ex.: restaurante_01" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-blue-600">Evolution API Key</label>
-                  <Input 
-                    name="evolutionApiKey" 
-                    type="password"
-                    defaultValue={aiSettings?.evolutionApiKey ?? ""} 
-                    placeholder="Apikey da Evolution API" 
-                  />
-                </div>
-                <div className="rounded-2xl border bg-slate-50 p-4">
-                  <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">Webhook URL para Evolution API</p>
-                  <code className="block break-all rounded-md border bg-white p-2 text-[10px]">
-                    {process.env.NEXT_PUBLIC_APP_URL || "https://sua-url.com"}/api/webhooks/evolution
-                  </code>
-                  <p className="mt-2 text-[10px] italic text-muted-foreground">Copie esta URL e configure-a na sua instância da Evolution API.</p>
-                </div>
+
+                {/* Opções Técnicas Avançadas (Opcional) */}
+                <details className="group rounded-xl border bg-slate-50/60 p-3 text-xs">
+                  <summary className="cursor-pointer font-medium text-muted-foreground flex items-center justify-between">
+                    <span>Configurações Técnicas Avançadas</span>
+                    <ChevronDownIcon className="h-4 w-4 transition-transform group-open:rotate-180" />
+                  </summary>
+                  <div className="mt-3 space-y-3 pt-2 border-t">
+                    <div className="space-y-1">
+                      <label className="font-medium text-slate-700">Nome da Instância</label>
+                      <Input
+                        name="evolutionInstanceName"
+                        defaultValue={aiSettings?.evolutionInstanceName ?? ""}
+                        placeholder="Gerado automaticamente ao conectar"
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="font-medium text-slate-700">Chave de API da Instância</label>
+                      <Input
+                        name="evolutionApiKey"
+                        type="password"
+                        defaultValue={aiSettings?.evolutionApiKey ?? ""}
+                        placeholder="Herdada do servidor ou personalizada"
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                  </div>
+                </details>
               </CardContent>
             </Card>
 
-            <SubmitButton className="h-14 w-full rounded-full text-lg shadow-lg shadow-primary/20">
+            <SubmitButton className="h-14 w-full rounded-2xl text-lg font-semibold shadow-lg shadow-primary/20">
               <SaveIcon className="mr-2" size={20} />
               Salvar Configurações
             </SubmitButton>
