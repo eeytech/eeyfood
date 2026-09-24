@@ -11,6 +11,7 @@ import { notFound } from "next/navigation";
 
 import { buscarRestauranteParaGestao } from "@/lib/admin-queries";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -92,104 +93,122 @@ export default async function CustomerDetailPage({ params }: PageProps) {
   const segmentLabel = SEGMENT_LABELS[customer.segment] ?? customer.segment;
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="space-y-6">
       {/* Back + header */}
-      <div className="flex items-center gap-3">
-        <Link
-          href="/crm"
-          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeftIcon className="h-4 w-4" />
-          Clientes
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm font-display text-sm font-bold">
+            {customer.name?.slice(0, 2).toUpperCase() || "CL"}
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
+                {customer.name}
+              </h1>
+              <Badge variant={segmentVariant} className="rounded-full px-2.5 py-0.5 text-xs font-medium">
+                {segmentLabel}
+              </Badge>
+            </div>
+            <p className="text-sm text-slate-500">
+              Telefone: {customer.phone} {customer.email ? `• ${customer.email}` : ""}
+            </p>
+          </div>
+        </div>
+
+        <Link href="/crm">
+          <Button
+            variant="outline"
+            className="h-10 gap-1.5 rounded-full border-slate-200 bg-white px-4 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-100"
+          >
+            <ArrowLeftIcon size={14} />
+            <span>Voltar para Clientes</span>
+          </Button>
         </Link>
-        <span className="text-muted-foreground">/</span>
-        <h1 className="text-xl font-bold">{customer.name}</h1>
-        <Badge variant={segmentVariant}>{segmentLabel}</Badge>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left column — customer info + interactions */}
         <div className="space-y-4">
           {/* KPIs */}
-          <Card>
+          <Card className="border-slate-200/80 bg-white shadow-sm">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <ShoppingBagIcon className="h-4 w-4" />
+              <CardTitle className="flex items-center gap-2 text-base text-slate-900 font-semibold">
+                <ShoppingBagIcon className="h-4 w-4 text-slate-500" />
                 Dados do cliente
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Telefone</span>
-                <span className="font-medium">{customer.phone}</span>
+                <span className="text-slate-500">Telefone</span>
+                <span className="font-medium text-slate-900">{customer.phone}</span>
               </div>
               {customer.email && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">E-mail</span>
-                  <span className="font-medium">{customer.email}</span>
+                  <span className="text-slate-500">E-mail</span>
+                  <span className="font-medium text-slate-900">{customer.email}</span>
                 </div>
               )}
               {customer.cpf && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">CPF</span>
-                  <span className="font-medium">{customer.cpf}</span>
+                  <span className="text-slate-500">CPF</span>
+                  <span className="font-medium text-slate-900">{customer.cpf}</span>
                 </div>
               )}
               {customer.birthDate && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Aniversário</span>
-                  <span className="font-medium">{formatDate(customer.birthDate)}</span>
+                  <span className="text-slate-500">Aniversário</span>
+                  <span className="font-medium text-slate-900">{formatDate(customer.birthDate)}</span>
                 </div>
               )}
-              <div className="flex justify-between border-t pt-2">
-                <span className="text-muted-foreground">Total de pedidos</span>
-                <span className="font-bold">{customer.totalOrders}</span>
+              <div className="flex justify-between border-t border-slate-100 pt-2">
+                <span className="text-slate-500">Total de pedidos</span>
+                <span className="font-bold text-slate-900">{customer.totalOrders}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Ticket médio</span>
-                <span className="font-bold">{formatCurrency(customer.avgTicket)}</span>
+                <span className="text-slate-500">Ticket médio</span>
+                <span className="font-bold text-slate-900">{formatCurrency(customer.avgTicket)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Total gasto</span>
-                <span className="font-bold">{formatCurrency(customer.totalSpent)}</span>
+                <span className="text-slate-500">Total gasto</span>
+                <span className="font-bold text-slate-900">{formatCurrency(customer.totalSpent)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Primeiro pedido</span>
-                <span>{formatDate(customer.firstOrderAt)}</span>
+                <span className="text-slate-500">Primeiro pedido</span>
+                <span className="text-slate-700">{formatDate(customer.firstOrderAt)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Último pedido</span>
-                <span>{formatDate(customer.lastOrderAt)}</span>
+                <span className="text-slate-500">Último pedido</span>
+                <span className="text-slate-700">{formatDate(customer.lastOrderAt)}</span>
               </div>
             </CardContent>
           </Card>
 
           {/* Wallet */}
           {walletData && (
-            <Card>
+            <Card className="border-slate-200/80 bg-white shadow-sm">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <WalletIcon className="h-4 w-4" />
-                  Cashback
+                <CardTitle className="flex items-center gap-2 text-base text-slate-900 font-semibold">
+                  <WalletIcon className="h-4 w-4 text-emerald-600" />
+                  Cashback & Carteira
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Saldo disponível</span>
-                  <span className="font-bold text-green-600">{formatCurrency(walletData.balance)}</span>
+                  <span className="text-slate-500">Saldo disponível</span>
+                  <span className="font-bold text-emerald-600">{formatCurrency(walletData.balance)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total ganho</span>
-                  <span>{formatCurrency(walletData.totalEarned)}</span>
+                  <span className="text-slate-500">Total ganho</span>
+                  <span className="text-slate-800">{formatCurrency(walletData.totalEarned)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total resgatado</span>
-                  <span>{formatCurrency(walletData.totalRedeemed)}</span>
+                  <span className="text-slate-500">Total resgatado</span>
+                  <span className="text-slate-800">{formatCurrency(walletData.totalRedeemed)}</span>
                 </div>
                 {walletData.points > 0 && (
-                  <div className="flex justify-between border-t pt-2">
-                    <span className="text-muted-foreground">Pontos</span>
-                    <span className="font-bold">{walletData.points.toFixed(0)} pts</span>
+                  <div className="flex justify-between border-t border-slate-100 pt-2">
+                    <span className="text-slate-500">Pontos</span>
+                    <span className="font-bold text-slate-900">{walletData.points.toFixed(0)} pts</span>
                   </div>
                 )}
               </CardContent>
@@ -198,25 +217,25 @@ export default async function CustomerDetailPage({ params }: PageProps) {
 
           {/* Interaction history */}
           {customer.interactions && customer.interactions.length > 0 && (
-            <Card>
+            <Card className="border-slate-200/80 bg-white shadow-sm">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <MessageSquareIcon className="h-4 w-4" />
+                <CardTitle className="flex items-center gap-2 text-base text-slate-900 font-semibold">
+                  <MessageSquareIcon className="h-4 w-4 text-slate-500" />
                   Histórico de interações
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {customer.interactions.map((interaction) => (
-                  <div key={interaction.id} className="space-y-1 border-b pb-3 last:border-0 last:pb-0">
+                  <div key={interaction.id} className="space-y-1 border-b border-slate-100 pb-3 last:border-0 last:pb-0">
                     <div className="flex items-center justify-between">
                       <Badge variant="secondary" className="text-xs">
                         {interaction.type === "CART_RECOVERY" ? "Recuperação" : interaction.type === "CAMPAIGN" ? "Campanha" : interaction.type}
                       </Badge>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-slate-400">
                         {formatDateTime(interaction.sentAt)}
                       </span>
                     </div>
-                    <p className="text-xs text-muted-foreground line-clamp-2">{interaction.message}</p>
+                    <p className="text-xs text-slate-600 line-clamp-2">{interaction.message}</p>
                   </div>
                 ))}
               </CardContent>
@@ -226,55 +245,57 @@ export default async function CustomerDetailPage({ params }: PageProps) {
 
         {/* Right column — order history */}
         <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <PackageIcon className="h-4 w-4" />
+          <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+            <CardHeader className="border-b border-slate-100">
+              <CardTitle className="flex items-center gap-2 text-base text-slate-900 font-semibold">
+                <PackageIcon className="h-4 w-4 text-slate-500" />
                 Histórico de pedidos ({orders.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               {orders.length === 0 ? (
-                <p className="p-6 text-center text-sm text-muted-foreground">
+                <p className="p-6 text-center text-sm text-slate-500">
                   Nenhum pedido encontrado.
                 </p>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Pedido</TableHead>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Itens</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {orders.map((order) => (
-                      <TableRow key={order.id}>
-                        <TableCell className="font-medium">#{order.id}</TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {formatDateTime(order.createdAt)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={order.status === "CANCELLED" ? "danger" : order.status === "FINISHED" ? "secondary" : "default"}>
-                            {STATUS_LABELS[order.status] ?? order.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {order.orderProducts
-                            .slice(0, 2)
-                            .map((p) => `${p.quantity}x ${p.productNameSnapshot}`)
-                            .join(", ")}
-                          {order.orderProducts.length > 2 && ` +${order.orderProducts.length - 2}`}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatCurrency(order.total)}
-                        </TableCell>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader className="bg-slate-50/80">
+                      <TableRow className="border-b border-slate-200">
+                        <TableHead className="text-xs font-semibold text-slate-700">Pedido</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-700">Data</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-700">Status</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-700">Itens</TableHead>
+                        <TableHead className="text-right text-xs font-semibold text-slate-700">Total</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody className="divide-y divide-slate-100">
+                      {orders.map((order) => (
+                        <TableRow key={order.id} className="transition-colors hover:bg-slate-50/70">
+                          <TableCell className="font-semibold text-slate-900">#{order.id}</TableCell>
+                          <TableCell className="text-xs text-slate-500">
+                            {formatDateTime(order.createdAt)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={order.status === "CANCELLED" ? "danger" : order.status === "FINISHED" ? "secondary" : "default"} className="rounded-full text-xs">
+                              {STATUS_LABELS[order.status] ?? order.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-slate-600">
+                            {order.orderProducts
+                              .slice(0, 2)
+                              .map((p) => `${p.quantity}x ${p.productNameSnapshot}`)
+                              .join(", ")}
+                            {order.orderProducts.length > 2 && ` +${order.orderProducts.length - 2}`}
+                          </TableCell>
+                          <TableCell className="text-right font-display font-semibold text-slate-900">
+                            {formatCurrency(order.total)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               )}
             </CardContent>
           </Card>

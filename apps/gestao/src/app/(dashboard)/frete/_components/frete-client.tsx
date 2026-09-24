@@ -4,24 +4,19 @@ import type { MenuCategory, Product, Restaurant } from "@fsw/db";
 import {
   AlertCircleIcon,
   BadgeDollarSignIcon,
-  CalendarIcon,
   CheckCircle2Icon,
   ChevronLeftIcon,
   ChevronRightIcon,
   FilterXIcon,
-  HelpCircleIcon,
   LayersIcon,
   LoaderCircleIcon,
   PackageIcon,
   PencilIcon,
   PlusIcon,
   SearchIcon,
-  ShieldCheckIcon,
-  ShoppingBagIcon,
   SparklesIcon,
   Trash2Icon,
   TruckIcon,
-  UserPlusIcon,
   XIcon,
 } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
@@ -391,26 +386,26 @@ export function FreteClient({
     <div className="space-y-6 pb-12">
       {/* ── Page Header ── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <TruckIcon className="h-5 w-5" />
-            </div>
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm">
+            <TruckIcon size={22} />
+          </div>
+          <div>
             <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
               Frete Grátis
             </h1>
+            <p className="text-sm text-slate-500">
+              Configure campanhas e benefícios de frete grátis para diversas ocasiões: valor mínimo, primeira compra, categoria ou produto específico.
+            </p>
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Configure campanhas e benefícios de frete grátis para diversas ocasiões: valor mínimo, primeira compra, categoria ou produto específico.
-          </p>
         </div>
 
         <Button
           onClick={handleOpenCreate}
-          className="gap-2 shadow-sm"
+          className="h-10 gap-2 rounded-full bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
         >
-          <PlusIcon className="h-4 w-4" />
-          Nova Regra
+          <PlusIcon size={16} />
+          <span>Nova Regra</span>
         </Button>
       </div>
 
