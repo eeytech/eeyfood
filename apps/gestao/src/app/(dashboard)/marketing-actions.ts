@@ -2,13 +2,14 @@
 
 import {
   aiSettingsTable,
+  and,
   buscarRestaurantePorSlug,
   customerInteractionsTable,
   customersTable,
   db,
   eq,
+  inArray,
   marketingSettingsTable,
-  and,
 } from "@fsw/db";
 import axios from "axios";
 import { revalidatePath } from "next/cache";
@@ -73,7 +74,7 @@ export async function dispararCampanhaAction(
   const restaurant = await buscarRestaurantePorSlug(slug);
   if (!restaurant) throw new Error("Restaurante não encontrado.");
 
-  const segment = getStringValue(formData.get("segment"));
+  const targetType = getStringValue(formData.get("targetType")) || "SEGMENT";
   const message = getStringValue(formData.get("message"));
 
   if (!message || message.trim().length < 5) {
@@ -90,19 +91,61 @@ export async function dispararCampanhaAction(
 
   const EVOLUTION_URL = process.env.EVOLUTION_API_URL || "http://localhost:8080";
 
-  const conditions = [eq(customersTable.restaurantId, restaurant.id)];
-  if (segment && segment !== "ALL") {
-    conditions.push(
-      eq(
-        customersTable.segment,
-        segment as "NEW" | "VIP" | "INACTIVE" | "AT_RISK" | "RECOVERED",
-      ),
-    );
-  }
+  let customers: Array<{ id: string; name: string; phone: string }> = [];
 
-  const customers = await db.query.customersTable.findMany({
-    where: and(...conditions),
-  });
+  if (targetType === "SPECIFIC") {
+    const rawIds = formData.getAll("customerIds").map(String);
+    const specificIdsStr = getStringValue(formData.get("specificIds"));
+    const idSet = new Set<string>(rawIds.filter(Boolean));
+    if (specificIdsStr) {
+      specificIdsStr
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .forEach((id) => idSet.add(id));
+    }
+    const customerIdsArray = Array.from(idSet);
+
+    if (customerIdsArray.length === 0) {
+      throw new Error("Nenhum contato selecionado para envio.");
+    }
+
+    customers = await db.query.customersTable.findMany({
+      where: and(
+        eq(customersTable.restaurantId, restaurant.id),
+        inArray(customersTable.id, customerIdsArray),
+      ),
+      columns: {
+        id: true,
+        name: true,
+        phone: true,
+      },
+    });
+
+    if (customers.length === 0) {
+      throw new Error("Nenhum contato válido encontrado para envio.");
+    }
+  } else {
+    const segment = getStringValue(formData.get("segment"));
+    const conditions = [eq(customersTable.restaurantId, restaurant.id)];
+    if (segment && segment !== "ALL") {
+      conditions.push(
+        eq(
+          customersTable.segment,
+          segment as "NEW" | "VIP" | "INACTIVE" | "AT_RISK" | "RECOVERED",
+        ),
+      );
+    }
+
+    customers = await db.query.customersTable.findMany({
+      where: and(...conditions),
+      columns: {
+        id: true,
+        name: true,
+        phone: true,
+      },
+    });
+  }
 
   let sent = 0;
 

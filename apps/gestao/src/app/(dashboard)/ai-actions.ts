@@ -1,6 +1,6 @@
 "use server";
 
-import { aiSettingsTable, buscarRestaurantePorSlug, db, reativarBot } from "@fsw/db";
+import { aiSettingsTable, buscarRestaurantePorSlug, db, eq, reativarBot } from "@fsw/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -22,10 +22,22 @@ export const updateAiSettingsAction = async (
   const restaurant = await buscarRestaurantePorSlug(slug);
   if (!restaurant) throw new Error("Restaurante não encontrado.");
 
+  const existing = await db.query.aiSettingsTable.findFirst({
+    where: eq(aiSettingsTable.restaurantId, restaurant.id),
+  });
+
+  const evolutionInstanceName = formData.has("evolutionInstanceName")
+    ? getStringValue(formData.get("evolutionInstanceName"))
+    : (existing?.evolutionInstanceName ?? "");
+
+  const evolutionApiKey = formData.has("evolutionApiKey")
+    ? getStringValue(formData.get("evolutionApiKey"))
+    : (existing?.evolutionApiKey ?? "");
+
   const parsedData = aiSettingsSchema.safeParse({
     openaiApiKey: getStringValue(formData.get("openaiApiKey")),
-    evolutionInstanceName: getStringValue(formData.get("evolutionInstanceName")),
-    evolutionApiKey: getStringValue(formData.get("evolutionApiKey")),
+    evolutionInstanceName,
+    evolutionApiKey,
     botName: getStringValue(formData.get("botName")),
     systemPrompt: getStringValue(formData.get("systemPrompt")),
     isBotActive: getBooleanValue(formData.get("isBotActive")),
@@ -52,6 +64,9 @@ export const updateAiSettingsAction = async (
     });
 
   revalidatePath(`/${slug}/ai`);
+  revalidatePath("/ai");
+  revalidatePath(`/${slug}/whatsapp`);
+  revalidatePath("/whatsapp");
 };
 
 export const reativarBotAction = async (slug: string) => {
@@ -60,4 +75,5 @@ export const reativarBotAction = async (slug: string) => {
 
   await reativarBot(restaurant.id);
   revalidatePath(`/${slug}/ai`);
+  revalidatePath("/ai");
 };

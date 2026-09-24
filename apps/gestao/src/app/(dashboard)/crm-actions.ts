@@ -3,12 +3,16 @@
 import {
   and,
   buscarRestaurantePorSlug,
-  customersTable,
+  customerAddressesTable,
   customerInteractionsTable,
+  customersTable,
   db,
   desc,
   eq,
   ilike,
+  inArray,
+  isNotNull,
+  ne,
   or,
   ordersTable,
   sql,
@@ -168,8 +172,71 @@ export async function listarClientesCRMAction(
     .from(customersTable)
     .where(and(...conditions));
 
+  const phoneList = customers.map((c) => c.phone).filter(Boolean);
+  const addressMap: Record<string, string> = {};
+
+  if (phoneList.length > 0) {
+    // 1. Endereços salvos na tabela de endereços de clientes
+    const savedAddresses = await db
+      .select({
+        phone: customerAddressesTable.customerPhone,
+        street: customerAddressesTable.street,
+        number: customerAddressesTable.number,
+        complement: customerAddressesTable.complement,
+        neighborhood: customerAddressesTable.neighborhood,
+        city: customerAddressesTable.city,
+        state: customerAddressesTable.state,
+      })
+      .from(customerAddressesTable)
+      .where(inArray(customerAddressesTable.customerPhone, phoneList))
+      .orderBy(desc(customerAddressesTable.lastUsedAt));
+
+    for (const addr of savedAddresses) {
+      if (!addressMap[addr.phone]) {
+        const parts = [
+          `${addr.street}, ${addr.number}`,
+          addr.complement ? `(${addr.complement})` : null,
+          addr.neighborhood,
+          addr.city ? `${addr.city}${addr.state ? `/${addr.state}` : ""}` : null,
+        ].filter(Boolean);
+        addressMap[addr.phone] = parts.join(" - ");
+      }
+    }
+
+    // 2. Endereços registrados diretamente nos pedidos de entrega
+    const missingPhones = phoneList.filter((p) => !addressMap[p]);
+    if (missingPhones.length > 0) {
+      const orderAddresses = await db
+        .select({
+          phone: ordersTable.customerPhone,
+          deliveryAddress: ordersTable.deliveryAddress,
+        })
+        .from(ordersTable)
+        .where(
+          and(
+            eq(ordersTable.restaurantId, restaurant.id),
+            inArray(ordersTable.customerPhone, missingPhones),
+            isNotNull(ordersTable.deliveryAddress),
+            ne(ordersTable.deliveryAddress, ""),
+          ),
+        )
+        .orderBy(desc(ordersTable.createdAt));
+
+      for (const order of orderAddresses) {
+        if (order.deliveryAddress && !addressMap[order.phone]) {
+          addressMap[order.phone] = order.deliveryAddress;
+        }
+      }
+    }
+  }
+
+  const customersWithAddress = customers.map((c) => ({
+    ...c,
+    deliveryAddress: addressMap[c.phone] ?? null,
+  }));
+
   return {
-    customers,
+    customers: customersWithAddress,
     total: Number(countResult[0]?.count ?? 0),
     page,
     pageSize: PAGE_SIZE,
@@ -200,7 +267,13 @@ export async function buscarClienteDetalheAction(slug: string, customerId: strin
     with: { orderProducts: { with: { product: true } } },
   });
 
-  return { customer, orders };
+  const savedAddresses = await db
+    .select()
+    .from(customerAddressesTable)
+    .where(eq(customerAddressesTable.customerPhone, customer.phone))
+    .orderBy(desc(customerAddressesTable.lastUsedAt));
+
+  return { customer, orders, addresses: savedAddresses };
 }
 
 const updateCustomerSchema = z.object({

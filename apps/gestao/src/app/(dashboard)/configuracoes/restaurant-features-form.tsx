@@ -34,12 +34,11 @@ interface RestaurantFeaturesFormProps {
 }
 
 const AI_SETUP_STEPS = [
-  "Acesse o menu lateral e clique na opção \"IA Bot\".",
+  "Acesse o menu lateral em Configurar e clique em \"IA\".",
   "Insira a sua chave de API da OpenAI (OpenAI API Key).",
-  "Preencha as credenciais da API do WhatsApp (Evolution API).",
   "Defina as instruções de comportamento do bot (Prompt de Sistema).",
-  "Conecte o seu WhatsApp lendo o QR Code disponível no painel da IA.",
-  "Ative a funcionalidade para iniciar os atendimentos automáticos.",
+  "Acesse a opção \"WhatsApp\" em Configurar e conecte lendo o QR Code.",
+  "Ative o atendimento automático com IA para iniciar.",
 ];
 
 export const RestaurantFeaturesForm = ({

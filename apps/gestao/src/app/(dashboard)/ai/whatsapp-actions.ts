@@ -288,6 +288,9 @@ export async function gerarQrCodeWhatsAppAction(slug: string): Promise<QrCodeRes
     }
 
     revalidatePath(`/${slug}/ai`);
+    revalidatePath("/ai");
+    revalidatePath(`/${slug}/whatsapp`);
+    revalidatePath("/whatsapp");
 
     return {
       ok: true,
@@ -334,6 +337,9 @@ export async function desconectarWhatsAppAction(slug: string): Promise<{ ok: boo
     }
 
     revalidatePath(`/${slug}/ai`);
+    revalidatePath("/ai");
+    revalidatePath(`/${slug}/whatsapp`);
+    revalidatePath("/whatsapp");
     return { ok: true };
   } catch (error) {
     return {

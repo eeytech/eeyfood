@@ -13,7 +13,6 @@ import {
   UsersIcon,
   UserXIcon,
 } from "lucide-react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -139,7 +138,7 @@ export default async function CrmPage({ params, searchParams }: PageProps) {
               Clientes (CRM)
             </h1>
             <p className="text-sm text-slate-500">
-              Base de clientes identificados por telefone com classificação de recorrência RFM.
+              Base de clientes identificados por telefone com classificação de recorrência RFM e endereços de entrega.
             </p>
           </div>
         </div>
@@ -147,49 +146,39 @@ export default async function CrmPage({ params, searchParams }: PageProps) {
         <CrmReclassifyButton action={reclassify} />
       </div>
 
-      {/* ── Segment KPI Cards ────────────────────────────── */}
+      {/* ── Segment KPI Cards (Não clicáveis) ────────────── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {SEGMENT_CARDS.map((card) => {
           const count = stats[card.key] ?? 0;
-          const isSelected =
-            (!sp.segment && card.key === "ALL") || sp.segment === card.key;
           const Icon = card.icon;
-          const href =
-            card.key === "ALL"
-              ? "/crm"
-              : `/crm?segment=${card.key}${sp.search ? `&search=${encodeURIComponent(sp.search)}` : ""}`;
 
           return (
-            <Link key={card.key} href={href} className="group block">
-              <Card
-                className={cn(
-                  "border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300",
-                  isSelected && "ring-2 ring-slate-900 ring-offset-1 border-slate-900",
-                )}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">
-                      {card.label}
-                    </span>
-                    <div className={cn("rounded-lg p-1.5 shrink-0", card.badgeClass)}>
-                      <Icon size={16} />
-                    </div>
+            <Card
+              key={card.key}
+              className="border-slate-200/80 bg-white shadow-sm transition-all"
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">
+                    {card.label}
+                  </span>
+                  <div className={cn("rounded-lg p-1.5 shrink-0", card.badgeClass)}>
+                    <Icon size={16} />
                   </div>
-                  <p
-                    className={cn(
-                      "mt-2 font-display text-2xl font-bold",
-                      card.key === "ALL" ? "text-slate-900" : card.textClass,
-                    )}
-                  >
-                    {count}
-                  </p>
-                  <p className="mt-0.5 text-xs text-slate-500 truncate">
-                    {card.description}
-                  </p>
-                </CardContent>
-              </Card>
-            </Link>
+                </div>
+                <p
+                  className={cn(
+                    "mt-2 font-display text-2xl font-bold",
+                    card.key === "ALL" ? "text-slate-900" : card.textClass,
+                  )}
+                >
+                  {count}
+                </p>
+                <p className="mt-0.5 text-xs text-slate-500 truncate">
+                  {card.description}
+                </p>
+              </CardContent>
+            </Card>
           );
         })}
       </div>

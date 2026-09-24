@@ -1,6 +1,7 @@
-import { db, eq, walletsTable, and } from "@fsw/db";
+import { and, db, eq, walletsTable } from "@fsw/db";
 import {
   ArrowLeftIcon,
+  MapPinIcon,
   MessageSquareIcon,
   PackageIcon,
   ShoppingBagIcon,
@@ -80,7 +81,32 @@ export default async function CustomerDetailPage({ params }: PageProps) {
 
   if (!restaurant) notFound();
 
-  const { customer, orders } = await buscarClienteDetalheAction(restaurant.slug, customerId);
+  const { customer, orders, addresses } = await buscarClienteDetalheAction(restaurant.slug, customerId);
+
+  const addressSet = new Set<string>();
+  const allCustomerAddresses: string[] = [];
+
+  for (const a of addresses || []) {
+    const parts = [
+      `${a.street}, ${a.number}`,
+      a.complement ? `(${a.complement})` : null,
+      a.neighborhood,
+      a.city ? `${a.city}${a.state ? `/${a.state}` : ""}` : null,
+      a.reference ? `Ref: ${a.reference}` : null,
+    ].filter(Boolean);
+    const str = parts.join(" - ");
+    if (str && !addressSet.has(str)) {
+      addressSet.add(str);
+      allCustomerAddresses.push(str);
+    }
+  }
+
+  for (const o of orders) {
+    if (o.deliveryAddress && !addressSet.has(o.deliveryAddress.trim())) {
+      addressSet.add(o.deliveryAddress.trim());
+      allCustomerAddresses.push(o.deliveryAddress.trim());
+    }
+  }
 
   const walletData = await db.query.walletsTable.findFirst({
     where: and(
@@ -180,6 +206,31 @@ export default async function CustomerDetailPage({ params }: PageProps) {
                 <span className="text-slate-500">Último pedido</span>
                 <span className="text-slate-700">{formatDate(customer.lastOrderAt)}</span>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Endereços de Entrega */}
+          <Card className="border-slate-200/80 bg-white shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base text-slate-900 font-semibold">
+                <MapPinIcon className="h-4 w-4 text-rose-500" />
+                Endereços de Entrega ({allCustomerAddresses.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2.5 text-xs">
+              {allCustomerAddresses.length === 0 ? (
+                <p className="text-slate-400 italic">Nenhum endereço de entrega registrado.</p>
+              ) : (
+                allCustomerAddresses.map((addrStr, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-start gap-2 rounded-xl border border-slate-100 bg-slate-50/70 p-2.5 text-slate-700"
+                  >
+                    <MapPinIcon size={14} className="text-rose-500 shrink-0 mt-0.5" />
+                    <span className="leading-relaxed font-medium">{addrStr}</span>
+                  </div>
+                ))
+              )}
             </CardContent>
           </Card>
 

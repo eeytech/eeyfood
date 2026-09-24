@@ -14,6 +14,7 @@ import {
   LayoutGridIcon,
   LogOutIcon,
   MegaphoneIcon,
+  MessageSquareIcon,
   MonitorSmartphoneIcon,
   ShoppingCartIcon,
   SparklesIcon,
@@ -90,7 +91,6 @@ const navigationGroups = [
     items: [
       { href: "financeiro", label: "Financeiro", icon: BarChart3Icon },
       { href: "relatorios", label: "Relatórios", icon: BarChart3Icon },
-      { href: "ai", label: "IA Bot", icon: SparklesIcon },
     ],
   },
   {
@@ -113,6 +113,8 @@ const navigationGroups = [
     label: "Configurar",
     items: [
       { href: "logistica", label: "Logística", icon: TruckIcon },
+      { href: "ai", label: "IA", icon: SparklesIcon },
+      { href: "whatsapp", label: "WhatsApp", icon: MessageSquareIcon },
       { href: "configuracoes", label: "Configurações", icon: StoreIcon },
       { href: "configuracoes/usuarios", label: "Usuários", icon: Users2Icon },
     ],

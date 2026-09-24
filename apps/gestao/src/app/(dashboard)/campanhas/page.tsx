@@ -1,6 +1,7 @@
 import {
   customersTable,
   db,
+  desc,
   eq,
 } from "@fsw/db";
 import {
@@ -102,6 +103,18 @@ export default async function CampanhasPage({ params }: PageProps) {
   const restaurantSlug = restaurant.slug;
   const counts = await getSegmentCounts(restaurant.id);
 
+  const customers = await db
+    .select({
+      id: customersTable.id,
+      name: customersTable.name,
+      phone: customersTable.phone,
+      segment: customersTable.segment,
+      totalOrders: customersTable.totalOrders,
+    })
+    .from(customersTable)
+    .where(eq(customersTable.restaurantId, restaurant.id))
+    .orderBy(desc(customersTable.lastOrderAt));
+
   async function dispatch(formData: FormData) {
     "use server";
     return dispararCampanhaAction(restaurantSlug, formData);
@@ -120,7 +133,7 @@ export default async function CampanhasPage({ params }: PageProps) {
               Campanhas de Marketing
             </h1>
             <p className="text-sm text-slate-500">
-              Envie mensagens segmentadas via WhatsApp para sua base de clientes com alta conversão.
+              Envie mensagens segmentadas por grupo ou escolha contatos específicos da sua base para envio via WhatsApp.
             </p>
           </div>
         </div>
@@ -174,6 +187,7 @@ export default async function CampanhasPage({ params }: PageProps) {
       <CampanhaForm
         segments={SEGMENT_CARDS.map((c) => ({ value: c.value, label: c.label }))}
         counts={counts}
+        customers={customers}
         dispatchAction={dispatch}
       />
     </div>
