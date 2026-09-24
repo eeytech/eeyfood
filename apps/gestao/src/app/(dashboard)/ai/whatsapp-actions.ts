@@ -22,12 +22,20 @@ interface QrCodeResult {
   error?: string;
 }
 
+function cleanKey(val?: string | null): string {
+  if (!val) return "";
+  return val.trim().replace(/^["']|["']$/g, "");
+}
+
 function getEvolutionConfig(storedInstanceName?: string | null, storedApiKey?: string | null, restaurantSlug?: string) {
-  const evolutionUrl = (process.env.EVOLUTION_API_URL || "http://localhost:8080").replace(/\/$/, "");
-  const apiKey = storedApiKey || process.env.EVOLUTION_API_KEY || process.env.AUTHENTICATION_API_KEY || "";
+  const evolutionUrl = cleanKey(process.env.EVOLUTION_API_URL || "http://localhost:8080").replace(/\/$/, "");
+  
+  // A chave mestra do servidor (EVOLUTION_API_KEY) tem prioridade absoluta para criação e gestão de instâncias
+  const envKey = cleanKey(process.env.EVOLUTION_API_KEY || process.env.AUTHENTICATION_API_KEY);
+  const apiKey = envKey || cleanKey(storedApiKey);
   
   const cleanSlug = restaurantSlug ? restaurantSlug.toLowerCase().replace(/[^a-z0-9]/g, "_") : "loja";
-  const instanceName = storedInstanceName || `restaurante_${cleanSlug}`;
+  const instanceName = cleanKey(storedInstanceName) || `restaurante_${cleanSlug}`;
 
   return { evolutionUrl, apiKey, instanceName };
 }
@@ -55,7 +63,7 @@ export async function buscarStatusWhatsAppAction(slug: string): Promise<WhatsApp
         isConnected: false,
         state: "unknown",
         instanceName,
-        error: "Chave da Evolution API (EVOLUTION_API_KEY) não configurada.",
+        error: "Chave da Evolution API (EVOLUTION_API_KEY) não configurada no ambiente do servidor.",
       };
     }
 
@@ -184,6 +192,12 @@ export async function gerarQrCodeWhatsAppAction(slug: string): Promise<QrCodeRes
           }
         );
       } catch (err: unknown) {
+        if (axios.isAxiosError(err) && err.response?.status === 401) {
+          return {
+            ok: false,
+            error: "Chave não autorizada (401). Certifique-se de que a variável EVOLUTION_API_KEY no eeyFood é idêntica à AUTHENTICATION_API_KEY da Evolution API no Coolify.",
+          };
+        }
         // Se já existir, ignora erro 403 / "already in use"
         const msg = axios.isAxiosError(err) ? JSON.stringify(err.response?.data) : "";
         if (!msg.includes("already in use") && !msg.includes("already exists")) {
@@ -239,10 +253,24 @@ export async function gerarQrCodeWhatsAppAction(slug: string): Promise<QrCodeRes
       });
 
     // 5. Solicita o QR Code de conexão
-    const connectRes = await axios.get(`${evolutionUrl}/instance/connect/${instanceName}`, {
-      headers: { apikey: apiKey },
-      timeout: 10000,
-    });
+    let connectRes;
+    try {
+      connectRes = await axios.get(`${evolutionUrl}/instance/connect/${instanceName}`, {
+        headers: { apikey: apiKey },
+        timeout: 10000,
+      });
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        return {
+          ok: false,
+          error: "Chave não autorizada (401). Verifique a variável EVOLUTION_API_KEY.",
+        };
+      }
+      return {
+        ok: false,
+        error: `Erro ao buscar QR code: ${axios.isAxiosError(err) ? err.response?.data?.message || err.message : "Falha na conexão."}`,
+      };
+    }
 
     let base64 = connectRes.data?.base64 as string | undefined;
     const code = connectRes.data?.code as string | undefined;
