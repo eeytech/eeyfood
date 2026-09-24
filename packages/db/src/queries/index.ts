@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, ilike, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, isNotNull, ne, sql } from "drizzle-orm";
 
 import { db } from "../client";
 import { isRestaurantOpen } from "../restaurant-utils";
@@ -25,6 +25,7 @@ import {
   stockMovementsTable,
   walletsTable,
   loyaltyRulesTable,
+  freeDeliveryRulesTable,
   waitersTable,
   tableReservationsTable,
   waitingQueueTable,
@@ -661,6 +662,7 @@ const carregarContextoPedidoCalculado = async (
     walletRaw,
     feeRulesRaw,
     loyaltyRules,
+    freeDeliveryRulesRaw,
   ] = await Promise.all([
     db.select().from(operatingHoursTable).where(eq(operatingHoursTable.restaurantId, restaurant.id)),
     db.select().from(productsTable).where(
@@ -705,6 +707,12 @@ const carregarContextoPedidoCalculado = async (
         eq(loyaltyRulesTable.isActive, true),
       ),
     ).orderBy(desc(loyaltyRulesTable.minOrderValue)),
+    db.select().from(freeDeliveryRulesTable).where(
+      and(
+        eq(freeDeliveryRulesTable.restaurantId, restaurant.id),
+        eq(freeDeliveryRulesTable.isActive, true),
+      ),
+    ).catch(() => [] as (typeof freeDeliveryRulesTable.$inferSelect)[]),
   ]);
 
   const { isOpen } = isRestaurantOpen(restaurant.status, operatingHours);
@@ -852,12 +860,93 @@ const carregarContextoPedidoCalculado = async (
         ? 0
         : Number(matchedRule.fee);
     }
-  } else if (input.consumptionMethod === "DELIVERY") {
-    if (restaurant.freeDeliveryThreshold !== null && subtotal >= (Number(restaurant.freeDeliveryThreshold) ?? Infinity)) {
+  } else if (input.consumptionMethod !== "DELIVERY") {
+    deliveryFee = 0;
+  }
+
+  // Avaliação de Frete Grátis com suporte a múltiplas ocasiões:
+  // - Valor Mínimo de Pedido
+  // - Primeira Compra do Cliente
+  // - Categoria do Cardápio
+  // - Produto Específico
+  if (input.consumptionMethod === "DELIVERY" && deliveryFee > 0) {
+    let isFreeDeliveryGranted =
+      restaurant.freeDeliveryThreshold !== null &&
+      restaurant.freeDeliveryThreshold !== undefined &&
+      subtotal >= Number(restaurant.freeDeliveryThreshold);
+
+    if (!isFreeDeliveryGranted && freeDeliveryRulesRaw && freeDeliveryRulesRaw.length > 0) {
+      const now = new Date();
+      let isFirstPurchaseChecked: boolean | null = null;
+
+      for (const rule of freeDeliveryRulesRaw) {
+        if (!rule.isActive) continue;
+        if (rule.startsAt && new Date(rule.startsAt) > now) continue;
+        if (rule.endsAt && new Date(rule.endsAt) < now) continue;
+
+        const minOrder = Number(rule.minOrderValue || 0);
+
+        if (rule.criterion === "MIN_ORDER_VALUE") {
+          if (subtotal >= minOrder) {
+            isFreeDeliveryGranted = true;
+            break;
+          }
+        } else if (rule.criterion === "FIRST_PURCHASE") {
+          if (minOrder > 0 && subtotal < minOrder) continue;
+          if (!input.customerPhone) continue;
+
+          if (isFirstPurchaseChecked === null) {
+            try {
+              const prev = await db
+                .select({ id: ordersTable.id })
+                .from(ordersTable)
+                .where(
+                  and(
+                    eq(ordersTable.restaurantId, restaurant.id),
+                    eq(ordersTable.customerPhone, input.customerPhone),
+                    ne(ordersTable.status, "CANCELLED"),
+                  ),
+                )
+                .limit(1);
+              isFirstPurchaseChecked = prev.length === 0;
+            } catch {
+              isFirstPurchaseChecked = false;
+            }
+          }
+
+          if (isFirstPurchaseChecked) {
+            isFreeDeliveryGranted = true;
+            break;
+          }
+        } else if (rule.criterion === "CATEGORY") {
+          if (minOrder > 0 && subtotal < minOrder) continue;
+          if (rule.menuCategoryId) {
+            const hasCategoryItem = itens.some(
+              (item) => item.currentProduct.menuCategoryId === rule.menuCategoryId,
+            );
+            if (hasCategoryItem) {
+              isFreeDeliveryGranted = true;
+              break;
+            }
+          }
+        } else if (rule.criterion === "PRODUCT") {
+          if (minOrder > 0 && subtotal < minOrder) continue;
+          if (rule.productId) {
+            const hasProductItem = itens.some(
+              (item) => item.productId === rule.productId,
+            );
+            if (hasProductItem) {
+              isFreeDeliveryGranted = true;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    if (isFreeDeliveryGranted) {
       deliveryFee = 0;
     }
-  } else {
-    deliveryFee = 0;
   }
 
   deliveryFee = arredondarMoeda(deliveryFee);

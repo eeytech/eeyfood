@@ -74,6 +74,7 @@ import {
   vehicleStatusEnum,
   walletsTable,
   loyaltyRulesTable,
+  freeDeliveryRulesTable,
   aiSettingsTable,
   waitersTable,
   waiterStatusEnum,
@@ -153,6 +154,9 @@ export type NewWallet = InferInsertModel<typeof walletsTable>;
 
 export type LoyaltyRule = InferSelectModel<typeof loyaltyRulesTable>;
 export type NewLoyaltyRule = InferInsertModel<typeof loyaltyRulesTable>;
+
+export type FreeDeliveryRule = InferSelectModel<typeof freeDeliveryRulesTable>;
+export type NewFreeDeliveryRule = InferInsertModel<typeof freeDeliveryRulesTable>;
 
 export type AbandonedCart = InferSelectModel<typeof abandonedCartsTable>;
 export type NewAbandonedCart = InferInsertModel<typeof abandonedCartsTable>;

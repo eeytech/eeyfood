@@ -539,6 +539,23 @@ export const loyaltyRulesTable = pgTable("LoyaltyRule", {
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
+export const freeDeliveryRulesTable = pgTable("FreeDeliveryRule", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  restaurantId: uuid("restaurantId")
+    .notNull()
+    .references(() => restaurantsTable.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  criterion: text("criterion").default("MIN_ORDER_VALUE").notNull(),
+  minOrderValue: money("minOrderValue").default(0).notNull(),
+  menuCategoryId: uuid("menuCategoryId").references(() => menuCategoriesTable.id, { onDelete: "cascade" }),
+  productId: uuid("productId").references(() => productsTable.id, { onDelete: "cascade" }),
+  isActive: boolean("isActive").default(true).notNull(),
+  startsAt: timestamp("startsAt"),
+  endsAt: timestamp("endsAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
 export const abandonedCartsTable = pgTable(
   "AbandonedCart",
   {
@@ -1325,6 +1342,7 @@ export const restaurantsRelations = relations(
   marketingSettings: one(marketingSettingsTable),
   loyaltyPrizes: many(loyaltyPrizesTable),
   marketingSpends: many(marketingSpendTable),
+  freeDeliveryRules: many(freeDeliveryRulesTable),
 }));
 
 export const orderRatingsRelations = relations(
@@ -1500,6 +1518,24 @@ export const loyaltyRulesRelations = relations(
     }),
     product: one(productsTable, {
       fields: [loyaltyRulesTable.productId],
+      references: [productsTable.id],
+    }),
+  }),
+);
+
+export const freeDeliveryRulesRelations = relations(
+  freeDeliveryRulesTable,
+  ({ one }) => ({
+    restaurant: one(restaurantsTable, {
+      fields: [freeDeliveryRulesTable.restaurantId],
+      references: [restaurantsTable.id],
+    }),
+    category: one(menuCategoriesTable, {
+      fields: [freeDeliveryRulesTable.menuCategoryId],
+      references: [menuCategoriesTable.id],
+    }),
+    product: one(productsTable, {
+      fields: [freeDeliveryRulesTable.productId],
       references: [productsTable.id],
     }),
   }),

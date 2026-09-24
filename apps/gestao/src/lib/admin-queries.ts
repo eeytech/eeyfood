@@ -22,7 +22,7 @@ import type {
   Supplier,
   VehicleStatus,
 } from "@fsw/db";
-import type { InventoryItem } from "@fsw/db";
+import type { FreeDeliveryRule, InventoryItem } from "@fsw/db";
 import {
   aiSettingsTable,
   abandonedCartsTable,
@@ -45,6 +45,7 @@ import {
   eq,
   financialCategoriesTable,
   financialTransactionsTable,
+  freeDeliveryRulesTable,
   gte,
   ilike,
   inventoryBatchesTable,
@@ -715,6 +716,80 @@ export const listarRegrasLoyaltyGestao = async (
     menuCategory: row.menuCategory?.id ? row.menuCategory : null,
     product: row.product?.id ? row.product : null,
   }));
+};
+
+// ─── Regras de Frete Grátis ──────────────────────────────────────────────────
+
+export type RegraFreteGratisComDetalhes = FreeDeliveryRule & {
+  menuCategory: Pick<MenuCategory, "id" | "name"> | null;
+  product: Pick<Product, "id" | "name"> | null;
+};
+
+export const ensureFreeDeliveryTable = async () => {
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS "FreeDeliveryRule" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "restaurantId" uuid NOT NULL REFERENCES "Restaurant"("id") ON DELETE CASCADE,
+        "name" text NOT NULL,
+        "criterion" text NOT NULL DEFAULT 'MIN_ORDER_VALUE',
+        "minOrderValue" numeric(10,2) NOT NULL DEFAULT 0,
+        "menuCategoryId" uuid REFERENCES "MenuCategory"("id") ON DELETE CASCADE,
+        "productId" uuid REFERENCES "Product"("id") ON DELETE CASCADE,
+        "isActive" boolean NOT NULL DEFAULT true,
+        "startsAt" timestamp,
+        "endsAt" timestamp,
+        "createdAt" timestamp NOT NULL DEFAULT now(),
+        "updatedAt" timestamp NOT NULL DEFAULT now()
+      );
+    `);
+  } catch (err) {
+    console.warn("⚠️ [ensureFreeDeliveryTable] Notice/warn:", err);
+  }
+};
+
+export const listarRegrasFreteGratisGestao = async (
+  slug: string,
+): Promise<RegraFreteGratisComDetalhes[]> => {
+  const restaurant = await buscarRestaurantePorSlug(slug);
+  if (!restaurant) return [];
+
+  await ensureFreeDeliveryTable();
+
+  try {
+    const rows = await db
+      .select({
+        rule: freeDeliveryRulesTable,
+        menuCategory: {
+          id: menuCategoriesTable.id,
+          name: menuCategoriesTable.name,
+        },
+        product: {
+          id: productsTable.id,
+          name: productsTable.name,
+        },
+      })
+      .from(freeDeliveryRulesTable)
+      .leftJoin(
+        menuCategoriesTable,
+        eq(menuCategoriesTable.id, freeDeliveryRulesTable.menuCategoryId),
+      )
+      .leftJoin(
+        productsTable,
+        eq(productsTable.id, freeDeliveryRulesTable.productId),
+      )
+      .where(eq(freeDeliveryRulesTable.restaurantId, restaurant.id))
+      .orderBy(asc(freeDeliveryRulesTable.name));
+
+    return rows.map((row) => ({
+      ...row.rule,
+      menuCategory: row.menuCategory?.id ? row.menuCategory : null,
+      product: row.product?.id ? row.product : null,
+    }));
+  } catch (error) {
+    console.warn("⚠️ [listarRegrasFreteGratisGestao] Error reading rules:", error);
+    return [];
+  }
 };
 
 // ─── Inventário Geral ────────────────────────────────────────────────────────
