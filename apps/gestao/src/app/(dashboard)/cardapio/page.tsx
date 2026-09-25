@@ -16,17 +16,7 @@ const CardapioPage = async ({ params }: CardapioPageProps) => {
     return notFound();
   }
 
-  return (
-    <main className="space-y-4">
-      <div>
-        <h1 className="font-display text-2xl font-semibold">Cardápio</h1>
-        <p className="text-sm text-muted-foreground">
-          Gerencie produtos e categorias do cardápio do seu restaurante.
-        </p>
-      </div>
-      <CardapioClient slug={slug} cardapio={cardapio} />
-    </main>
-  );
+  return <CardapioClient slug={slug} cardapio={cardapio} />;
 };
 
 export default CardapioPage;

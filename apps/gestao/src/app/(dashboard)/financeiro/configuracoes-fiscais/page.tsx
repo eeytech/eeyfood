@@ -1,9 +1,16 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import {
   buscarRestauranteParaGestao,
   buscarConfiguracoesFiscaisGestao,
 } from "@/lib/admin-queries";
 import { FiscalSettingsClient } from "./_components/fiscal-settings-client";
+
+export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Configurações Fiscais | Gestão",
+};
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -19,13 +26,11 @@ const ConfiguracoesFiscaisPage = async ({ params }: PageProps) => {
   if (!restaurant) return notFound();
 
   return (
-    <main>
-      <FiscalSettingsClient
-        slug={slug}
-        restaurant={restaurant}
-        fiscalSettings={fiscalSettings}
-      />
-    </main>
+    <FiscalSettingsClient
+      slug={slug}
+      restaurant={restaurant}
+      fiscalSettings={fiscalSettings}
+    />
   );
 };
 

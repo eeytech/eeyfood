@@ -3,8 +3,15 @@
 import { ArrowDownCircleIcon, ArrowUpCircleIcon, CreditCardIcon } from "lucide-react";
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type { DashboardData } from "@/lib/admin-queries";
 
 const fmt = (v: number) =>
@@ -36,22 +43,27 @@ const PagamentosTab = ({ data }: PagamentosTabProps) => {
   const totalRevenues = revenues.reduce((s, r) => s + r.total, 0);
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-4 xl:grid-cols-[360px_1fr]">
+    <div className="space-y-6">
+      <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
         {/* Donut de pagamentos */}
-        <Card className="border-white/80 bg-white/90">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <CreditCardIcon size={16} />
+        <Card className="border-slate-200/80 bg-white shadow-sm">
+          <CardHeader className="border-b border-slate-100 pb-3">
+            <CardTitle className="flex items-center gap-2 font-display text-base font-semibold text-slate-900">
+              <CreditCardIcon size={16} className="text-slate-500" />
               Meios de pagamento
             </CardTitle>
-            <CardDescription>Divisão do faturamento por forma de pagamento</CardDescription>
+            <CardDescription className="text-xs text-slate-500">
+              Divisão do faturamento por forma de pagamento
+            </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-4">
             {paymentWithLabels.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed bg-slate-50 py-12">
-                <CreditCardIcon className="text-muted-foreground" size={32} />
-                <p className="text-sm text-muted-foreground">Sem dados de pagamento.</p>
+              <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 px-4 py-10 text-center">
+                <div className="rounded-full bg-slate-100 p-3 text-slate-400">
+                  <CreditCardIcon size={24} />
+                </div>
+                <p className="font-display text-sm font-semibold text-slate-900">Sem pagamentos</p>
+                <p className="max-w-xs text-xs text-slate-500">Nenhum pagamento registrado no período.</p>
               </div>
             ) : (
               <>
@@ -82,19 +94,19 @@ const PagamentosTab = ({ data }: PagamentosTabProps) => {
                     <Legend wrapperStyle={{ fontSize: 12 }} />
                   </PieChart>
                 </ResponsiveContainer>
-                <div className="mt-2 space-y-1.5">
+                <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
                   {paymentWithLabels.map((p, i) => (
-                    <div key={p.paymentMethod} className="flex items-center justify-between text-sm">
+                    <div key={p.paymentMethod} className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
                         <span
                           className="inline-block h-2.5 w-2.5 rounded-full"
                           style={{ background: COLORS[i % COLORS.length] }}
                         />
-                        <span>{p.name}</span>
+                        <span className="font-medium text-slate-700">{p.name}</span>
                       </div>
                       <div className="text-right">
-                        <span className="font-medium">{fmt(p.total)}</span>
-                        <span className="ml-1.5 text-xs text-muted-foreground">
+                        <span className="font-semibold text-slate-900">{fmt(p.total)}</span>
+                        <span className="ml-1.5 text-slate-400">
                           ({p.count} ped.)
                         </span>
                       </div>
@@ -107,32 +119,44 @@ const PagamentosTab = ({ data }: PagamentosTabProps) => {
         </Card>
 
         {/* Balanço financeiro */}
-        <Card className="border-white/80 bg-white/90">
-          <CardHeader>
-            <CardTitle className="text-base">Balanço operacional</CardTitle>
-            <CardDescription>
+        <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+          <CardHeader className="border-b border-slate-100 pb-3">
+            <CardTitle className="font-display text-base font-semibold text-slate-900">
+              Balanço operacional
+            </CardTitle>
+            <CardDescription className="text-xs text-slate-500">
               Faturamento vs. gastos operacionais cadastrados no período
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-5 p-5">
             {/* Summary row */}
             <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl bg-emerald-50 p-3">
-                <p className="text-xs text-muted-foreground">Receita de pedidos</p>
-                <p className="mt-0.5 text-lg font-semibold text-emerald-700">
+              <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5">
+                <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Receita de pedidos
+                </span>
+                <p className="mt-1 font-display text-lg font-bold text-emerald-700">
                   {fmt(summary.grossRevenue)}
                 </p>
               </div>
-              <div className="rounded-2xl bg-red-50 p-3">
-                <p className="text-xs text-muted-foreground">Gastos operacionais</p>
-                <p className="mt-0.5 text-lg font-semibold text-red-700">{fmt(totalExpenses)}</p>
+              <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5">
+                <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Gastos operacionais
+                </span>
+                <p className="mt-1 font-display text-lg font-bold text-rose-700">
+                  {fmt(totalExpenses)}
+                </p>
               </div>
-              <div
-                className={`rounded-2xl p-3 ${summary.grossRevenue + totalRevenues - totalExpenses >= 0 ? "bg-blue-50" : "bg-red-50"}`}
-              >
-                <p className="text-xs text-muted-foreground">Balanço líquido</p>
+              <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5">
+                <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Balanço líquido
+                </span>
                 <p
-                  className={`mt-0.5 text-lg font-semibold ${summary.grossRevenue + totalRevenues - totalExpenses >= 0 ? "text-blue-700" : "text-red-700"}`}
+                  className={`mt-1 font-display text-lg font-bold ${
+                    summary.grossRevenue + totalRevenues - totalExpenses >= 0
+                      ? "text-blue-700"
+                      : "text-rose-700"
+                  }`}
                 >
                   {fmt(summary.grossRevenue + totalRevenues - totalExpenses)}
                 </p>
@@ -141,50 +165,50 @@ const PagamentosTab = ({ data }: PagamentosTabProps) => {
 
             {/* Breakdown table */}
             {financialBreakdown.length === 0 ? (
-              <div className="rounded-2xl border border-dashed bg-slate-50 py-8 text-center text-sm text-muted-foreground">
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 py-8 text-center text-xs text-slate-500">
                 Nenhuma transação financeira registrada no período.
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="border-b text-muted-foreground">
-                      <th className="px-2 py-2 text-left font-medium">Categoria</th>
-                      <th className="px-2 py-2 text-left font-medium">Tipo</th>
-                      <th className="px-2 py-2 text-right font-medium">Qtd.</th>
-                      <th className="px-2 py-2 text-right font-medium">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+              <div className="overflow-x-auto rounded-xl border border-slate-200/80">
+                <Table>
+                  <TableHeader className="bg-slate-50/80">
+                    <TableRow className="border-b border-slate-200">
+                      <TableHead className="text-xs font-semibold text-slate-700">Categoria</TableHead>
+                      <TableHead className="text-xs font-semibold text-slate-700">Tipo</TableHead>
+                      <TableHead className="text-right text-xs font-semibold text-slate-700">Qtd.</TableHead>
+                      <TableHead className="text-right text-xs font-semibold text-slate-700">Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {financialBreakdown.map((f, i) => (
-                      <tr key={i} className="border-b last:border-0">
-                        <td className="px-2 py-2 font-medium">
+                      <TableRow key={i} className="border-b border-slate-100 hover:bg-slate-50/60">
+                        <TableCell className="font-medium text-slate-900">
                           {f.categoryName ?? "Sem categoria"}
-                        </td>
-                        <td className="px-2 py-2">
+                        </TableCell>
+                        <TableCell>
                           {f.type === "EXPENSE" ? (
-                            <Badge className="gap-1 bg-red-100 text-red-700 hover:bg-red-100">
-                              <ArrowDownCircleIcon size={11} />
+                            <span className="inline-flex items-center gap-1 rounded-full border border-rose-200/80 bg-rose-50 px-2.5 py-0.5 text-[11px] font-semibold text-rose-700">
+                              <ArrowDownCircleIcon size={12} />
                               Despesa
-                            </Badge>
+                            </span>
                           ) : (
-                            <Badge className="gap-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
-                              <ArrowUpCircleIcon size={11} />
+                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200/80 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+                              <ArrowUpCircleIcon size={12} />
                               Receita
-                            </Badge>
+                            </span>
                           )}
-                        </td>
-                        <td className="px-2 py-2 text-right">{f.count}</td>
-                        <td
-                          className={`px-2 py-2 text-right font-medium ${f.type === "EXPENSE" ? "text-red-600" : "text-emerald-600"}`}
+                        </TableCell>
+                        <TableCell className="text-right font-medium text-slate-700">{f.count}</TableCell>
+                        <TableCell
+                          className={`text-right font-semibold ${f.type === "EXPENSE" ? "text-rose-600" : "text-emerald-700"}`}
                         >
                           {f.type === "EXPENSE" ? "−" : "+"}
                           {fmt(f.total)}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             )}
           </CardContent>

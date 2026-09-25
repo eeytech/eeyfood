@@ -1,6 +1,12 @@
 "use client";
 
-import { BarChart3Icon } from "lucide-react";
+import {
+  BarChart3Icon,
+  DollarSignIcon,
+  ReceiptIcon,
+  TrendingDownIcon,
+  TrendingUpIcon,
+} from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DashboardData } from "@/lib/admin-queries";
@@ -17,8 +23,8 @@ const vertPct = (value: number, base: number) => {
 
 function SectionHeader({ label }: { label: string }) {
   return (
-    <tr className="bg-slate-100/80">
-      <td colSpan={3} className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+    <tr className="bg-slate-100/90">
+      <td colSpan={3} className="px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-600">
         {label}
       </td>
     </tr>
@@ -41,19 +47,19 @@ function LineRow({
   indent?: boolean;
 }) {
   return (
-    <tr className="border-b border-slate-100 hover:bg-slate-50/50">
-      <td className={`py-2 pr-4 ${indent ? "pl-10" : "pl-4"}`}>
-        <span className="mr-2 font-mono text-xs text-muted-foreground">{operator}</span>
+    <tr className="border-b border-slate-100 transition-colors hover:bg-slate-50/60">
+      <td className={`py-2.5 pr-4 text-xs font-medium text-slate-800 ${indent ? "pl-9" : "pl-4"}`}>
+        <span className="mr-2 font-mono text-xs text-slate-400">{operator}</span>
         {label}
       </td>
       <td
-        className={`py-2 pr-4 text-right font-mono text-sm ${
-          deduction ? "text-red-600" : "text-emerald-700"
+        className={`py-2.5 pr-4 text-right font-mono text-xs font-medium ${
+          deduction ? "text-rose-600" : "text-emerald-700"
         }`}
       >
         {deduction ? `(${fmt(value)})` : fmt(value)}
       </td>
-      <td className="py-2 pr-4 text-right text-xs text-muted-foreground">
+      <td className="py-2.5 pr-4 text-right text-xs text-slate-500">
         {vertPct(value, base)}
       </td>
     </tr>
@@ -76,16 +82,16 @@ function SubtotalRow({
   const showAsDeduction = deduction || isNegative;
 
   return (
-    <tr className="border-b-2 border-slate-200 bg-slate-50">
-      <td className="px-4 py-2.5 text-sm font-semibold">{label}</td>
+    <tr className="border-b-2 border-slate-200 bg-slate-50/80">
+      <td className="px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-slate-900">{label}</td>
       <td
-        className={`py-2.5 pr-4 text-right font-mono text-sm font-semibold ${
-          showAsDeduction ? "text-red-700" : "text-emerald-700"
+        className={`py-2.5 pr-4 text-right font-mono text-xs font-bold ${
+          showAsDeduction ? "text-rose-700" : "text-emerald-700"
         }`}
       >
         {showAsDeduction ? `(${fmt(displayValue)})` : fmt(displayValue)}
       </td>
-      <td className="py-2.5 pr-4 text-right text-xs font-medium text-muted-foreground">
+      <td className="py-2.5 pr-4 text-right text-xs font-semibold text-slate-600">
         {vertPct(displayValue, base)}
       </td>
     </tr>
@@ -104,22 +110,22 @@ function ResultRow({
   return (
     <tr
       className={`border-t-2 border-slate-300 ${
-        isProfit ? "bg-emerald-50" : "bg-red-50"
+        isProfit ? "bg-emerald-50/70" : "bg-rose-50/70"
       }`}
     >
-      <td className={`px-4 py-3 text-sm font-bold ${isProfit ? "text-emerald-800" : "text-red-800"}`}>
+      <td className={`px-4 py-3 text-sm font-bold ${isProfit ? "text-emerald-900" : "text-rose-900"}`}>
         (=) RESULTADO LÍQUIDO (EBITDA)
       </td>
       <td
         className={`py-3 pr-4 text-right font-mono text-base font-bold ${
-          isProfit ? "text-emerald-700" : "text-red-700"
+          isProfit ? "text-emerald-700" : "text-rose-700"
         }`}
       >
         {isProfit ? fmt(value) : `(${fmt(Math.abs(value))})`}
       </td>
       <td
         className={`py-3 pr-4 text-right text-sm font-semibold ${
-          isProfit ? "text-emerald-600" : "text-red-600"
+          isProfit ? "text-emerald-700" : "text-rose-700"
         }`}
       >
         {vertPct(Math.abs(value), base)}
@@ -153,74 +159,106 @@ const DreTab = ({ data }: DreTabProps) => {
   const isProfit = resultadoLiquido >= 0;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* KPI Summary Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="border-white/80 bg-white/90">
-          <CardContent className="pb-4 pt-5">
-            <p className="text-xs text-muted-foreground">Receita Bruta Total</p>
-            <p className="mt-1 text-xl font-bold text-emerald-700">{fmt(receitaBrutaTotal)}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">{summary.totalOrders} pedidos no período</p>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 sm:gap-4">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Receita Bruta Total
+              </span>
+              <div className="rounded-lg bg-slate-100 p-1.5 text-slate-700">
+                <ReceiptIcon size={16} />
+              </div>
+            </div>
+            <p className="mt-2 font-display text-2xl font-bold text-slate-900">
+              {fmt(receitaBrutaTotal)}
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500">
+              {summary.totalOrders} pedidos faturados
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="border-white/80 bg-white/90">
-          <CardContent className="pb-4 pt-5">
-            <p className="text-xs text-muted-foreground">CMV – Custo de Mercadoria</p>
-            <p className="mt-1 text-xl font-bold text-orange-600">{fmt(cmv)}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                CMV – Custo Mercadoria
+              </span>
+              <div className="rounded-lg bg-amber-100 p-1.5 text-amber-700">
+                <TrendingDownIcon size={16} />
+              </div>
+            </div>
+            <p className="mt-2 font-display text-2xl font-bold text-amber-700">
+              {fmt(cmv)}
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500">
               {vertPct(cmv, receitaBrutaTotal)} da receita bruta
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border-white/80 bg-white/90">
-          <CardContent className="pb-4 pt-5">
-            <p className="text-xs text-muted-foreground">Despesas Operacionais</p>
-            <p className="mt-1 text-xl font-bold text-red-600">{fmt(totalDespesas)}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Despesas Operacionais
+              </span>
+              <div className="rounded-lg bg-rose-100 p-1.5 text-rose-700">
+                <DollarSignIcon size={16} />
+              </div>
+            </div>
+            <p className="mt-2 font-display text-2xl font-bold text-rose-700">
+              {fmt(totalDespesas)}
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500">
               {vertPct(totalDespesas, receitaBrutaTotal)} da receita bruta
             </p>
           </CardContent>
         </Card>
 
-        <Card
-          className={`border-white/80 ${isProfit ? "bg-emerald-50/90" : "bg-red-50/90"}`}
-        >
-          <CardContent className="pb-4 pt-5">
-            <p className="text-xs text-muted-foreground">Resultado Líquido</p>
-            <p
-              className={`mt-1 text-xl font-bold ${isProfit ? "text-emerald-700" : "text-red-700"}`}
-            >
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Resultado Líquido
+              </span>
+              <div className={`rounded-lg p-1.5 ${isProfit ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
+                <TrendingUpIcon size={16} />
+              </div>
+            </div>
+            <p className={`mt-2 font-display text-2xl font-bold ${isProfit ? "text-emerald-700" : "text-rose-700"}`}>
               {fmt(resultadoLiquido)}
             </p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Margem: {vertPct(Math.abs(resultadoLiquido), receitaBrutaTotal)}
+            <p className="mt-0.5 text-xs text-slate-500">
+              Margem líquida: {vertPct(Math.abs(resultadoLiquido), receitaBrutaTotal)}
             </p>
           </CardContent>
         </Card>
       </div>
 
       {/* DRE Table */}
-      <Card className="border-white/80 bg-white/90">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <BarChart3Icon size={16} />
+      <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+        <CardHeader className="border-b border-slate-100 pb-3">
+          <CardTitle className="flex items-center gap-2 font-display text-base font-semibold text-slate-900">
+            <BarChart3Icon size={16} className="text-slate-500" />
             DRE — Demonstrativo de Resultado do Exercício
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-xs text-slate-500">
             Análise vertical da lucratividade. Percentuais calculados sobre a Receita Bruta Total.
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="p-0 pb-2">
+        <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-xs text-muted-foreground">
-                  <th className="px-4 py-2.5 text-left font-medium">Descrição</th>
-                  <th className="pr-4 py-2.5 text-right font-medium">Valor (R$)</th>
-                  <th className="pr-4 py-2.5 text-right font-medium">A.V.%</th>
+                <tr className="border-b border-slate-200 bg-slate-50/80 text-xs font-semibold text-slate-700">
+                  <th className="px-4 py-2.5 text-left font-semibold text-slate-700">Descrição</th>
+                  <th className="py-2.5 pr-4 text-right font-semibold text-slate-700">Valor (R$)</th>
+                  <th className="py-2.5 pr-4 text-right font-semibold text-slate-700">A.V.%</th>
                 </tr>
               </thead>
               <tbody>
@@ -278,7 +316,7 @@ const DreTab = ({ data }: DreTabProps) => {
                   <tr>
                     <td
                       colSpan={3}
-                      className="px-10 py-3 text-xs italic text-muted-foreground"
+                      className="px-10 py-3 text-xs italic text-slate-400"
                     >
                       Nenhuma despesa operacional registrada no período.
                     </td>

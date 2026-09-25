@@ -35,22 +35,26 @@ const KPICard = ({
   value,
   description,
   icon: Icon,
-  color,
+  badgeClass,
+  valueClass = "text-slate-900",
 }: {
   label: string;
   value: string;
   description?: string;
   icon: React.ElementType;
-  color: string;
+  badgeClass: string;
+  valueClass?: string;
 }) => (
-  <Card className="border-white/80 bg-white/90">
-    <CardContent className="flex items-start justify-between gap-3 p-4">
-      <div>
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="font-display mt-0.5 text-xl font-semibold">{value}</p>
-        {description && <p className="mt-0.5 text-[11px] text-muted-foreground">{description}</p>}
+  <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+    <CardContent className="p-4">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</span>
+        <div className={`rounded-lg p-1.5 ${badgeClass}`}>
+          <Icon size={16} />
+        </div>
       </div>
-      <Icon className={`${color} mt-0.5 shrink-0`} size={20} />
+      <p className={`mt-2 font-display text-2xl font-bold ${valueClass}`}>{value}</p>
+      {description && <p className="mt-0.5 text-xs text-slate-500">{description}</p>}
     </CardContent>
   </Card>
 );
@@ -75,22 +79,24 @@ const KPIsBITab = ({ kpis }: KPIBiTabProps) => {
   }));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 sm:gap-4">
         <KPICard
           label="LTV Médio (Lifetime Value)"
           value={fmt(kpis.ltv)}
           description="Gasto médio total por cliente ativo"
           icon={DollarSignIcon}
-          color="text-emerald-600"
+          badgeClass="bg-emerald-100 text-emerald-700"
+          valueClass="text-emerald-700"
         />
         <KPICard
           label="Churn Rate"
           value={fmtPct(kpis.churnRate)}
           description="Clientes inativos ou em risco sobre o total"
           icon={TrendingDownIcon}
-          color={kpis.churnRate > 30 ? "text-rose-600" : "text-amber-500"}
+          badgeClass={kpis.churnRate > 30 ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700"}
+          valueClass={kpis.churnRate > 30 ? "text-rose-700" : "text-amber-700"}
         />
         <KPICard
           label="CAC (Custo de Aquisição)"
@@ -98,37 +104,42 @@ const KPIsBITab = ({ kpis }: KPIBiTabProps) => {
           description={
             kpis.cac > 0
               ? `${kpis.newCustomers} novos clientes · ${fmt(kpis.marketingSpend)} investidos`
-              : "Registre gastos de marketing para calcular"
+              : "Sem gastos de marketing cadastrados"
           }
           icon={UsersIcon}
-          color="text-blue-500"
+          badgeClass="bg-blue-100 text-blue-700"
+          valueClass="text-blue-700"
         />
         <KPICard
           label="ROI em Cupons"
           value={kpis.roi > 0 ? fmtPct(kpis.roi) : "—"}
-          description="Retorno sobre investimento em promoções"
+          description="Retorno sobre investimento em cupons"
           icon={kpis.roi >= 0 ? TrendingUpIcon : TrendingDownIcon}
-          color={kpis.roi >= 0 ? "text-emerald-600" : "text-rose-600"}
+          badgeClass={kpis.roi >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}
+          valueClass={kpis.roi >= 0 ? "text-emerald-700" : "text-rose-700"}
         />
       </div>
 
       {/* Funnel Chart */}
-      <Card className="border-white/80 bg-white/90">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <ShoppingCartIcon size={18} className="text-primary" />
+      <Card className="border-slate-200/80 bg-white shadow-sm">
+        <CardHeader className="border-b border-slate-100 pb-3">
+          <CardTitle className="flex items-center gap-2 font-display text-base font-semibold text-slate-900">
+            <ShoppingCartIcon size={16} className="text-slate-500" />
             Funil de Conversão do Cardápio
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-xs text-slate-500">
             Jornada do cliente desde o carrinho até o pedido finalizado
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-4">
           {kpis.conversionFunnel.carts === 0 ? (
-            <div className="flex h-56 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed bg-slate-50">
-              <BarChart3Icon className="text-muted-foreground" size={32} />
-              <p className="text-sm text-muted-foreground">
-                Sem dados de carrinho no período selecionado.
+            <div className="flex h-56 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-6 text-center">
+              <div className="rounded-full bg-slate-100 p-3 text-slate-400">
+                <BarChart3Icon size={24} />
+              </div>
+              <p className="font-display text-sm font-semibold text-slate-900">Sem dados de funil</p>
+              <p className="max-w-xs text-xs text-slate-500">
+                Sem registros de carrinho ou checkout no período selecionado.
               </p>
             </div>
           ) : (
@@ -172,13 +183,13 @@ const KPIsBITab = ({ kpis }: KPIBiTabProps) => {
 
           {/* Conversion rate badges */}
           {kpis.conversionFunnel.carts > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
               {funnelWithRate.slice(1).map((item, i) => (
                 <span
                   key={i}
-                  className="rounded-full border bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600"
+                  className="rounded-full border border-slate-200 bg-slate-50/80 px-3 py-1 text-xs font-medium text-slate-700"
                 >
-                  {funnelData[i]!.name} → {item.name}: {item.taxa}%
+                  {funnelData[i]!.name} → {item.name}: <strong className="font-semibold text-slate-900">{item.taxa}%</strong>
                 </span>
               ))}
             </div>

@@ -46,29 +46,41 @@ interface OverviewTabProps {
 const KPICard = ({
   label,
   value,
+  subtext,
   icon: Icon,
-  color,
+  badgeClass,
+  valueClass = "text-slate-900",
 }: {
   label: string;
   value: string;
+  subtext?: string;
   icon: React.ElementType;
-  color: string;
+  badgeClass: string;
+  valueClass?: string;
 }) => (
-  <Card className="border-white/80 bg-white/90">
-    <CardContent className="flex items-center justify-between p-4">
-      <div>
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="font-display mt-0.5 text-xl font-semibold">{value}</p>
+  <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+    <CardContent className="p-4">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+          {label}
+        </span>
+        <div className={`rounded-lg p-1.5 ${badgeClass}`}>
+          <Icon size={16} />
+        </div>
       </div>
-      <Icon className={`${color} shrink-0`} size={20} />
+      <p className={`mt-2 font-display text-2xl font-bold ${valueClass}`}>{value}</p>
+      {subtext && <p className="mt-0.5 text-xs text-slate-500">{subtext}</p>}
     </CardContent>
   </Card>
 );
 
 const EmptyChart = ({ label }: { label: string }) => (
-  <div className="flex h-64 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed bg-slate-50">
-    <BarChart3Icon className="text-muted-foreground" size={32} />
-    <p className="text-sm text-muted-foreground">{label}</p>
+  <div className="flex h-64 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-6 text-center">
+    <div className="rounded-full bg-slate-100 p-3 text-slate-400">
+      <BarChart3Icon size={24} />
+    </div>
+    <p className="font-display text-sm font-semibold text-slate-900">Sem dados no período</p>
+    <p className="max-w-xs text-xs text-slate-500">{label}</p>
   </div>
 );
 
@@ -81,58 +93,74 @@ const OverviewTab = ({ data }: OverviewTabProps) => {
   }));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 sm:gap-4">
         <KPICard
           label="Faturamento bruto"
           value={fmt(summary.grossRevenue)}
+          subtext="Receita de todos os pedidos"
           icon={ReceiptIcon}
-          color="text-primary"
+          badgeClass="bg-slate-100 text-slate-700"
+          valueClass="text-slate-900"
         />
         <KPICard
           label="Custo estimado"
           value={fmt(summary.estimatedCost)}
+          subtext="CMV e insumos calculados"
           icon={TrendingDownIcon}
-          color="text-amber-500"
+          badgeClass="bg-amber-100 text-amber-700"
+          valueClass="text-amber-700"
         />
         <KPICard
           label="Lucro líquido"
           value={fmt(summary.estimatedProfit)}
+          subtext="Resultado bruto menos CMV"
           icon={TrendingUpIcon}
-          color="text-emerald-600"
+          badgeClass="bg-emerald-100 text-emerald-700"
+          valueClass="text-emerald-700"
         />
         <KPICard
           label="Ticket médio"
           value={fmt(summary.avgTicket)}
+          subtext="Média por pedido fechado"
           icon={BarChart3Icon}
-          color="text-blue-500"
+          badgeClass="bg-blue-100 text-blue-700"
+          valueClass="text-blue-700"
         />
         <KPICard
           label="Total de pedidos"
           value={String(summary.totalOrders)}
+          subtext="Pedidos pagos no período"
           icon={PackageSearchIcon}
-          color="text-slate-500"
+          badgeClass="bg-purple-100 text-purple-700"
+          valueClass="text-purple-700"
         />
         <KPICard
           label="Margem de lucro"
           value={`${summary.profitMargin.toFixed(1)}%`}
+          subtext="Rentabilidade operacional"
           icon={PercentIcon}
-          color="text-violet-500"
+          badgeClass="bg-indigo-100 text-indigo-700"
+          valueClass="text-indigo-700"
         />
       </div>
 
       {/* Charts */}
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         {/* Area Chart — evolução diária */}
-        <Card className="border-white/80 bg-white/90">
-          <CardHeader>
-            <CardTitle className="text-base">Evolução do período</CardTitle>
-            <CardDescription>Faturamento e lucro estimado por dia</CardDescription>
+        <Card className="border-slate-200/80 bg-white shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="font-display text-base font-semibold text-slate-900">
+              Evolução do período
+            </CardTitle>
+            <CardDescription className="text-xs text-slate-500">
+              Faturamento e lucro estimado distribuídos por dia
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {dailyRevenue.length === 0 ? (
-              <EmptyChart label="Nenhum dado disponível para o período selecionado." />
+              <EmptyChart label="Nenhum faturamento registrado no período selecionado." />
             ) : (
               <ResponsiveContainer width="100%" height={280}>
                 <AreaChart data={dailyRevenue} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
@@ -202,14 +230,18 @@ const OverviewTab = ({ data }: OverviewTabProps) => {
         </Card>
 
         {/* Donut — por método de consumo */}
-        <Card className="border-white/80 bg-white/90">
-          <CardHeader>
-            <CardTitle className="text-base">Tipos de consumo</CardTitle>
-            <CardDescription>Faturamento por canal no período</CardDescription>
+        <Card className="border-slate-200/80 bg-white shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="font-display text-base font-semibold text-slate-900">
+              Canais e Tipos de consumo
+            </CardTitle>
+            <CardDescription className="text-xs text-slate-500">
+              Faturamento por canal de atendimento no período
+            </CardDescription>
           </CardHeader>
           <CardContent className="flex items-center justify-center">
             {consumptionWithLabels.length === 0 ? (
-              <EmptyChart label="Sem dados de consumo." />
+              <EmptyChart label="Sem pedidos no período." />
             ) : (
               <ResponsiveContainer width="100%" height={260}>
                 <PieChart>

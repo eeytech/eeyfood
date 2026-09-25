@@ -12,17 +12,27 @@ import {
   YAxis,
 } from "recharts";
 
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type { DashboardData } from "@/lib/admin-queries";
 
 const fmt = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
 const EmptyState = ({ label }: { label: string }) => (
-  <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed bg-slate-50 py-12">
-    <PackageSearchIcon className="text-muted-foreground" size={32} />
-    <p className="text-sm text-muted-foreground">{label}</p>
+  <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 px-4 py-10 text-center">
+    <div className="rounded-full bg-slate-100 p-3 text-slate-400">
+      <PackageSearchIcon size={24} />
+    </div>
+    <p className="font-display text-sm font-semibold text-slate-900">Nenhum registro</p>
+    <p className="max-w-xs text-xs text-slate-500">{label}</p>
   </div>
 );
 
@@ -34,12 +44,16 @@ const ProdutosTab = ({ data }: ProdutosTabProps) => {
   const { topProducts, bottomProducts, topModifiers } = data;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Top 10 produtos — gráfico horizontal */}
-      <Card className="border-white/80 bg-white/90">
-        <CardHeader>
-          <CardTitle className="text-base">Top 10 produtos mais vendidos</CardTitle>
-          <CardDescription>Ranking por quantidade de unidades vendidas no período</CardDescription>
+      <Card className="border-slate-200/80 bg-white shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="font-display text-base font-semibold text-slate-900">
+            Top 10 produtos mais vendidos
+          </CardTitle>
+          <CardDescription className="text-xs text-slate-500">
+            Ranking por quantidade de unidades vendidas no período
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {topProducts.length === 0 ? (
@@ -92,81 +106,91 @@ const ProdutosTab = ({ data }: ProdutosTabProps) => {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid gap-6 xl:grid-cols-2">
         {/* Produtos com menor saída */}
-        <Card className="border-white/80 bg-white/90">
-          <CardHeader>
-            <CardTitle className="text-base">Produtos com menor saída</CardTitle>
-            <CardDescription>
+        <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+          <CardHeader className="border-b border-slate-100 pb-3">
+            <CardTitle className="font-display text-base font-semibold text-slate-900">
+              Produtos com menor saída
+            </CardTitle>
+            <CardDescription className="text-xs text-slate-500">
               Produtos que tiveram menos pedidos ou nenhuma saída no período
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="p-0">
             {bottomProducts.length === 0 ? (
-              <EmptyState label="Nenhum produto cadastrado." />
+              <div className="p-6">
+                <EmptyState label="Nenhum produto cadastrado." />
+              </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="border-b text-muted-foreground">
-                      <th className="px-2 py-2 text-left font-medium">Produto</th>
-                      <th className="px-2 py-2 text-right font-medium">Unidades</th>
-                      <th className="px-2 py-2 text-right font-medium">Receita</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Table>
+                  <TableHeader className="bg-slate-50/80">
+                    <TableRow className="border-b border-slate-200">
+                      <TableHead className="text-xs font-semibold text-slate-700">Produto</TableHead>
+                      <TableHead className="text-right text-xs font-semibold text-slate-700">Unidades</TableHead>
+                      <TableHead className="text-right text-xs font-semibold text-slate-700">Receita</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {bottomProducts.map((p) => (
-                      <tr key={p.productId} className="border-b last:border-0">
-                        <td className="px-2 py-2 font-medium">
+                      <TableRow key={p.productId} className="border-b border-slate-100 hover:bg-slate-50/60">
+                        <TableCell className="font-medium text-slate-900">
                           {p.productName}
                           {p.totalQuantity === 0 && (
-                            <Badge variant="warning" className="ml-2 text-[10px]">
+                            <span className="ml-2 inline-flex items-center rounded-full border border-amber-200/80 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
                               Sem saída
-                            </Badge>
+                            </span>
                           )}
-                        </td>
-                        <td className="px-2 py-2 text-right">{p.totalQuantity}</td>
-                        <td className="px-2 py-2 text-right">{fmt(p.grossRevenue)}</td>
-                      </tr>
+                        </TableCell>
+                        <TableCell className="text-right font-medium text-slate-700">{p.totalQuantity}</TableCell>
+                        <TableCell className="text-right font-semibold text-slate-900">{fmt(p.grossRevenue)}</TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             )}
           </CardContent>
         </Card>
 
         {/* Opcionais mais pedidos */}
-        <Card className="border-white/80 bg-white/90">
-          <CardHeader>
-            <CardTitle className="text-base">Opcionais / adicionais mais pedidos</CardTitle>
-            <CardDescription>Modificadores com maior número de seleções</CardDescription>
+        <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+          <CardHeader className="border-b border-slate-100 pb-3">
+            <CardTitle className="font-display text-base font-semibold text-slate-900">
+              Opcionais / adicionais mais pedidos
+            </CardTitle>
+            <CardDescription className="text-xs text-slate-500">
+              Modificadores com maior número de seleções
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="p-0">
             {topModifiers.length === 0 ? (
-              <EmptyState label="Nenhum opcional registrado no período." />
+              <div className="p-6">
+                <EmptyState label="Nenhum opcional registrado no período." />
+              </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="border-b text-muted-foreground">
-                      <th className="px-2 py-2 text-left font-medium">#</th>
-                      <th className="px-2 py-2 text-left font-medium">Opcional</th>
-                      <th className="px-2 py-2 text-right font-medium">Qtd.</th>
-                      <th className="px-2 py-2 text-right font-medium">Receita extra</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Table>
+                  <TableHeader className="bg-slate-50/80">
+                    <TableRow className="border-b border-slate-200">
+                      <TableHead className="w-12 text-xs font-semibold text-slate-700">#</TableHead>
+                      <TableHead className="text-xs font-semibold text-slate-700">Opcional</TableHead>
+                      <TableHead className="text-right text-xs font-semibold text-slate-700">Qtd.</TableHead>
+                      <TableHead className="text-right text-xs font-semibold text-slate-700">Receita extra</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {topModifiers.map((m, i) => (
-                      <tr key={m.optionName} className="border-b last:border-0">
-                        <td className="px-2 py-2 text-xs text-muted-foreground">#{i + 1}</td>
-                        <td className="px-2 py-2 font-medium">{m.optionName}</td>
-                        <td className="px-2 py-2 text-right">{m.totalCount}</td>
-                        <td className="px-2 py-2 text-right">{fmt(m.estimatedRevenue)}</td>
-                      </tr>
+                      <TableRow key={m.optionName} className="border-b border-slate-100 hover:bg-slate-50/60">
+                        <TableCell className="font-mono text-xs text-slate-400">#{i + 1}</TableCell>
+                        <TableCell className="font-medium text-slate-900">{m.optionName}</TableCell>
+                        <TableCell className="text-right font-medium text-slate-700">{m.totalCount}</TableCell>
+                        <TableCell className="text-right font-semibold text-emerald-700">{fmt(m.estimatedRevenue)}</TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             )}
           </CardContent>

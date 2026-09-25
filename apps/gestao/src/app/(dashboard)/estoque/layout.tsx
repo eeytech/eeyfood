@@ -1,13 +1,13 @@
 import { notFound } from "next/navigation";
 import { buscarRestauranteParaGestao } from "@/lib/admin-queries";
-import { FinanceiroNav } from "./_components/financeiro-nav";
+import { EstoqueNav } from "./_components/estoque-nav";
 
-interface FinanceiroLayoutProps {
+interface EstoqueLayoutProps {
   params: Promise<{ slug: string }>;
   children: React.ReactNode;
 }
 
-const FinanceiroLayout = async ({ params, children }: FinanceiroLayoutProps) => {
+const EstoqueLayout = async ({ params, children }: EstoqueLayoutProps) => {
   const { slug } = await params;
   const restaurant = await buscarRestauranteParaGestao(slug);
 
@@ -15,10 +15,10 @@ const FinanceiroLayout = async ({ params, children }: FinanceiroLayoutProps) => 
 
   return (
     <div className="space-y-6">
-      <FinanceiroNav />
+      <EstoqueNav />
       {children}
     </div>
   );
 };
 
-export default FinanceiroLayout;
+export default EstoqueLayout;

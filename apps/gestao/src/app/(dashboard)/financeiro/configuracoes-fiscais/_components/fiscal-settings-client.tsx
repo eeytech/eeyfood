@@ -1,7 +1,15 @@
 "use client";
 
-import { AlertTriangleIcon, CheckCircleIcon, FileTextIcon, SaveIcon } from "lucide-react";
+import {
+  AlertTriangleIcon,
+  CheckCircle2Icon,
+  CheckCircleIcon,
+  FileTextIcon,
+  SaveIcon,
+  ShieldCheckIcon,
+} from "lucide-react";
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { salvarConfiguracoesFiscaisAction } from "../actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import type { FiscalSettings, Restaurant } from "@fsw/db";
 
 interface FiscalSettingsClientProps {
@@ -29,9 +38,14 @@ export function FiscalSettingsClient({
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     startTransition(async () => {
-      await salvarConfiguracoesFiscaisAction(slug, fd);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      try {
+        await salvarConfiguracoesFiscaisAction(slug, fd);
+        setSaved(true);
+        toast.success("Configurações fiscais salvas com sucesso!");
+        setTimeout(() => setSaved(false), 3000);
+      } catch {
+        toast.error("Erro ao salvar configurações fiscais.");
+      }
     });
   };
 
@@ -40,157 +54,202 @@ export function FiscalSettingsClient({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-xl font-semibold">Configurações Fiscais</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          Configure as credenciais para emissão de NFC-e e NF-e via FocusNFe.
-        </p>
-      </div>
+      {/* ── Page Header ─────────────────────────────────── */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm">
+            <FileTextIcon size={22} />
+          </div>
+          <div>
+            <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
+              Configurações Fiscais (NFC-e)
+            </h1>
+            <p className="text-sm text-slate-500">
+              Configure as credenciais e parâmetros para emissão automática de notas fiscais via FocusNFe.
+            </p>
+          </div>
+        </div>
 
-      <div className="flex flex-wrap gap-2">
-        <Badge variant={hasToken ? "success" : "secondary"}>
-          {hasToken ? "API Configurada" : "API não configurada"}
-        </Badge>
-        <Badge variant={ambiente === "producao" ? "danger" : "secondary"}>
-          {ambiente === "producao" ? "Produção" : "Homologação (Teste)"}
-        </Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge
+            className={cn(
+              "rounded-full px-3 py-1 text-xs font-semibold",
+              hasToken
+                ? "bg-emerald-50 text-emerald-800 border-emerald-200/80"
+                : "bg-slate-100 text-slate-600 border-slate-200",
+            )}
+          >
+            {hasToken ? "API Conectada" : "API Pendente"}
+          </Badge>
+          <Badge
+            className={cn(
+              "rounded-full px-3 py-1 text-xs font-semibold",
+              ambiente === "producao"
+                ? "bg-rose-50 text-rose-800 border-rose-200/80"
+                : "bg-amber-50 text-amber-800 border-amber-200/80",
+            )}
+          >
+            {ambiente === "producao" ? "Produção (SEFAZ Real)" : "Homologação (Testes)"}
+          </Badge>
+        </div>
       </div>
 
       {ambiente === "producao" && (
-        <Alert>
-          <AlertTriangleIcon className="h-4 w-4" />
-          <AlertTitle>Ambiente de Produção</AlertTitle>
-          <AlertDescription>
-            Notas emitidas neste modo são válidas perante a SEFAZ. Certifique-se de que os dados
-            estão corretos antes de emitir.
+        <Alert className="border-rose-200 bg-rose-50/60 text-rose-900">
+          <AlertTriangleIcon className="h-4 w-4 text-rose-600" />
+          <AlertTitle className="font-semibold text-rose-900">Atenção: Ambiente de Produção Ativo</AlertTitle>
+          <AlertDescription className="text-xs text-rose-700">
+            Notas emitidas neste modo possuem valor fiscal legal perante a SEFAZ. Certifique-se de que os produtos possuem NCM e tributação corretos.
           </AlertDescription>
         </Alert>
       )}
 
       {saved && (
-        <Alert className="border-emerald-200 bg-emerald-50">
+        <Alert className="border-emerald-200 bg-emerald-50 text-emerald-900">
           <CheckCircleIcon className="h-4 w-4 text-emerald-600" />
-          <AlertTitle className="text-emerald-900">Configurações salvas!</AlertTitle>
+          <AlertTitle className="font-semibold text-emerald-900">Configurações Atualizadas com Sucesso!</AlertTitle>
         </Alert>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Dados da Empresa</CardTitle>
+        {/* Dados da Empresa */}
+        <Card className="border-slate-200/80 bg-white shadow-sm">
+          <CardHeader className="border-b border-slate-100 pb-3">
+            <CardTitle className="font-display text-base font-semibold text-slate-900">
+              Dados da Empresa Emissora
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="cnpj">CNPJ</Label>
+                <Label htmlFor="cnpj" className="text-xs font-semibold text-slate-700">
+                  CNPJ
+                </Label>
                 <Input
                   id="cnpj"
                   name="cnpj"
                   placeholder="00.000.000/0000-00"
                   defaultValue={fiscalSettings?.cnpj ?? restaurant.cnpj ?? ""}
+                  className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm text-slate-900 focus:bg-white"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="inscricaoEstadual">Inscrição Estadual</Label>
+                <Label htmlFor="inscricaoEstadual" className="text-xs font-semibold text-slate-700">
+                  Inscrição Estadual (IE)
+                </Label>
                 <Input
                   id="inscricaoEstadual"
                   name="inscricaoEstadual"
                   placeholder="000.000.000.000"
                   defaultValue={fiscalSettings?.inscricaoEstadual ?? ""}
+                  className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm text-slate-900 focus:bg-white"
                 />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Integração FocusNFe</CardTitle>
+        {/* Integração FocusNFe */}
+        <Card className="border-slate-200/80 bg-white shadow-sm">
+          <CardHeader className="border-b border-slate-100 pb-3">
+            <CardTitle className="font-display text-base font-semibold text-slate-900">
+              Integração FocusNFe
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-4">
             <div className="space-y-1.5">
-              <Label htmlFor="focusNfeToken">Token da API FocusNFe</Label>
+              <Label htmlFor="focusNfeToken" className="text-xs font-semibold text-slate-700">
+                Token de Acesso da API
+              </Label>
               <Input
                 id="focusNfeToken"
                 name="focusNfeToken"
                 type="password"
-                placeholder="Seu token de homologação ou produção"
+                placeholder="Insira sua chave de API FocusNFe"
                 defaultValue={fiscalSettings?.focusNfeToken ?? ""}
+                className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm text-slate-900 focus:bg-white"
               />
-              <p className="text-xs text-muted-foreground">
-                Obtenha seu token em{" "}
-                <span className="font-medium text-foreground">app.focusnfe.com.br</span>
+              <p className="text-xs text-slate-500">
+                Obtenha o token no painel oficial em{" "}
+                <span className="font-semibold text-slate-700">app.focusnfe.com.br</span>
               </p>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="ambienteFiscal">Ambiente</Label>
-              <select
-                id="ambienteFiscal"
-                name="ambienteFiscal"
-                defaultValue={fiscalSettings?.ambienteFiscal ?? "homologacao"}
-                className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-              >
-                <option value="homologacao">Homologação (Testes)</option>
-                <option value="producao">Produção (SEFAZ Real)</option>
-              </select>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="ambienteFiscal" className="text-xs font-semibold text-slate-700">
+                  Ambiente de Emissão
+                </Label>
+                <select
+                  id="ambienteFiscal"
+                  name="ambienteFiscal"
+                  defaultValue={fiscalSettings?.ambienteFiscal ?? "homologacao"}
+                  className="flex h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-sm text-slate-900 focus:bg-white"
+                >
+                  <option value="homologacao">Homologação (Testes sem valor fiscal)</option>
+                  <option value="producao">Produção (SEFAZ Real)</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="serieNfce" className="text-xs font-semibold text-slate-700">
+                  Série da NFC-e
+                </Label>
+                <Input
+                  id="serieNfce"
+                  name="serieNfce"
+                  placeholder="001"
+                  maxLength={3}
+                  defaultValue={fiscalSettings?.serieNfce ?? "001"}
+                  className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm text-slate-900 focus:bg-white"
+                />
+              </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="webhookUrl">Webhook URL (opcional)</Label>
+              <Label htmlFor="webhookUrl" className="text-xs font-semibold text-slate-700">
+                URL de Webhook (Opcional)
+              </Label>
               <Input
                 id="webhookUrl"
                 name="webhookUrl"
                 type="url"
-                placeholder="https://seusite.com/webhook/nfe"
+                placeholder="https://meusite.com/api/webhook/nfe"
                 defaultValue={fiscalSettings?.webhookUrl ?? ""}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Numeração NFC-e</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1.5">
-              <Label htmlFor="serieNfce">Série NFC-e</Label>
-              <Input
-                id="serieNfce"
-                name="serieNfce"
-                placeholder="001"
-                maxLength={3}
-                defaultValue={fiscalSettings?.serieNfce ?? "001"}
-                className="max-w-[120px]"
+                className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm text-slate-900 focus:bg-white"
               />
             </div>
           </CardContent>
         </Card>
 
         <div className="flex items-center gap-3">
-          <Button type="submit" className="gap-1.5" disabled={isPending}>
-            <SaveIcon size={14} />
-            {isPending ? "Salvando..." : "Salvar configurações"}
+          <Button
+            type="submit"
+            disabled={isPending}
+            className="h-10 gap-2 rounded-full bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
+          >
+            <SaveIcon size={15} />
+            <span>{isPending ? "Salvando..." : "Salvar Configurações Fiscais"}</span>
           </Button>
-          <p className="text-sm text-muted-foreground">
-            Campos salvos são aplicados imediatamente às próximas emissões.
+          <p className="text-xs text-slate-500">
+            As alterações são aplicadas instantaneamente às próximas emissões.
           </p>
         </div>
       </form>
 
-      <Card className="border-slate-100 bg-slate-50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <FileTextIcon size={16} />
-            Como emitir NFC-e em um pedido
+      {/* Dica / Passo a passo */}
+      <Card className="border-slate-200/80 bg-slate-50/60 shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 font-display text-sm font-bold text-slate-900">
+            <ShieldCheckIcon size={16} className="text-emerald-600" />
+            Como funciona a emissão de NFC-e nos pedidos
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-1 text-sm text-muted-foreground">
-          <p>1. Configure o token FocusNFe e selecione o ambiente.</p>
-          <p>2. Certifique-se de que os produtos possuem NCM e CFOP cadastrados.</p>
-          <p>3. Acesse o pedido em <strong>Pedidos</strong> e clique em <strong>&ldquo;Emitir NFC-e&rdquo;</strong>.</p>
-          <p>4. O sistema enviará a nota automaticamente e disponibilizará o link do DANFE.</p>
+        <CardContent className="space-y-1.5 text-xs text-slate-600">
+          <p>1. Insira o token FocusNFe e selecione o ambiente desejado acima.</p>
+          <p>2. Certifique-se de que os produtos possuem NCM e CFOP válidos cadastrados no Cardápio.</p>
+          <p>3. Ao finalizar um pedido em <strong>Pedidos</strong>, clique no botão <strong>&ldquo;Emitir NFC-e&rdquo;</strong>.</p>
+          <p>4. O sistema transmite a nota diretamente para a SEFAZ e gera o link do DANFE e QR Code para impressão.</p>
         </CardContent>
       </Card>
     </div>

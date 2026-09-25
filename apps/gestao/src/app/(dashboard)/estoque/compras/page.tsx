@@ -21,14 +21,12 @@ const ComprasPage = async ({ params }: ComprasPageProps) => {
   if (!restaurant) return notFound();
 
   return (
-    <main className="space-y-4">
-      <ComprasClient
-        slug={slug}
-        inventoryItems={inventoryItems}
-        fornecedores={fornecedores}
-        notasCompra={notasCompra}
-      />
-    </main>
+    <ComprasClient
+      slug={slug}
+      inventoryItems={inventoryItems}
+      fornecedores={fornecedores}
+      notasCompra={notasCompra}
+    />
   );
 };
 

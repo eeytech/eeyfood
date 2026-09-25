@@ -362,9 +362,14 @@ const ExportPDFButton = ({ data, activeTab, from, to }: ExportPDFButtonProps) =>
   };
 
   return (
-    <Button onClick={handleExport} variant="outline" size="sm" className="print:hidden">
-      <DownloadIcon className="mr-2 size-4" />
-      Exportar PDF
+    <Button
+      onClick={handleExport}
+      variant="outline"
+      size="sm"
+      className="h-10 gap-2 rounded-full border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:text-slate-900 print:hidden"
+    >
+      <DownloadIcon size={15} />
+      <span>Exportar PDF</span>
     </Button>
   );
 };

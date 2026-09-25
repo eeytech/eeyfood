@@ -22,15 +22,13 @@ const EstoquePage = async ({ params }: EstoquePageProps) => {
   }
 
   return (
-    <main className="space-y-4">
-      <EstoqueClient
-        slug={slug}
-        products={cardapio.products}
-        inventoryItems={inventoryItems}
-        lotes={lotes}
-        perdas={perdas}
-      />
-    </main>
+    <EstoqueClient
+      slug={slug}
+      products={cardapio.products}
+      inventoryItems={inventoryItems}
+      lotes={lotes}
+      perdas={perdas}
+    />
   );
 };
 

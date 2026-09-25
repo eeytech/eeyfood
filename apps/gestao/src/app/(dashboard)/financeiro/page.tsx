@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import {
@@ -7,6 +8,12 @@ import {
 } from "@/lib/admin-queries";
 
 import { FinanceiroClient } from "./_components/financeiro-client";
+
+export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Gestão Financeira | Gestão",
+};
 
 interface FinanceiroPageProps {
   params: Promise<{ slug: string }>;
@@ -37,15 +44,13 @@ const FinanceiroPage = async ({ params }: FinanceiroPageProps) => {
     .reduce((acc, t) => acc + t.transaction.amount, 0);
 
   return (
-    <main className="space-y-4">
-      <FinanceiroClient
-        slug={slug}
-        transacoes={transacoes}
-        categorias={categorias}
-        receitasPendentes={receitasPendentes}
-        despesasPendentes={despesasPendentes}
-      />
-    </main>
+    <FinanceiroClient
+      slug={slug}
+      transacoes={transacoes}
+      categorias={categorias}
+      receitasPendentes={receitasPendentes}
+      despesasPendentes={despesasPendentes}
+    />
   );
 };
 

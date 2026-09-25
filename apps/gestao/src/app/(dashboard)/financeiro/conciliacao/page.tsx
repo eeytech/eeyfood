@@ -1,9 +1,16 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import {
   buscarRestauranteParaGestao,
   listarContasBancariasGestao,
 } from "@/lib/admin-queries";
 import { ConciliacaoClient } from "./_components/conciliacao-client";
+
+export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Conciliação OFX | Gestão",
+};
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -18,11 +25,7 @@ const ConciliacaoPage = async ({ params }: PageProps) => {
 
   if (!restaurant) return notFound();
 
-  return (
-    <main>
-      <ConciliacaoClient slug={slug} contas={contas} />
-    </main>
-  );
+  return <ConciliacaoClient slug={slug} contas={contas} />;
 };
 
 export default ConciliacaoPage;

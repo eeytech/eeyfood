@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { buscarRegrasFreteAtivas, buscarRestaurantePorSlug } from "@fsw/db";
 import { notFound } from "next/navigation";
 
@@ -8,6 +9,12 @@ import {
 } from "@/lib/admin-queries";
 
 import { LogisticaClient } from "./_components/logistica-client";
+
+export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Logística e Motoboys | Gestão",
+};
 
 interface LogisticaPageProps {
   params: Promise<{ slug: string }>;

@@ -1,12 +1,13 @@
 "use client";
 
-import { CalendarIcon, FilterIcon } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
+import { cn } from "@/lib/utils";
 
 interface DateRangeFilterProps {
   from: string;
@@ -66,61 +67,153 @@ const DateRangeFilter = ({ from, to }: DateRangeFilterProps) => {
     navigate(f.toISOString().slice(0, 10), t.toISOString().slice(0, 10));
   };
 
-  return (
-    <Card className="overflow-hidden border-white/80 bg-white/90 print:hidden">
-      <CardHeader className="pb-3">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <CardTitle className="font-display flex items-center gap-2 text-xl">
-              <FilterIcon className="text-primary" size={18} />
-              Relatórios &amp; Analytics
-            </CardTitle>
-            <CardDescription className="mt-1 text-sm">
-              Período:{" "}
-              <span className="font-medium text-foreground">
-                {fmt(from)} — {fmt(to)}
-              </span>
-            </CardDescription>
-          </div>
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
 
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={today}>
+  const t7 = new Date();
+  const f7 = new Date();
+  f7.setDate(f7.getDate() - 6);
+  const isLast7 =
+    from === f7.toISOString().slice(0, 10) && to === t7.toISOString().slice(0, 10);
+
+  const t30 = new Date();
+  const f30 = new Date();
+  f30.setDate(f30.getDate() - 29);
+  const isLast30 =
+    from === f30.toISOString().slice(0, 10) && to === t30.toISOString().slice(0, 10);
+
+  const fThisMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    .toISOString()
+    .slice(0, 10);
+  const isThisMonth = from === fThisMonth && to === todayStr;
+
+  const fLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    .toISOString()
+    .slice(0, 10);
+  const tLastMonth = new Date(now.getFullYear(), now.getMonth(), 0)
+    .toISOString()
+    .slice(0, 10);
+  const isLastMonth = from === fLastMonth && to === tLastMonth;
+
+  const isToday = from === todayStr && to === todayStr;
+
+  return (
+    <Card className="border-slate-200/80 bg-white shadow-sm print:hidden">
+      <CardContent className="p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          {/* Quick presets */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="mr-1 text-xs font-medium text-slate-500">Atalhos:</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={today}
+              className={cn(
+                "h-9 rounded-xl px-3 text-xs font-medium transition-all",
+                isToday
+                  ? "border-slate-900 bg-slate-900 text-white hover:bg-slate-800 shadow-xs"
+                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900",
+              )}
+            >
               Hoje
             </Button>
-            <Button variant="outline" size="sm" onClick={last7}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={last7}
+              className={cn(
+                "h-9 rounded-xl px-3 text-xs font-medium transition-all",
+                isLast7
+                  ? "border-slate-900 bg-slate-900 text-white hover:bg-slate-800 shadow-xs"
+                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900",
+              )}
+            >
               7 dias
             </Button>
-            <Button variant="outline" size="sm" onClick={last30}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={last30}
+              className={cn(
+                "h-9 rounded-xl px-3 text-xs font-medium transition-all",
+                isLast30
+                  ? "border-slate-900 bg-slate-900 text-white hover:bg-slate-800 shadow-xs"
+                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900",
+              )}
+            >
               30 dias
             </Button>
-            <Button variant="outline" size="sm" onClick={thisMonth}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={thisMonth}
+              className={cn(
+                "h-9 rounded-xl px-3 text-xs font-medium transition-all",
+                isThisMonth
+                  ? "border-slate-900 bg-slate-900 text-white hover:bg-slate-800 shadow-xs"
+                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900",
+              )}
+            >
               Este mês
             </Button>
-            <Button variant="outline" size="sm" onClick={lastMonth}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={lastMonth}
+              className={cn(
+                "h-9 rounded-xl px-3 text-xs font-medium transition-all",
+                isLastMonth
+                  ? "border-slate-900 bg-slate-900 text-white hover:bg-slate-800 shadow-xs"
+                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900",
+              )}
+            >
               Mês passado
             </Button>
+          </div>
 
-            <div className="flex items-center gap-1.5">
+          {/* Date Picker Custom Range */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50/70 p-1">
               <DatePicker
                 value={from}
                 onChange={(_, str) => str && navigate(str, to)}
-                buttonClassName="h-8 rounded-full text-xs px-3 min-w-[140px]"
+                buttonClassName="h-8 rounded-lg border-0 bg-white text-xs font-medium text-slate-700 shadow-xs hover:bg-slate-50 px-3 min-w-[130px]"
                 clearable={false}
                 placeholder="Data inicial"
               />
-              <span className="text-xs text-muted-foreground">até</span>
+              <span className="text-xs text-slate-400">até</span>
               <DatePicker
                 value={to}
                 onChange={(_, str) => str && navigate(from, str)}
-                buttonClassName="h-8 rounded-full text-xs px-3 min-w-[140px]"
+                buttonClassName="h-8 rounded-lg border-0 bg-white text-xs font-medium text-slate-700 shadow-xs hover:bg-slate-50 px-3 min-w-[130px]"
                 clearable={false}
                 placeholder="Data final"
               />
             </div>
           </div>
         </div>
-      </CardHeader>
-      <CardContent className="pb-3" />
+
+        {/* Results / filter indicator footer */}
+        <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500">
+          <div className="flex items-center gap-1.5">
+            <CalendarIcon size={14} className="text-slate-400" />
+            <span>
+              Período selecionado:{" "}
+              <strong className="font-semibold text-slate-900">
+                {fmt(from)} — {fmt(to)}
+              </strong>
+            </span>
+          </div>
+          <span className="rounded-full border border-emerald-200/80 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-800">
+            Dados consolidados
+          </span>
+        </div>
+      </CardContent>
     </Card>
   );
 };

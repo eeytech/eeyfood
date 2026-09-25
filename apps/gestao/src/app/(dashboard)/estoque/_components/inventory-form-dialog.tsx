@@ -1,9 +1,13 @@
 "use client";
 
 import { useTransition } from "react";
+import { toast } from "sonner";
 
 import type { InventoryActionResult } from "@/app/(dashboard)/actions";
-import { createInventoryItemAction, updateInventoryItemAction } from "@/app/(dashboard)/actions";
+import {
+  createInventoryItemAction,
+  updateInventoryItemAction,
+} from "@/app/(dashboard)/actions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,6 +18,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { InventoryItem } from "@fsw/db";
 
 const TYPES = [
@@ -68,59 +79,72 @@ export function InventoryFormDialog({
         result = await createInventoryItemAction(slug, formData);
       }
       if (result.success) {
+        toast.success(
+          isEditing ? "Item atualizado com sucesso!" : "Item cadastrado com sucesso!",
+        );
         onOpenChange(false);
         onSuccess?.();
       } else {
-        alert(result.error ?? "Erro ao salvar item.");
+        toast.error(result.error ?? "Erro ao salvar item.");
       }
     });
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg border-slate-200 bg-white shadow-2xl">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Editar item" : "Novo item de inventário"}</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="font-display text-lg font-bold text-slate-900">
+            {isEditing ? "Editar item de inventário" : "Novo item de inventário"}
+          </DialogTitle>
+          <DialogDescription className="text-slate-500">
             {isEditing
               ? `Editando: ${item.name}`
-              : "Cadastre um insumo, embalagem, equipamento ou material de apoio."}
+              : "Cadastre um insumo, embalagem, equipamento ou material interno."}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="mt-2 space-y-4">
           {/* Nome */}
           <div className="space-y-1.5">
-            <Label htmlFor="inv-name">Nome</Label>
+            <Label htmlFor="inv-name" className="text-xs font-semibold text-slate-700">
+              Nome do Item
+            </Label>
             <Input
               id="inv-name"
               name="name"
               placeholder="Ex.: Embalagem pizza G, Luva de borracha..."
               defaultValue={item?.name ?? ""}
               required
+              className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm focus:bg-white"
             />
           </div>
 
           {/* Descrição */}
           <div className="space-y-1.5">
-            <Label htmlFor="inv-desc">Descrição</Label>
+            <Label htmlFor="inv-desc" className="text-xs font-semibold text-slate-700">
+              Descrição (Opcional)
+            </Label>
             <Input
               id="inv-desc"
               name="description"
-              placeholder="Opcional — detalhes adicionais"
+              placeholder="Detalhes adicionais, marca recomendada..."
               defaultValue={item?.description ?? ""}
+              className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm focus:bg-white"
             />
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2">
             {/* Tipo */}
             <div className="space-y-1.5">
-              <Label htmlFor="inv-type">Tipo</Label>
+              <Label htmlFor="inv-type" className="text-xs font-semibold text-slate-700">
+                Tipo
+              </Label>
               <select
                 id="inv-type"
                 name="type"
                 defaultValue={item?.type ?? "INSUMO"}
-                className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm"
+                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs sm:text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900"
                 required
               >
                 {TYPES.map((t) => (
@@ -133,12 +157,14 @@ export function InventoryFormDialog({
 
             {/* Unidade de medida */}
             <div className="space-y-1.5">
-              <Label htmlFor="inv-unit">Unidade</Label>
+              <Label htmlFor="inv-unit" className="text-xs font-semibold text-slate-700">
+                Unidade de Medida
+              </Label>
               <select
                 id="inv-unit"
                 name="unitOfMeasure"
                 defaultValue={item?.unitOfMeasure ?? "UN"}
-                className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm"
+                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs sm:text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900"
                 required
               >
                 {UNITS.map((u) => (
@@ -152,19 +178,24 @@ export function InventoryFormDialog({
 
           {/* SKU */}
           <div className="space-y-1.5">
-            <Label htmlFor="inv-sku">SKU / Código</Label>
+            <Label htmlFor="inv-sku" className="text-xs font-semibold text-slate-700">
+              SKU / Código Interno
+            </Label>
             <Input
               id="inv-sku"
               name="sku"
               placeholder="Ex.: EMB-PIZ-G"
               defaultValue={item?.sku ?? ""}
+              className="h-10 rounded-xl border-slate-200 bg-slate-50/70 font-mono text-sm focus:bg-white"
             />
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2">
             {/* Quantidade */}
             <div className="space-y-1.5">
-              <Label htmlFor="inv-qty">Quantidade atual</Label>
+              <Label htmlFor="inv-qty" className="text-xs font-semibold text-slate-700">
+                Quantidade Atual
+              </Label>
               <Input
                 id="inv-qty"
                 name="currentQuantity"
@@ -173,12 +204,15 @@ export function InventoryFormDialog({
                 step="any"
                 defaultValue={item?.currentQuantity ?? 0}
                 required
+                className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm focus:bg-white"
               />
             </div>
 
             {/* Alerta */}
             <div className="space-y-1.5">
-              <Label htmlFor="inv-threshold">Alerta de baixo estoque</Label>
+              <Label htmlFor="inv-threshold" className="text-xs font-semibold text-slate-700">
+                Alerta de Saldo Mínimo
+              </Label>
               <Input
                 id="inv-threshold"
                 name="lowStockThreshold"
@@ -186,47 +220,27 @@ export function InventoryFormDialog({
                 min="0"
                 step="any"
                 defaultValue={item?.lowStockThreshold ?? 0}
+                required
+                className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm focus:bg-white"
               />
             </div>
           </div>
-
-          {/* Custo unitário */}
-          <div className="space-y-1.5">
-            <Label htmlFor="inv-cost">Custo unitário (R$)</Label>
-            <Input
-              id="inv-cost"
-              name="unitCost"
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="0,00"
-              defaultValue={item?.unitCost != null ? String(item.unitCost) : ""}
-            />
-          </div>
-
-          {/* Motivo do ajuste (apenas edição) */}
-          {isEditing && (
-            <div className="space-y-1.5">
-              <Label htmlFor="inv-reason">Motivo do ajuste de quantidade</Label>
-              <Input
-                id="inv-reason"
-                name="reason"
-                placeholder="Ex.: Reposição do fornecedor, perda/avaria..."
-              />
-            </div>
-          )}
 
           <div className="flex justify-end gap-2 pt-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={isPending}
+              className="h-10 rounded-full border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Salvando..." : isEditing ? "Salvar alterações" : "Cadastrar item"}
+            <Button
+              type="submit"
+              disabled={isPending}
+              className="h-10 rounded-full bg-slate-900 px-5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800"
+            >
+              {isPending ? "Salvando..." : isEditing ? "Salvar Alterações" : "Cadastrar Item"}
             </Button>
           </div>
         </form>

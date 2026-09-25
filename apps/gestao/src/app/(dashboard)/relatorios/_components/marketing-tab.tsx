@@ -3,6 +3,14 @@
 import { CoinsIcon, TagIcon, WalletIcon } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type { DashboardData } from "@/lib/admin-queries";
 
 const fmt = (v: number) =>
@@ -16,98 +24,117 @@ const MarketingTab = ({ data }: MarketingTabProps) => {
   const { couponUsage, cashbackMetrics } = data;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Cashback metrics */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card className="border-white/80 bg-gradient-to-br from-yellow-50 to-white">
-          <CardContent className="flex items-center justify-between p-5">
-            <div>
-              <p className="text-xs text-muted-foreground">Cashback gerado</p>
-              <p className="font-display mt-0.5 text-2xl font-semibold text-amber-600">
-                {fmt(cashbackMetrics.totalEarned)}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">Creditado aos clientes</p>
+      <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Cashback gerado
+              </span>
+              <div className="rounded-lg bg-amber-100 p-1.5 text-amber-700">
+                <CoinsIcon size={16} />
+              </div>
             </div>
-            <CoinsIcon className="text-amber-400" size={28} />
+            <p className="mt-2 font-display text-2xl font-bold text-amber-700">
+              {fmt(cashbackMetrics.totalEarned)}
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500">Creditado aos clientes</p>
           </CardContent>
         </Card>
-        <Card className="border-white/80 bg-gradient-to-br from-emerald-50 to-white">
-          <CardContent className="flex items-center justify-between p-5">
-            <div>
-              <p className="text-xs text-muted-foreground">Cashback resgatado</p>
-              <p className="font-display mt-0.5 text-2xl font-semibold text-emerald-600">
-                {fmt(cashbackMetrics.totalRedeemed)}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">Utilizado como desconto</p>
+
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Cashback resgatado
+              </span>
+              <div className="rounded-lg bg-emerald-100 p-1.5 text-emerald-700">
+                <WalletIcon size={16} />
+              </div>
             </div>
-            <WalletIcon className="text-emerald-500" size={28} />
+            <p className="mt-2 font-display text-2xl font-bold text-emerald-700">
+              {fmt(cashbackMetrics.totalRedeemed)}
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500">Utilizado como desconto</p>
           </CardContent>
         </Card>
-        <Card className="border-white/80 bg-gradient-to-br from-blue-50 to-white">
-          <CardContent className="flex items-center justify-between p-5">
-            <div>
-              <p className="text-xs text-muted-foreground">Saldo em circulação</p>
-              <p className="font-display mt-0.5 text-2xl font-semibold text-blue-600">
-                {fmt(cashbackMetrics.currentBalance)}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">Disponível nas carteiras</p>
+
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Saldo em circulação
+              </span>
+              <div className="rounded-lg bg-blue-100 p-1.5 text-blue-700">
+                <CoinsIcon size={16} />
+              </div>
             </div>
-            <CoinsIcon className="text-blue-400" size={28} />
+            <p className="mt-2 font-display text-2xl font-bold text-blue-700">
+              {fmt(cashbackMetrics.currentBalance)}
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500">Disponível nas carteiras</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Coupon usage table */}
-      <Card className="border-white/80 bg-white/90">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <TagIcon size={16} />
+      <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+        <CardHeader className="border-b border-slate-100 pb-3">
+          <CardTitle className="flex items-center gap-2 font-display text-base font-semibold text-slate-900">
+            <TagIcon size={16} className="text-slate-500" />
             Uso de cupons no período
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-xs text-slate-500">
             Cupons aplicados em pedidos pagos, com desconto total concedido
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {couponUsage.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed bg-slate-50 py-12">
-              <TagIcon className="text-muted-foreground" size={32} />
-              <p className="text-sm text-muted-foreground">
-                Nenhum cupom utilizado no período selecionado.
-              </p>
+            <div className="p-6">
+              <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 px-4 py-10 text-center">
+                <div className="rounded-full bg-slate-100 p-3 text-slate-400">
+                  <TagIcon size={24} />
+                </div>
+                <p className="font-display text-sm font-semibold text-slate-900">Nenhum cupom utilizado</p>
+                <p className="max-w-xs text-xs text-slate-500">
+                  Nenhum cupom foi aplicado em pedidos durante o período selecionado.
+                </p>
+              </div>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="border-b text-muted-foreground">
-                    <th className="px-2 py-3 text-left font-medium">#</th>
-                    <th className="px-2 py-3 text-left font-medium">Cupom</th>
-                    <th className="px-2 py-3 text-right font-medium">Utilizações</th>
-                    <th className="px-2 py-3 text-right font-medium">Desconto total</th>
-                    <th className="px-2 py-3 text-right font-medium">Desconto médio</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table>
+                <TableHeader className="bg-slate-50/80">
+                  <TableRow className="border-b border-slate-200">
+                    <TableHead className="w-12 text-xs font-semibold text-slate-700">#</TableHead>
+                    <TableHead className="text-xs font-semibold text-slate-700">Cupom</TableHead>
+                    <TableHead className="text-right text-xs font-semibold text-slate-700">Utilizações</TableHead>
+                    <TableHead className="text-right text-xs font-semibold text-slate-700">Desconto total</TableHead>
+                    <TableHead className="text-right text-xs font-semibold text-slate-700">Desconto médio</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {couponUsage.map((c, i) => (
-                    <tr key={c.couponCode} className="border-b last:border-0">
-                      <td className="px-2 py-2.5 text-xs text-muted-foreground">#{i + 1}</td>
-                      <td className="px-2 py-2.5">
-                        <span className="rounded-lg bg-yellow-100 px-2 py-0.5 font-mono text-xs font-semibold text-yellow-800">
+                    <TableRow key={c.couponCode} className="border-b border-slate-100 hover:bg-slate-50/60">
+                      <TableCell className="font-mono text-xs text-slate-400">#{i + 1}</TableCell>
+                      <TableCell>
+                        <span className="rounded-md border border-amber-200/80 bg-amber-50 px-2 py-0.5 font-mono text-xs font-semibold text-amber-800">
                           {c.couponCode}
                         </span>
-                      </td>
-                      <td className="px-2 py-2.5 text-right font-semibold">{c.usageCount}×</td>
-                      <td className="px-2 py-2.5 text-right text-red-600">
+                      </TableCell>
+                      <TableCell className="text-right font-semibold text-slate-900">{c.usageCount}×</TableCell>
+                      <TableCell className="text-right font-semibold text-rose-600">
                         −{fmt(c.totalDiscount)}
-                      </td>
-                      <td className="px-2 py-2.5 text-right text-muted-foreground">
+                      </TableCell>
+                      <TableCell className="text-right font-medium text-slate-600">
                         {fmt(c.usageCount > 0 ? c.totalDiscount / c.usageCount : 0)}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent>

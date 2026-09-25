@@ -1,9 +1,15 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { buscarDadosDashboard, buscarKPIsAvancados } from "@/lib/admin-queries";
 
-import DateRangeFilter from "./_components/date-range-filter";
-import DashboardTabs from "./_components/dashboard-tabs";
+import { RelatoriosClient } from "./_components/relatorios-client";
+
+export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Relatórios & Analytics | Gestão",
+};
 
 interface RelatoriosPageProps {
   params: Promise<{ slug: string }>;
@@ -39,10 +45,13 @@ const RelatoriosPage = async ({ params, searchParams }: RelatoriosPageProps) => 
   if (!data || !kpis) return notFound();
 
   return (
-    <main className="space-y-4">
-      <DateRangeFilter from={fromStr} to={toStr} />
-      <DashboardTabs data={data} kpis={kpis} slug={slug} from={fromStr} to={toStr} />
-    </main>
+    <RelatoriosClient
+      data={data}
+      kpis={kpis}
+      slug={slug}
+      from={fromStr}
+      to={toStr}
+    />
   );
 };
 

@@ -90,23 +90,23 @@ const AssistenteIaTab = ({ slug }: AssistenteIaTabProps) => {
   };
 
   return (
-    <div className="space-y-4">
-      <Card className="border-white/80 bg-white/90">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 font-display text-2xl">
-            <SparklesIcon className="text-primary" size={24} />
+    <div className="space-y-6">
+      <Card className="border-slate-200/80 bg-white shadow-sm">
+        <CardHeader className="border-b border-slate-100 pb-4">
+          <CardTitle className="flex items-center gap-2 font-display text-xl font-bold text-slate-900">
+            <SparklesIcon className="text-amber-500" size={22} />
             Assistente Analítico IA
           </CardTitle>
-          <CardDescription className="text-base">
-            Análise preditiva de demanda, projeção de vendas e sugestões de preço geradas por
-            inteligência artificial com base nos seus últimos 3 meses de operação.
+          <CardDescription className="text-sm text-slate-500">
+            Análise preditiva de demanda, projeção de vendas e sugestões de precificação geradas por
+            inteligência artificial com base no histórico do seu restaurante.
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <CardContent className="flex flex-col gap-4 pt-4 sm:flex-row sm:items-center">
           <Button
             onClick={handleGenerate}
             disabled={loading}
-            className="gap-2 rounded-full px-6 shadow-md shadow-primary/20"
+            className="h-10 gap-2 rounded-full bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
           >
             {loading ? (
               <LoaderIcon size={16} className="animate-spin" />
@@ -116,44 +116,46 @@ const AssistenteIaTab = ({ slug }: AssistenteIaTabProps) => {
             {loading ? "Analisando dados..." : "Gerar Insights com IA"}
           </Button>
           {result && !loading && (
-            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <ClockIcon size={12} />
+            <span className="flex items-center gap-1.5 text-xs text-slate-500">
+              <ClockIcon size={13} className="text-slate-400" />
               Gerado em{" "}
-              {new Date(result.generatedAt).toLocaleString("pt-BR", {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+              <strong className="font-semibold text-slate-700">
+                {new Date(result.generatedAt).toLocaleString("pt-BR", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </strong>
             </span>
           )}
         </CardContent>
       </Card>
 
       {error && (
-        <Card className="border-rose-200 bg-rose-50">
+        <Card className="border-rose-200 bg-rose-50/70 shadow-sm">
           <CardContent className="flex items-center gap-3 p-4">
             <AlertTriangleIcon className="shrink-0 text-rose-600" size={20} />
-            <p className="text-sm text-rose-700">{error}</p>
+            <p className="text-xs font-medium text-rose-700">{error}</p>
           </CardContent>
         </Card>
       )}
 
       {loading && (
-        <Card className="border-white/80 bg-white/90">
+        <Card className="border-slate-200/80 bg-white shadow-sm">
           <CardContent className="flex flex-col items-center justify-center gap-3 py-16">
-            <LoaderIcon size={32} className="animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">
-              Analisando seus dados de vendas, estoque e perdas...
+            <LoaderIcon size={32} className="animate-spin text-slate-900" />
+            <p className="font-display text-sm font-semibold text-slate-900">
+              Processando inteligência analítica...
             </p>
-            <p className="text-xs text-muted-foreground">Isso pode levar alguns segundos.</p>
+            <p className="text-xs text-slate-500">Isso pode levar alguns segundos.</p>
           </CardContent>
         </Card>
       )}
 
       {result && !loading && (
-        <Card className="border-white/80 bg-white/90">
+        <Card className="border-slate-200/80 bg-white shadow-sm">
           <CardContent className="p-6">
             <MarkdownRenderer content={result.markdown} />
           </CardContent>
@@ -161,12 +163,16 @@ const AssistenteIaTab = ({ slug }: AssistenteIaTabProps) => {
       )}
 
       {!result && !loading && !error && (
-        <Card className="border-white/80 border-dashed bg-white/40">
-          <CardContent className="flex flex-col items-center justify-center gap-2 py-16">
-            <SparklesIcon size={40} className="text-slate-300" />
-            <p className="text-sm text-muted-foreground">
-              Clique em &ldquo;Gerar Insights com IA&rdquo; para obter uma análise completa do
-              seu negócio.
+        <Card className="border-dashed border-slate-200 bg-slate-50/60 shadow-sm">
+          <CardContent className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+            <div className="rounded-full bg-slate-100 p-3.5 text-slate-400">
+              <SparklesIcon size={30} />
+            </div>
+            <h3 className="font-display text-base font-semibold text-slate-900">
+              Assistente de Inteligência Artificial
+            </h3>
+            <p className="max-w-md text-xs text-slate-500">
+              Clique em &ldquo;Gerar Insights com IA&rdquo; para processar dados de faturamento, pratos mais vendidos, horários de pico e oportunidades de crescimento.
             </p>
           </CardContent>
         </Card>
