@@ -38,6 +38,12 @@ import {
   criarUsuarioAction,
   excluirUsuarioAction,
 } from "../usuarios-actions";
+import {
+  CommissionRuleData,
+  GarcomMetricas,
+  TipClosingItem,
+} from "../garcons-actions";
+import { GarconsTab } from "./garcons-tab";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -89,6 +95,11 @@ export interface UserItem {
 interface UsuariosClientProps {
   slug: string;
   users: UserItem[];
+  garconsData?: {
+    garcons: GarcomMetricas[];
+    regraComissao: CommissionRuleData | null;
+    fechamentos: TipClosingItem[];
+  };
 }
 
 interface RoleConfig {
@@ -173,8 +184,15 @@ const formatDate = (date: Date | string): string => {
   }
 };
 
-export function UsuariosClient({ slug, users }: UsuariosClientProps) {
+export function UsuariosClient({
+  slug,
+  users,
+  garconsData,
+}: UsuariosClientProps) {
   const [isPending, startTransition] = useTransition();
+
+  // Sub-tabs
+  const [activeTab, setActiveTab] = useState<"USUARIOS" | "GARCONS">("USUARIOS");
 
   // Dialogs
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -344,20 +362,66 @@ export function UsuariosClient({ slug, users }: UsuariosClientProps) {
           </div>
         </div>
 
-        <Button
-          onClick={() => {
-            setCreateError(null);
-            setSelectedRole("KITCHEN");
-            setIsCreateOpen(true);
-          }}
-          className="h-10 gap-2 rounded-full bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
-        >
-          <UserPlusIcon size={16} />
-          <span>Novo Usuário</span>
-        </Button>
+        {activeTab === "USUARIOS" && (
+          <Button
+            onClick={() => {
+              setCreateError(null);
+              setSelectedRole("KITCHEN");
+              setIsCreateOpen(true);
+            }}
+            className="h-10 gap-2 rounded-full bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+          >
+            <UserPlusIcon size={16} />
+            <span>Novo Usuário</span>
+          </Button>
+        )}
       </div>
 
-      {/* ── Metric Cards ────────────────────────────────── */}
+      {/* ── Sub-Tabs Navigation ─────────────────────────── */}
+      <div className="flex border-b border-slate-200">
+        <button
+          onClick={() => setActiveTab("USUARIOS")}
+          className={cn(
+            "flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-semibold transition-all",
+            activeTab === "USUARIOS"
+              ? "border-slate-950 text-slate-950"
+              : "border-transparent text-slate-500 hover:text-slate-800",
+          )}
+        >
+          <UsersIcon size={16} />
+          <span>Acessos ao Painel</span>
+          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 font-medium">
+            {users.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("GARCONS")}
+          className={cn(
+            "flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-semibold transition-all",
+            activeTab === "GARCONS"
+              ? "border-slate-950 text-slate-950"
+              : "border-transparent text-slate-500 hover:text-slate-800",
+          )}
+        >
+          <UtensilsCrossedIcon size={16} />
+          <span>Garçons & Salão</span>
+          <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs text-purple-700 font-medium">
+            {garconsData?.garcons.length || 0}
+          </span>
+        </button>
+      </div>
+
+      {activeTab === "GARCONS" ? (
+        <GarconsTab
+          slug={slug}
+          garcons={garconsData?.garcons || []}
+          regraComissao={garconsData?.regraComissao || null}
+          fechamentos={garconsData?.fechamentos || []}
+        />
+      ) : (
+        <>
+          {/* ── Metric Cards ────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
           <CardContent className="p-4">
@@ -1256,6 +1320,8 @@ export function UsuariosClient({ slug, users }: UsuariosClientProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+        </>
+      )}
     </div>
   );
 }

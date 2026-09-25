@@ -15,7 +15,13 @@ const buscarMenuCached = (slug?: string) =>
 
 interface RestaurantMenuPageProps {
   params?: Promise<{ slug?: string }>;
-  searchParams: Promise<{ consumptionMethod?: string; tableId?: string; mode?: string }>;
+  searchParams: Promise<{
+    consumptionMethod?: string;
+    tableId?: string;
+    mode?: string;
+    slug?: string;
+    restaurant?: string;
+  }>;
 }
 
 const isConsumptionMethodValid = (consumptionMethod?: string) => {
@@ -30,8 +36,14 @@ const RestaurantMenuPage = async ({
   searchParams,
 }: RestaurantMenuPageProps) => {
   const resolvedParams = params ? await params : undefined;
-  const slug = resolvedParams?.slug;
-  const { consumptionMethod, tableId, mode } = await searchParams;
+  const {
+    consumptionMethod,
+    tableId,
+    mode,
+    slug: querySlug,
+    restaurant: queryRest,
+  } = await searchParams;
+  const slug = resolvedParams?.slug || querySlug || queryRest;
 
   const validMethod = isConsumptionMethodValid(consumptionMethod)
     ? (consumptionMethod!.toUpperCase() as "DINE_IN" | "TAKEAWAY" | "DELIVERY")

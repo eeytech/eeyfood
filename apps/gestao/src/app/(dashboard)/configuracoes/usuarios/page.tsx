@@ -3,12 +3,13 @@ import { notFound } from "next/navigation";
 
 import { buscarRestauranteParaGestao } from "@/lib/admin-queries";
 import { listarUsuariosAction } from "../usuarios-actions";
+import { listarGarconsComMetricasAction } from "../garcons-actions";
 import { UsuariosClient } from "./usuarios-client";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Usuários e Permissões | Gestão",
+  title: "Equipe, Usuários e Garçons | Gestão",
 };
 
 interface UsuariosPageProps {
@@ -23,7 +24,20 @@ export default async function UsuariosPage({ params }: UsuariosPageProps) {
     return notFound();
   }
 
-  const users = await listarUsuariosAction(restaurant.slug);
+  const [users, garconsData] = await Promise.all([
+    listarUsuariosAction(restaurant.slug),
+    listarGarconsComMetricasAction(restaurant.slug).catch(() => ({
+      garcons: [],
+      regraComissao: null,
+      fechamentos: [],
+    })),
+  ]);
 
-  return <UsuariosClient slug={restaurant.slug} users={users} />;
+  return (
+    <UsuariosClient
+      slug={restaurant.slug}
+      users={users}
+      garconsData={garconsData}
+    />
+  );
 }

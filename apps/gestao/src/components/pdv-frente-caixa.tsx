@@ -27,6 +27,8 @@ import {
   WalletIcon,
   WifiOffIcon,
   XIcon,
+  CheckIcon,
+  CopyIcon,
 } from "lucide-react";
 import {
   useCallback,
@@ -68,6 +70,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { QRCodeSVG } from "qrcode.react";
+import { gerarPayloadPix } from "@/lib/pix";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -302,6 +306,13 @@ const PdvFrenteCaixa = ({
   const [paymentMethod, setPaymentMethod] = useState<PdvPaymentMethod>("DINHEIRO");
   const [receivedAmount, setReceivedAmount] = useState("");
 
+  // ── Pix Modal ──────────────────────────────────────────────────────────────
+  const [isPixModalOpen, setIsPixModalOpen] = useState(false);
+  const [pixKey, setPixKey] = useState("");
+  const [isEditingPixKey, setIsEditingPixKey] = useState(false);
+  const [pixTempKey, setPixTempKey] = useState("");
+  const [pixCopied, setPixCopied] = useState(false);
+
   // ── Split payment ──────────────────────────────────────────────────────────
   const [paymentSplits, setPaymentSplits] = useState<PaymentSplitItem[]>([]);
   const [splitPendingMethod, setSplitPendingMethod] = useState<PdvPaymentMethod>("DINHEIRO");
@@ -435,6 +446,20 @@ const PdvFrenteCaixa = ({
   const serviceFeeAmount = useServiceFee ? round2(baseTotal * (serviceFeePercent / 100)) : 0;
   const finalTotal = round2(baseTotal + serviceFeeAmount);
 
+  // ── Pix generation ─────────────────────────────────────────────────────────
+  const activePixKey = pixKey.trim() || "contato@eeyfood.com.br";
+  const pixPayload = useMemo(() => {
+    if (finalTotal <= 0) return "";
+    return gerarPayloadPix({
+      chavePix: activePixKey,
+      nomeRecebedor: restaurantName || "EEYFOOD",
+      cidadeRecebedor: "BRASIL",
+      valor: finalTotal,
+      identificador: `PDV${Date.now().toString().slice(-6)}`,
+      descricao: `Venda PDV ${restaurantName}`,
+    });
+  }, [activePixKey, finalTotal, restaurantName]);
+
   const receivedAmountNum = parseFloat(receivedAmount.replace(",", ".")) || 0;
   const change = round2(receivedAmountNum - finalTotal);
 
@@ -477,6 +502,15 @@ const PdvFrenteCaixa = ({
   }, [customizingProduct, customOptionGroups, selectedCustomOptions]);
 
   // ── Effects ────────────────────────────────────────────────────────────────
+
+  // Carregar chave Pix salva localmente
+  useEffect(() => {
+    const saved = localStorage.getItem("eeyfood_pdv_chave_pix");
+    if (saved) {
+      setPixKey(saved);
+      setPixTempKey(saved);
+    }
+  }, []);
 
   // Clear coupon & cashback when cart changes
   useEffect(() => {
@@ -1749,6 +1783,34 @@ const PdvFrenteCaixa = ({
                     )}
                   </div>
                 )}
+
+                {/* Pix dynamic trigger */}
+                {paymentMethod === "PIX" && (
+                  <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/60 p-2.5 space-y-2 mt-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-emerald-900 flex items-center gap-1.5">
+                        <QrCodeIcon size={14} className="text-emerald-600" />
+                        Pix Dinâmico
+                      </span>
+                      <span className="text-xs font-bold text-emerald-700">
+                        {formatCurrency(finalTotal)}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-emerald-700 leading-tight">
+                      Gere o QR Code dinâmico na tela do caixa para o cliente escanear e pagar instantaneamente.
+                    </p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => setIsPixModalOpen(true)}
+                      disabled={cartItems.length === 0}
+                      className="w-full h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-xs"
+                    >
+                      <QrCodeIcon size={14} />
+                      <span>Abrir QR Code Pix no Caixa</span>
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Service fee toggle */}
@@ -2512,6 +2574,169 @@ const PdvFrenteCaixa = ({
               </div>
             )
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Modal: Pix Dinâmico QR Code ── */}
+      <Dialog open={isPixModalOpen} onOpenChange={setIsPixModalOpen}>
+        <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <div className="rounded-xl bg-emerald-100 p-2 text-emerald-700">
+                <QrCodeIcon size={20} />
+              </div>
+              <div>
+                <DialogTitle className="font-display text-lg font-bold text-slate-900">
+                  Pagamento via Pix
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500">
+                  Apresente o QR Code ao cliente ou copie o código Copia e Cola
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Amount card */}
+            <div className="rounded-2xl bg-slate-50 border border-slate-200/80 p-3 text-center">
+              <span className="text-xs font-medium text-slate-500 block uppercase tracking-wide">
+                Valor Total do Pedido
+              </span>
+              <span className="text-2xl font-black text-emerald-600 font-display">
+                {formatCurrency(finalTotal)}
+              </span>
+            </div>
+
+            {/* QR Code display */}
+            <div className="flex flex-col items-center justify-center p-4 bg-white rounded-2xl border border-slate-200 shadow-xs">
+              {pixPayload ? (
+                <QRCodeSVG
+                  value={pixPayload}
+                  size={190}
+                  level="M"
+                  includeMargin={true}
+                  className="rounded-xl"
+                />
+              ) : (
+                <div className="flex h-48 w-48 items-center justify-center text-xs text-slate-400">
+                  Adicione itens para gerar o QR Code
+                </div>
+              )}
+              <span className="text-[11px] font-medium text-slate-500 mt-2">
+                Escaneie com o app do seu banco
+              </span>
+            </div>
+
+            {/* Pix Copia e Cola */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">
+                Pix Copia e Cola
+              </Label>
+              <div className="flex items-center gap-1.5">
+                <Input
+                  readOnly
+                  value={pixPayload}
+                  className="h-8 text-[11px] font-mono bg-slate-50 text-slate-600 truncate rounded-lg"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (!pixPayload) return;
+                    void navigator.clipboard.writeText(pixPayload);
+                    setPixCopied(true);
+                    toast.success("Código Pix Copia e Cola copiado!");
+                    setTimeout(() => setPixCopied(false), 3000);
+                  }}
+                  className="h-8 shrink-0 gap-1 rounded-lg border-slate-200 text-xs font-semibold"
+                >
+                  {pixCopied ? (
+                    <>
+                      <CheckIcon size={13} className="text-emerald-600" />
+                      <span className="text-emerald-700">Copiado</span>
+                    </>
+                  ) : (
+                    <>
+                      <CopyIcon size={13} />
+                      <span>Copiar</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {/* Chave Pix Configuration */}
+            <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-2.5 text-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-600 font-medium">
+                  Chave Pix do Estabelecimento:
+                </span>
+                {!isEditingPixKey ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPixTempKey(pixKey);
+                      setIsEditingPixKey(true);
+                    }}
+                    className="text-xs text-blue-600 hover:underline font-semibold"
+                  >
+                    Alterar
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPixKey(pixTempKey.trim());
+                      localStorage.setItem("eeyfood_pdv_chave_pix", pixTempKey.trim());
+                      setIsEditingPixKey(false);
+                      toast.success("Chave Pix salva para o caixa!");
+                    }}
+                    className="text-xs text-emerald-600 hover:underline font-semibold"
+                  >
+                    Salvar
+                  </button>
+                )}
+              </div>
+              {isEditingPixKey ? (
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    placeholder="Ex: CNPJ, Email ou Celular"
+                    value={pixTempKey}
+                    onChange={(e) => setPixTempKey(e.target.value)}
+                    className="h-8 text-xs bg-white rounded-lg"
+                  />
+                </div>
+              ) : (
+                <span className="font-mono text-slate-800 font-semibold block truncate">
+                  {pixKey.trim() || "(Padrão: contato@eeyfood.com.br)"}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsPixModalOpen(false)}
+              className="rounded-full border-slate-200 text-xs font-medium text-slate-700"
+            >
+              Fechar
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                setIsPixModalOpen(false);
+                handleFinishSale();
+              }}
+              disabled={isPending || cartItems.length === 0}
+              className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white px-5 text-xs font-semibold shadow-sm"
+            >
+              <CheckCircle2Icon size={14} className="mr-1.5" />
+              Confirmar Recebimento e Finalizar
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

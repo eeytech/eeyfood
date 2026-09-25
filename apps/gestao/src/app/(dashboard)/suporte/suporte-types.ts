@@ -11,9 +11,11 @@ export type TicketCategory =
   | "INTEGRACOES"
   | "OUTRO";
 
+export type TicketSender = "USER" | "SUPPORT";
+
 export interface TicketMessage {
   id: string;
-  sender: "USER" | "SUPPORT";
+  sender: TicketSender;
   senderName: string;
   content: string;
   createdAt: string;

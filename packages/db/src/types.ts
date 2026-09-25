@@ -90,6 +90,12 @@ import {
   pizzaPricingRuleEnum,
   usersTable,
   userRoleEnum,
+  supportTicketsTable,
+  supportTicketMessagesTable,
+  ticketStatusEnum,
+  ticketPriorityEnum,
+  ticketCategoryEnum,
+  ticketSenderEnum,
 } from "./schema";
 
   // ...
@@ -386,4 +392,17 @@ export type MarketingChannel = (typeof marketingChannelEnum.enumValues)[number];
 export type User = InferSelectModel<typeof usersTable>;
 export type NewUser = InferInsertModel<typeof usersTable>;
 export type UserRole = (typeof userRoleEnum.enumValues)[number];
+
+export type SupportTicket = InferSelectModel<typeof supportTicketsTable>;
+export type NewSupportTicket = InferInsertModel<typeof supportTicketsTable>;
+export type SupportTicketMessage = InferSelectModel<typeof supportTicketMessagesTable>;
+export type NewSupportTicketMessage = InferInsertModel<typeof supportTicketMessagesTable>;
+export type TicketStatus = (typeof ticketStatusEnum.enumValues)[number];
+export type TicketPriority = (typeof ticketPriorityEnum.enumValues)[number];
+export type TicketCategory = (typeof ticketCategoryEnum.enumValues)[number];
+export type TicketSender = (typeof ticketSenderEnum.enumValues)[number];
+
+export interface SupportTicketComMensagens extends SupportTicket {
+  messages: SupportTicketMessage[];
+}
 

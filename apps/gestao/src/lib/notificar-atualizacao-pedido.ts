@@ -1,3 +1,5 @@
+import { enviarNotificacaoWhatsAppStatusPedido } from "./whatsapp-order-notifications";
+
 interface NotificarAtualizacaoPedidoInput {
   orderId: number;
   restaurantSlug: string;
@@ -11,6 +13,18 @@ export const notificarAtualizacaoPedido = async ({
   status,
   paymentStatus,
 }: NotificarAtualizacaoPedidoInput) => {
+  // Disparo assíncrono da notificação transacional de WhatsApp para o cliente
+  if (status) {
+    enviarNotificacaoWhatsAppStatusPedido({
+      orderId,
+      restaurantSlug,
+      status,
+      paymentStatus,
+    }).catch((err) =>
+      console.warn("Aviso ao disparar notificação WhatsApp do pedido:", err),
+    );
+  }
+
   const websocketServerUrl =
     process.env.WEBSOCKET_SERVER_URL ||
     process.env.NEXT_PUBLIC_WEBSOCKET_URL ||

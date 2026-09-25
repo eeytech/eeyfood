@@ -249,6 +249,14 @@ export {
   usersTable,
   usersRelations,
   userRoleEnum,
+  supportTicketsTable,
+  supportTicketsRelations,
+  supportTicketMessagesTable,
+  supportTicketMessagesRelations,
+  ticketStatusEnum,
+  ticketPriorityEnum,
+  ticketCategoryEnum,
+  ticketSenderEnum,
 } from "./schema";
 export type {
   AbandonedCart,
@@ -394,6 +402,15 @@ export type {
   User,
   NewUser,
   UserRole,
+  SupportTicket,
+  NewSupportTicket,
+  SupportTicketMessage,
+  NewSupportTicketMessage,
+  TicketStatus,
+  TicketPriority,
+  TicketCategory,
+  TicketSender,
+  SupportTicketComMensagens,
 } from "./types";
 export { geocodeAddress } from "./geocoding";
 export type { GeocodedCoordinates } from "./geocoding";

@@ -6,6 +6,7 @@ import {
   ArrowLeftRightIcon,
   BookOpenIcon,
   Building2Icon,
+  CalendarCheck2Icon,
   FileTextIcon,
   ReceiptIcon,
 } from "lucide-react";
@@ -14,6 +15,7 @@ import { cn } from "@/lib/utils";
 const NAV_ITEMS = [
   { href: "", label: "Lançamentos & Fluxo", icon: ReceiptIcon },
   { href: "/contas-bancarias", label: "Contas Bancárias", icon: Building2Icon },
+  { href: "/fechamentos", label: "Fechamento DRE", icon: CalendarCheck2Icon },
   { href: "/configuracoes-fiscais", label: "Fiscal (NFC-e)", icon: FileTextIcon },
   { href: "/fiados", label: "Livro de Fiados", icon: BookOpenIcon },
   { href: "/conciliacao", label: "Conciliação OFX", icon: ArrowLeftRightIcon },

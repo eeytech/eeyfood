@@ -37,6 +37,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -45,6 +52,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -235,6 +243,35 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
   const [selectedCourierId, setSelectedCourierId] = useState<string>("");
   const [isDispatching, setIsDispatching] = useState(false);
 
+  // Auto-impressão de pedidos ao receber
+  const [autoPrintEnabled, setAutoPrintEnabled] = useState(false);
+  const [autoPrintMode, setAutoPrintMode] = useState<"DELIVERY" | "PRODUCTION" | "BOTH">("DELIVERY");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedAutoPrint = localStorage.getItem("eey_autoprint_enabled");
+      if (savedAutoPrint !== null) {
+        setAutoPrintEnabled(savedAutoPrint === "true");
+      }
+      const savedMode = localStorage.getItem("eey_autoprint_mode");
+      if (savedMode) {
+        setAutoPrintMode(savedMode as "DELIVERY" | "PRODUCTION" | "BOTH");
+      }
+    }
+  }, []);
+
+  const handleToggleAutoPrint = (enabled: boolean) => {
+    setAutoPrintEnabled(enabled);
+    localStorage.setItem("eey_autoprint_enabled", String(enabled));
+    toast.info(enabled ? "Auto-impressão de novos pedidos ativada!" : "Auto-impressão desativada.");
+  };
+
+  const handleChangeAutoPrintMode = (mode: "DELIVERY" | "PRODUCTION" | "BOTH") => {
+    setAutoPrintMode(mode);
+    localStorage.setItem("eey_autoprint_mode", mode);
+    toast.success(`Via de impressão definida: ${mode === "DELIVERY" ? "Entrega" : mode === "PRODUCTION" ? "Cozinha" : "Ambas as Vias"}`);
+  };
+
   const websocketUrl = (() => {
     const raw = process.env.NEXT_PUBLIC_WEBSOCKET_URL?.trim();
     if (!raw) return "http://localhost:4000";
@@ -255,6 +292,22 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
 
     setOrders((currentOrders) => {
       if (!currentOrders.some((currentOrder) => currentOrder.id === order.id)) {
+        // Novo pedido detectado em tempo real
+        try {
+          new Audio("/sounds/bell.mp3").play().catch(() => null);
+        } catch { /* ignore */ }
+
+        if (autoPrintEnabled) {
+          setTimeout(() => {
+            if (autoPrintMode === "BOTH") {
+              handlePrint(order, "PRODUCTION");
+              setTimeout(() => handlePrint(order, "DELIVERY"), 600);
+            } else {
+              handlePrint(order, autoPrintMode);
+            }
+          }, 400);
+        }
+
         return [order, ...currentOrders];
       }
 
@@ -699,7 +752,79 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                 Acompanhe o status de cada pedido e avance conforme a produção.
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+              {/* Botão de Configuração de Auto-Impressão */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "h-8 gap-1.5 text-xs font-semibold rounded-lg border transition-all shadow-xs",
+                      autoPrintEnabled
+                        ? "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
+                    )}
+                  >
+                    <PrinterIcon
+                      size={14}
+                      className={autoPrintEnabled ? "text-emerald-600" : "text-slate-400"}
+                    />
+                    <span>
+                      {autoPrintEnabled ? "Auto-Print Ativo" : "Auto-Print"}
+                    </span>
+                    <ChevronDownIcon size={12} className="opacity-60" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 p-2 space-y-2">
+                  <div className="flex items-center justify-between px-1 py-1">
+                    <span className="text-xs font-semibold text-slate-800">
+                      Imprimir Novos Pedidos
+                    </span>
+                    <Switch
+                      checked={autoPrintEnabled}
+                      onCheckedChange={handleToggleAutoPrint}
+                    />
+                  </div>
+                  <DropdownMenuSeparator />
+                  <div className="space-y-1">
+                    <p className="px-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Via Padrão
+                    </p>
+                    <DropdownMenuItem
+                      onClick={() => handleChangeAutoPrintMode("DELIVERY")}
+                      className={cn(
+                        "text-xs justify-between cursor-pointer",
+                        autoPrintMode === "DELIVERY" && "font-bold text-slate-900 bg-slate-50",
+                      )}
+                    >
+                      <span>Via Entrega / Cliente</span>
+                      {autoPrintMode === "DELIVERY" && <span className="text-emerald-600">✓</span>}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleChangeAutoPrintMode("PRODUCTION")}
+                      className={cn(
+                        "text-xs justify-between cursor-pointer",
+                        autoPrintMode === "PRODUCTION" && "font-bold text-slate-900 bg-slate-50",
+                      )}
+                    >
+                      <span>Via Cozinha / Produção</span>
+                      {autoPrintMode === "PRODUCTION" && <span className="text-emerald-600">✓</span>}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleChangeAutoPrintMode("BOTH")}
+                      className={cn(
+                        "text-xs justify-between cursor-pointer",
+                        autoPrintMode === "BOTH" && "font-bold text-slate-900 bg-slate-50",
+                      )}
+                    >
+                      <span>Ambas (Cozinha + Entrega)</span>
+                      {autoPrintMode === "BOTH" && <span className="text-emerald-600">✓</span>}
+                    </DropdownMenuItem>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
               <Badge
                 variant={socketConnected ? "success" : "danger"}
                 className="w-fit"

@@ -221,6 +221,33 @@ export const userRoleEnum = pgEnum("UserRole", [
   "COURIER",
 ]);
 
+export const ticketStatusEnum = pgEnum("TicketStatus", [
+  "OPEN",
+  "IN_PROGRESS",
+  "WAITING_CUSTOMER",
+  "RESOLVED",
+  "CLOSED",
+]);
+
+export const ticketPriorityEnum = pgEnum("TicketPriority", [
+  "LOW",
+  "NORMAL",
+  "HIGH",
+  "URGENT",
+]);
+
+export const ticketCategoryEnum = pgEnum("TicketCategory", [
+  "PDV_CAIXA",
+  "KDS_COZINHA",
+  "CARDAPIO_ESTOQUE",
+  "IMPRESSAO_HARDWARE",
+  "FINANCEIRO_FISCAL",
+  "INTEGRACOES",
+  "OUTRO",
+]);
+
+export const ticketSenderEnum = pgEnum("TicketSender", ["USER", "SUPPORT"]);
+
 export const usersTable = pgTable("User", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
@@ -1343,6 +1370,7 @@ export const restaurantsRelations = relations(
   loyaltyPrizes: many(loyaltyPrizesTable),
   marketingSpends: many(marketingSpendTable),
   freeDeliveryRules: many(freeDeliveryRulesTable),
+  supportTickets: many(supportTicketsTable),
 }));
 
 export const orderRatingsRelations = relations(
@@ -2069,4 +2097,57 @@ export const usersRelations = relations(usersTable, ({ one }) => ({
     references: [restaurantsTable.id],
   }),
 }));
+
+// ─── Support Tickets & Messages ──────────────────────────────────────────────
+
+export const supportTicketsTable = pgTable("SupportTicket", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  restaurantId: uuid("restaurantId").references(() => restaurantsTable.id, {
+    onDelete: "cascade",
+  }),
+  protocol: text("protocol").notNull().unique(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  category: ticketCategoryEnum("category").default("OUTRO").notNull(),
+  priority: ticketPriorityEnum("priority").default("NORMAL").notNull(),
+  status: ticketStatusEnum("status").default("OPEN").notNull(),
+  userName: text("userName").notNull(),
+  userEmail: text("userEmail").notNull(),
+  userPhone: text("userPhone"),
+  restaurantSlug: text("restaurantSlug").default("").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export const supportTicketMessagesTable = pgTable("SupportTicketMessage", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  ticketId: uuid("ticketId")
+    .notNull()
+    .references(() => supportTicketsTable.id, { onDelete: "cascade" }),
+  sender: ticketSenderEnum("sender").notNull(),
+  senderName: text("senderName").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const supportTicketsRelations = relations(
+  supportTicketsTable,
+  ({ one, many }) => ({
+    restaurant: one(restaurantsTable, {
+      fields: [supportTicketsTable.restaurantId],
+      references: [restaurantsTable.id],
+    }),
+    messages: many(supportTicketMessagesTable),
+  }),
+);
+
+export const supportTicketMessagesRelations = relations(
+  supportTicketMessagesTable,
+  ({ one }) => ({
+    ticket: one(supportTicketsTable, {
+      fields: [supportTicketMessagesTable.ticketId],
+      references: [supportTicketsTable.id],
+    }),
+  }),
+);
 

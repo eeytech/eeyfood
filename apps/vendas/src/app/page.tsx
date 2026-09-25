@@ -1,13 +1,21 @@
 import Image from "next/image";
 
-import { buscarRestauranteUnico } from "@/lib/db";
+import { buscarRestaurantePorSlug, buscarRestauranteUnico } from "@/lib/db";
 
 import ConsumptionMethodOption from "./components/consumption-method-option";
 
 export const dynamic = "force-dynamic";
 
-const RestaurantPage = async () => {
-  const restaurant = await buscarRestauranteUnico();
+interface RestaurantPageProps {
+  searchParams?: Promise<{ slug?: string; restaurant?: string }>;
+}
+
+const RestaurantPage = async ({ searchParams }: RestaurantPageProps) => {
+  const sp = searchParams ? await searchParams : undefined;
+  const targetSlug = sp?.slug || sp?.restaurant;
+  const restaurant = targetSlug
+    ? await buscarRestaurantePorSlug(targetSlug)
+    : await buscarRestauranteUnico();
 
   if (!restaurant) {
     return (
