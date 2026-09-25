@@ -1,28 +1,32 @@
 "use client";
 
 import {
-  BarChart2Icon,
   BarChart3Icon,
   BikeIcon,
   BoxesIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
   CircleDollarSignIcon,
   ClipboardListIcon,
+  CoinsIcon,
   ConciergeBellIcon,
+  GiftIcon,
   HeadphonesIcon,
+  HeartHandshakeIcon,
   LayoutGridIcon,
   LogOutIcon,
   MegaphoneIcon,
+  MenuIcon,
   MessageSquareIcon,
   MonitorSmartphoneIcon,
+  PanelLeftCloseIcon,
   ShoppingCartIcon,
   SparklesIcon,
   StoreIcon,
   TagIcon,
+  TargetIcon,
   TruckIcon,
   Users2Icon,
   UsersRoundIcon,
+  UtensilsCrossedIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -43,6 +47,7 @@ interface AdminSidebarProps {
   userRole?: string;
   userName?: string;
   userEmail?: string;
+  children?: React.ReactNode;
 }
 
 const kitchenGroups = [
@@ -69,54 +74,48 @@ const navigationGroups = [
   {
     label: "Operações",
     items: [
+      { href: "pedidos", label: "Pedidos", icon: ClipboardListIcon },
       { href: "pdv", label: "PDV", icon: MonitorSmartphoneIcon },
       { href: "comandas", label: "Comandas", icon: UsersRoundIcon },
       { href: "mesas", label: "Mesas", icon: LayoutGridIcon },
-      { href: "pedidos", label: "Pedidos", icon: ClipboardListIcon },
+      { href: "kds", label: "Cozinha (KDS)", icon: ConciergeBellIcon },
       { href: "entregas", label: "Entregas", icon: BikeIcon },
-      { href: "kds", label: "KDS", icon: ConciergeBellIcon },
     ],
   },
   {
-    label: "Cardápio",
+    label: "Cardápio & Estoque",
     items: [
-      { href: "cardapio", label: "Cardápio", icon: LayoutGridIcon },
+      { href: "cardapio", label: "Cardápio", icon: UtensilsCrossedIcon },
       { href: "estoque", label: "Estoque", icon: BoxesIcon },
       { href: "estoque/compras", label: "Compras", icon: ShoppingCartIcon },
     ],
   },
   {
-    label: "Backoffice",
+    label: "Financeiro & Métricas",
     items: [
-      { href: "financeiro", label: "Financeiro", icon: BarChart3Icon },
+      { href: "financeiro", label: "Financeiro", icon: CircleDollarSignIcon },
       { href: "relatorios", label: "Relatórios", icon: BarChart3Icon },
     ],
   },
   {
-    label: "Fidelização",
+    label: "Marketing & Clientes",
     items: [
-      { href: "cupons", label: "Cupons", icon: TagIcon },
-      { href: "cashback", label: "Cashback", icon: CircleDollarSignIcon },
-      { href: "frete", label: "Frete", icon: TruckIcon },
-    ],
-  },
-  {
-    label: "CRM & Marketing",
-    items: [
-      { href: "crm", label: "Clientes (CRM)", icon: Users2Icon },
+      { href: "crm", label: "Clientes (CRM)", icon: HeartHandshakeIcon },
       { href: "campanhas", label: "Campanhas", icon: MegaphoneIcon },
-      { href: "marketing", label: "Marketing", icon: BarChart2Icon },
+      { href: "cupons", label: "Cupons", icon: TagIcon },
+      { href: "cashback", label: "Cashback", icon: CoinsIcon },
+      { href: "frete", label: "Frete Grátis", icon: GiftIcon },
     ],
   },
   {
-    label: "Configurar",
+    label: "Configurações",
     items: [
-      { href: "logistica", label: "Logística", icon: TruckIcon },
-      { href: "ai", label: "IA", icon: SparklesIcon },
+      { href: "configuracoes", label: "Geral", icon: StoreIcon },
+      { href: "logistica", label: "Logística & Motoboys", icon: TruckIcon },
+      { href: "configuracoes/usuarios", label: "Equipe & Acessos", icon: Users2Icon },
       { href: "whatsapp", label: "WhatsApp", icon: MessageSquareIcon },
-      { href: "configuracoes", label: "Configurações", icon: StoreIcon },
-      { href: "configuracoes/usuarios", label: "Usuários", icon: Users2Icon },
-      { href: "suporte", label: "Suporte", icon: HeadphonesIcon },
+      { href: "ai", label: "IA", icon: SparklesIcon },
+      { href: "marketing", label: "Pixels & Rastreamento", icon: TargetIcon },
     ],
   },
 ];
@@ -126,23 +125,38 @@ const AdminSidebar = ({
   currentCompanyId,
   userRole,
   userName,
+  children,
 }: AdminSidebarProps) => {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // No celular, inicia oculto para não ocupar a tela pequena
+  // Inicializa preferência e no celular inicia recolhido
   useEffect(() => {
-    if (typeof window !== "undefined" && window.innerWidth < 768) {
-      setIsCollapsed(true);
+    if (typeof window !== "undefined") {
+      if (window.innerWidth < 768) {
+        setIsCollapsed(true);
+      } else {
+        const saved = localStorage.getItem("admin_sidebar_collapsed");
+        if (saved !== null) {
+          setIsCollapsed(saved === "true");
+        }
+      }
     }
   }, []);
 
-  // Ao navegar em uma rota no celular, oculta a sidebar automaticamente
+  // Ao navegar em uma rota no celular, fecha a sidebar automaticamente
   useEffect(() => {
     if (typeof window !== "undefined" && window.innerWidth < 768) {
       setIsCollapsed(true);
     }
   }, [pathname]);
+
+  const setCollapsed = (collapsed: boolean) => {
+    setIsCollapsed(collapsed);
+    if (typeof window !== "undefined" && window.innerWidth >= 768) {
+      localStorage.setItem("admin_sidebar_collapsed", String(collapsed));
+    }
+  };
 
   const activeGroups =
     userRole === "KITCHEN"
@@ -152,160 +166,160 @@ const AdminSidebar = ({
         : navigationGroups;
 
   return (
-    <>
-      {/* Backdrop para fechar ao tocar fora no celular */}
+    <div className="flex h-screen w-full overflow-hidden bg-slate-50">
+      {/* Backdrop para fechar ao tocar fora no celular quando aberto */}
       {!isCollapsed && (
         <div
-          onClick={() => setIsCollapsed(true)}
+          onClick={() => setCollapsed(true)}
           className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity md:hidden"
           aria-hidden="true"
         />
       )}
 
-      {/* Botão flutuante para reexibir a sidebar no celular quando estiver totalmente ocultada */}
+      {/* Botão no topo para reabrir a sidebar quando estiver recolhida */}
       {isCollapsed && (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setIsCollapsed(false)}
-          className="fixed left-3 top-2.5 z-50 flex h-8 w-8 items-center justify-center rounded-xl border border-white/20 bg-slate-900/95 text-white shadow-md backdrop-blur transition-transform active:scale-95 hover:bg-slate-800 hover:text-white md:hidden"
-          title="Exibir menu"
+        <button
+          type="button"
+          onClick={() => setCollapsed(false)}
+          className="fixed left-3 top-3 z-40 flex items-center gap-2 rounded-xl border border-slate-700/60 bg-slate-950/95 px-3 py-2 text-xs font-semibold text-white shadow-xl backdrop-blur-md transition-all duration-200 hover:bg-slate-900 hover:border-slate-500 hover:shadow-2xl active:scale-95 group"
+          title="Abrir menu lateral"
         >
-          <ChevronRightIcon size={16} />
-        </Button>
+          <MenuIcon size={16} className="text-slate-300 transition-colors group-hover:text-white" />
+          <span className="tracking-wide">Menu</span>
+        </button>
       )}
 
+      {/* Barra lateral */}
       <aside
         className={cn(
           "flex h-screen shrink-0 flex-col bg-slate-950 text-white transition-all duration-300 ease-in-out",
-          // Mobile: fixo em tela cheia na lateral, acima do conteúdo
+          // Mobile: Drawer fixo acima do conteúdo
           "max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-50 max-md:shadow-2xl",
           // Desktop: posicionado no fluxo normal
-          "md:relative md:z-auto",
+          "md:relative md:z-30",
           isCollapsed
-            ? "max-md:-translate-x-full max-md:w-0 md:translate-x-0 md:w-16"
-            : "max-md:translate-x-0 max-md:w-[240px] md:w-[220px]",
+            ? "max-md:-translate-x-full max-md:w-0 md:w-0 md:-translate-x-full md:overflow-hidden md:opacity-0 pointer-events-none"
+            : "max-md:translate-x-0 max-md:w-[250px] md:w-[240px]",
         )}
       >
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className={cn(
-            "absolute -right-3 top-10 z-50 h-6 w-6 rounded-full border border-white/20 bg-slate-900 text-white hover:bg-slate-800 hover:text-white shadow-md",
-            isCollapsed && "max-md:hidden",
-          )}
-          title={isCollapsed ? "Expandir menu" : "Recolher menu"}
-        >
-          {isCollapsed ? (
-            <ChevronRightIcon size={12} />
-          ) : (
-            <ChevronLeftIcon size={12} />
-          )}
-        </Button>
-
-        <CompanySwitcher
-          companies={companies}
-          currentCompanyId={currentCompanyId}
-          isCollapsed={isCollapsed}
-        />
-
-      <nav className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden p-2 no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-        {activeGroups.map((group, groupIndex) => (
-          <div
-            key={group.label}
-            className={cn("flex flex-col gap-0.5", groupIndex > 0 && "mt-3")}
+        {/* Cabeçalho da Sidebar com Seletor e Botão de Recolher */}
+        <div className="relative flex items-center">
+          <div className="min-w-0 flex-1 pr-9">
+            <CompanySwitcher
+              companies={companies}
+              currentCompanyId={currentCompanyId}
+              isCollapsed={false}
+            />
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setCollapsed(true)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-lg text-slate-400 hover:bg-white/10 hover:text-white"
+            title="Recolher menu lateral"
           >
-            {!isCollapsed && (
-              <p className="mb-0.5 px-2 text-[10px] font-medium uppercase tracking-widest text-slate-600">
+            <PanelLeftCloseIcon size={18} />
+          </Button>
+        </div>
+
+        {/* Links de navegação agrupados */}
+        <nav className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden p-2 no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          {activeGroups.map((group, groupIndex) => (
+            <div
+              key={group.label}
+              className={cn("flex flex-col gap-0.5", groupIndex > 0 && "mt-3")}
+            >
+              <p className="mb-0.5 px-2 text-[10px] font-medium uppercase tracking-widest text-slate-500">
                 {group.label}
               </p>
-            )}
-            {group.items.map((item) => {
-              const href = `/${item.href}`;
-              const isActive = pathname === href;
-              const Icon = item.icon;
+              {group.items.map((item) => {
+                const href = `/${item.href}`;
+                const isActive =
+                  pathname === href ||
+                  (item.href !== "configuracoes" &&
+                    item.href !== "estoque" &&
+                    pathname.startsWith(`${href}/`));
+                const Icon = item.icon;
 
-              return (
-                <Link
-                  key={item.href}
-                  href={href}
-                  title={isCollapsed ? item.label : undefined}
-                  className={cn(
-                    "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors duration-150",
-                    isActive
-                      ? "bg-white font-medium text-slate-950"
-                      : "text-slate-400 hover:bg-white/5 hover:text-slate-100",
-                    isCollapsed && "justify-center",
-                  )}
-                >
-                  <Icon size={15} className="shrink-0" />
-                  {!isCollapsed && <span>{item.label}</span>}
-                </Link>
-              );
-            })}
-          </div>
-        ))}
-      </nav>
+                return (
+                  <Link
+                    key={item.href}
+                    href={href}
+                    className={cn(
+                      "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors duration-150",
+                      isActive
+                        ? "bg-white font-medium text-slate-950"
+                        : "text-slate-400 hover:bg-white/5 hover:text-slate-100",
+                    )}
+                  >
+                    <Icon size={15} className="shrink-0" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
 
-      <div className="shrink-0 border-t border-white/10 p-2">
-        {/* User identification badge */}
-        {userName && (
-          <div
-            className={cn(
-              "mb-2 rounded-md bg-white/5 p-2 text-xs",
-              isCollapsed && "px-1 text-center",
-            )}
-          >
-            <p className="truncate font-medium text-white">{userName}</p>
-            <span className="text-[10px] font-semibold text-amber-400">
-              {userRole === "KITCHEN"
-                ? "Cozinha / KDS"
-                : userRole === "WAITER"
-                  ? "Comandas / Garçom"
-                  : userRole === "COURIER"
-                    ? "Entregador"
-                    : "Administrador"}
-            </span>
-          </div>
-        )}
-
-        <div className={cn("flex flex-col gap-1", isCollapsed && "items-center")}>
-          {userRole !== "KITCHEN" && (
-            <Link
-              href="/suporte"
-              title={isCollapsed ? "Central de Suporte" : undefined}
-              className={cn(
-                "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors duration-150",
-                pathname === "/suporte"
-                  ? "bg-white font-medium text-slate-950"
-                  : "text-slate-400 hover:bg-white/5 hover:text-slate-100",
-                isCollapsed && "justify-center",
-              )}
-            >
-              <HeadphonesIcon size={15} className="shrink-0" />
-              {!isCollapsed && <span>Suporte</span>}
-            </Link>
+        {/* Rodapé da Sidebar */}
+        <div className="shrink-0 border-t border-white/10 p-2">
+          {userName && (
+            <div className="mb-2 rounded-md bg-white/5 p-2 text-xs">
+              <p className="truncate font-medium text-white">{userName}</p>
+              <span className="text-[10px] font-semibold text-amber-400">
+                {userRole === "KITCHEN"
+                  ? "Cozinha / KDS"
+                  : userRole === "WAITER"
+                    ? "Comandas / Garçom"
+                    : userRole === "COURIER"
+                      ? "Entregador"
+                      : "Administrador"}
+              </span>
+            </div>
           )}
 
-          <form action={logoutAction}>
-            <button
-              type="submit"
-              title={isCollapsed ? "Sair" : undefined}
-              className={cn(
-                "flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-slate-400 transition-colors hover:bg-white/5 hover:text-red-400",
-                isCollapsed && "justify-center",
-              )}
-            >
-              <LogOutIcon size={15} className="shrink-0" />
-              {!isCollapsed && <span>Sair</span>}
-            </button>
-          </form>
+          <div className="flex flex-col gap-1">
+            {userRole !== "KITCHEN" && (
+              <Link
+                href="/suporte"
+                className={cn(
+                  "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors duration-150",
+                  pathname === "/suporte" || pathname.startsWith("/suporte/")
+                    ? "bg-white font-medium text-slate-950"
+                    : "text-slate-400 hover:bg-white/5 hover:text-slate-100",
+                )}
+              >
+                <HeadphonesIcon size={15} className="shrink-0" />
+                <span>Suporte</span>
+              </Link>
+            )}
+
+            <form action={logoutAction}>
+              <button
+                type="submit"
+                className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-slate-400 transition-colors hover:bg-white/5 hover:text-red-400"
+              >
+                <LogOutIcon size={15} className="shrink-0" />
+                <span>Sair</span>
+              </button>
+            </form>
+          </div>
         </div>
-      </div>
-    </aside>
-  </>
-);
+      </aside>
+
+      {/* Conteúdo Principal */}
+      {children && (
+        <main
+          className={cn(
+            "flex-1 overflow-y-auto p-3 transition-all duration-300 md:p-4 lg:p-5",
+            isCollapsed ? "pt-14 md:pt-14" : "pt-12 md:pt-4",
+          )}
+        >
+          {children}
+        </main>
+      )}
+    </div>
+  );
 };
 
 export default AdminSidebar;

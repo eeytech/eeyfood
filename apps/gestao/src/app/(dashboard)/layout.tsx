@@ -49,20 +49,17 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
   const restaurantName = restaurant?.name ?? "Meu Restaurante";
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
-      <AdminSidebar
-        slug={slug}
-        restaurantName={restaurantName}
-        companies={[]}
-        currentCompanyId={restaurant?.id ?? ""}
-        userPermissions={{}}
-        userRole={session.role}
-        userName={session.name}
-        userEmail={session.email}
-      />
-      <main className="flex-1 overflow-y-auto p-3 pt-12 md:p-4 lg:p-5 md:pt-4">
-        <div className="mx-auto max-w-[1600px]">{children}</div>
-      </main>
-    </div>
+    <AdminSidebar
+      slug={slug}
+      restaurantName={restaurantName}
+      companies={[]}
+      currentCompanyId={restaurant?.id ?? ""}
+      userPermissions={{}}
+      userRole={session.role}
+      userName={session.name}
+      userEmail={session.email}
+    >
+      <div className="mx-auto max-w-[1600px]">{children}</div>
+    </AdminSidebar>
   );
 }
