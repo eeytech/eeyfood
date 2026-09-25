@@ -35,6 +35,15 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
     );
   }
 
+  // Perfil de Comandas / Garçom opera em tela cheia como um aplicativo dedicado (mobile/tablet/terminal)
+  if (session.role === "WAITER") {
+    return (
+      <div className="min-h-screen w-screen overflow-x-hidden bg-slate-100 text-slate-900">
+        {children}
+      </div>
+    );
+  }
+
   const restaurant = await buscarRestauranteUnico();
   const slug = restaurant?.slug ?? "";
   const restaurantName = restaurant?.name ?? "Meu Restaurante";

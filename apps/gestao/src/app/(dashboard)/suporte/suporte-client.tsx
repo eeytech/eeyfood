@@ -11,6 +11,7 @@ import {
   ChevronsRightIcon,
   CircleDollarSignIcon,
   ClockIcon,
+  CopyIcon,
   ExternalLinkIcon,
   FilterXIcon,
   HeadphonesIcon,
@@ -27,6 +28,7 @@ import {
   SearchIcon,
   SendIcon,
   SparklesIcon,
+  Trash2Icon,
   UserIcon,
   XIcon,
 } from "lucide-react";
@@ -75,6 +77,7 @@ import {
   adicionarMensagemChamadoAction,
   atualizarStatusChamadoAction,
   criarChamadoAction,
+  excluirChamadoAction,
 } from "./suporte-actions";
 import type {
   SupportTicket,
@@ -88,20 +91,19 @@ interface SuporteClientProps {
   initialTickets: SupportTicket[];
 }
 
-const STATUS_CONFIG: Record<
-  TicketStatus,
-  {
-    label: string;
-    badgeClass: string;
-    icon: React.ComponentType<{ className?: string; size?: number }>;
-    description: string;
-  }
-> = {
+interface StatusConfig {
+  label: string;
+  badgeClass: string;
+  icon: React.ComponentType<{ className?: string; size?: number }>;
+  description: string;
+}
+
+const STATUS_CONFIG: Record<TicketStatus, StatusConfig> = {
   OPEN: {
     label: "Aberto",
-    badgeClass: "bg-blue-50 text-blue-700 border-blue-200/80 hover:bg-blue-100",
+    badgeClass: "bg-blue-50 text-blue-800 border-blue-200/80 hover:bg-blue-100",
     icon: AlertCircleIcon,
-    description: "Aguardando primeiro retorno da equipe de suporte",
+    description: "Aguardando primeiro retorno da equipe técnica",
   },
   IN_PROGRESS: {
     label: "Em Análise",
@@ -129,50 +131,99 @@ const STATUS_CONFIG: Record<
   },
 };
 
-const PRIORITY_CONFIG: Record<
-  TicketPriority,
-  {
-    label: string;
-    badgeClass: string;
-    dotClass: string;
-  }
-> = {
+interface PriorityConfig {
+  label: string;
+  badgeClass: string;
+  dotClass: string;
+  description: string;
+}
+
+const PRIORITY_CONFIG: Record<TicketPriority, PriorityConfig> = {
   LOW: {
     label: "Baixa",
     badgeClass: "bg-slate-50 text-slate-700 border-slate-200",
     dotClass: "bg-slate-400",
+    description: "Dúvidas gerais, melhorias ou pequenos ajustes",
   },
   NORMAL: {
     label: "Média",
     badgeClass: "bg-blue-50 text-blue-700 border-blue-200",
     dotClass: "bg-blue-500",
+    description: "Impacto moderado que não impede a operação",
   },
   HIGH: {
     label: "Alta",
-    badgeClass: "bg-orange-50 text-orange-700 border-orange-200",
+    badgeClass: "bg-orange-50 text-orange-800 border-orange-200",
     dotClass: "bg-orange-500",
+    description: "Dificulta pedidos, entregas ou rotinas fiscais",
   },
   URGENT: {
     label: "Urgente",
-    badgeClass: "bg-rose-50 text-rose-700 border-rose-200 animate-pulse",
+    badgeClass: "bg-rose-50 text-rose-800 border-rose-200",
     dotClass: "bg-rose-600",
+    description: "Operação parada, caixa travado ou PDV fora do ar",
   },
 };
 
-const CATEGORY_CONFIG: Record<
-  TicketCategory,
-  {
-    label: string;
-    icon: React.ComponentType<{ className?: string; size?: number }>;
-  }
-> = {
-  PDV_CAIXA: { label: "PDV & Caixa", icon: MonitorSmartphoneIcon },
-  KDS_COZINHA: { label: "Cozinha & KDS", icon: ChefHatIcon },
-  CARDAPIO_ESTOQUE: { label: "Cardápio & Estoque", icon: BoxesIcon },
-  IMPRESSAO_HARDWARE: { label: "Impressoras & Balança", icon: PrinterIcon },
-  FINANCEIRO_FISCAL: { label: "Financeiro & Fiscal (NFC-e)", icon: CircleDollarSignIcon },
-  INTEGRACOES: { label: "Integrações (iFood, WhatsApp)", icon: SparklesIcon },
-  OUTRO: { label: "Dúvidas Gerais / Outro", icon: HelpCircleIcon },
+interface CategoryConfig {
+  label: string;
+  shortLabel: string;
+  icon: React.ComponentType<{ className?: string; size?: number }>;
+  description: string;
+}
+
+const CATEGORY_CONFIG: Record<TicketCategory, CategoryConfig> = {
+  PDV_CAIXA: {
+    label: "PDV & Caixa",
+    shortLabel: "PDV & Caixa",
+    icon: MonitorSmartphoneIcon,
+    description: "Abertura, fechamento, vendas e recebimentos no balcão",
+  },
+  KDS_COZINHA: {
+    label: "Cozinha & KDS",
+    shortLabel: "Cozinha (KDS)",
+    icon: ChefHatIcon,
+    description: "Painel de produção, tempos de preparo e despacho de pratos",
+  },
+  CARDAPIO_ESTOQUE: {
+    label: "Cardápio & Estoque",
+    shortLabel: "Cardápio/Estoque",
+    icon: BoxesIcon,
+    description: "Categorias, itens, adicionais, fichas técnicas e insumos",
+  },
+  IMPRESSAO_HARDWARE: {
+    label: "Impressoras & Balança",
+    shortLabel: "Impressão",
+    icon: PrinterIcon,
+    description: "Impressoras térmicas de cupom, Web Serial e periféricos",
+  },
+  FINANCEIRO_FISCAL: {
+    label: "Financeiro & Fiscal (NFC-e)",
+    shortLabel: "Fiscal (NFC-e)",
+    icon: CircleDollarSignIcon,
+    description: "Emissão de NFC-e/NF-e, contingência SEFAZ e contas bancárias",
+  },
+  INTEGRACOES: {
+    label: "Integrações (iFood, WhatsApp)",
+    shortLabel: "Integrações",
+    icon: SparklesIcon,
+    description: "iFood, bot de WhatsApp, notificações e sincronizações",
+  },
+  OUTRO: {
+    label: "Dúvidas Gerais / Outro",
+    shortLabel: "Geral",
+    icon: HelpCircleIcon,
+    description: "Orientações gerais, cadastros e suporte operacional",
+  },
+};
+
+const getInitials = (name: string): string => {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 0 || !parts[0]) return "U";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  const first = parts[0][0] ?? "";
+  const last = parts[parts.length - 1]?.[0] ?? "";
+  return `${first}${last}`.toUpperCase();
 };
 
 const formatDate = (dateStr: string): string => {
@@ -181,6 +232,7 @@ const formatDate = (dateStr: string): string => {
     return new Intl.DateTimeFormat("pt-BR", {
       day: "2-digit",
       month: "short",
+      year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
     }).format(d);
@@ -195,12 +247,12 @@ const FAQS = [
     a: "Acesse Cardápio > Setores de Produção, vincule as categorias desejadas ao setor da cozinha e ative a impressão contínua via Web Serial no navegador do PDV.",
   },
   {
-    q: "O que fazer se a emissão de NFC-e ficar indisponível?",
-    a: "Caso a SEFAZ do seu estado oscile, o sistema entra em contingência offline automaticamente e retransmite as notas fiscais assim que a conexão for restabelecida.",
+    q: "O que fazer se a emissão de NFC-e ficar temporariamente indisponível?",
+    a: "Caso a SEFAZ do seu estado oscile, o sistema entra em contingência offline de forma automática e retransmite as notas fiscais assim que a conexão for reestabelecida.",
   },
   {
-    q: "Como pausar temporariamente os pedidos no cardápio online?",
-    a: "Em Configurações > Horários de Funcionamento, você pode marcar a loja como pausada ou definir um tempo de espera estendido para entrega.",
+    q: "Como pausar ou definir horários de funcionamento do cardápio online?",
+    a: "Em Configurações > Horários de Funcionamento, você pode marcar a loja como temporariamente pausada ou definir um tempo estendido para o preparo e entrega.",
   },
 ];
 
@@ -210,40 +262,56 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
 
   // Dialogs
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  const [deletingTicket, setDeletingTicket] = useState<SupportTicket | null>(null);
 
   // Form states
-  const [category, setCategory] = useState<TicketCategory>("PDV_CAIXA");
-  const [priority, setPriority] = useState<TicketPriority>("NORMAL");
+  const [createTitle, setCreateTitle] = useState("");
+  const [createCategory, setCreateCategory] = useState<TicketCategory>("PDV_CAIXA");
+  const [createPriority, setCreatePriority] = useState<TicketPriority>("NORMAL");
+  const [createUserPhone, setCreateUserPhone] = useState("");
+  const [createDescription, setCreateDescription] = useState("");
   const [replyMessage, setReplyMessage] = useState("");
 
-  // Filters
+  // Filters and search
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [priorityFilter, setPriorityFilter] = useState<string>("ALL");
+
+  // Pagination (matching usuarios-client pattern)
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(10);
 
   // Filtered tickets
   const filteredTickets = useMemo(() => {
     return tickets.filter((t) => {
+      // Search term
       if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
+        const query = searchQuery.toLowerCase().trim();
         const matchesProtocol = t.protocol.toLowerCase().includes(query);
         const matchesTitle = t.title.toLowerCase().includes(query);
         const matchesDesc = t.description.toLowerCase().includes(query);
         const matchesUser = t.userName.toLowerCase().includes(query);
-        if (!matchesProtocol && !matchesTitle && !matchesDesc && !matchesUser) {
+        const matchesEmail = t.userEmail.toLowerCase().includes(query);
+        if (
+          !matchesProtocol &&
+          !matchesTitle &&
+          !matchesDesc &&
+          !matchesUser &&
+          !matchesEmail
+        ) {
           return false;
         }
       }
 
+      // Category filter
       if (categoryFilter !== "ALL" && t.category !== categoryFilter) {
         return false;
       }
 
+      // Status filter
       if (statusFilter !== "ALL") {
         if (statusFilter === "ACTIVE") {
           if (t.status === "RESOLVED" || t.status === "CLOSED") return false;
@@ -252,6 +320,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
         }
       }
 
+      // Priority filter
       if (priorityFilter !== "ALL" && t.priority !== priorityFilter) {
         return false;
       }
@@ -260,24 +329,33 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
     });
   }, [tickets, searchQuery, categoryFilter, statusFilter, priorityFilter]);
 
-  // Pagination
-  const totalPages = Math.ceil(filteredTickets.length / pageSize) || 1;
-  const paginatedTickets = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredTickets.slice(start, start + pageSize);
-  }, [filteredTickets, currentPage, pageSize]);
-
-  // Metrics
+  // Metric stats
   const totalCount = tickets.length;
   const inProgressCount = tickets.filter(
-    (t) => t.status === "OPEN" || t.status === "IN_PROGRESS" || t.status === "WAITING_CUSTOMER",
+    (t) =>
+      t.status === "OPEN" ||
+      t.status === "IN_PROGRESS" ||
+      t.status === "WAITING_CUSTOMER",
   ).length;
   const resolvedCount = tickets.filter(
     (t) => t.status === "RESOLVED" || t.status === "CLOSED",
   ).length;
+  const urgentCount = tickets.filter(
+    (t) =>
+      t.priority === "URGENT" &&
+      t.status !== "RESOLVED" &&
+      t.status !== "CLOSED",
+  ).length;
+
+  // Pagination slice
+  const totalPages = Math.max(1, Math.ceil(filteredTickets.length / pageSize));
+  const validCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (validCurrentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedTickets = filteredTickets.slice(startIndex, endIndex);
 
   const isFiltering =
-    Boolean(searchQuery.trim()) ||
+    searchQuery.trim() !== "" ||
     categoryFilter !== "ALL" ||
     statusFilter !== "ALL" ||
     priorityFilter !== "ALL";
@@ -290,40 +368,56 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
     setCurrentPage(1);
   };
 
-  // Actions
-  const handleCreateTicket = (e: React.FormEvent<HTMLFormElement>) => {
+  // Handlers
+  const handleOpenCreate = () => {
+    setCreateError(null);
+    setCreateTitle("");
+    setCreateCategory("PDV_CAIXA");
+    setCreatePriority("NORMAL");
+    setCreateUserPhone("");
+    setCreateDescription("");
+    setIsCreateOpen(true);
+  };
+
+  const handleCreateSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setCreateError(null);
-    const formData = new FormData(e.currentTarget);
-    formData.set("category", category);
-    formData.set("priority", priority);
+
+    const formData = new FormData();
+    formData.set("title", createTitle);
+    formData.set("description", createDescription);
+    formData.set("category", createCategory);
+    formData.set("priority", createPriority);
+    if (createUserPhone.trim()) {
+      formData.set("userPhone", createUserPhone.trim());
+    }
     formData.set("restaurantSlug", slug);
 
     startTransition(async () => {
-      const res = await criarChamadoAction(null, formData);
-      if (res.error) {
-        setCreateError(res.error);
-        toast.error(res.error);
+      const result = await criarChamadoAction(null, formData);
+
+      if (result.error) {
+        setCreateError(result.error);
+        toast.error(result.error);
         return;
       }
 
-      const title = formData.get("title")?.toString() || "";
-      const description = formData.get("description")?.toString() || "";
-      const userPhone = formData.get("userPhone")?.toString() || "";
+      // Optimistic addition
       const randomNum = Math.floor(10000 + Math.random() * 90000);
+      const newProtocol = `#SUP-${randomNum}`;
       const now = new Date().toISOString();
 
       const optimisticTicket: SupportTicket = {
-        id: res.ticketId || `tkt-${Date.now()}`,
-        protocol: `#SUP-${randomNum}`,
-        title,
-        description,
-        category,
-        priority,
+        id: result.ticketId || `tkt-${Date.now()}`,
+        protocol: newProtocol,
+        title: createTitle,
+        description: createDescription,
+        category: createCategory,
+        priority: createPriority,
         status: "OPEN",
         userName: "Administrador",
         userEmail: "contato@restaurante.com",
-        userPhone,
+        userPhone: createUserPhone.trim() || undefined,
         restaurantSlug: slug,
         createdAt: now,
         updatedAt: now,
@@ -332,7 +426,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
             id: `msg-${Date.now()}`,
             sender: "USER",
             senderName: "Administrador",
-            content: description,
+            content: createDescription,
             createdAt: now,
           },
         ],
@@ -340,48 +434,45 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
 
       setTickets((prev) => [optimisticTicket, ...prev]);
       setIsCreateOpen(false);
-      toast.success("Chamado aberto com sucesso! Nossa equipe entrará em contato em breve.");
+      toast.success("Novo chamado de suporte cadastrado com sucesso!");
     });
   };
 
   const handleUpdateStatus = (ticketId: string, newStatus: TicketStatus) => {
     startTransition(async () => {
-      const res = await atualizarStatusChamadoAction(ticketId, newStatus);
-      if (!res.success) {
-        toast.error(res.error || "Não foi possível atualizar o status.");
+      const result = await atualizarStatusChamadoAction(ticketId, newStatus);
+      if (!result.success) {
+        toast.error(result.error || "Não foi possível atualizar o chamado.");
         return;
       }
 
+      const now = new Date().toISOString();
       setTickets((prev) =>
         prev.map((t) =>
-          t.id === ticketId
-            ? { ...t, status: newStatus, updatedAt: new Date().toISOString() }
-            : t,
+          t.id === ticketId ? { ...t, status: newStatus, updatedAt: now } : t,
         ),
       );
 
-      if (selectedTicket?.id === ticketId) {
-        setSelectedTicket((prev) =>
-          prev
-            ? { ...prev, status: newStatus, updatedAt: new Date().toISOString() }
-            : null,
-        );
-      }
+      setSelectedTicket((prev) =>
+        prev && prev.id === ticketId
+          ? { ...prev, status: newStatus, updatedAt: now }
+          : prev,
+      );
 
-      toast.success(`Status atualizado para "${STATUS_CONFIG[newStatus].label}"`);
+      const statusLabel = STATUS_CONFIG[newStatus]?.label || newStatus;
+      toast.success(`Status do chamado alterado para "${statusLabel}".`);
     });
   };
 
   const handleSendReply = () => {
     if (!selectedTicket || !replyMessage.trim()) return;
-
-    const messageText = replyMessage.trim();
-    setReplyMessage("");
+    const content = replyMessage.trim();
+    const ticketId = selectedTicket.id;
 
     startTransition(async () => {
-      const res = await adicionarMensagemChamadoAction(selectedTicket.id, messageText);
-      if (!res.success) {
-        toast.error(res.error || "Erro ao enviar resposta.");
+      const result = await adicionarMensagemChamadoAction(ticketId, content);
+      if (!result.success) {
+        toast.error(result.error || "Não foi possível enviar a resposta.");
         return;
       }
 
@@ -390,17 +481,20 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
         id: `msg-${Date.now()}`,
         sender: "USER" as const,
         senderName: selectedTicket.userName || "Administrador",
-        content: messageText,
+        content,
         createdAt: now,
       };
 
       setTickets((prev) =>
         prev.map((t) => {
-          if (t.id === selectedTicket.id) {
+          if (t.id === ticketId) {
             return {
               ...t,
               updatedAt: now,
-              status: t.status === "RESOLVED" || t.status === "CLOSED" ? "IN_PROGRESS" : t.status,
+              status:
+                t.status === "RESOLVED" || t.status === "CLOSED"
+                  ? "IN_PROGRESS"
+                  : t.status,
               messages: [...t.messages, newMessage],
             };
           }
@@ -413,14 +507,43 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
           ? {
               ...prev,
               updatedAt: now,
-              status: prev.status === "RESOLVED" || prev.status === "CLOSED" ? "IN_PROGRESS" : prev.status,
+              status:
+                prev.status === "RESOLVED" || prev.status === "CLOSED"
+                  ? "IN_PROGRESS"
+                  : prev.status,
               messages: [...prev.messages, newMessage],
             }
           : null,
       );
 
+      setReplyMessage("");
       toast.success("Mensagem enviada com sucesso!");
     });
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!deletingTicket) return;
+    const ticketId = deletingTicket.id;
+
+    startTransition(async () => {
+      const result = await excluirChamadoAction(ticketId, slug);
+      if (!result.success) {
+        toast.error(result.error || "Não foi possível excluir o chamado.");
+        return;
+      }
+
+      setTickets((prev) => prev.filter((t) => t.id !== ticketId));
+      if (selectedTicket?.id === ticketId) {
+        setSelectedTicket(null);
+      }
+      setDeletingTicket(null);
+      toast.success(`Chamado ${deletingTicket.protocol} removido com sucesso.`);
+    });
+  };
+
+  const handleCopyProtocol = (protocol: string) => {
+    navigator.clipboard.writeText(protocol);
+    toast.success(`Protocolo ${protocol} copiado para a área de transferência!`);
   };
 
   return (
@@ -436,7 +559,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
               Central de Suporte & Ajuda
             </h1>
             <p className="text-sm text-slate-500">
-              Abra chamados, acompanhe solicitações técnicas e tire dúvidas diretamente com nossa equipe.
+              Acompanhe solicitações técnicas, tire dúvidas operacionais e abra chamados com atendimento ágil.
             </p>
           </div>
         </div>
@@ -448,7 +571,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
             className="h-10 gap-2 rounded-full border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
           >
             <a
-              href="https://wa.me/5511999999999?text=Olá!%20Preciso%20de%20ajuda%20com%20o%20sistema%20EeyFood"
+              href="https://wa.me/5511999999999?text=Ol%C3%A1!%20Preciso%20de%20ajuda%20com%20o%20sistema%20EeyFood"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -459,10 +582,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
           </Button>
 
           <Button
-            onClick={() => {
-              setCreateError(null);
-              setIsCreateOpen(true);
-            }}
+            onClick={handleOpenCreate}
             className="h-10 gap-2 rounded-full bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
           >
             <PlusIcon size={16} />
@@ -473,77 +593,85 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
 
       {/* ── Metric Cards ────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+        {/* Card 1: Total */}
         <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Total de Chamados
               </span>
-              <div className="rounded-lg bg-slate-100 p-1.5 text-slate-700 shrink-0">
+              <div className="rounded-lg bg-slate-100 p-1.5 text-slate-700">
                 <LifeBuoyIcon size={16} />
               </div>
             </div>
             <p className="mt-2 font-display text-2xl font-bold text-slate-900">
               {totalCount}
             </p>
-            <p className="mt-0.5 text-xs text-slate-500 truncate">
-              Histórico de solicitações
+            <p className="mt-0.5 text-xs text-slate-500">
+              {inProgressCount} pendente{inProgressCount !== 1 ? "s" : ""} de retorno
             </p>
           </CardContent>
         </Card>
 
+        {/* Card 2: Em Atendimento */}
         <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">
-                Em Andamento
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Em Atendimento
               </span>
-              <div className="rounded-lg bg-amber-100 p-1.5 text-amber-700 shrink-0">
+              <div className="rounded-lg bg-amber-100 p-1.5 text-amber-700">
                 <ClockIcon size={16} />
               </div>
             </div>
             <p className="mt-2 font-display text-2xl font-bold text-amber-700">
               {inProgressCount}
             </p>
-            <p className="mt-0.5 text-xs text-slate-500 truncate">
-              {inProgressCount === 0 ? "Nenhum pendente" : "Em análise técnica"}
+            <p className="mt-0.5 text-xs text-slate-500">
+              {urgentCount > 0
+                ? `${urgentCount} de prioridade urgente`
+                : "Abertos e em análise técnica"}
             </p>
           </CardContent>
         </Card>
 
+        {/* Card 3: Resolvidos */}
         <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Resolvidos
               </span>
-              <div className="rounded-lg bg-emerald-100 p-1.5 text-emerald-700 shrink-0">
+              <div className="rounded-lg bg-emerald-100 p-1.5 text-emerald-700">
                 <CheckCircle2Icon size={16} />
               </div>
             </div>
             <p className="mt-2 font-display text-2xl font-bold text-emerald-700">
               {resolvedCount}
             </p>
-            <p className="mt-0.5 text-xs text-slate-500 truncate">
-              Casos solucionados
+            <p className="mt-0.5 text-xs text-slate-500">
+              {totalCount > 0
+                ? `${Math.round((resolvedCount / totalCount) * 100)}% de taxa de resolução`
+                : "Nenhum histórico"}
             </p>
           </CardContent>
         </Card>
 
+        {/* Card 4: SLA */}
         <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">
-                Tempo de Resposta
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Tempo Médio (SLA)
               </span>
-              <div className="rounded-lg bg-blue-100 p-1.5 text-blue-700 shrink-0">
+              <div className="rounded-lg bg-blue-100 p-1.5 text-blue-700">
                 <SparklesIcon size={16} />
               </div>
             </div>
             <p className="mt-2 font-display text-2xl font-bold text-blue-700">
               ~15 min
             </p>
-            <p className="mt-0.5 text-xs text-slate-500 truncate">
+            <p className="mt-0.5 text-xs text-slate-500">
               Atendimento priorizado
             </p>
           </CardContent>
@@ -561,7 +689,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                 className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
               />
               <Input
-                placeholder="Buscar por protocolo, título ou palavra-chave..."
+                placeholder="Buscar por protocolo, assunto, solicitante ou mensagem..."
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
@@ -582,7 +710,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
 
             {/* Selects: Categoria, Status e Prioridade */}
             <div className="flex flex-wrap items-center gap-2">
-              <div className="w-full sm:w-44">
+              <div className="w-full sm:w-48">
                 <Select
                   value={categoryFilter}
                   onValueChange={(val) => {
@@ -598,7 +726,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                     <SelectItem value="PDV_CAIXA">PDV & Caixa</SelectItem>
                     <SelectItem value="KDS_COZINHA">Cozinha & KDS</SelectItem>
                     <SelectItem value="CARDAPIO_ESTOQUE">Cardápio & Estoque</SelectItem>
-                    <SelectItem value="IMPRESSAO_HARDWARE">Impressoras</SelectItem>
+                    <SelectItem value="IMPRESSAO_HARDWARE">Impressoras & Balança</SelectItem>
                     <SelectItem value="FINANCEIRO_FISCAL">Fiscal (NFC-e)</SelectItem>
                     <SelectItem value="INTEGRACOES">Integrações</SelectItem>
                     <SelectItem value="OUTRO">Dúvidas Gerais</SelectItem>
@@ -694,8 +822,8 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
             </h3>
             <p className="mt-1 max-w-sm text-xs text-slate-500">
               {isFiltering
-                ? "Tente ajustar os termos da busca ou limpar os filtros para ver outros chamados."
-                : "Você não possui nenhum chamado de suporte aberto no momento. Tudo funcionando perfeitamente!"}
+                ? "Tente ajustar os termos da busca ou limpar os filtros selecionados para ver outros chamados."
+                : "Você não possui nenhum chamado de suporte em aberto no momento. Tudo funcionando perfeitamente!"}
             </p>
             {isFiltering ? (
               <Button
@@ -710,11 +838,11 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
             ) : (
               <Button
                 size="sm"
-                onClick={() => setIsCreateOpen(true)}
+                onClick={handleOpenCreate}
                 className="mt-4 gap-1.5 rounded-full bg-slate-900 text-xs font-semibold text-white hover:bg-slate-800"
               >
                 <PlusIcon size={14} />
-                Abrir chamado agora
+                Cadastrar primeiro chamado
               </Button>
             )}
           </div>
@@ -725,8 +853,11 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
               <Table>
                 <TableHeader className="bg-slate-50/80">
                   <TableRow className="border-b border-slate-200">
-                    <TableHead className="w-[340px] text-xs font-semibold text-slate-700">
+                    <TableHead className="w-[320px] text-xs font-semibold text-slate-700">
                       Protocolo & Assunto
+                    </TableHead>
+                    <TableHead className="w-[220px] text-xs font-semibold text-slate-700">
+                      Solicitante
                     </TableHead>
                     <TableHead className="text-xs font-semibold text-slate-700">
                       Módulo / Categoria
@@ -763,29 +894,47 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                         <TableCell className="py-3.5">
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
-                              <span className="font-mono text-xs font-semibold text-slate-700">
+                              <span className="font-mono text-xs font-bold text-slate-800">
                                 {t.protocol}
                               </span>
                               <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">
                                 {t.messages.length} msg{t.messages.length !== 1 ? "s" : ""}
                               </span>
                             </div>
-                            <p className="truncate text-sm font-semibold text-slate-900 max-w-[320px]">
+                            <p className="max-w-[300px] truncate text-sm font-semibold text-slate-900">
                               {t.title}
                             </p>
-                            <p className="line-clamp-1 text-xs text-slate-500 max-w-[320px]">
+                            <p className="max-w-[300px] line-clamp-1 text-xs text-slate-500">
                               {t.description}
                             </p>
                           </div>
                         </TableCell>
 
-                        {/* Categoria */}
+                        {/* Solicitante (Avatar & Info matching usuarios-client) */}
+                        <TableCell className="py-3.5">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 font-display text-xs font-bold text-slate-700">
+                              {getInitials(t.userName)}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold text-slate-900">
+                                {t.userName}
+                              </p>
+                              <p className="flex items-center gap-1 truncate text-xs text-slate-500">
+                                <MailIcon size={12} className="shrink-0 text-slate-400" />
+                                {t.userEmail}
+                              </p>
+                            </div>
+                          </div>
+                        </TableCell>
+
+                        {/* Módulo / Categoria */}
                         <TableCell className="py-3.5">
                           <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
                             <div className="rounded-lg bg-slate-100 p-1.5 text-slate-600">
                               <CategoryIcon size={14} />
                             </div>
-                            <span>{categoryInfo.label}</span>
+                            <span>{categoryInfo.shortLabel}</span>
                           </div>
                         </TableCell>
 
@@ -797,7 +946,12 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                               priorityInfo.badgeClass,
                             )}
                           >
-                            <span className={cn("h-1.5 w-1.5 rounded-full", priorityInfo.dotClass)} />
+                            <span
+                              className={cn(
+                                "h-1.5 w-1.5 rounded-full",
+                                priorityInfo.dotClass,
+                              )}
+                            />
                             {priorityInfo.label}
                           </span>
                         </TableCell>
@@ -805,7 +959,9 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                         {/* Data */}
                         <TableCell className="py-3.5">
                           <div className="text-xs text-slate-600">
-                            <p className="font-medium text-slate-900">{formatDate(t.createdAt)}</p>
+                            <p className="font-medium text-slate-900">
+                              {formatDate(t.createdAt)}
+                            </p>
                             <p className="text-[11px] text-slate-400">
                               Atualizado: {formatDate(t.updatedAt)}
                             </p>
@@ -835,45 +991,64 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                                className="h-8 w-8 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"
                               >
                                 <MoreHorizontalIcon size={16} />
+                                <span className="sr-only">Opções</span>
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent
                               align="end"
-                              className="w-48 rounded-xl border-slate-200 bg-white p-1 shadow-lg"
+                              className="w-52 rounded-xl border-slate-200 bg-white p-1 text-slate-900 shadow-xl"
                             >
-                              <DropdownMenuLabel className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                                Opções do chamado
+                              <DropdownMenuLabel className="px-2.5 py-1.5 text-xs font-semibold text-slate-500">
+                                Opções do Chamado
                               </DropdownMenuLabel>
                               <DropdownMenuItem
                                 onClick={() => setSelectedTicket(t)}
-                                className="gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                                className="gap-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
                               >
                                 <MessageSquareIcon size={14} className="text-blue-600" />
-                                <span>Ver detalhes & respostas</span>
+                                Ver detalhes & respostas
                               </DropdownMenuItem>
 
-                              <DropdownMenuSeparator className="my-1 bg-slate-100" />
+                              <DropdownMenuItem
+                                onClick={() => handleCopyProtocol(t.protocol)}
+                                className="gap-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
+                              >
+                                <CopyIcon size={14} className="text-slate-500" />
+                                Copiar protocolo
+                              </DropdownMenuItem>
+
+                              <DropdownMenuSeparator className="bg-slate-100" />
 
                               {t.status !== "RESOLVED" && t.status !== "CLOSED" ? (
                                 <DropdownMenuItem
                                   onClick={() => handleUpdateStatus(t.id, "RESOLVED")}
-                                  className="gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
+                                  className="gap-2 rounded-lg text-xs font-medium text-emerald-700 hover:bg-emerald-50 focus:bg-emerald-50"
                                 >
                                   <CheckCircle2Icon size={14} />
-                                  <span>Marcar como Resolvido</span>
+                                  Marcar como Resolvido
                                 </DropdownMenuItem>
                               ) : (
                                 <DropdownMenuItem
                                   onClick={() => handleUpdateStatus(t.id, "IN_PROGRESS")}
-                                  className="gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-amber-700 hover:bg-amber-50"
+                                  className="gap-2 rounded-lg text-xs font-medium text-amber-700 hover:bg-amber-50 focus:bg-amber-50"
                                 >
                                   <ClockIcon size={14} />
-                                  <span>Reabrir Chamado</span>
+                                  Reabrir Chamado
                                 </DropdownMenuItem>
                               )}
+
+                              <DropdownMenuSeparator className="bg-slate-100" />
+
+                              <DropdownMenuItem
+                                onClick={() => setDeletingTicket(t)}
+                                className="gap-2 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-700"
+                              >
+                                <Trash2Icon size={14} />
+                                Excluir chamado
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -884,7 +1059,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
               </Table>
             </div>
 
-            {/* Mobile Cards View */}
+            {/* Mobile Cards View (matching usuarios-client mobile cards) */}
             <div className="divide-y divide-slate-100 sm:hidden">
               {paginatedTickets.map((t) => {
                 const statusInfo = STATUS_CONFIG[t.status];
@@ -897,104 +1072,190 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                   <div
                     key={t.id}
                     onClick={() => setSelectedTicket(t)}
-                    className="p-4 space-y-3 cursor-pointer transition-colors active:bg-slate-50"
+                    className="cursor-pointer space-y-3 p-4 transition-colors active:bg-slate-50"
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="space-y-0.5">
-                        <span className="font-mono text-xs font-semibold text-slate-600">
-                          {t.protocol}
-                        </span>
-                        <h4 className="text-sm font-semibold text-slate-900 line-clamp-1">
-                          {t.title}
-                        </h4>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 font-display text-xs font-bold text-slate-700">
+                          {getInitials(t.userName)}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-xs font-bold text-slate-800">
+                              {t.protocol}
+                            </span>
+                            <span className="rounded bg-slate-100 px-1.5 py-0.2 text-[10px] font-medium text-slate-600">
+                              {t.messages.length} msg{t.messages.length !== 1 ? "s" : ""}
+                            </span>
+                          </div>
+                          <p className="truncate text-sm font-semibold text-slate-900">
+                            {t.title}
+                          </p>
+                        </div>
                       </div>
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium shrink-0",
-                          statusInfo.badgeClass,
-                        )}
-                      >
-                        <StatusIcon size={11} />
-                        {statusInfo.label}
-                      </span>
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-900"
+                          >
+                            <MoreHorizontalIcon size={16} />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="end"
+                          className="w-48 rounded-xl border-slate-200 bg-white p-1 text-slate-900 shadow-xl"
+                        >
+                          <DropdownMenuItem
+                            onClick={() => setSelectedTicket(t)}
+                            className="gap-2 rounded-lg text-xs font-medium text-slate-700"
+                          >
+                            <MessageSquareIcon size={14} />
+                            Ver detalhes
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleCopyProtocol(t.protocol)}
+                            className="gap-2 rounded-lg text-xs font-medium text-slate-700"
+                          >
+                            <CopyIcon size={14} />
+                            Copiar protocolo
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator className="bg-slate-100" />
+                          <DropdownMenuItem
+                            onClick={() => setDeletingTicket(t)}
+                            className="gap-2 rounded-lg text-xs font-medium text-red-600"
+                          >
+                            <Trash2Icon size={14} />
+                            Excluir chamado
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
 
-                    <p className="text-xs text-slate-500 line-clamp-2">
+                    <p className="line-clamp-2 text-xs text-slate-500">
                       {t.description}
                     </p>
 
-                    <div className="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-50">
-                      <span className="flex items-center gap-1.5 font-medium text-slate-700">
+                    <div className="flex items-center justify-between pt-1">
+                      <div className="flex items-center gap-1.5 text-xs text-slate-600">
                         <CategoryIcon size={13} className="text-slate-500" />
-                        {categoryInfo.label}
-                      </span>
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium",
-                          priorityInfo.badgeClass,
-                        )}
-                      >
-                        <span className={cn("h-1 w-1 rounded-full", priorityInfo.dotClass)} />
-                        {priorityInfo.label}
-                      </span>
+                        <span>{categoryInfo.shortLabel}</span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium",
+                            priorityInfo.badgeClass,
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "h-1 w-1 rounded-full",
+                              priorityInfo.dotClass,
+                            )}
+                          />
+                          {priorityInfo.label}
+                        </span>
+
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium",
+                            statusInfo.badgeClass,
+                          )}
+                        >
+                          <StatusIcon size={11} />
+                          {statusInfo.label}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            {/* Pagination footer */}
-            <div className="flex flex-col items-center justify-between gap-3 border-t border-slate-100 bg-white px-4 py-3 sm:flex-row">
-              <span className="text-xs text-slate-500">
-                Página{" "}
-                <strong className="font-semibold text-slate-900">
-                  {currentPage}
-                </strong>{" "}
-                de {totalPages}
-              </span>
-
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setCurrentPage(1)}
-                  disabled={currentPage <= 1}
-                  className="h-8 w-8 rounded-lg border-slate-200 text-slate-600 hover:bg-slate-100"
+            {/* ── Pagination Controls (identical to usuarios-client) ── */}
+            <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              {/* Items per page selector */}
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <span>Exibir</span>
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(val) => {
+                    setPageSize(Number(val));
+                    setCurrentPage(1);
+                  }}
                 >
-                  <ChevronsLeftIcon size={14} />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage <= 1}
-                  className="h-8 w-8 rounded-lg border-slate-200 text-slate-600 hover:bg-slate-100"
-                >
-                  <ChevronLeftIcon size={14} />
-                </Button>
+                  <SelectTrigger className="h-8 w-16 rounded-lg border-slate-200 bg-white text-xs font-medium text-slate-700">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-lg border-slate-200 bg-white">
+                    <SelectItem value="5">5</SelectItem>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span>chamados por página</span>
+              </div>
 
-                <div className="px-2 text-xs font-semibold text-slate-700">
-                  {currentPage} / {totalPages}
+              {/* Page numbers & navigations */}
+              <div className="flex items-center justify-between gap-2 sm:justify-end">
+                <span className="text-xs text-slate-500">
+                  Página{" "}
+                  <strong className="font-semibold text-slate-900">
+                    {validCurrentPage}
+                  </strong>{" "}
+                  de{" "}
+                  <strong className="font-semibold text-slate-900">
+                    {totalPages}
+                  </strong>
+                </span>
+
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    disabled={validCurrentPage <= 1}
+                    onClick={() => setCurrentPage(1)}
+                    className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                    title="Primeira página"
+                  >
+                    <ChevronsLeftIcon size={14} />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    disabled={validCurrentPage <= 1}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                    title="Página anterior"
+                  >
+                    <ChevronLeftIcon size={14} />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    disabled={validCurrentPage >= totalPages}
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                    title="Próxima página"
+                  >
+                    <ChevronRightIcon size={14} />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    disabled={validCurrentPage >= totalPages}
+                    onClick={() => setCurrentPage(totalPages)}
+                    className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                    title="Última página"
+                  >
+                    <ChevronsRightIcon size={14} />
+                  </Button>
                 </div>
-
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage >= totalPages}
-                  className="h-8 w-8 rounded-lg border-slate-200 text-slate-600 hover:bg-slate-100"
-                >
-                  <ChevronRightIcon size={14} />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setCurrentPage(totalPages)}
-                  disabled={currentPage >= totalPages}
-                  className="h-8 w-8 rounded-lg border-slate-200 text-slate-600 hover:bg-slate-100"
-                >
-                  <ChevronsRightIcon size={14} />
-                </Button>
               </div>
             </div>
           </>
@@ -1004,16 +1265,16 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
       {/* ── FAQ & Knowledge Base Card ────────────────────── */}
       <Card className="border-slate-200/80 bg-white shadow-sm">
         <CardContent className="p-5">
-          <div className="flex items-center gap-2 mb-4">
+          <div className="mb-4 flex items-center gap-2">
             <div className="rounded-lg bg-blue-50 p-2 text-blue-700">
               <HelpCircleIcon size={18} />
             </div>
             <div>
               <h3 className="font-display text-base font-semibold text-slate-900">
-                Perguntas Frequentes (FAQ)
+                Perguntas Frequentes & Autoatendimento
               </h3>
               <p className="text-xs text-slate-500">
-                Respostas rápidas para as dúvidas mais comuns do dia a dia no restaurante.
+                Respostas rápidas e orientações passo a passo para as dúvidas mais comuns do restaurante.
               </p>
             </div>
           </div>
@@ -1024,10 +1285,10 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                 key={index}
                 className="rounded-xl border border-slate-100 bg-slate-50/60 p-4 transition-colors hover:bg-slate-50"
               >
-                <h4 className="text-xs font-semibold text-slate-900 leading-snug">
+                <h4 className="text-xs font-semibold leading-snug text-slate-900">
                   {faq.q}
                 </h4>
-                <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">
+                <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
                   {faq.a}
                 </p>
               </div>
@@ -1036,138 +1297,194 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
         </CardContent>
       </Card>
 
-      {/* ── Modal: Novo Chamado ──────────────────────────── */}
+      {/* ── Dialog: Cadastrar Novo Chamado (matching usuarios-client) ─────────────── */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="max-w-xl rounded-2xl border-slate-200 bg-white p-6 shadow-2xl">
+        <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-xl">
           <DialogHeader>
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-white">
-                <HeadphonesIcon size={18} />
+            <div className="flex items-center gap-2">
+              <div className="rounded-xl bg-slate-100 p-2 text-slate-900">
+                <HeadphonesIcon size={20} />
               </div>
               <div>
                 <DialogTitle className="font-display text-lg font-bold text-slate-900">
-                  Abrir Novo Chamado de Suporte
+                  Cadastrar Novo Chamado
                 </DialogTitle>
                 <DialogDescription className="text-xs text-slate-500">
-                  Preencha os detalhes da sua dúvida ou incidente. Nossa equipe técnica responderá prontamente.
+                  Preencha as informações para registrar sua solicitação técnica ou dúvida.
                 </DialogDescription>
               </div>
             </div>
           </DialogHeader>
 
-          <form onSubmit={handleCreateTicket} className="space-y-4 pt-2">
+          <form onSubmit={handleCreateSubmit} className="space-y-4 pt-2">
             {createError && (
-              <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
-                <AlertCircleIcon size={16} className="shrink-0" />
+              <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+                <AlertCircleIcon size={16} className="mt-0.5 shrink-0" />
                 <span>{createError}</span>
               </div>
             )}
 
             <div className="space-y-1.5">
-              <Label htmlFor="ticket-title" className="text-xs font-semibold text-slate-700">
+              <Label htmlFor="create-title" className="text-xs font-semibold text-slate-700">
                 Título ou Resumo do Chamado *
               </Label>
               <Input
-                id="ticket-title"
-                name="title"
-                placeholder="Ex: Impressora térmica travando no fechamento de pedidos"
+                id="create-title"
                 required
                 maxLength={120}
-                className="h-10 rounded-xl border-slate-200 text-sm focus:border-slate-900"
+                value={createTitle}
+                onChange={(e) => setCreateTitle(e.target.value)}
+                placeholder="Ex.: Impressora térmica travando no fechamento de pedidos"
+                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400"
               />
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {/* Rich Select for Category (matching Role Select pattern in usuarios-client) */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-700">
+                <Label htmlFor="create-category" className="text-xs font-semibold text-slate-700">
                   Módulo / Categoria *
                 </Label>
-                <Select value={category} onValueChange={(val) => setCategory(val as TicketCategory)}>
-                  <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs font-medium text-slate-700">
+                <Select
+                  value={createCategory}
+                  onValueChange={(val) => setCreateCategory(val as TicketCategory)}
+                >
+                  <SelectTrigger
+                    id="create-category"
+                    className="h-11 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-slate-400"
+                  >
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
-                    <SelectItem value="PDV_CAIXA">PDV & Caixa</SelectItem>
-                    <SelectItem value="KDS_COZINHA">Cozinha & KDS</SelectItem>
-                    <SelectItem value="CARDAPIO_ESTOQUE">Cardápio & Estoque</SelectItem>
-                    <SelectItem value="IMPRESSAO_HARDWARE">Impressoras & Balança</SelectItem>
-                    <SelectItem value="FINANCEIRO_FISCAL">Fiscal (NFC-e)</SelectItem>
-                    <SelectItem value="INTEGRACOES">Integrações (iFood, WhatsApp)</SelectItem>
-                    <SelectItem value="OUTRO">Dúvidas Gerais</SelectItem>
+                  <SelectContent className="max-h-80 rounded-xl border-slate-200 bg-white shadow-xl">
+                    {Object.entries(CATEGORY_CONFIG).map(([catKey, config]) => {
+                      const CatIcon = config.icon;
+                      return (
+                        <SelectItem
+                          key={catKey}
+                          value={catKey}
+                          className="cursor-pointer py-2.5 focus:bg-slate-50"
+                        >
+                          <div className="flex items-start gap-2.5">
+                            <CatIcon size={16} className="mt-0.5 text-slate-600" />
+                            <div>
+                              <p className="font-semibold leading-tight text-slate-900">
+                                {config.label}
+                              </p>
+                              <p className="mt-0.5 text-[11px] leading-tight text-slate-500">
+                                {config.description}
+                              </p>
+                            </div>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
 
+              {/* Rich Select for Priority */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-700">
+                <Label htmlFor="create-priority" className="text-xs font-semibold text-slate-700">
                   Nível de Prioridade *
                 </Label>
-                <Select value={priority} onValueChange={(val) => setPriority(val as TicketPriority)}>
-                  <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs font-medium text-slate-700">
+                <Select
+                  value={createPriority}
+                  onValueChange={(val) => setCreatePriority(val as TicketPriority)}
+                >
+                  <SelectTrigger
+                    id="create-priority"
+                    className="h-11 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-slate-400"
+                  >
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
-                    <SelectItem value="LOW">Baixa (Dúvidas ou sugestões)</SelectItem>
-                    <SelectItem value="NORMAL">Média (Impacto não impeditivo)</SelectItem>
-                    <SelectItem value="HIGH">Alta (Dificulta a operação)</SelectItem>
-                    <SelectItem value="URGENT">Urgente (Operação parada / Caixa travado)</SelectItem>
+                  <SelectContent className="max-h-80 rounded-xl border-slate-200 bg-white shadow-xl">
+                    {Object.entries(PRIORITY_CONFIG).map(([prioKey, config]) => {
+                      return (
+                        <SelectItem
+                          key={prioKey}
+                          value={prioKey}
+                          className="cursor-pointer py-2.5 focus:bg-slate-50"
+                        >
+                          <div className="flex items-start gap-2.5">
+                            <span
+                              className={cn(
+                                "mt-1.5 h-2 w-2 rounded-full shrink-0",
+                                config.dotClass,
+                              )}
+                            />
+                            <div>
+                              <p className="font-semibold leading-tight text-slate-900">
+                                {config.label}
+                              </p>
+                              <p className="mt-0.5 text-[11px] leading-tight text-slate-500">
+                                {config.description}
+                              </p>
+                            </div>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="ticket-phone" className="text-xs font-semibold text-slate-700">
+              <Label htmlFor="create-phone" className="text-xs font-semibold text-slate-700">
                 WhatsApp ou Celular para Contato
               </Label>
               <Input
-                id="ticket-phone"
-                name="userPhone"
-                placeholder="(00) 00000-0000"
-                className="h-10 rounded-xl border-slate-200 text-sm focus:border-slate-900"
+                id="create-phone"
+                value={createUserPhone}
+                onChange={(e) => setCreateUserPhone(e.target.value)}
+                placeholder="Ex.: (11) 98765-4321"
+                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400"
               />
               <p className="text-[11px] text-slate-400">
-                Se preenchido, podemos retornar diretamente via WhatsApp para maior agilidade.
+                Se informado, nosso time técnico poderá retornar diretamente pelo WhatsApp para maior agilidade.
               </p>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="ticket-desc" className="text-xs font-semibold text-slate-700">
+              <Label htmlFor="create-desc" className="text-xs font-semibold text-slate-700">
                 Descrição Detalhada do Ocorrido *
               </Label>
               <Textarea
-                id="ticket-desc"
-                name="description"
-                placeholder="Descreva o que aconteceu, quais passos reproduzem o problema e qualquer mensagem de erro exibida na tela..."
+                id="create-desc"
                 required
                 rows={4}
-                className="rounded-xl border-slate-200 text-sm resize-none focus:border-slate-900"
+                value={createDescription}
+                onChange={(e) => setCreateDescription(e.target.value)}
+                placeholder="Descreva o que aconteceu, quais passos reproduzem a situação e qualquer mensagem de erro exibida na tela..."
+                className="resize-none rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400"
               />
             </div>
 
-            <DialogFooter className="gap-2 pt-2 sm:justify-end">
+            <DialogFooter className="gap-2 pt-2">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setIsCreateOpen(false)}
-                className="rounded-full border-slate-200 text-xs font-semibold text-slate-600"
+                className="rounded-full border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-100"
               >
                 Cancelar
               </Button>
               <Button
                 type="submit"
                 disabled={isPending}
-                className="gap-2 rounded-full bg-slate-900 px-6 text-xs font-semibold text-white hover:bg-slate-800"
+                className="rounded-full bg-slate-900 px-5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
               >
-                {isPending && <LoaderCircleIcon size={14} className="animate-spin" />}
-                <span>Enviar Chamado</span>
+                {isPending && (
+                  <LoaderCircleIcon size={14} className="mr-1.5 animate-spin" />
+                )}
+                {isPending ? "Cadastrando..." : "Cadastrar Chamado"}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* ── Modal: Detalhes do Chamado & Mensagens ─────────── */}
+      {/* ── Dialog: Detalhes & Timeline do Chamado ─────────── */}
       <Dialog
         open={Boolean(selectedTicket)}
         onOpenChange={(open) => !open && setSelectedTicket(null)}
@@ -1177,9 +1494,9 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
             <>
               <DialogHeader>
                 <div className="flex items-start justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-bold text-slate-700">
+                  <div className="space-y-1.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-xs font-bold text-slate-800">
                         {selectedTicket.protocol}
                       </span>
                       <span
@@ -1199,57 +1516,106 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                         {PRIORITY_CONFIG[selectedTicket.priority].label}
                       </span>
                     </div>
+
                     <DialogTitle className="font-display text-lg font-bold text-slate-900">
                       {selectedTicket.title}
                     </DialogTitle>
+
                     <p className="text-xs text-slate-500">
-                      Aberto por {selectedTicket.userName} • {formatDate(selectedTicket.createdAt)}
+                      Aberto por{" "}
+                      <strong className="font-medium text-slate-800">
+                        {selectedTicket.userName}
+                      </strong>{" "}
+                      ({selectedTicket.userEmail}) • {formatDate(selectedTicket.createdAt)}
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    {selectedTicket.status !== "RESOLVED" && selectedTicket.status !== "CLOSED" ? (
+                  <div className="flex shrink-0 items-center gap-2">
+                    {selectedTicket.status !== "RESOLVED" &&
+                    selectedTicket.status !== "CLOSED" ? (
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleUpdateStatus(selectedTicket.id, "RESOLVED")}
+                        onClick={() =>
+                          handleUpdateStatus(selectedTicket.id, "RESOLVED")
+                        }
                         disabled={isPending}
                         className="gap-1.5 rounded-full border-emerald-200 bg-emerald-50 text-xs font-semibold text-emerald-800 hover:bg-emerald-100"
                       >
                         <CheckCircle2Icon size={14} />
-                        <span>Marcar como Resolvido</span>
+                        <span>Marcar Resolvido</span>
                       </Button>
                     ) : (
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleUpdateStatus(selectedTicket.id, "IN_PROGRESS")}
+                        onClick={() =>
+                          handleUpdateStatus(selectedTicket.id, "IN_PROGRESS")
+                        }
                         disabled={isPending}
                         className="gap-1.5 rounded-full border-amber-200 bg-amber-50 text-xs font-semibold text-amber-800 hover:bg-amber-100"
                       >
                         <ClockIcon size={14} />
-                        <span>Reabrir Chamado</span>
+                        <span>Reabrir</span>
                       </Button>
                     )}
                   </div>
                 </div>
               </DialogHeader>
 
+              {/* Ticket Metadata Overview */}
+              <div className="my-2 grid grid-cols-2 gap-2 rounded-xl border border-slate-100 bg-slate-50/70 p-3 sm:grid-cols-4">
+                <div>
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
+                    Módulo
+                  </span>
+                  <p className="mt-0.5 text-xs font-semibold text-slate-800">
+                    {CATEGORY_CONFIG[selectedTicket.category]?.label}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
+                    Telefone / Whats
+                  </span>
+                  <p className="mt-0.5 text-xs font-semibold text-slate-800">
+                    {selectedTicket.userPhone || "Não informado"}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
+                    Aberto em
+                  </span>
+                  <p className="mt-0.5 text-xs font-semibold text-slate-800">
+                    {formatDate(selectedTicket.createdAt)}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
+                    Última Atualização
+                  </span>
+                  <p className="mt-0.5 text-xs font-semibold text-slate-800">
+                    {formatDate(selectedTicket.updatedAt)}
+                  </p>
+                </div>
+              </div>
+
               {/* Chat & Messages Timeline */}
-              <div className="mt-4 space-y-3">
-                <div className="flex items-center justify-between text-xs text-slate-500 border-b border-slate-100 pb-2">
-                  <span className="font-semibold text-slate-700">Histórico de Mensagens</span>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2 text-xs text-slate-500">
+                  <span className="font-semibold text-slate-700">
+                    Linha do Tempo & Respostas
+                  </span>
                   <span>{selectedTicket.messages.length} iten(s)</span>
                 </div>
 
-                <div className="max-h-[320px] overflow-y-auto space-y-3 pr-1">
+                <div className="max-h-[280px] space-y-3 overflow-y-auto pr-1">
                   {selectedTicket.messages.map((msg) => {
                     const isSupport = msg.sender === "SUPPORT";
                     return (
                       <div
                         key={msg.id}
                         className={cn(
-                          "rounded-2xl p-4 text-xs leading-relaxed space-y-1.5",
+                          "space-y-1.5 rounded-2xl p-4 text-xs leading-relaxed",
                           isSupport
                             ? "border border-blue-100 bg-blue-50/70 text-slate-900"
                             : "border border-slate-200 bg-slate-50 text-slate-900",
@@ -1259,8 +1625,13 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                           <span className="flex items-center gap-1.5">
                             {isSupport ? (
                               <>
-                                <HeadphonesIcon size={13} className="text-blue-700" />
-                                <span className="text-blue-900">{msg.senderName}</span>
+                                <HeadphonesIcon
+                                  size={13}
+                                  className="text-blue-700"
+                                />
+                                <span className="text-blue-900">
+                                  {msg.senderName}
+                                </span>
                               </>
                             ) : (
                               <>
@@ -1273,7 +1644,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                             {formatDate(msg.createdAt)}
                           </span>
                         </div>
-                        <p className="whitespace-pre-wrap text-slate-700 text-[13px]">
+                        <p className="whitespace-pre-wrap text-[13px] text-slate-700">
                           {msg.content}
                         </p>
                       </div>
@@ -1299,7 +1670,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                     <Button
                       onClick={handleSendReply}
                       disabled={isPending || !replyMessage.trim()}
-                      className="h-10 gap-1.5 rounded-xl bg-slate-900 px-4 text-xs font-semibold text-white hover:bg-slate-800 shrink-0"
+                      className="h-10 shrink-0 gap-1.5 rounded-xl bg-slate-900 px-4 text-xs font-semibold text-white hover:bg-slate-800"
                     >
                       <SendIcon size={13} />
                       <span>Responder</span>
@@ -1308,17 +1679,88 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                 </div>
               </div>
 
-              <DialogFooter className="pt-3 border-t border-slate-100 sm:justify-end">
+              <DialogFooter className="border-t border-slate-100 pt-3 sm:justify-between">
+                <Button
+                  asChild
+                  variant="ghost"
+                  className="gap-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+                >
+                  <a
+                    href={`https://wa.me/5511999999999?text=Ol%C3%A1!%20Gostaria%20de%20falar%20sobre%20o%20chamado%20${encodeURIComponent(selectedTicket.protocol)}%20(${encodeURIComponent(selectedTicket.title)})`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <PhoneIcon size={13} />
+                    <span>Falar no WhatsApp sobre este protocolo</span>
+                  </a>
+                </Button>
+
                 <Button
                   variant="outline"
                   onClick={() => setSelectedTicket(null)}
-                  className="rounded-full border-slate-200 text-xs font-semibold text-slate-600"
+                  className="rounded-full border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-100"
                 >
                   Fechar Visualização
                 </Button>
               </DialogFooter>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Excluir Chamado (matching usuarios-client delete dialog) ─────────────── */}
+      <Dialog
+        open={Boolean(deletingTicket)}
+        onOpenChange={(open) => {
+          if (!open) setDeletingTicket(null);
+        }}
+      >
+        <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <div className="rounded-xl bg-red-100 p-2 text-red-600">
+                <Trash2Icon size={20} />
+              </div>
+              <div>
+                <DialogTitle className="font-display text-lg font-bold text-slate-900">
+                  Excluir Chamado
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500">
+                  Esta ação removerá o histórico desta solicitação de suporte.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <p className="text-sm text-slate-600">
+            Tem certeza de que deseja remover permanentemente o chamado{" "}
+            <strong className="text-slate-900">
+              {deletingTicket?.protocol} — "{deletingTicket?.title}"
+            </strong>
+            ?
+          </p>
+
+          <DialogFooter className="gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeletingTicket(null)}
+              className="rounded-full border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-100"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              disabled={isPending}
+              onClick={handleDeleteConfirm}
+              className="rounded-full bg-red-600 px-5 text-xs font-semibold text-white shadow-sm hover:bg-red-700 disabled:opacity-50"
+            >
+              {isPending && (
+                <LoaderCircleIcon size={14} className="mr-1.5 animate-spin" />
+              )}
+              {isPending ? "Excluindo..." : "Excluir Chamado"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

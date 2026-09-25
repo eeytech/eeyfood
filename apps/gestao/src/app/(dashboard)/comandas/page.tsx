@@ -11,17 +11,27 @@ import {
   listarReservasGestao,
 } from "@/lib/admin-queries";
 
+import { getSession } from "@/lib/auth/session";
+
 export const dynamic = "force-dynamic";
 
 interface ComandasPageProps {
-  params: Promise<{ slug: string }>;
+  params?: Promise<{ slug?: string }>;
 }
 
 const ComandasPage = async ({ params }: ComandasPageProps) => {
-  const { slug } = await params;
-  const [restaurant, cardapio, mesas, , reservations, queue, avulsas] =
+  const resolvedParams = params ? await params : undefined;
+  const restaurant = await buscarRestauranteParaGestao(resolvedParams?.slug);
+
+  if (!restaurant) {
+    return notFound();
+  }
+
+  const slug = restaurant.slug;
+  const session = await getSession();
+
+  const [cardapio, mesas, , reservations, queue, avulsas] =
     await Promise.all([
-      buscarRestauranteParaGestao(slug),
       buscarCardapioGestao(slug),
       listarMesasComandasGestao(slug),
       listarGarconsGestao(slug),
@@ -30,7 +40,7 @@ const ComandasPage = async ({ params }: ComandasPageProps) => {
       listarComandasAvulsasGestao(slug),
     ]);
 
-  if (!restaurant || !cardapio) {
+  if (!cardapio) {
     return notFound();
   }
 
@@ -52,6 +62,9 @@ const ComandasPage = async ({ params }: ComandasPageProps) => {
       initialReservations={reservations}
       initialQueue={queue}
       initialComandasAvulsas={avulsas}
+      userName={session?.name}
+      userRole={session?.role}
+      isDedicatedMode={session?.role === "WAITER"}
     />
   );
 };

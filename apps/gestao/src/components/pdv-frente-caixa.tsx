@@ -3,17 +3,27 @@
 import type { CashRegisterShift } from "@fsw/db";
 import {
   BanknoteIcon,
+  CheckCircle2Icon,
+  ChefHatIcon,
   CircleAlertIcon,
+  ClockIcon,
   CreditCardIcon,
   InfoIcon,
+  LoaderCircleIcon,
   MinusIcon,
-  PrinterIcon,
+  MonitorSmartphoneIcon,
   PlusIcon,
+  PrinterIcon,
   QrCodeIcon,
+  RotateCcwIcon,
   ScaleIcon,
   SearchIcon,
   ShoppingCartIcon,
+  SparklesIcon,
   TagIcon,
+  Trash2Icon,
+  UserIcon,
+  UtensilsCrossedIcon,
   WalletIcon,
   WifiOffIcon,
   XIcon,
@@ -27,21 +37,24 @@ import {
   useState,
   useTransition,
 } from "react";
+import { toast } from "sonner";
 
-import { abrirTurnoCaixa, buscarPedidoPdvParaImpressao, buscarSaldoCashbackPdv, fecharTurnoCaixa, finalizarVendaPdv, registrarMovimentacaoCaixa, validarCupomPdv } from "@/app/(dashboard)/pdv/actions";
+import {
+  abrirTurnoCaixa,
+  buscarPedidoPdvParaImpressao,
+  buscarProdutoComOpcoesPdv,
+  buscarSaldoCashbackPdv,
+  fecharTurnoCaixa,
+  finalizarVendaPdv,
+  registrarMovimentacaoCaixa,
+  validarCupomPdv,
+} from "@/app/(dashboard)/pdv/actions";
 import type { FinalizarVendaPdvInput } from "@/app/(dashboard)/pdv/actions";
 import { useCashDrawer } from "@/hooks/use-cash-drawer";
 import { useWebSerial } from "@/hooks/use-web-serial";
 import type { ScaleProtocol } from "@/hooks/use-web-serial";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -52,29 +65,54 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface PdvProduct {
+export interface PdvCategory {
+  id: string;
+  name: string;
+  isPizzaCategory: boolean;
+}
+
+export interface PdvProduct {
   id: string;
   name: string;
   description: string;
   price: number;
+  imageUrl?: string;
+  categoryId: string;
   categoryName: string;
+  isPizzaCategory: boolean;
   isActive: boolean;
   trackInventory: boolean;
   stockQuantity: number;
   sku?: string;
 }
 
-interface CartItem {
+export interface CartItemOption {
   id: string;
   name: string;
   price: number;
-  quantity: number; // may be decimal for weight-based items (e.g. 0.450 kg)
-  isWeighed?: boolean; // true for items added via scale capture
+}
+
+export interface CartItem {
+  id: string;
+  productId: string;
+  name: string;
+  price: number; // Unit price including fraction & options
+  quantity: number;
+  isWeighed?: boolean;
+  selectedOptionIds?: string[];
+  selectedOptionNames?: string[];
+  notes?: string;
+  isPizza?: boolean;
+  fraction?: "inteira" | "meio-a-meio";
+  flavor1Name?: string;
+  flavor2Name?: string;
+  borderName?: string;
 }
 
 type PdvPaymentMethod =
@@ -99,12 +137,27 @@ interface AppliedCoupon {
   discountAmount: number;
 }
 
+interface OptionGroupWithOptions {
+  id: string;
+  name: string;
+  minOptions: number;
+  maxOptions: number;
+  options: Array<{
+    id: string;
+    name: string;
+    price: number;
+    description?: string | null;
+  }>;
+}
+
 interface PdvFrenteCaixaProps {
   slug: string;
   restaurantName: string;
   products: PdvProduct[];
+  categories?: PdvCategory[];
   isCashbackEnabled: boolean;
   isCouponsEnabled: boolean;
+  pizzaPricingRule?: "MAX" | "AVERAGE";
   initialShift: CashRegisterShift | null;
   scaleProtocol: ScaleProtocol | null;
   scaleBaudRate: number;
@@ -134,7 +187,7 @@ const PAYMENT_LABELS: Record<PdvPaymentMethod, string> = {
   VALE_REFEICAO: "Vale Ref.",
 };
 
-// ─── IndexedDB helpers ────────────────────────────────────────────────────────
+// ─── IndexedDB helpers (Offline Queue) ────────────────────────────────────────
 
 const PDV_DB_NAME = "eeyfood_pdv_v1";
 const STORE_QUEUE = "pendingOrders";
@@ -174,7 +227,8 @@ const loadPendingOrders = async (): Promise<
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_QUEUE, "readonly");
     const req = tx.objectStore(STORE_QUEUE).getAll();
-    req.onsuccess = () => resolve(req.result as Array<FinalizarVendaPdvInput & { localId: number }>);
+    req.onsuccess = () =>
+      resolve(req.result as Array<FinalizarVendaPdvInput & { localId: number }>);
     req.onerror = () => reject(req.error);
   });
 };
@@ -195,8 +249,10 @@ const PdvFrenteCaixa = ({
   slug,
   restaurantName,
   products,
+  categories: initialCategories,
   isCashbackEnabled,
   isCouponsEnabled,
+  pizzaPricingRule = "MAX",
   initialShift,
   scaleProtocol,
   scaleBaudRate,
@@ -280,50 +336,95 @@ const PdvFrenteCaixa = ({
   const [isSyncing, setIsSyncing] = useState(false);
 
   // ── Hardware peripherals ───────────────────────────────────────────────────
-  const { status: scaleStatus, errorMessage: scaleError, captureWeight } = useWebSerial();
-  const { drawerStatus, drawerError, openDrawerUsb } = useCashDrawer();
+  const { status: scaleStatus, captureWeight } = useWebSerial();
+  const { openDrawerUsb } = useCashDrawer();
   const [capturedWeight, setCapturedWeight] = useState<number | null>(null);
+
+  // ── Modals: Pizza Builder ─────────────────────────────────────────────────
+  const [selectedPizzaProduct, setSelectedPizzaProduct] = useState<PdvProduct | null>(null);
+  const [pizzaFraction, setPizzaFraction] = useState<"inteira" | "meio-a-meio">("inteira");
+  const [pizzaFlavor2, setPizzaFlavor2] = useState<PdvProduct | null>(null);
+  const [pizzaFlavor2Search, setPizzaFlavor2Search] = useState("");
+  const [pizzaBorderOptions, setPizzaBorderOptions] = useState<Array<{ id: string; name: string; price: number }>>([]);
+  const [selectedPizzaBorder, setSelectedPizzaBorder] = useState<{ id: string; name: string; price: number } | null>(null);
+  const [pizzaNotes, setPizzaNotes] = useState("");
+  const [pizzaQuantity, setPizzaQuantity] = useState(1);
+  const [isPizzaLoading, setIsPizzaLoading] = useState(false);
+
+  // ── Modals: Product Customization / Adicionais ─────────────────────────────
+  const [customizingProduct, setCustomizingProduct] = useState<PdvProduct | null>(null);
+  const [customOptionGroups, setCustomOptionGroups] = useState<OptionGroupWithOptions[]>([]);
+  const [selectedCustomOptions, setSelectedCustomOptions] = useState<Record<string, string[]>>({});
+  const [customNotes, setCustomNotes] = useState("");
+  const [customQuantity, setCustomQuantity] = useState(1);
+  const [isCustomLoading, setIsCustomLoading] = useState(false);
 
   // ── Refs ───────────────────────────────────────────────────────────────────
   const searchInputRef = useRef<HTMLInputElement>(null);
   const barcodeBufferRef = useRef("");
   const barcodeTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  // Stable callback refs: o listener de teclado usa .current para sempre chamar a versão mais recente
-  // das funções sem precisar re-registrar o listener a cada mudança de estado.
   const handleFinishSaleRef = useRef<() => void>(() => {});
   const addProductRef = useRef<(product: PdvProduct, overrideWeight?: number) => void>(() => {});
 
-  // ── Search / filter ────────────────────────────────────────────────────────
+  // ── Categories & Filtering ─────────────────────────────────────────────────
   const deferredSearchValue = useDeferredValue(searchValue);
   const normalizedSearchValue = deferredSearchValue.trim().toLowerCase();
 
   const categories = useMemo(() => {
+    if (initialCategories && initialCategories.length > 0) {
+      return ["TODOS", ...initialCategories.map((c) => c.name)];
+    }
     const cats = Array.from(
       new Set(products.filter((p) => p.isActive).map((p) => p.categoryName)),
     ).sort();
     return ["TODOS", ...cats];
-  }, [products]);
+  }, [products, initialCategories]);
 
-  const filteredProducts = products.filter((product) => {
-    if (!product.isActive) return false;
-    if (selectedCategory !== "TODOS" && product.categoryName !== selectedCategory)
-      return false;
-    if (!normalizedSearchValue) return true;
-    return (
-      product.name.toLowerCase().includes(normalizedSearchValue) ||
-      product.categoryName.toLowerCase().includes(normalizedSearchValue) ||
-      product.description.toLowerCase().includes(normalizedSearchValue) ||
-      (product.sku?.toLowerCase().includes(normalizedSearchValue) ?? false)
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      if (!product.isActive) return false;
+      if (selectedCategory !== "TODOS" && product.categoryName !== selectedCategory) {
+        return false;
+      }
+      if (!normalizedSearchValue) return true;
+      return (
+        product.name.toLowerCase().includes(normalizedSearchValue) ||
+        product.categoryName.toLowerCase().includes(normalizedSearchValue) ||
+        product.description.toLowerCase().includes(normalizedSearchValue) ||
+        (product.sku?.toLowerCase().includes(normalizedSearchValue) ?? false)
+      );
+    });
+  }, [products, selectedCategory, normalizedSearchValue]);
+
+  // Pizzas in the same category as selectedPizzaProduct for flavor 2 selection
+  const otherPizzaFlavors = useMemo(() => {
+    if (!selectedPizzaProduct) return [];
+    return products.filter(
+      (p) =>
+        p.isActive &&
+        p.id !== selectedPizzaProduct.id &&
+        (p.isPizzaCategory || p.categoryName === selectedPizzaProduct.categoryName),
     );
-  });
+  }, [products, selectedPizzaProduct]);
+
+  const filteredOtherPizzaFlavors = useMemo(() => {
+    if (!pizzaFlavor2Search.trim()) return otherPizzaFlavors;
+    const lower = pizzaFlavor2Search.toLowerCase().trim();
+    return otherPizzaFlavors.filter(
+      (p) =>
+        p.name.toLowerCase().includes(lower) ||
+        p.description.toLowerCase().includes(lower),
+    );
+  }, [otherPizzaFlavors, pizzaFlavor2Search]);
 
   // ── Totals ─────────────────────────────────────────────────────────────────
-  // Weighed items count as 1 each for display; only regular items sum quantities
   const totalItems = cartItems.reduce(
     (acc, item) => acc + (item.isWeighed ? 1 : item.quantity),
     0,
   );
-  const cartSubtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const cartSubtotal = round2(
+    cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0),
+  );
   const couponDiscount = appliedCoupon?.discountAmount ?? 0;
   const cashbackDiscount =
     useWalletBalance && walletBalance && walletBalance > 0
@@ -340,6 +441,41 @@ const PdvFrenteCaixa = ({
   const splitTotal = round2(paymentSplits.reduce((acc, s) => acc + s.amount, 0));
   const splitRemaining = round2(finalTotal - splitTotal);
 
+  // ── Calculated price for Pizza Modal ───────────────────────────────────────
+  const computedPizzaPrice = useMemo(() => {
+    if (!selectedPizzaProduct) return 0;
+    const p1 = Number(selectedPizzaProduct.price || 0);
+    const borderCost = selectedPizzaBorder ? Number(selectedPizzaBorder.price || 0) : 0;
+
+    if (pizzaFraction === "inteira" || !pizzaFlavor2) {
+      return round2(p1 + borderCost);
+    }
+
+    const p2 = Number(pizzaFlavor2.price || 0);
+    const base =
+      pizzaPricingRule === "MAX" ? Math.max(p1, p2) : (p1 + p2) / 2;
+
+    return round2(base + borderCost);
+  }, [selectedPizzaProduct, pizzaFlavor2, pizzaFraction, selectedPizzaBorder, pizzaPricingRule]);
+
+  // ── Calculated price for Customization Modal ────────────────────────────────
+  const computedCustomPrice = useMemo(() => {
+    if (!customizingProduct) return 0;
+    let total = Number(customizingProduct.price || 0);
+
+    for (const group of customOptionGroups) {
+      const selectedIds = selectedCustomOptions[group.id] || [];
+      for (const optId of selectedIds) {
+        const found = group.options.find((o) => o.id === optId);
+        if (found) {
+          total += Number(found.price || 0);
+        }
+      }
+    }
+
+    return round2(total);
+  }, [customizingProduct, customOptionGroups, selectedCustomOptions]);
+
   // ── Effects ────────────────────────────────────────────────────────────────
 
   // Clear coupon & cashback when cart changes
@@ -349,7 +485,7 @@ const PdvFrenteCaixa = ({
     setUseWalletBalance(false);
   }, [cartItems]);
 
-  // Clear splits when total changes (to avoid stale partial payments)
+  // Clear splits when total changes
   useEffect(() => {
     setPaymentSplits([]);
     setSplitPendingAmount("");
@@ -377,28 +513,25 @@ const PdvFrenteCaixa = ({
     return () => clearTimeout(timer);
   }, [customerPhone, slug, isCashbackEnabled]);
 
-  // Sincroniza os refs a cada render para que o handler de teclado use sempre as versões atuais
+  // Sync callback refs
   useEffect(() => {
     handleFinishSaleRef.current = handleFinishSale;
-    addProductRef.current = addProduct;
+    addProductRef.current = handleProductCardClick;
   });
 
   // Keyboard shortcuts (F2 / F8 / F12) + barcode scanner
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // F2 → focus search
       if (e.key === "F2") {
         e.preventDefault();
         searchInputRef.current?.focus();
         return;
       }
-      // F8 → focus split pending amount
       if (e.key === "F8") {
         e.preventDefault();
         document.getElementById("pdv-split-amount")?.focus();
         return;
       }
-      // F12 → finish sale
       if (e.key === "F12") {
         e.preventDefault();
         if (cartItems.length > 0 && !isPending && activeShift) {
@@ -407,7 +540,6 @@ const PdvFrenteCaixa = ({
         return;
       }
 
-      // Barcode scanner: intercept only when no input/textarea is focused
       const tag = (document.activeElement?.tagName ?? "").toLowerCase();
       if (tag === "input" || tag === "textarea" || tag === "select") return;
 
@@ -427,7 +559,6 @@ const PdvFrenteCaixa = ({
       if (e.key.length === 1) {
         clearTimeout(barcodeTimerRef.current);
         barcodeBufferRef.current += e.key;
-        // Reset buffer if no Enter comes within 80 ms (human typing speed)
         barcodeTimerRef.current = setTimeout(() => {
           barcodeBufferRef.current = "";
         }, 80);
@@ -438,7 +569,7 @@ const PdvFrenteCaixa = ({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [cartItems, isPending, activeShift, products]);
 
-  // Online / offline status + sync on reconnect
+  // Online / offline sync
   useEffect(() => {
     const updateOnlineStatus = () => setIsOffline(!navigator.onLine);
     setIsOffline(!navigator.onLine);
@@ -461,15 +592,12 @@ const PdvFrenteCaixa = ({
               synced++;
             }
           } catch {
-            // keep in queue
+            // Keep in offline queue
           }
         }
         setIsSyncing(false);
         if (synced > 0) {
-          setFeedback({
-            type: "success",
-            message: `${String(synced)} venda(s) offline sincronizada(s) com sucesso!`,
-          });
+          toast.success(`${synced} venda(s) offline sincronizada(s) com sucesso!`);
           setPendingOrdersCount((prev) => prev - synced);
         }
       } catch {
@@ -478,7 +606,7 @@ const PdvFrenteCaixa = ({
     };
 
     window.addEventListener("online", () => void syncPending());
-    void syncPending(); // try on mount
+    void syncPending();
 
     return () => {
       window.removeEventListener("online", updateOnlineStatus);
@@ -486,64 +614,268 @@ const PdvFrenteCaixa = ({
     };
   }, []);
 
-  // ── Cart handlers ──────────────────────────────────────────────────────────
+  // ── Open Pizza Builder Modal ───────────────────────────────────────────────
+  const openPizzaBuilder = async (product: PdvProduct) => {
+    setSelectedPizzaProduct(product);
+    setPizzaFraction("inteira");
+    setPizzaFlavor2(null);
+    setPizzaFlavor2Search("");
+    setSelectedPizzaBorder(null);
+    setPizzaNotes("");
+    setPizzaQuantity(1);
+    setIsPizzaLoading(true);
 
-  const addProduct = (product: PdvProduct, overrideWeight?: number) => {
+    try {
+      const full = await buscarProdutoComOpcoesPdv(slug, product.id);
+      if (full && full.optionGroups) {
+        const borderGroup = full.optionGroups.find((g) =>
+          g.name.toLowerCase().includes("borda"),
+        );
+        if (borderGroup) {
+          setPizzaBorderOptions(
+            borderGroup.options.map((o) => ({
+              id: o.id,
+              name: o.name,
+              price: Number(o.price || 0),
+            })),
+          );
+        } else {
+          setPizzaBorderOptions([]);
+        }
+      } else {
+        setPizzaBorderOptions([]);
+      }
+    } catch {
+      setPizzaBorderOptions([]);
+    } finally {
+      setIsPizzaLoading(false);
+    }
+  };
+
+  // ── Open Customization Modal (Adicionais nos lanches/pratos) ────────────────
+  const openProductCustomization = async (product: PdvProduct) => {
+    setCustomizingProduct(product);
+    setSelectedCustomOptions({});
+    setCustomNotes("");
+    setCustomQuantity(1);
+    setIsCustomLoading(true);
+
+    try {
+      const full = await buscarProdutoComOpcoesPdv(slug, product.id);
+      if (full && full.optionGroups && full.optionGroups.length > 0) {
+        setCustomOptionGroups(
+          full.optionGroups.map((g) => ({
+            id: g.id,
+            name: g.name,
+            minOptions: g.minOptions ?? 0,
+            maxOptions: g.maxOptions ?? 1,
+            options: g.options.map((o) => ({
+              id: o.id,
+              name: o.name,
+              price: Number(o.price || 0),
+              description: o.description,
+            })),
+          })),
+        );
+      } else {
+        // No option groups, add directly
+        setCustomizingProduct(null);
+        addSimpleProduct(product);
+      }
+    } catch {
+      setCustomizingProduct(null);
+      addSimpleProduct(product);
+    } finally {
+      setIsCustomLoading(false);
+    }
+  };
+
+  // ── Click on Product Card ──────────────────────────────────────────────────
+  const handleProductCardClick = (product: PdvProduct, overrideWeight?: number) => {
+    // If scale has captured weight, add as weighed item directly
+    if (overrideWeight !== undefined || capturedWeight !== null) {
+      addSimpleProduct(product, overrideWeight);
+      return;
+    }
+
+    if (product.isPizzaCategory) {
+      void openPizzaBuilder(product);
+      return;
+    }
+
+    // Opens customization modal to check if there are option groups
+    void openProductCustomization(product);
+  };
+
+  // ── Add simple product directly (no options) ──────────────────────────────
+  const addSimpleProduct = (product: PdvProduct, overrideWeight?: number) => {
     setFeedback(null);
     const weightToUse = overrideWeight ?? capturedWeight;
 
     if (weightToUse !== null) {
-      // Weight-based item: always create a distinct line entry
       setCapturedWeight(null);
       setCartItems((current) => [
         ...current,
         {
           id: `${product.id}_w${String(Date.now())}`,
+          productId: product.id,
           name: product.name,
           price: product.price,
           quantity: round2(weightToUse),
           isWeighed: true,
         },
       ]);
+      toast.success(`${product.name} adicionado (${weightToUse.toFixed(3)} kg)`);
       return;
     }
 
     setCartItems((current) => {
-      const existing = current.find((i) => i.id === product.id && !i.isWeighed);
+      const existing = current.find(
+        (i) => i.productId === product.id && !i.isWeighed && !i.selectedOptionIds?.length && !i.notes,
+      );
       if (!existing) {
-        return [...current, { id: product.id, name: product.name, price: product.price, quantity: 1 }];
+        return [
+          ...current,
+          {
+            id: `${product.id}_${String(Date.now())}`,
+            productId: product.id,
+            name: product.name,
+            price: product.price,
+            quantity: 1,
+          },
+        ];
       }
       if (product.trackInventory && existing.quantity >= product.stockQuantity) {
+        toast.warning("Limite de estoque atingido para este item.");
         return current;
       }
       return current.map((i) =>
-        i.id === product.id && !i.isWeighed ? { ...i, quantity: i.quantity + 1 } : i,
+        i.id === existing.id ? { ...i, quantity: i.quantity + 1 } : i,
       );
     });
+    toast.success(`${product.name} adicionado ao pedido`);
   };
 
-  const decreaseProduct = (productId: string) => {
+  // ── Confirm Pizza Addition to Cart ─────────────────────────────────────────
+  const handleConfirmPizza = () => {
+    if (!selectedPizzaProduct) return;
+
+    if (pizzaFraction === "meio-a-meio" && !pizzaFlavor2) {
+      toast.warning("Selecione o segundo sabor da pizza para continuar.");
+      return;
+    }
+
+    const flavorLabel =
+      pizzaFraction === "meio-a-meio" && pizzaFlavor2
+        ? `${selectedPizzaProduct.name} / ${pizzaFlavor2.name}`
+        : selectedPizzaProduct.name;
+
+    const noteParts: string[] = [];
+    if (pizzaFraction === "meio-a-meio" && pizzaFlavor2) {
+      noteParts.push(`1/2 ${selectedPizzaProduct.name} + 1/2 ${pizzaFlavor2.name}`);
+    }
+    if (selectedPizzaBorder) {
+      noteParts.push(`Borda: ${selectedPizzaBorder.name}`);
+    }
+    if (pizzaNotes.trim()) {
+      noteParts.push(pizzaNotes.trim());
+    }
+    const finalNotes = noteParts.join(" | ");
+
+    const selectedOptionIds = selectedPizzaBorder ? [selectedPizzaBorder.id] : [];
+    const selectedOptionNames = selectedPizzaBorder
+      ? [`Borda ${selectedPizzaBorder.name} (+${formatCurrency(selectedPizzaBorder.price)})`]
+      : [];
+
+    const primaryProduct =
+      pizzaPricingRule === "MAX" && pizzaFlavor2 && Number(pizzaFlavor2.price) > Number(selectedPizzaProduct.price)
+        ? pizzaFlavor2
+        : selectedPizzaProduct;
+
+    const cartItem: CartItem = {
+      id: `pizza_${primaryProduct.id}_${pizzaFraction}_${pizzaFlavor2?.id ?? ""}_${Date.now()}`,
+      productId: primaryProduct.id,
+      name: `Pizza — ${flavorLabel}`,
+      price: computedPizzaPrice,
+      quantity: pizzaQuantity,
+      isPizza: true,
+      fraction: pizzaFraction,
+      flavor1Name: selectedPizzaProduct.name,
+      flavor2Name: pizzaFlavor2?.name,
+      borderName: selectedPizzaBorder?.name,
+      selectedOptionIds,
+      selectedOptionNames,
+      notes: finalNotes || undefined,
+    };
+
+    setCartItems((prev) => [...prev, cartItem]);
+    setSelectedPizzaProduct(null);
+    toast.success(`Pizza ${flavorLabel} adicionada com sucesso!`);
+  };
+
+  // ── Confirm Custom Product Addition to Cart ────────────────────────────────
+  const handleConfirmCustomProduct = () => {
+    if (!customizingProduct) return;
+
+    // Validate required groups
+    for (const group of customOptionGroups) {
+      const selected = selectedCustomOptions[group.id] || [];
+      if (group.minOptions > 0 && selected.length < group.minOptions) {
+        toast.warning(
+          `O grupo "${group.name}" requer pelo menos ${group.minOptions} opção(ões) selecionada(s).`,
+        );
+        return;
+      }
+    }
+
+    const allOptionIds: string[] = [];
+    const allOptionNames: string[] = [];
+
+    for (const group of customOptionGroups) {
+      const selectedIds = selectedCustomOptions[group.id] || [];
+      for (const optId of selectedIds) {
+        const opt = group.options.find((o) => o.id === optId);
+        if (opt) {
+          allOptionIds.push(opt.id);
+          const priceSuffix = opt.price > 0 ? ` (+${formatCurrency(opt.price)})` : "";
+          allOptionNames.push(`${opt.name}${priceSuffix}`);
+        }
+      }
+    }
+
+    const cartItem: CartItem = {
+      id: `prod_${customizingProduct.id}_${Date.now()}`,
+      productId: customizingProduct.id,
+      name: customizingProduct.name,
+      price: computedCustomPrice,
+      quantity: customQuantity,
+      selectedOptionIds: allOptionIds,
+      selectedOptionNames: allOptionNames,
+      notes: customNotes.trim() || undefined,
+    };
+
+    setCartItems((prev) => [...prev, cartItem]);
+    setCustomizingProduct(null);
+    toast.success(`${customizingProduct.name} adicionado com opcionais!`);
+  };
+
+  // ── Cart item controls ─────────────────────────────────────────────────────
+  const decreaseCartItem = (itemId: string) => {
     setCartItems((current) =>
       current
-        .map((i) => (i.id === productId && !i.isWeighed ? { ...i, quantity: i.quantity - 1 } : i))
+        .map((i) => (i.id === itemId && !i.isWeighed ? { ...i, quantity: i.quantity - 1 } : i))
         .filter((i) => i.quantity > 0),
     );
   };
 
-  const increaseProduct = (productId: string) => {
-    const baseId = productId.split("_w")[0];
-    const product = products.find((p) => p.id === baseId);
+  const increaseCartItem = (itemId: string) => {
     setCartItems((current) =>
-      current.map((i) => {
-        if (i.id !== productId || i.isWeighed) return i;
-        if (product?.trackInventory && i.quantity >= product.stockQuantity) return i;
-        return { ...i, quantity: i.quantity + 1 };
-      }),
+      current.map((i) => (i.id === itemId && !i.isWeighed ? { ...i, quantity: i.quantity + 1 } : i)),
     );
   };
 
-  const removeProduct = (productId: string) => {
-    setCartItems((current) => current.filter((i) => i.id !== productId));
+  const removeCartItem = (itemId: string) => {
+    setCartItems((current) => current.filter((i) => i.id !== itemId));
   };
 
   const clearSale = () => {
@@ -564,7 +896,6 @@ const PdvFrenteCaixa = ({
   };
 
   // ── Split payment handlers ─────────────────────────────────────────────────
-
   const handleAddSplit = () => {
     const amount = parseFloat(splitPendingAmount.replace(",", ".")) || 0;
     if (amount <= 0) return;
@@ -583,7 +914,6 @@ const PdvFrenteCaixa = ({
   };
 
   // ── Coupon ─────────────────────────────────────────────────────────────────
-
   const handleApplyCoupon = useCallback(async () => {
     if (!couponCode.trim()) return;
     setIsValidatingCoupon(true);
@@ -599,44 +929,46 @@ const PdvFrenteCaixa = ({
 
     setIsValidatingCoupon(false);
 
-    if (result.success && result.discountAmount !== undefined && result.code) {
-      setAppliedCoupon({ code: result.code, discountAmount: result.discountAmount });
+    if (result.success && result.discountAmount) {
+      setAppliedCoupon({
+        code: couponCode.trim().toUpperCase(),
+        discountAmount: result.discountAmount,
+      });
+      toast.success(`Cupom aplicado! Desconto de ${formatCurrency(result.discountAmount)}`);
     } else {
-      setCouponError(result.error ?? "Erro ao validar cupom.");
+      const err = result.error || "Cupom inválido.";
+      setCouponError(err);
+      toast.error(err);
     }
   }, [couponCode, slug, customerPhone, cartSubtotal]);
 
-  // ── Scale weight capture ───────────────────────────────────────────────────
-
-  const handleCaptureWeight = useCallback(async () => {
-    if (!scaleProtocol) return;
-    const weight = await captureWeight(scaleProtocol, scaleBaudRate);
-    if (weight !== null) {
-      setCapturedWeight(weight);
-    }
-  }, [captureWeight, scaleProtocol, scaleBaudRate]);
-
-  // ── Print ──────────────────────────────────────────────────────────────────
-
-  const handlePrint = useCallback(async () => {
+  // ── Print receipt ──────────────────────────────────────────────────────────
+  const handlePrintReceipt = useCallback(async () => {
     if (!completedOrderId) return;
     setIsPrintLoading(true);
 
     const order = await buscarPedidoPdvParaImpressao(completedOrderId);
     setIsPrintLoading(false);
 
-    if (!order) return;
+    if (!order) {
+      toast.error("Não foi possível carregar os dados para impressão.");
+      return;
+    }
 
     const iframe = document.createElement("iframe");
-    iframe.style.position = "absolute";
-    iframe.style.top = "-9999px";
-    iframe.style.left = "-9999px";
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
     document.body.appendChild(iframe);
 
-    const html = `<!DOCTYPE html>
+    const html = `
+      <!DOCTYPE html>
       <html>
         <head>
-          <title>Cupom PDV #${order.id}</title>
+          <title>Cupom Pedido #${order.id}</title>
           <style>
             @page { margin: 0; size: 80mm auto; }
             body { margin: 0; padding: 4mm; width: 72mm; font-family: monospace; font-size: 12px; line-height: 1.2; color: black; }
@@ -649,13 +981,13 @@ const PdvFrenteCaixa = ({
           <div class="center mb">
             <h1 style="font-size:16px;" class="bold upper">${order.restaurant.name}</h1>
             <div class="dashed"></div>
-            <h2 class="bold">CUPOM DE ENTREGA — PDV</h2>
+            <h2 class="bold">CUPOM DE BALCÃO — PDV</h2>
             <p style="font-size:18px;" class="bold">PEDIDO #${order.id}</p>
           </div>
           <div class="mb">
             <p><span class="bold">CLIENTE:</span> ${order.customerName}</p>
             <p><span class="bold">DATA:</span> ${formatDateTime(order.createdAt)}</p>
-            <p><span class="bold">FORMA:</span> ${order.paymentMethod === "DINHEIRO" ? "DINHEIRO" : order.paymentMethod === "PIX" ? "PIX" : "CARTÃO"}</p>
+            <p><span class="bold">PAGAMENTO:</span> ${order.paymentMethod}</p>
           </div>
           <div class="dashed"></div>
           <div class="mb">
@@ -676,7 +1008,7 @@ const PdvFrenteCaixa = ({
           </div>
           ${order.paymentMethod === "DINHEIRO" && order.changeFor ? `<div class="dashed"></div><p class="bold">TROCO PARA: ${formatCurrency(order.changeFor)}</p>` : ""}
           <div class="center spacer" style="margin-top:20px;font-size:10px;">
-            <p>Obrigado pela preferência!</p><p>www.eeyfood.com.br</p>
+            <p>Obrigado pela preferência!</p><p>EeyFood Gestão</p>
           </div>
         </body>
       </html>`;
@@ -695,7 +1027,6 @@ const PdvFrenteCaixa = ({
   }, [completedOrderId]);
 
   // ── Finish sale ────────────────────────────────────────────────────────────
-
   const buildPayload = (): FinalizarVendaPdvInput => {
     const primaryMethod =
       isSplitMode && paymentSplits.length > 0 ? paymentSplits[0].method : paymentMethod;
@@ -706,7 +1037,13 @@ const PdvFrenteCaixa = ({
       customerPhone,
       paymentMethod: primaryMethod as FinalizarVendaPdvInput["paymentMethod"],
       paymentSplits: isSplitMode ? paymentSplits : undefined,
-      products: cartItems.map((item) => ({ id: item.id, quantity: item.quantity })),
+      products: cartItems.map((item) => ({
+        id: item.productId,
+        name: item.name,
+        quantity: item.quantity,
+        selectedOptions: item.selectedOptionIds,
+        notes: item.notes,
+      })),
       couponCode: appliedCoupon?.code,
       useWalletBalance: useWalletBalance && (walletBalance ?? 0) > 0,
       changeFor:
@@ -719,254 +1056,1010 @@ const PdvFrenteCaixa = ({
   };
 
   const handleFinishSale = () => {
-    setFeedback(null);
-
-    const payload = buildPayload();
-
-    // Offline: save to IndexedDB queue
-    if (isOffline) {
-      void saveOfflineOrder(payload).then(() => {
-        setPendingOrdersCount((prev) => prev + 1);
-        clearSale();
-        setFeedback({
-          type: "offline",
-          message: "Venda salva localmente! Será sincronizada quando a internet retornar.",
-        });
-      });
+    if (cartItems.length === 0) {
+      toast.warning("Adicione pelo menos um item para finalizar a venda.");
       return;
     }
 
-    startTransition(async () => {
-      const result = await finalizarVendaPdv(payload);
+    if (!activeShift) {
+      toast.warning("Abra um turno de caixa antes de realizar vendas.");
+      setIsShiftModalOpen(true);
+      return;
+    }
 
-      if (!result.success) {
-        setFeedback({ type: "error", message: result.message });
+    if (isSplitMode && splitRemaining !== 0) {
+      toast.error(
+        splitRemaining > 0
+          ? `Falta cobrir ${formatCurrency(splitRemaining)} nos pagamentos divididos.`
+          : `Os pagamentos excedem o total em ${formatCurrency(Math.abs(splitRemaining))}.`,
+      );
+      return;
+    }
+
+    if (!isSplitMode && paymentMethod === "DINHEIRO" && receivedAmountNum > 0 && change < 0) {
+      toast.error(`Valor recebido insuficiente. Faltam ${formatCurrency(Math.abs(change))}.`);
+      return;
+    }
+
+    const payload = buildPayload();
+
+    if (paymentMethod === "DINHEIRO" || (isSplitMode && paymentSplits.some((s) => s.method === "DINHEIRO"))) {
+      void openDrawerUsb(drawerPulseHex);
+    }
+
+    startTransition(async () => {
+      if (!navigator.onLine) {
+        try {
+          await saveOfflineOrder(payload);
+          setPendingOrdersCount((c) => c + 1);
+          toast.success("Venda salva em modo offline com sucesso!");
+          clearSale();
+        } catch {
+          toast.error("Erro ao salvar venda offline.");
+        }
         return;
       }
 
-      const newOrderId = result.orderId ?? null;
-
-      // Auto-open cash drawer when payment involves cash
-      const hasCashPayment =
-        (!isSplitMode && paymentMethod === "DINHEIRO") ||
-        (isSplitMode && paymentSplits.some((s) => s.method === "DINHEIRO"));
-      if (hasCashPayment) {
-        void openDrawerUsb(drawerPulseHex);
+      try {
+        const result = await finalizarVendaPdv(payload);
+        if (result.success) {
+          toast.success(`Venda #${result.orderId} finalizada com sucesso!`);
+          setCompletedOrderId(result.orderId ?? null);
+          clearSale();
+        } else {
+          toast.error(result.message || "Erro ao finalizar venda.");
+        }
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Erro inesperado.");
       }
-
-      clearSale();
-      setCompletedOrderId(newOrderId);
-      setFeedback({
-        type: "success",
-        message: `Venda registrada! Pedido #${String(result.orderId)} — ${formatCurrency(result.total ?? 0)}.`,
-      });
     });
   };
 
-  const canFinish =
-    cartItems.length > 0 &&
-    !isPending &&
-    (isSplitMode ? round2(splitTotal) >= round2(finalTotal) : true);
-
-  // ── Shift handlers ─────────────────────────────────────────────────────────
-
-  const handleAbrirTurno = async () => {
+  // ── Shift management handlers ──────────────────────────────────────────────
+  const handleOpenShiftSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsShiftOpening(true);
+
     const amount = parseFloat(shiftOpeningAmount.replace(",", ".")) || 0;
     const result = await abrirTurnoCaixa({
       slug,
       openedByUser: shiftOperatorName,
       openingAmount: amount,
     });
-    setIsShiftOpening(false);
 
+    setIsShiftOpening(false);
     if (result.success && result.shift) {
       setActiveShift(result.shift);
       setIsShiftModalOpen(false);
+      toast.success("Turno de caixa aberto com sucesso!");
     } else {
-      setFeedback({ type: "error", message: result.message });
+      toast.error(result.message);
     }
   };
 
-  const handleFecharTurno = async () => {
+  const handleOpenFechamentoModal = async () => {
+    if (!activeShift) return;
+    setIsFechamentoLoading(true);
+    setIsFechamentoOpen(true);
+
+    const result = await fecharTurnoCaixa({
+      slug,
+      shiftId: activeShift.id,
+      actualClosingAmount: 0,
+    });
+
+    setIsFechamentoLoading(false);
+    if (result.success && result.summary) {
+      setFechamentoSummary(result.summary);
+      setFechamentoActualAmount(result.summary.dinheiroEsperado.toFixed(2));
+    } else {
+      toast.error(result.message || "Não foi possível carregar o resumo.");
+    }
+  };
+
+  const handleConfirmFechamento = async () => {
     if (!activeShift) return;
     setIsFechamentoLoading(true);
 
-    const amount = parseFloat(fechamentoActualAmount.replace(",", ".")) || 0;
+    const actual = parseFloat(fechamentoActualAmount.replace(",", ".")) || 0;
     const result = await fecharTurnoCaixa({
-      shiftId: activeShift.id,
       slug,
-      actualClosingAmount: amount,
+      shiftId: activeShift.id,
+      actualClosingAmount: actual,
       notes: fechamentoNotes,
     });
 
     setIsFechamentoLoading(false);
-
     if (result.success) {
-      setFechamentoSummary(result.summary ?? null);
+      toast.success("Turno de caixa fechado com sucesso!");
       setActiveShift(null);
-    } else {
-      setFeedback({ type: "error", message: result.message });
       setIsFechamentoOpen(false);
+      setFechamentoSummary(null);
+      setIsShiftModalOpen(true);
+    } else {
+      toast.error(result.message);
     }
   };
 
-  const handleMovimentacao = async () => {
+  const handleMovimentacaoSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!activeShift) return;
     setIsMovimentacaoLoading(true);
 
     const amount = parseFloat(movimentacaoAmount.replace(",", ".")) || 0;
     const result = await registrarMovimentacaoCaixa({
-      shiftId: activeShift.id,
       slug,
+      shiftId: activeShift.id,
       type: movimentacaoType,
       amount,
       reason: movimentacaoReason,
     });
 
     setIsMovimentacaoLoading(false);
-
     if (result.success) {
+      toast.success(result.message);
       setIsMovimentacaoOpen(false);
       setMovimentacaoAmount("");
       setMovimentacaoReason("");
-      setFeedback({ type: "success", message: result.message });
     } else {
-      setFeedback({ type: "error", message: result.message });
+      toast.error(result.message);
     }
   };
 
-  // ── Stock label helpers ────────────────────────────────────────────────────
-
-  const getAvailableStockLabel = (product: PdvProduct) => {
-    if (!product.trackInventory) return "Livre";
-    return `Estoque ${String(product.stockQuantity)}`;
-  };
-
-  const getAvailableStockVariant = (product: PdvProduct) => {
-    if (!product.trackInventory) return "secondary" as const;
-    return product.stockQuantity > 0 ? ("success" as const) : ("danger" as const);
-  };
-
-  // ── Render ─────────────────────────────────────────────────────────────────
-
   return (
-    <section className="space-y-4">
-      {/* ── Shift opening modal ──────────────────────────────────────────── */}
-      <Dialog open={isShiftModalOpen} onOpenChange={() => void 0}>
-        <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
-          <DialogHeader>
-            <DialogTitle className="font-display text-xl">Abertura de Caixa</DialogTitle>
-            <DialogDescription>
-              Informe o operador e o valor do fundo de troco para iniciar o turno.
-            </DialogDescription>
-          </DialogHeader>
+    <div className="space-y-6">
+      {/* ── Page Header (matching usuarios-client standard) ── */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm">
+            <MonitorSmartphoneIcon size={22} />
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
+                Frente de Caixa (PDV)
+              </h1>
+              {activeShift ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                  Turno Aberto: {activeShift.openedByUser}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-600" />
+                  Caixa Fechado
+                </span>
+              )}
+              {isOffline && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-0.5 text-xs font-semibold text-rose-800">
+                  <WifiOffIcon size={12} />
+                  Offline ({pendingOrdersCount})
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-slate-500">
+              Lançamento ágil de pedidos, pizzas meio a meio com 2 sabores, adicionais, pesagem e recebimentos.
+            </p>
+          </div>
+        </div>
 
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label>Nome do operador</Label>
-              <Input
-                value={shiftOperatorName}
-                onChange={(e) => setShiftOperatorName(e.target.value)}
-                placeholder="Ex.: Maria"
-                autoFocus
-              />
+        {/* Header Action Buttons */}
+        <div className="flex flex-wrap items-center gap-2">
+          {activeShift ? (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsMovimentacaoOpen(true)}
+                className="h-10 gap-1.5 rounded-full border-slate-200 bg-white text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+              >
+                <RotateCcwIcon size={14} />
+                <span>Sangria / Suprimento</span>
+              </Button>
+
+              <Button
+                size="sm"
+                onClick={handleOpenFechamentoModal}
+                className="h-10 gap-1.5 rounded-full bg-rose-600 px-4 text-xs font-semibold text-white shadow-sm hover:bg-rose-700"
+              >
+                <span>Fechar Caixa</span>
+              </Button>
+            </>
+          ) : (
+            <Button
+              size="sm"
+              onClick={() => setIsShiftModalOpen(true)}
+              className="h-10 gap-1.5 rounded-full bg-slate-900 px-5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800"
+            >
+              <ClockIcon size={14} />
+              <span>Abrir Turno de Caixa</span>
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Metric Cards (matching usuarios-client standard) ── */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">
+                Carrinho Atual
+              </span>
+              <div className="rounded-lg bg-blue-100 p-1.5 text-blue-700 shrink-0">
+                <ShoppingCartIcon size={16} />
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label>Fundo de troco (R$)</Label>
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={shiftOpeningAmount}
-                onChange={(e) => setShiftOpeningAmount(e.target.value)}
-                placeholder="0,00"
-              />
+            <p className="mt-2 font-display text-2xl font-bold text-blue-700">
+              {formatCurrency(finalTotal)}
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500 truncate">
+              {totalItems} {totalItems === 1 ? "item adicionado" : "itens adicionados"}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">
+                Regra de Pizza
+              </span>
+              <div className="rounded-lg bg-amber-100 p-1.5 text-amber-700 shrink-0">
+                <ChefHatIcon size={16} />
+              </div>
             </div>
+            <p className="mt-2 font-display text-lg font-bold text-slate-900">
+              {pizzaPricingRule === "MAX" ? "Maior Valor" : "Média dos Sabores"}
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500 truncate">
+              Cálculo para 2 sabores
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">
+                Balança Serial
+              </span>
+              <div className="rounded-lg bg-slate-100 p-1.5 text-slate-700 shrink-0">
+                <ScaleIcon size={16} />
+              </div>
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <span className="font-display text-2xl font-bold text-slate-900">
+                {capturedWeight !== null ? `${capturedWeight.toFixed(3)} kg` : "—"}
+              </span>
+            </div>
+            <p className="mt-0.5 text-xs text-slate-500 truncate">
+              {scaleStatus === "reading" || scaleStatus === "done"
+                ? "Conectada (Lendo)"
+                : scaleStatus === "error"
+                  ? "Erro na Balança"
+                  : "Manual / Pronta"}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">
+                Conexão
+              </span>
+              <div className="rounded-lg bg-emerald-100 p-1.5 text-emerald-700 shrink-0">
+                <CheckCircle2Icon size={16} />
+              </div>
+            </div>
+            <p className="mt-2 font-display text-2xl font-bold text-emerald-700">
+              {isOffline ? "Offline" : "100% Online"}
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500 truncate">
+              {pendingOrdersCount > 0 ? `${pendingOrdersCount} pendente(s) de envio` : "Sincronizado com retaguarda"}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── Main Workspace: Catalog (Left) + Cart/Checkout (Right) ── */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        {/* Left Column: Products & Categories (7 cols) */}
+        <div className="space-y-4 lg:col-span-7">
+          {/* Search bar & Category filter */}
+          <Card className="border-slate-200/80 bg-white shadow-sm">
+            <CardContent className="p-4 space-y-3">
+              <div className="relative">
+                <SearchIcon
+                  size={16}
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+                <Input
+                  ref={searchInputRef}
+                  placeholder="Buscar por nome, código SKU ou bipe o código de barras (F2)..."
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
+                  className="h-10 rounded-xl border-slate-200 bg-slate-50/70 pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white"
+                />
+                {searchValue && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchValue("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    <XIcon size={14} />
+                  </button>
+                )}
+              </div>
+
+              {/* Category Pills Carousel */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                {categories.map((cat) => {
+                  const isSelected = selectedCategory === cat;
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setSelectedCategory(cat)}
+                      className={cn(
+                        "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all",
+                        isSelected
+                          ? "bg-slate-900 text-white shadow-sm"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200/80",
+                      )}
+                    >
+                      {cat}
+                    </button>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Product Grid */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {filteredProducts.map((product) => {
+              const inCart = cartItems.find((i) => i.productId === product.id);
+
+              return (
+                <div
+                  key={product.id}
+                  onClick={() => handleProductCardClick(product)}
+                  className={cn(
+                    "group relative flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-sm transition-all cursor-pointer hover:border-slate-400 hover:shadow-md",
+                    inCart && "border-slate-900/60 ring-1 ring-slate-900/30",
+                  )}
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-start justify-between gap-1.5">
+                      <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 truncate max-w-[120px]">
+                        {product.categoryName}
+                      </span>
+                      {product.isPizzaCategory && (
+                        <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 shrink-0">
+                          🍕 Pizza
+                        </span>
+                      )}
+                    </div>
+
+                    <h3 className="font-semibold text-sm text-slate-900 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                      {product.name}
+                    </h3>
+
+                    {product.description && (
+                      <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+                        {product.description}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between pt-2 border-t border-slate-100">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block">Preço</span>
+                      <span className="font-display text-sm font-bold text-slate-900">
+                        {formatCurrency(product.price)}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      {product.isPizzaCategory ? (
+                        <span className="flex items-center gap-1 rounded-full bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm group-hover:bg-slate-800">
+                          <ChefHatIcon size={12} />
+                          <span>Montar</span>
+                        </span>
+                      ) : (
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition-colors group-hover:bg-slate-900 group-hover:text-white">
+                          <PlusIcon size={14} />
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
-          <DialogFooter>
-            <Button
-              onClick={() => void handleAbrirTurno()}
-              disabled={isShiftOpening}
-              className="w-full"
-            >
-              {isShiftOpening ? "Abrindo caixa..." : "Abrir caixa e iniciar turno"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          {filteredProducts.length === 0 && (
+            <Card className="border-slate-200/80 bg-white shadow-sm p-8 text-center">
+              <p className="text-sm font-semibold text-slate-700">Nenhum produto encontrado</p>
+              <p className="text-xs text-slate-500 mt-1">
+                Tente ajustar os termos da busca ou selecionar outra categoria.
+              </p>
+            </Card>
+          )}
+        </div>
 
-      {/* ── Fechar turno modal ───────────────────────────────────────────── */}
-      <Dialog open={isFechamentoOpen} onOpenChange={setIsFechamentoOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="font-display text-xl">Fechamento de Caixa</DialogTitle>
-            <DialogDescription>
-              Informe o valor que você está contando na gaveta para fechar o turno.
-            </DialogDescription>
-          </DialogHeader>
+        {/* Right Column: Cart & Checkout (5 cols) */}
+        <div className="space-y-4 lg:col-span-5">
+          <Card className="border-slate-200/80 bg-white shadow-sm overflow-hidden">
+            <CardContent className="p-4 space-y-4">
+              {/* Cart Header */}
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="rounded-xl bg-slate-100 p-2 text-slate-800">
+                    <ShoppingCartIcon size={16} />
+                  </div>
+                  <div>
+                    <h2 className="font-display text-base font-bold text-slate-900">
+                      Pedido em Andamento
+                    </h2>
+                    <p className="text-xs text-slate-500">
+                      {cartItems.length} {cartItems.length === 1 ? "item" : "itens"} na comanda
+                    </p>
+                  </div>
+                </div>
 
-          {fechamentoSummary ? (
-            // Summary after closing
-            <div className="space-y-3">
-              <div className="rounded-xl border bg-slate-950 p-4 text-white text-sm space-y-1.5">
-                <div className="flex justify-between"><span className="text-slate-400">Total de vendas</span><span className="font-semibold">{formatCurrency(fechamentoSummary.totalVendas)}</span></div>
-                <div className="flex justify-between"><span className="text-slate-400">Dinheiro</span><span>{formatCurrency(fechamentoSummary.totalDinheiro)}</span></div>
-                <div className="flex justify-between"><span className="text-slate-400">Cartão</span><span>{formatCurrency(fechamentoSummary.totalCartao)}</span></div>
-                <div className="flex justify-between"><span className="text-slate-400">PIX</span><span>{formatCurrency(fechamentoSummary.totalPix)}</span></div>
-                <div className="flex justify-between"><span className="text-slate-400">Vale</span><span>{formatCurrency(fechamentoSummary.totalVale)}</span></div>
-                <Separator className="border-white/10" />
-                <div className="flex justify-between"><span className="text-slate-400">Suprimentos</span><span className="text-emerald-400">+{formatCurrency(fechamentoSummary.totalSuprimento)}</span></div>
-                <div className="flex justify-between"><span className="text-slate-400">Sangrias</span><span className="text-rose-400">-{formatCurrency(fechamentoSummary.totalSangria)}</span></div>
-                <Separator className="border-white/10" />
-                <div className="flex justify-between font-semibold"><span>Esperado no caixa</span><span>{formatCurrency(fechamentoSummary.dinheiroEsperado)}</span></div>
-                <div className={`flex justify-between font-bold text-base ${fechamentoSummary.diferenca >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                  <span>Diferença</span>
-                  <span>{fechamentoSummary.diferenca >= 0 ? "+" : ""}{formatCurrency(fechamentoSummary.diferenca)}</span>
+                {cartItems.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearSale}
+                    className="h-8 gap-1 text-xs text-slate-500 hover:text-rose-600"
+                  >
+                    <Trash2Icon size={13} />
+                    <span>Limpar</span>
+                  </Button>
+                )}
+              </div>
+
+              {/* Cart Items List */}
+              <div className="max-h-[300px] overflow-y-auto space-y-2.5 pr-1 divide-y divide-slate-100">
+                {cartItems.map((item) => (
+                  <div key={item.id} className="pt-2 first:pt-0 space-y-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-xs text-slate-900 line-clamp-1">
+                          {item.name}
+                        </p>
+                        {item.fraction === "meio-a-meio" && (
+                          <span className="inline-block rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 border border-amber-200">
+                            1/2 {item.flavor1Name} + 1/2 {item.flavor2Name}
+                          </span>
+                        )}
+                        {item.borderName && (
+                          <p className="text-[11px] text-amber-700 font-medium">
+                            • Borda: {item.borderName}
+                          </p>
+                        )}
+                        {item.selectedOptionNames && item.selectedOptionNames.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-0.5">
+                            {item.selectedOptionNames.map((optName, idx) => (
+                              <span
+                                key={idx}
+                                className="rounded bg-blue-50 px-1 py-0.2 text-[10px] text-blue-700 border border-blue-100"
+                              >
+                                {optName}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {item.notes && (
+                          <p className="text-[11px] italic text-slate-500 flex items-center gap-1 mt-0.5">
+                            <InfoIcon size={10} className="shrink-0" />
+                            <span>Obs: {item.notes}</span>
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <p className="font-semibold text-xs text-slate-900">
+                          {formatCurrency(item.price * item.quantity)}
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                          {formatCurrency(item.price)} cada
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Quantity controls */}
+                    <div className="flex items-center justify-between pt-1">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => decreaseCartItem(item.id)}
+                          className="flex h-6 w-6 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                        >
+                          <MinusIcon size={12} />
+                        </button>
+                        <span className="w-8 text-center text-xs font-semibold text-slate-900">
+                          {item.quantity}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => increaseCartItem(item.id)}
+                          className="flex h-6 w-6 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                        >
+                          <PlusIcon size={12} />
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => removeCartItem(item.id)}
+                        className="text-[11px] text-rose-600 hover:underline"
+                      >
+                        Remover
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {cartItems.length === 0 && (
+                  <div className="py-8 text-center text-slate-400 space-y-2">
+                    <ShoppingCartIcon size={28} className="mx-auto text-slate-300" />
+                    <p className="text-xs">Nenhum item adicionado ao pedido ainda.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Customer and phone identification */}
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
+                <div className="space-y-1">
+                  <Label htmlFor="pdv-cust-name" className="text-[11px] font-semibold text-slate-700">
+                    Nome do Cliente
+                  </Label>
+                  <Input
+                    id="pdv-cust-name"
+                    placeholder="Ex: Carlos"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    className="h-8 rounded-lg border-slate-200 text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="pdv-cust-phone" className="text-[11px] font-semibold text-slate-700">
+                    WhatsApp (Cashback)
+                  </Label>
+                  <Input
+                    id="pdv-cust-phone"
+                    placeholder="11999999999"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    className="h-8 rounded-lg border-slate-200 text-xs"
+                  />
                 </div>
               </div>
-              <p className="text-sm text-center text-muted-foreground">
-                {fechamentoSummary.totalOrders} pedido(s) neste turno.
-              </p>
+
+              {/* Cashback toggle if available */}
+              {walletBalance && walletBalance > 0 && (
+                <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50/70 p-2.5">
+                  <div className="flex items-center gap-2">
+                    <WalletIcon size={16} className="text-emerald-700" />
+                    <div>
+                      <p className="text-xs font-semibold text-emerald-900">
+                        Saldo Cashback: {formatCurrency(walletBalance)}
+                      </p>
+                      <p className="text-[10px] text-emerald-700">
+                        Usar {formatCurrency(cashbackDiscount)} neste pedido
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={useWalletBalance}
+                    onCheckedChange={setUseWalletBalance}
+                    className="data-[state=checked]:bg-emerald-600"
+                  />
+                </div>
+              )}
+
+              {/* Coupon input */}
+              {isCouponsEnabled && (
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    placeholder="Código do cupom de desconto..."
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    className="h-8 rounded-lg border-slate-200 text-xs uppercase"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={isValidatingCoupon || !couponCode.trim()}
+                    onClick={handleApplyCoupon}
+                    className="h-8 rounded-lg border-slate-200 text-xs font-semibold text-slate-700 shrink-0"
+                  >
+                    {isValidatingCoupon ? "..." : "Aplicar"}
+                  </Button>
+                </div>
+              )}
+
+              {/* Payment Methods */}
+              <div className="space-y-1.5 pt-2 border-t border-slate-100">
+                <Label className="text-[11px] font-semibold text-slate-700">
+                  Forma de Pagamento
+                </Label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {(["DINHEIRO", "CARTAO_PRESENCIAL", "PIX", "VALE_REFEICAO", "VALE_ALIMENTACAO"] as PdvPaymentMethod[]).map(
+                    (method) => {
+                      const isSelected = paymentMethod === method;
+                      return (
+                        <button
+                          key={method}
+                          type="button"
+                          onClick={() => setPaymentMethod(method)}
+                          className={cn(
+                            "flex items-center justify-center gap-1 rounded-xl border p-2 text-xs font-semibold transition-all",
+                            isSelected
+                              ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+                              : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                          )}
+                        >
+                          {method === "DINHEIRO" && <BanknoteIcon size={13} />}
+                          {method === "CARTAO_PRESENCIAL" && <CreditCardIcon size={13} />}
+                          {method === "PIX" && <QrCodeIcon size={13} />}
+                          {method === "VALE_REFEICAO" && <UtensilsCrossedIcon size={13} />}
+                          {method === "VALE_ALIMENTACAO" && <TagIcon size={13} />}
+                          <span>{PAYMENT_LABELS[method]}</span>
+                        </button>
+                      );
+                    },
+                  )}
+                </div>
+
+                {/* Cash change field */}
+                {paymentMethod === "DINHEIRO" && (
+                  <div className="flex items-center gap-2 pt-1">
+                    <div className="flex-1">
+                      <Label htmlFor="pdv-cash-received" className="text-[10px] text-slate-500">
+                        Valor Recebido (R$)
+                      </Label>
+                      <Input
+                        id="pdv-cash-received"
+                        placeholder="Ex: 50,00"
+                        value={receivedAmount}
+                        onChange={(e) => setReceivedAmount(e.target.value)}
+                        className="h-8 rounded-lg border-slate-200 text-xs"
+                      />
+                    </div>
+                    {receivedAmountNum > 0 && (
+                      <div className="flex-1 text-right">
+                        <span className="text-[10px] text-slate-500 block">Troco</span>
+                        <span
+                          className={cn(
+                            "font-bold text-xs",
+                            change >= 0 ? "text-emerald-700" : "text-rose-600",
+                          )}
+                        >
+                          {change >= 0 ? formatCurrency(change) : "Falta dinheiro"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Service fee toggle */}
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-xs text-slate-600 font-medium">Taxa de Serviço (10%)</span>
+                <Switch
+                  checked={useServiceFee}
+                  onCheckedChange={setUseServiceFee}
+                  className="data-[state=checked]:bg-slate-900"
+                />
+              </div>
+
+              {/* Summary totals */}
+              <div className="space-y-1.5 pt-2 border-t border-slate-100 text-xs">
+                <div className="flex items-center justify-between text-slate-500">
+                  <span>Subtotal</span>
+                  <span>{formatCurrency(cartSubtotal)}</span>
+                </div>
+                {discountAmount > 0 && (
+                  <div className="flex items-center justify-between text-emerald-700 font-medium">
+                    <span>Descontos</span>
+                    <span>-{formatCurrency(discountAmount)}</span>
+                  </div>
+                )}
+                {useServiceFee && (
+                  <div className="flex items-center justify-between text-slate-500">
+                    <span>Serviço (10%)</span>
+                    <span>+{formatCurrency(serviceFeeAmount)}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between text-slate-900 font-bold text-sm pt-1 border-t border-slate-200">
+                  <span>Total a Pagar</span>
+                  <span className="font-display text-base text-slate-900">
+                    {formatCurrency(finalTotal)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Action Finish Button */}
               <Button
-                className="w-full"
-                onClick={() => { setIsFechamentoOpen(false); setFechamentoSummary(null); setIsShiftModalOpen(true); }}
+                type="button"
+                onClick={handleFinishSale}
+                disabled={isPending || cartItems.length === 0}
+                className="h-12 w-full gap-2 rounded-2xl bg-slate-900 text-sm font-bold text-white shadow-md hover:bg-slate-800 disabled:opacity-50"
               >
-                Abrir novo turno
+                {isPending ? (
+                  <>
+                    <LoaderCircleIcon size={16} className="animate-spin" />
+                    <span>Finalizando Venda...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2Icon size={16} />
+                    <span>Finalizar Venda (F12)</span>
+                  </>
+                )}
               </Button>
+
+              {completedOrderId && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handlePrintReceipt}
+                  disabled={isPrintLoading}
+                  className="h-10 w-full gap-1.5 rounded-xl border-slate-200 bg-white text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                >
+                  <PrinterIcon size={14} />
+                  <span>Imprimir Cupom do Pedido #{completedOrderId}</span>
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* ── Modal: Pizza Builder (1 ou 2 Sabores / Meio a Meio) ── */}
+      <Dialog
+        open={Boolean(selectedPizzaProduct)}
+        onOpenChange={(open) => !open && setSelectedPizzaProduct(null)}
+      >
+        <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-lg">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <div className="rounded-xl bg-amber-100 p-2 text-amber-700">
+                <ChefHatIcon size={20} />
+              </div>
+              <div>
+                <DialogTitle className="font-display text-lg font-bold text-slate-900">
+                  Montar Pizza — {selectedPizzaProduct?.name}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500">
+                  Personalize os sabores, selecione borda recheada e observações.
+                </DialogDescription>
+              </div>
             </div>
-          ) : (
-            <div className="space-y-4 py-2">
+          </DialogHeader>
+
+          {selectedPizzaProduct && (
+            <div className="space-y-4 pt-2">
+              {/* Fraction Toggle */}
               <div className="space-y-1.5">
-                <Label>Valor contado na gaveta (R$)</Label>
+                <Label className="text-xs font-semibold text-slate-700">
+                  Divisão de Sabores
+                </Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPizzaFraction("inteira");
+                      setPizzaFlavor2(null);
+                    }}
+                    className={cn(
+                      "rounded-xl border p-2.5 text-xs font-semibold transition-all",
+                      pizzaFraction === "inteira"
+                        ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+                        : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                    )}
+                  >
+                    Pizza Inteira (1 Sabor)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPizzaFraction("meio-a-meio")}
+                    className={cn(
+                      "rounded-xl border p-2.5 text-xs font-semibold transition-all",
+                      pizzaFraction === "meio-a-meio"
+                        ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+                        : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                    )}
+                  >
+                    Meio a Meio (2 Sabores)
+                  </button>
+                </div>
+              </div>
+
+              {/* Sabor 1 info */}
+              <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+                    {pizzaFraction === "meio-a-meio" ? "1º Sabor (1/2)" : "Sabor Escolhido"}
+                  </span>
+                  <p className="font-semibold text-sm text-slate-900">
+                    {selectedPizzaProduct.name}
+                  </p>
+                </div>
+                <span className="font-bold text-xs text-slate-900">
+                  {formatCurrency(selectedPizzaProduct.price)}
+                </span>
+              </div>
+
+              {/* Sabor 2 Picker if Meio a Meio */}
+              {pizzaFraction === "meio-a-meio" && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold text-slate-700">
+                      Escolha o 2º Sabor (1/2) *
+                    </Label>
+                    <span className="text-[11px] text-amber-700 font-medium">
+                      {pizzaPricingRule === "MAX"
+                        ? "Cobrança pelo maior valor"
+                        : "Cobrança pela média dos sabores"}
+                    </span>
+                  </div>
+
+                  {/* Search for flavor 2 */}
+                  <Input
+                    placeholder="Filtrar outros sabores..."
+                    value={pizzaFlavor2Search}
+                    onChange={(e) => setPizzaFlavor2Search(e.target.value)}
+                    className="h-8 rounded-lg border-slate-200 text-xs"
+                  />
+
+                  <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1 border rounded-xl p-2 border-slate-200 bg-slate-50/40">
+                    {filteredOtherPizzaFlavors.map((flavor) => {
+                      const isChosen = pizzaFlavor2?.id === flavor.id;
+                      return (
+                        <div
+                          key={flavor.id}
+                          onClick={() => setPizzaFlavor2(flavor)}
+                          className={cn(
+                            "flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all border text-xs",
+                            isChosen
+                              ? "border-slate-900 bg-slate-900 text-white font-semibold shadow-sm"
+                              : "border-transparent bg-white text-slate-700 hover:bg-slate-100",
+                          )}
+                        >
+                          <div className="min-w-0 pr-2">
+                            <p className="truncate">{flavor.name}</p>
+                            {flavor.description && (
+                              <p className={cn("text-[10px] truncate", isChosen ? "text-slate-300" : "text-slate-400")}>
+                                {flavor.description}
+                              </p>
+                            )}
+                          </div>
+                          <span className={cn("shrink-0 font-bold", isChosen ? "text-white" : "text-slate-900")}>
+                            {formatCurrency(flavor.price)}
+                          </span>
+                        </div>
+                      );
+                    })}
+
+                    {filteredOtherPizzaFlavors.length === 0 && (
+                      <p className="text-xs text-slate-400 text-center py-2">
+                        Nenhum outro sabor encontrado.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Borda Recheada selection if available */}
+              {pizzaBorderOptions.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-slate-700">
+                    Borda Recheada (Opcional)
+                  </Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPizzaBorder(null)}
+                      className={cn(
+                        "rounded-xl border p-2 text-xs font-medium transition-all text-left",
+                        !selectedPizzaBorder
+                          ? "border-slate-900 bg-slate-900 text-white font-semibold"
+                          : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                      )}
+                    >
+                      <span>Sem Borda</span>
+                    </button>
+                    {pizzaBorderOptions.map((border) => {
+                      const isChosen = selectedPizzaBorder?.id === border.id;
+                      return (
+                        <button
+                          key={border.id}
+                          type="button"
+                          onClick={() => setSelectedPizzaBorder(border)}
+                          className={cn(
+                            "rounded-xl border p-2 text-xs font-medium transition-all text-left flex justify-between items-center",
+                            isChosen
+                              ? "border-slate-900 bg-slate-900 text-white font-semibold"
+                              : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                          )}
+                        >
+                          <span className="truncate">{border.name}</span>
+                          <span className="shrink-0 text-[11px] font-bold">
+                            +{formatCurrency(border.price)}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Notes */}
+              <div className="space-y-1.5">
+                <Label htmlFor="pdv-pizza-notes" className="text-xs font-semibold text-slate-700">
+                  Observações da Pizza (Ex: Sem cebola, massa bem assada)
+                </Label>
                 <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={fechamentoActualAmount}
-                  onChange={(e) => setFechamentoActualAmount(e.target.value)}
-                  placeholder="0,00"
-                  autoFocus
+                  id="pdv-pizza-notes"
+                  placeholder="Escreva aqui..."
+                  value={pizzaNotes}
+                  onChange={(e) => setPizzaNotes(e.target.value)}
+                  className="h-9 rounded-xl border-slate-200 text-xs"
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label>Observações (opcional)</Label>
-                <Input
-                  value={fechamentoNotes}
-                  onChange={(e) => setFechamentoNotes(e.target.value)}
-                  placeholder="Ex.: troco faltou, etc."
-                />
+
+              {/* Quantity */}
+              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                <span className="text-xs font-semibold text-slate-700">Quantidade</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPizzaQuantity((q) => Math.max(1, q - 1))}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+                  >
+                    <MinusIcon size={14} />
+                  </button>
+                  <span className="w-8 text-center text-sm font-bold text-slate-900">
+                    {pizzaQuantity}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPizzaQuantity((q) => q + 1)}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+                  >
+                    <PlusIcon size={14} />
+                  </button>
+                </div>
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsFechamentoOpen(false)}>
+
+              <DialogFooter className="gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setSelectedPizzaProduct(null)}
+                  className="rounded-full border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                >
                   Cancelar
                 </Button>
                 <Button
-                  onClick={() => void handleFecharTurno()}
-                  disabled={isFechamentoLoading || !fechamentoActualAmount}
+                  type="button"
+                  onClick={handleConfirmPizza}
+                  disabled={pizzaFraction === "meio-a-meio" && !pizzaFlavor2}
+                  className="rounded-full bg-slate-900 px-5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
                 >
-                  {isFechamentoLoading ? "Fechando..." : "Confirmar fechamento"}
+                  <span>
+                    Adicionar Pizza — {formatCurrency(computedPizzaPrice * pizzaQuantity)}
+                  </span>
                 </Button>
               </DialogFooter>
             </div>
@@ -974,747 +2067,454 @@ const PdvFrenteCaixa = ({
         </DialogContent>
       </Dialog>
 
-      {/* ── Sangria / Suprimento modal ───────────────────────────────────── */}
-      <Dialog open={isMovimentacaoOpen} onOpenChange={setIsMovimentacaoOpen}>
-        <DialogContent className="sm:max-w-md">
+      {/* ── Modal: Product Customization / Adicionais nos Lanches ── */}
+      <Dialog
+        open={Boolean(customizingProduct)}
+        onOpenChange={(open) => !open && setCustomizingProduct(null)}
+      >
+        <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-display text-xl">
-              {movimentacaoType === "SANGRIA" ? "Sangria de Caixa" : "Suprimento de Caixa"}
-            </DialogTitle>
-            <DialogDescription>
-              {movimentacaoType === "SANGRIA"
-                ? "Registre uma retirada de dinheiro do caixa."
-                : "Registre uma entrada de troco ou suprimento no caixa."}
-            </DialogDescription>
+            <div className="flex items-center gap-2">
+              <div className="rounded-xl bg-blue-100 p-2 text-blue-700">
+                <PlusIcon size={20} />
+              </div>
+              <div>
+                <DialogTitle className="font-display text-lg font-bold text-slate-900">
+                  Personalizar — {customizingProduct?.name}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500">
+                  Selecione opcionais, adicionais e complementos para este item.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label>Valor (R$)</Label>
-              <Input
-                type="number"
-                min={0.01}
-                step="0.01"
-                value={movimentacaoAmount}
-                onChange={(e) => setMovimentacaoAmount(e.target.value)}
-                placeholder="0,00"
-                autoFocus
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Motivo</Label>
-              <Input
-                value={movimentacaoReason}
-                onChange={(e) => setMovimentacaoReason(e.target.value)}
-                placeholder={movimentacaoType === "SANGRIA" ? "Ex.: Pagamento fornecedor" : "Ex.: Troco para o caixa"}
-              />
-            </div>
-          </div>
+          {customizingProduct && (
+            <div className="space-y-4 pt-2">
+              {isCustomLoading ? (
+                <div className="py-8 text-center text-slate-400 flex items-center justify-center gap-2">
+                  <LoaderCircleIcon size={18} className="animate-spin" />
+                  <span className="text-xs">Carregando grupos de adicionais...</span>
+                </div>
+              ) : (
+                <>
+                  <div className="max-h-72 overflow-y-auto space-y-4 pr-1">
+                    {customOptionGroups.map((group) => {
+                      const selected = selectedCustomOptions[group.id] || [];
+                      const isRequired = group.minOptions > 0;
+                      const isSingle = group.maxOptions === 1;
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsMovimentacaoOpen(false)}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={() => void handleMovimentacao()}
-              disabled={isMovimentacaoLoading || !movimentacaoAmount || !movimentacaoReason}
-              className={movimentacaoType === "SANGRIA" ? "bg-rose-600 hover:bg-rose-700" : ""}
-            >
-              {isMovimentacaoLoading ? "Registrando..." : "Confirmar"}
-            </Button>
-          </DialogFooter>
+                      return (
+                        <div
+                          key={group.id}
+                          className="rounded-xl border border-slate-200 bg-slate-50/50 p-3 space-y-2"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-xs text-slate-900">
+                              {group.name}
+                            </span>
+                            <span
+                              className={cn(
+                                "text-[10px] font-semibold px-2 py-0.5 rounded-full border",
+                                isRequired && selected.length < group.minOptions
+                                  ? "bg-amber-50 text-amber-800 border-amber-200"
+                                  : "bg-slate-100 text-slate-600 border-slate-200",
+                              )}
+                            >
+                              {isRequired
+                                ? `Obrigatório (mín. ${group.minOptions})`
+                                : `Opcional (máx. ${group.maxOptions})`}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 gap-1.5">
+                            {group.options.map((opt) => {
+                              const isChecked = selected.includes(opt.id);
+
+                              const toggleOption = () => {
+                                setSelectedCustomOptions((prev) => {
+                                  const current = prev[group.id] || [];
+                                  if (isSingle) {
+                                    return { ...prev, [group.id]: [opt.id] };
+                                  }
+                                  if (current.includes(opt.id)) {
+                                    return {
+                                      ...prev,
+                                      [group.id]: current.filter((id) => id !== opt.id),
+                                    };
+                                  }
+                                  if (current.length >= group.maxOptions) {
+                                    toast.warning(`Limite de ${group.maxOptions} opção(ões) atingido.`);
+                                    return prev;
+                                  }
+                                  return { ...prev, [group.id]: [...current, opt.id] };
+                                });
+                              };
+
+                              return (
+                                <div
+                                  key={opt.id}
+                                  onClick={toggleOption}
+                                  className={cn(
+                                    "flex items-center justify-between p-2 rounded-lg cursor-pointer border text-xs transition-all",
+                                    isChecked
+                                      ? "border-slate-900 bg-slate-900 text-white font-semibold"
+                                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-100",
+                                  )}
+                                >
+                                  <div>
+                                    <p>{opt.name}</p>
+                                    {opt.description && (
+                                      <p className={cn("text-[10px]", isChecked ? "text-slate-300" : "text-slate-400")}>
+                                        {opt.description}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <span className={cn("font-bold text-xs shrink-0", isChecked ? "text-white" : "text-slate-900")}>
+                                    {opt.price > 0 ? `+${formatCurrency(opt.price)}` : "Grátis"}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Notes */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="pdv-custom-notes" className="text-xs font-semibold text-slate-700">
+                      Observações (Ex: Sem cebola, pão bem passado)
+                    </Label>
+                    <Input
+                      id="pdv-custom-notes"
+                      placeholder="Escreva alguma observação para a cozinha..."
+                      value={customNotes}
+                      onChange={(e) => setCustomNotes(e.target.value)}
+                      className="h-9 rounded-xl border-slate-200 text-xs"
+                    />
+                  </div>
+
+                  {/* Quantity */}
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                    <span className="text-xs font-semibold text-slate-700">Quantidade</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCustomQuantity((q) => Math.max(1, q - 1))}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+                      >
+                        <MinusIcon size={14} />
+                      </button>
+                      <span className="w-8 text-center text-sm font-bold text-slate-900">
+                        {customQuantity}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setCustomQuantity((q) => q + 1)}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+                      >
+                        <PlusIcon size={14} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <DialogFooter className="gap-2 pt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setCustomizingProduct(null)}
+                      className="rounded-full border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleConfirmCustomProduct}
+                      className="rounded-full bg-slate-900 px-5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800"
+                    >
+                      <span>
+                        Adicionar ao Pedido — {formatCurrency(computedCustomPrice * customQuantity)}
+                      </span>
+                    </Button>
+                  </DialogFooter>
+                </>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
-      {/* ── Header card ─────────────────────────────────────────────────── */}
-      <Card className="border-white/80 bg-white/85">
-        <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge className="w-fit" variant="secondary">Frente de caixa</Badge>
-              {isOffline && (
-                <Badge variant="danger" className="gap-1">
-                  <WifiOffIcon size={11} /> Offline
-                </Badge>
-              )}
-              {pendingOrdersCount > 0 && (
-                <Badge variant="secondary" className="gap-1">
-                  {isSyncing ? "Sincronizando..." : `${String(pendingOrdersCount)} venda(s) na fila`}
-                </Badge>
-              )}
-              {drawerStatus === "opening" && (
-                <Badge variant="secondary" className="gap-1">Abrindo gaveta...</Badge>
-              )}
-              {drawerStatus === "done" && (
-                <Badge variant="secondary" className="gap-1 border-emerald-300 bg-emerald-50 text-emerald-800">Gaveta aberta</Badge>
-              )}
-              {drawerError && (
-                <Badge variant="danger" className="gap-1">{drawerError}</Badge>
-              )}
-            </div>
-            <CardTitle className="mt-2 font-display text-xl">PDV de {restaurantName}</CardTitle>
-            <CardDescription>
-              {activeShift
-                ? `Turno aberto por ${activeShift.openedByUser} — ${formatDateTime(activeShift.openedAt)} · F2 Busca · F8 Pag. · F12 Fechar`
-                : "Nenhum turno ativo."}
-            </CardDescription>
-          </div>
-
-          <div className="flex flex-wrap gap-2 items-end">
-            <div className="grid gap-2 sm:grid-cols-3 flex-1">
-              <Card className="bg-slate-950 text-white">
-                <CardContent className="p-3">
-                  <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Itens</p>
-                  <p className="mt-1 font-display text-xl">{String(totalItems)}</p>
-                </CardContent>
-              </Card>
-              <Card className="bg-white">
-                <CardContent className="p-3">
-                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Total</p>
-                  <p className="mt-1 font-display text-xl">{formatCurrency(finalTotal)}</p>
-                </CardContent>
-              </Card>
-              <Card className="bg-emerald-50">
-                <CardContent className="p-3">
-                  <p className="text-xs uppercase tracking-[0.18em] text-emerald-700">Turno</p>
-                  <p className="mt-1 text-xs font-medium text-emerald-900">
-                    {activeShift ? `Aberto · ${formatDateTime(activeShift.openedAt)}` : "Fechado"}
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Admin toolbar */}
-            {activeShift && (
-              <div className="flex gap-2 flex-wrap">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5 text-amber-700 border-amber-300 hover:bg-amber-50"
-                  onClick={() => { setMovimentacaoType("SUPRIMENTO"); setIsMovimentacaoOpen(true); }}
-                >
-                  + Suprimento
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5 text-rose-700 border-rose-300 hover:bg-rose-50"
-                  onClick={() => { setMovimentacaoType("SANGRIA"); setIsMovimentacaoOpen(true); }}
-                >
-                  − Sangria
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5 border-slate-300 hover:bg-slate-50"
-                  onClick={() => { setFechamentoSummary(null); setFechamentoActualAmount(""); setFechamentoNotes(""); setIsFechamentoOpen(true); }}
-                >
-                  Fechar turno
-                </Button>
+      {/* ── Modal: Abertura de Turno ── */}
+      <Dialog open={isShiftModalOpen} onOpenChange={setIsShiftModalOpen}>
+        <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <div className="rounded-xl bg-slate-100 p-2 text-slate-900">
+                <ClockIcon size={20} />
               </div>
-            )}
-          </div>
-        </CardHeader>
-      </Card>
+              <div>
+                <DialogTitle className="font-display text-lg font-bold text-slate-900">
+                  Abertura de Turno de Caixa
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500">
+                  Identifique o operador e informe o valor de fundo de troco inicial.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
 
-      <div className="grid gap-3 2xl:grid-cols-[minmax(0,1fr)_420px]">
-        {/* ── Left column: product list ────────────────────────────────── */}
-        <div className="space-y-3">
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <CardTitle>Buscar produtos</CardTitle>
-                  <CardDescription>
-                    F2 para focar · busque por nome, categoria, SKU ou descrição.
-                  </CardDescription>
-                </div>
+          <form onSubmit={handleOpenShiftSubmit} className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="shift-operator" className="text-xs font-semibold text-slate-700">
+                Nome do Operador *
+              </Label>
+              <Input
+                id="shift-operator"
+                required
+                placeholder="Ex.: Matheus"
+                value={shiftOperatorName}
+                onChange={(e) => setShiftOperatorName(e.target.value)}
+                className="h-10 rounded-xl border-slate-200 text-sm"
+              />
+            </div>
 
-                {/* Scale weight capture */}
-                {scaleProtocol && (
-                  <div className="flex shrink-0 flex-col items-end gap-1.5">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={capturedWeight !== null ? "default" : "outline"}
-                      className="gap-1.5"
-                      disabled={scaleStatus === "requesting" || scaleStatus === "reading"}
-                      onClick={() => {
-                        if (capturedWeight !== null) {
-                          setCapturedWeight(null);
-                        } else {
-                          void handleCaptureWeight();
-                        }
-                      }}
-                    >
-                      <ScaleIcon size={13} />
-                      {scaleStatus === "requesting" && "Selecionando porta..."}
-                      {scaleStatus === "reading" && "Lendo balança..."}
-                      {scaleStatus === "done" && capturedWeight !== null && `${capturedWeight.toFixed(3)} kg ✓`}
-                      {(scaleStatus === "idle" || scaleStatus === "error") && capturedWeight === null && "Capturar Peso"}
-                      {capturedWeight !== null && scaleStatus !== "done" && `${capturedWeight.toFixed(3)} kg — limpar`}
-                    </Button>
-                    {capturedWeight !== null && (
-                      <p className="text-[10px] text-emerald-700">
-                        Próximo produto adicionado usará este peso.
-                      </p>
-                    )}
-                    {scaleError && (
-                      <p className="text-[10px] text-rose-600">{scaleError}</p>
-                    )}
-                  </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="shift-opening-amount" className="text-xs font-semibold text-slate-700">
+                Fundo de Caixa Inicial (R$) *
+              </Label>
+              <Input
+                id="shift-opening-amount"
+                required
+                placeholder="0,00"
+                value={shiftOpeningAmount}
+                onChange={(e) => setShiftOpeningAmount(e.target.value)}
+                className="h-10 rounded-xl border-slate-200 text-sm"
+              />
+            </div>
+
+            <DialogFooter className="gap-2 pt-2">
+              <Button
+                type="submit"
+                disabled={isShiftOpening || !shiftOperatorName.trim()}
+                className="w-full rounded-full bg-slate-900 px-5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
+              >
+                {isShiftOpening && <LoaderCircleIcon size={14} className="mr-1.5 animate-spin" />}
+                {isShiftOpening ? "Abrindo Turno..." : "Confirmar Abertura de Turno"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Modal: Movimentação (Sangria / Suprimento) ── */}
+      <Dialog open={isMovimentacaoOpen} onOpenChange={setIsMovimentacaoOpen}>
+        <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <div className="rounded-xl bg-slate-100 p-2 text-slate-900">
+                <RotateCcwIcon size={20} />
+              </div>
+              <div>
+                <DialogTitle className="font-display text-lg font-bold text-slate-900">
+                  Movimentação de Caixa
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500">
+                  Registre uma retirada de valor (sangria) ou entrada adicional (suprimento).
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <form onSubmit={handleMovimentacaoSubmit} className="space-y-4 pt-2">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setMovimentacaoType("SANGRIA")}
+                className={cn(
+                  "p-2.5 rounded-xl border text-xs font-semibold transition-all",
+                  movimentacaoType === "SANGRIA"
+                    ? "border-rose-600 bg-rose-600 text-white shadow-sm"
+                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
                 )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="relative">
-                <SearchIcon className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-                <Input
-                  ref={searchInputRef}
-                  value={searchValue}
-                  onChange={(e) => setSearchValue(e.target.value)}
-                  placeholder="Ex.: combo, coca, batata... ou código de barras"
-                  className="pl-11"
-                />
-              </div>
-            </CardContent>
-          </Card>
+              >
+                Sangria (Retirada)
+              </button>
 
-          <Tabs value={selectedCategory} onValueChange={setSelectedCategory}>
-            <TabsList className="h-auto flex-wrap gap-1 bg-muted/60 p-1">
-              {categories.map((cat) => (
-                <TabsTrigger key={cat} value={cat} className="text-xs">{cat}</TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+              <button
+                type="button"
+                onClick={() => setMovimentacaoType("SUPRIMENTO")}
+                className={cn(
+                  "p-2.5 rounded-xl border text-xs font-semibold transition-all",
+                  movimentacaoType === "SUPRIMENTO"
+                    ? "border-emerald-600 bg-emerald-600 text-white shadow-sm"
+                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                )}
+              >
+                Suprimento (Entrada)
+              </button>
+            </div>
 
-          {filteredProducts.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="flex min-h-[120px] flex-col items-center justify-center gap-2 p-4 text-center">
-                <SearchIcon className="text-slate-400" size={20} />
-                <p className="font-medium text-slate-900">Nenhum produto encontrado</p>
-                <p className="text-sm text-muted-foreground">Ajuste a busca ou a categoria.</p>
-              </CardContent>
-            </Card>
+            <div className="space-y-1.5">
+              <Label htmlFor="mov-amount" className="text-xs font-semibold text-slate-700">
+                Valor da Movimentação (R$) *
+              </Label>
+              <Input
+                id="mov-amount"
+                required
+                placeholder="0,00"
+                value={movimentacaoAmount}
+                onChange={(e) => setMovimentacaoAmount(e.target.value)}
+                className="h-10 rounded-xl border-slate-200 text-sm"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="mov-reason" className="text-xs font-semibold text-slate-700">
+                Motivo / Justificativa *
+              </Label>
+              <Input
+                id="mov-reason"
+                required
+                placeholder="Ex: Pagamento de fornecedor de gelo"
+                value={movimentacaoReason}
+                onChange={(e) => setMovimentacaoReason(e.target.value)}
+                className="h-10 rounded-xl border-slate-200 text-sm"
+              />
+            </div>
+
+            <DialogFooter className="gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsMovimentacaoOpen(false)}
+                className="rounded-full border-slate-200 text-xs font-medium text-slate-700"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={isMovimentacaoLoading || !movimentacaoAmount.trim() || !movimentacaoReason.trim()}
+                className="rounded-full bg-slate-900 px-5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800"
+              >
+                {isMovimentacaoLoading ? "Registrando..." : "Confirmar Movimentação"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Modal: Fechamento de Caixa ── */}
+      <Dialog open={isFechamentoOpen} onOpenChange={setIsFechamentoOpen}>
+        <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <div className="rounded-xl bg-rose-100 p-2 text-rose-700">
+                <ClockIcon size={20} />
+              </div>
+              <div>
+                <DialogTitle className="font-display text-lg font-bold text-slate-900">
+                  Fechamento de Turno de Caixa
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500">
+                  Confira as vendas do turno e informe a contagem física do dinheiro em gaveta.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {isFechamentoLoading ? (
+            <div className="py-8 text-center text-slate-400 flex items-center justify-center gap-2">
+              <LoaderCircleIcon size={16} className="animate-spin" />
+              <span className="text-xs">Calculando totais do turno...</span>
+            </div>
           ) : (
-            <Card className="overflow-hidden">
-              <div className="divide-y">
-                {filteredProducts.map((product) => (
-                  <div
-                    key={product.id}
-                    className="flex items-center gap-3 px-4 py-2.5 transition hover:bg-slate-50/80"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1">
-                        <p className="truncate text-sm font-medium text-slate-900">{product.name}</p>
-                        <button
-                          type="button"
-                          title={product.description}
-                          className="shrink-0 text-muted-foreground transition hover:text-slate-700"
-                        >
-                          <InfoIcon size={12} />
-                        </button>
-                      </div>
-                      {product.sku && (
-                        <p className="text-xs text-muted-foreground truncate">SKU: {product.sku}</p>
-                      )}
-                    </div>
-                    <Badge variant={getAvailableStockVariant(product)} className="shrink-0 text-xs">
-                      {getAvailableStockLabel(product)}
-                    </Badge>
-                    <p className="w-20 shrink-0 text-right font-display text-sm font-semibold">
-                      {formatCurrency(product.price)}
-                    </p>
-                    <Button
-                      size="icon"
-                      className="h-7 w-7 shrink-0"
-                      disabled={product.trackInventory && product.stockQuantity <= 0}
-                      onClick={() => addProduct(product)}
-                    >
-                      <PlusIcon size={14} />
-                    </Button>
+            fechamentoSummary && (
+              <div className="space-y-3 pt-2">
+                <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 space-y-1.5 text-xs">
+                  <div className="flex justify-between text-slate-500">
+                    <span>Total de Pedidos</span>
+                    <span className="font-semibold text-slate-900">{fechamentoSummary.totalOrders}</span>
                   </div>
-                ))}
-              </div>
-            </Card>
-          )}
-        </div>
-
-        {/* ── Right column: sale summary ────────────────────────────────── */}
-        <div className="space-y-3">
-          {/* Customer + payment */}
-          <Card className="border-white/80 bg-slate-950 text-white">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-white/10">
-                  <ShoppingCartIcon size={13} />
-                </div>
-                <div>
-                  <CardTitle className="font-display text-base">Resumo da venda</CardTitle>
-                  <CardDescription className="text-xs text-slate-300">
-                    Operação pensada para caixa rápido.
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {/* Customer fields */}
-              <div className="grid gap-2">
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-200">
-                    Nome do cliente
-                  </label>
-                  <Input
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Opcional. Padrão: Cliente do balcão"
-                    className="border-white/10 bg-white/5 text-white placeholder:text-slate-400"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-200">
-                    Celular do cliente
-                    {isCheckingWallet && (
-                      <span className="ml-2 text-slate-400">Verificando saldo...</span>
-                    )}
-                    {!isCheckingWallet && walletBalance !== null && (
-                      <span className="ml-2 text-emerald-400">
-                        Cashback: {formatCurrency(walletBalance)}
-                      </span>
-                    )}
-                  </label>
-                  <Input
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    placeholder="Opcional. Informe para cashback"
-                    className="border-white/10 bg-white/5 text-white placeholder:text-slate-400"
-                  />
-                </div>
-              </div>
-
-              {/* Payment methods */}
-              {!isSplitMode && (
-                <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-5">
-                  {(
-                    ["DINHEIRO", "CARTAO_PRESENCIAL", "PIX", "VALE_ALIMENTACAO", "VALE_REFEICAO"] as PdvPaymentMethod[]
-                  ).map((method) => (
-                    <button
-                      key={method}
-                      type="button"
-                      onClick={() => setPaymentMethod(method)}
-                      className={`rounded-xl border px-2 py-2 text-center transition ${
-                        paymentMethod === method
-                          ? "border-white bg-white text-slate-950"
-                          : "border-white/10 bg-white/5 text-white"
-                      }`}
-                    >
-                      <div className="flex flex-col items-center gap-1">
-                        {method === "DINHEIRO" && <BanknoteIcon size={14} />}
-                        {method === "CARTAO_PRESENCIAL" && <CreditCardIcon size={14} />}
-                        {method === "PIX" && <QrCodeIcon size={14} />}
-                        {(method === "VALE_ALIMENTACAO" || method === "VALE_REFEICAO") && (
-                          <WalletIcon size={14} />
-                        )}
-                        <span className="text-[10px] font-medium leading-none">
-                          {PAYMENT_LABELS[method]}
-                        </span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Cash change (simple mode, DINHEIRO selected) */}
-              {!isSplitMode && paymentMethod === "DINHEIRO" && (
-                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                  <label className="mb-1.5 block text-xs font-medium text-slate-200">
-                    Valor recebido (R$)
-                  </label>
-                  <Input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={receivedAmount}
-                    onChange={(e) => setReceivedAmount(e.target.value)}
-                    placeholder="0,00"
-                    className="border-white/10 bg-white/5 text-white placeholder:text-slate-400"
-                  />
-                  {receivedAmount !== "" && (
-                    <div className="mt-2">
-                      {change >= 0 ? (
-                        <p className="text-sm font-semibold text-emerald-400">
-                          Troco a devolver: <span className="font-display">{formatCurrency(change)}</span>
-                        </p>
-                      ) : (
-                        <p className="text-xs text-amber-400">
-                          Valor insuficiente — faltam {formatCurrency(Math.abs(change))}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ── Split payment section ──────────────────────────────── */}
-              <div className="rounded-xl border border-white/10 bg-white/5 p-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-slate-200">Dividir pagamento</span>
-                  {isSplitMode && (
-                    <button
-                      type="button"
-                      onClick={() => setPaymentSplits([])}
-                      className="text-xs text-rose-400 hover:text-rose-300"
-                    >
-                      Cancelar divisão
-                    </button>
-                  )}
-                </div>
-
-                {paymentSplits.map((split, index) => (
-                  <div key={index} className="flex items-center justify-between text-xs">
-                    <span className="text-slate-300">
-                      {PAYMENT_LABELS[split.method as PdvPaymentMethod]}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-white">{formatCurrency(split.amount)}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveSplit(index)}
-                        className="text-rose-400 hover:text-rose-300"
-                      >
-                        <XIcon size={12} />
-                      </button>
-                    </div>
+                  <div className="flex justify-between text-slate-500">
+                    <span>Vendas em Dinheiro</span>
+                    <span className="font-semibold text-slate-900">{formatCurrency(fechamentoSummary.totalDinheiro)}</span>
                   </div>
-                ))}
-
-                {isSplitMode && (
-                  <div className="flex items-center justify-between text-xs font-semibold border-t border-white/10 pt-1.5">
-                    <span className="text-slate-400">Restante</span>
-                    <span className={splitRemaining > 0 ? "text-amber-400" : "text-emerald-400"}>
-                      {formatCurrency(Math.max(splitRemaining, 0))}
+                  <div className="flex justify-between text-slate-500">
+                    <span>Vendas em Cartão</span>
+                    <span className="font-semibold text-slate-900">{formatCurrency(fechamentoSummary.totalCartao)}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-500">
+                    <span>Vendas em PIX</span>
+                    <span className="font-semibold text-slate-900">{formatCurrency(fechamentoSummary.totalPix)}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-500">
+                    <span>Suprimentos (+)</span>
+                    <span className="font-semibold text-emerald-700">+{formatCurrency(fechamentoSummary.totalSuprimento)}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-500">
+                    <span>Sangrias (-)</span>
+                    <span className="font-semibold text-rose-600">-{formatCurrency(fechamentoSummary.totalSangria)}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-900 font-bold border-t border-slate-200 pt-1.5">
+                    <span>Dinheiro Esperado em Caixa</span>
+                    <span className="text-sm font-bold text-blue-700">
+                      {formatCurrency(fechamentoSummary.dinheiroEsperado)}
                     </span>
                   </div>
-                )}
+                </div>
 
-                <div className="flex gap-1.5">
-                  <select
-                    value={splitPendingMethod}
-                    onChange={(e) => setSplitPendingMethod(e.target.value as PdvPaymentMethod)}
-                    className="rounded-lg border border-white/10 bg-white/5 text-white text-xs px-2 py-1.5 flex-1"
-                  >
-                    <option value="DINHEIRO">Dinheiro</option>
-                    <option value="CARTAO_PRESENCIAL">Cartão</option>
-                    <option value="PIX">PIX</option>
-                    <option value="VALE_ALIMENTACAO">Vale Alim.</option>
-                    <option value="VALE_REFEICAO">Vale Ref.</option>
-                  </select>
+                <div className="space-y-1.5">
+                  <Label htmlFor="fech-actual" className="text-xs font-semibold text-slate-700">
+                    Valor Físico em Dinheiro Contado na Gaveta (R$) *
+                  </Label>
                   <Input
-                    id="pdv-split-amount"
-                    type="number"
-                    min={0.01}
-                    step="0.01"
-                    value={splitPendingAmount}
-                    onChange={(e) => setSplitPendingAmount(e.target.value)}
-                    placeholder="0,00"
-                    className="border-white/10 bg-white/5 text-white placeholder:text-slate-400 text-xs flex-1"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleAddSplit();
-                    }}
+                    id="fech-actual"
+                    required
+                    value={fechamentoActualAmount}
+                    onChange={(e) => setFechamentoActualAmount(e.target.value)}
+                    className="h-10 rounded-xl border-slate-200 text-sm font-semibold"
                   />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="fech-notes" className="text-xs font-semibold text-slate-700">
+                    Observações do Fechamento
+                  </Label>
+                  <Input
+                    id="fech-notes"
+                    placeholder="Alguma divergência ou justificativa..."
+                    value={fechamentoNotes}
+                    onChange={(e) => setFechamentoNotes(e.target.value)}
+                    className="h-9 rounded-xl border-slate-200 text-xs"
+                  />
+                </div>
+
+                <DialogFooter className="gap-2 pt-2">
                   <Button
                     type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={handleAddSplit}
-                    disabled={!splitPendingAmount}
-                    className="shrink-0 text-xs"
+                    variant="outline"
+                    onClick={() => setIsFechamentoOpen(false)}
+                    className="rounded-full border-slate-200 text-xs font-medium text-slate-700"
                   >
-                    Add
+                    Cancelar
                   </Button>
-                </div>
-
-                {splitRemaining > 0 && splitPendingAmount === "" && (
-                  <button
+                  <Button
                     type="button"
-                    onClick={handleAddFullRemainingSplit}
-                    className="text-xs text-emerald-400 hover:text-emerald-300"
+                    onClick={handleConfirmFechamento}
+                    disabled={isFechamentoLoading || !fechamentoActualAmount.trim()}
+                    className="rounded-full bg-rose-600 px-5 text-xs font-semibold text-white shadow-sm hover:bg-rose-700"
                   >
-                    + Adicionar {formatCurrency(splitRemaining)} em {PAYMENT_LABELS[splitPendingMethod]}
-                  </button>
-                )}
+                    Confirmar Fechamento
+                  </Button>
+                </DialogFooter>
               </div>
-
-              {/* Service fee toggle */}
-              <div className="rounded-xl border border-white/10 bg-white/5 p-3 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-medium text-slate-200">Taxa de serviço</p>
-                  <p className="text-[10px] text-slate-400">Adicionada ao total antes do pagamento.</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={serviceFeePercent}
-                    onChange={(e) => setServiceFeePercent(Number(e.target.value))}
-                    className="w-14 border-white/10 bg-white/5 text-white text-xs text-center placeholder:text-slate-400"
-                  />
-                  <span className="text-xs text-slate-400">%</span>
-                  <button
-                    type="button"
-                    onClick={() => setUseServiceFee((prev) => !prev)}
-                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition ${
-                      useServiceFee ? "bg-emerald-500" : "bg-white/20"
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition ${
-                        useServiceFee ? "translate-x-4" : "translate-x-0.5"
-                      }`}
-                    />
-                  </button>
-                </div>
-              </div>
-
-              {/* Coupon */}
-              {isCouponsEnabled && cartItems.length > 0 && (
-                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                  <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-slate-200">
-                    <TagIcon size={12} />
-                    Cupom de desconto
-                  </label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={couponCode}
-                      onChange={(e) => { setCouponCode(e.target.value); setAppliedCoupon(null); setCouponError(null); }}
-                      placeholder="Ex.: BEMVINDO10"
-                      className="border-white/10 bg-white/5 text-white placeholder:text-slate-400"
-                    />
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="secondary"
-                      disabled={!couponCode.trim() || isValidatingCoupon}
-                      onClick={() => void handleApplyCoupon()}
-                      className="shrink-0"
-                    >
-                      {isValidatingCoupon ? "..." : "Aplicar"}
-                    </Button>
-                  </div>
-                  {appliedCoupon && (
-                    <p className="mt-1.5 text-xs font-medium text-emerald-400">
-                      Cupom {appliedCoupon.code} aplicado — -{formatCurrency(appliedCoupon.discountAmount)}
-                    </p>
-                  )}
-                  {couponError && <p className="mt-1.5 text-xs text-rose-400">{couponError}</p>}
-                </div>
-              )}
-
-              {/* Cashback redemption */}
-              {isCashbackEnabled && walletBalance !== null && (
-                <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5">
-                  <input
-                    type="checkbox"
-                    checked={useWalletBalance}
-                    onChange={(e) => setUseWalletBalance(e.target.checked)}
-                    className="h-4 w-4 rounded accent-emerald-500"
-                  />
-                  <div className="flex min-w-0 flex-1 items-center gap-1.5">
-                    <WalletIcon size={13} className="shrink-0 text-emerald-400" />
-                    <span className="text-xs font-medium text-slate-200">
-                      Usar cashback —{" "}
-                      <span className="font-semibold text-emerald-400">
-                        {formatCurrency(walletBalance)}
-                      </span>{" "}
-                      disponível
-                    </span>
-                  </div>
-                </label>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Cart items + totals */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle>Itens selecionados</CardTitle>
-              <CardDescription>Ajuste as quantidades antes de concluir.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {cartItems.length === 0 ? (
-                <div className="rounded-xl border border-dashed bg-slate-50 px-4 py-5 text-center">
-                  <p className="text-sm font-medium text-slate-900">Carrinho vazio</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">Adicione produtos para liberar o fechamento.</p>
-                </div>
-              ) : (
-                cartItems.map((item) => (
-                  <div key={item.id} className="rounded-xl border bg-slate-50/80 p-2.5">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <p className="text-sm font-medium text-slate-950">{item.name}</p>
-                          {item.isWeighed && (
-                            <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
-                              <ScaleIcon size={9} /> pesado
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {formatCurrency(item.price)} / {item.isWeighed ? "kg" : "un."}
-                        </p>
-                      </div>
-                      <button type="button" onClick={() => removeProduct(item.id)} className="text-xs font-medium text-rose-600">
-                        Remover
-                      </button>
-                    </div>
-                    <div className="mt-2 flex items-center justify-between gap-2">
-                      {item.isWeighed ? (
-                        <div className="flex items-center gap-1.5">
-                          <ScaleIcon size={12} className="text-emerald-600" />
-                          <span className="text-sm font-semibold text-emerald-800">
-                            {item.quantity.toFixed(3)} kg
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1">
-                          <Button type="button" variant="outline" size="icon" className="h-7 w-7" onClick={() => decreaseProduct(item.id)}>
-                            <MinusIcon size={12} />
-                          </Button>
-                          <div className="flex h-7 min-w-9 items-center justify-center rounded-lg border bg-white px-2 text-sm font-semibold">
-                            {String(item.quantity)}
-                          </div>
-                          <Button type="button" variant="outline" size="icon" className="h-7 w-7" onClick={() => increaseProduct(item.id)}>
-                            <PlusIcon size={12} />
-                          </Button>
-                        </div>
-                      )}
-                      <p className="font-display text-sm font-semibold">{formatCurrency(item.price * item.quantity)}</p>
-                    </div>
-                  </div>
-                ))
-              )}
-
-              {/* Totals block */}
-              <div className="rounded-xl border bg-slate-950 p-3 text-white">
-                <div className="flex items-center justify-between text-xs text-slate-300">
-                  <span>Quantidade total</span>
-                  <span>{String(totalItems)} itens</span>
-                </div>
-                {(discountAmount > 0 || serviceFeeAmount > 0) && (
-                  <>
-                    <div className="mt-1.5 flex items-center justify-between text-xs text-slate-300">
-                      <span>Subtotal</span>
-                      <span>{formatCurrency(cartSubtotal)}</span>
-                    </div>
-                    {couponDiscount > 0 && (
-                      <div className="flex items-center justify-between text-xs text-emerald-400">
-                        <span>Cupom ({appliedCoupon?.code})</span>
-                        <span>-{formatCurrency(couponDiscount)}</span>
-                      </div>
-                    )}
-                    {cashbackDiscount > 0 && (
-                      <div className="flex items-center justify-between text-xs text-emerald-400">
-                        <span>Cashback</span>
-                        <span>-{formatCurrency(cashbackDiscount)}</span>
-                      </div>
-                    )}
-                    {serviceFeeAmount > 0 && (
-                      <div className="flex items-center justify-between text-xs text-amber-400">
-                        <span>Taxa de serviço ({serviceFeePercent}%)</span>
-                        <span>+{formatCurrency(serviceFeeAmount)}</span>
-                      </div>
-                    )}
-                  </>
-                )}
-                <div className="mt-1.5 flex items-center justify-between">
-                  <span className="text-sm font-medium">Total da venda</span>
-                  <span className="font-display text-xl font-semibold">{formatCurrency(finalTotal)}</span>
-                </div>
-                {isSplitMode && (
-                  <div className={`mt-1 flex items-center justify-between text-xs ${splitTotal >= finalTotal ? "text-emerald-400" : "text-amber-400"}`}>
-                    <span>Pago (divisão)</span>
-                    <span>{formatCurrency(splitTotal)}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Split mode warning */}
-              {isSplitMode && splitTotal < finalTotal && (
-                <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                  <CircleAlertIcon size={13} className="shrink-0" />
-                  Faltam {formatCurrency(splitRemaining)} para completar o pagamento.
-                </div>
-              )}
-
-              {/* Feedback */}
-              {feedback && (
-                <div
-                  className={`rounded-xl border px-3 py-2 text-sm ${
-                    feedback.type === "success"
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-                      : feedback.type === "offline"
-                      ? "border-amber-200 bg-amber-50 text-amber-900"
-                      : "border-rose-200 bg-rose-50 text-rose-900"
-                  }`}
-                >
-                  {feedback.message}
-                </div>
-              )}
-
-              {/* Print after successful sale */}
-              {feedback?.type === "success" && completedOrderId && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full gap-2 border-emerald-300 text-emerald-800 hover:bg-emerald-50"
-                  disabled={isPrintLoading}
-                  onClick={() => void handlePrint()}
-                >
-                  <PrinterIcon size={14} />
-                  {isPrintLoading ? "Preparando impressão..." : "Imprimir Cupom da Venda"}
-                </Button>
-              )}
-
-              {/* Shift required warning */}
-              {!activeShift && (
-                <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                  <CircleAlertIcon size={13} className="shrink-0" />
-                  Abra um turno de caixa para habilitar as vendas.
-                  <button type="button" onClick={() => setIsShiftModalOpen(true)} className="font-semibold underline">
-                    Abrir turno
-                  </button>
-                </div>
-              )}
-
-              {/* Action buttons */}
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1"
-                  disabled={isPending || cartItems.length === 0}
-                  onClick={clearSale}
-                >
-                  Limpar venda
-                </Button>
-                <Button
-                  type="button"
-                  className="flex-1"
-                  disabled={!canFinish || !activeShift}
-                  onClick={handleFinishSale}
-                >
-                  {isPending
-                    ? "Fechando venda..."
-                    : `Fechar conta${isOffline ? " (offline)" : ""} · F12`}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </section>
+            )
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 

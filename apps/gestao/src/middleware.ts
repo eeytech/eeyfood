@@ -64,6 +64,18 @@ export async function middleware(request: NextRequest) {
       }
     }
 
+    // Se o usuário for Operador de Comandas / Garçom, restringir exclusivamente ao /comandas e APIs
+    if (userRole === "WAITER") {
+      const isAllowed =
+        pathname === "/comandas" ||
+        pathname.startsWith("/comandas/") ||
+        pathname.startsWith("/api/");
+
+      if (!isAllowed) {
+        return NextResponse.redirect(new URL("/comandas", request.url));
+      }
+    }
+
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set("x-pathname", pathname);
     requestHeaders.set("x-user-id", String(payload.sub ?? ""));

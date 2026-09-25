@@ -762,6 +762,10 @@ export const updateRestaurantFeaturesAction = async (
     ? getBooleanValue(formData.get("isOrderSchedulingEnabled"))
     : restaurant.isOrderSchedulingEnabled;
 
+  const pizzaPricingRuleRaw = getStringValue(formData.get("pizzaPricingRule"));
+  const pizzaPricingRule =
+    pizzaPricingRuleRaw === "AVERAGE" ? "AVERAGE" : "MAX";
+
   await db
     .update(restaurantsTable)
     .set({
@@ -773,6 +777,7 @@ export const updateRestaurantFeaturesAction = async (
       isTakeawayEnabled,
       isDineInEnabled,
       isOrderSchedulingEnabled,
+      pizzaPricingRule,
       updatedAt: new Date(),
     })
     .where(eq(restaurantsTable.id, restaurant.id));

@@ -61,89 +61,102 @@ export const RestaurantDetailsForm = ({
   };
 
   return (
-    <Card className="border-white/80 bg-white/90">
+    <Card className="border-slate-200/80 bg-white shadow-sm">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <StoreIcon size={16} />
+        <CardTitle className="flex items-center gap-2 font-display text-lg text-slate-900">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+            <StoreIcon size={18} />
+          </div>
           Dados do Estabelecimento
         </CardTitle>
-        <CardDescription>
-          Informações públicas e de identificação do seu restaurante.
+        <CardDescription className="text-sm text-slate-500">
+          Informações públicas e de identificação visíveis para clientes e comprovantes de venda.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} encType="multipart/form-data" className="space-y-4">
+        <form onSubmit={handleSubmit} encType="multipart/form-data" className="space-y-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="name">
-                Nome do Estabelecimento <span className="text-destructive">*</span>
+              <Label htmlFor="name" className="text-xs font-semibold uppercase text-slate-600">
+                Nome do Estabelecimento <span className="text-rose-500">*</span>
               </Label>
               <Input
                 id="name"
                 name="name"
                 defaultValue={initialValues.name}
                 placeholder="Ex: Burger House"
+                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-slate-400"
                 disabled={isPending}
                 required
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="phone">Celular</Label>
+              <Label htmlFor="phone" className="text-xs font-semibold uppercase text-slate-600">
+                Telefone / WhatsApp
+              </Label>
               <Input
                 id="phone"
                 name="phone"
                 defaultValue={initialValues.phone ?? ""}
                 placeholder="(11) 99999-9999"
+                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-slate-400"
                 disabled={isPending}
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="cnpj">CNPJ</Label>
+              <Label htmlFor="cnpj" className="text-xs font-semibold uppercase text-slate-600">
+                CNPJ
+              </Label>
               <Input
                 id="cnpj"
                 name="cnpj"
                 defaultValue={initialValues.cnpj ?? ""}
                 placeholder="00.000.000/0001-00"
+                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-slate-400"
                 disabled={isPending}
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="address">Endereço Completo</Label>
+              <Label htmlFor="address" className="text-xs font-semibold uppercase text-slate-600">
+                Endereço Completo
+              </Label>
               <Input
                 id="address"
                 name="address"
                 defaultValue={initialValues.address ?? ""}
                 placeholder="Rua Exemplo, 123 – Bairro, Cidade"
+                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-slate-400"
                 disabled={isPending}
               />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="description">
-              Descrição / Slogan <span className="text-destructive">*</span>
+            <Label htmlFor="description" className="text-xs font-semibold uppercase text-slate-600">
+              Descrição / Slogan <span className="text-rose-500">*</span>
             </Label>
             <Textarea
               id="description"
               name="description"
               defaultValue={initialValues.description}
-              placeholder="Uma breve descrição exibida para os seus clientes."
+              placeholder="Uma breve apresentação exibida para seus clientes no topo do cardápio."
               rows={3}
+              className="rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-slate-400 resize-none"
               disabled={isPending}
               required
             />
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label>
-                Logo do Restaurante <span className="text-destructive">*</span>
+          <div className="grid gap-5 sm:grid-cols-2 pt-1">
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold uppercase text-slate-600">
+                Logo do Restaurante <span className="text-rose-500">*</span>
               </Label>
               <div
-                className="relative flex aspect-square w-32 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 transition hover:border-slate-400 hover:bg-slate-100"
+                className="relative flex aspect-square w-32 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 transition hover:border-slate-300 hover:bg-slate-100"
                 onClick={() => avatarInputRef.current?.click()}
               >
                 {avatarPreview ? (
@@ -161,7 +174,7 @@ export const RestaurantDetailsForm = ({
                   <UploadIcon size={20} className="text-white" />
                 </div>
               </div>
-              <p className="text-xs text-slate-500">Clique para trocar. Máx. 2 MB.</p>
+              <p className="text-[11px] text-slate-500">Formatos JPG, PNG ou WEBP. Máx. 2 MB.</p>
               <input
                 ref={avatarInputRef}
                 id="avatarFile"
@@ -174,12 +187,12 @@ export const RestaurantDetailsForm = ({
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label>
-                Capa do Restaurante <span className="text-destructive">*</span>
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold uppercase text-slate-600">
+                Banner de Capa <span className="text-rose-500">*</span>
               </Label>
               <div
-                className="relative flex h-32 w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 transition hover:border-slate-400 hover:bg-slate-100"
+                className="relative flex h-32 w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 transition hover:border-slate-300 hover:bg-slate-100"
                 onClick={() => coverInputRef.current?.click()}
               >
                 {coverPreview ? (
@@ -197,7 +210,7 @@ export const RestaurantDetailsForm = ({
                   <UploadIcon size={20} className="text-white" />
                 </div>
               </div>
-              <p className="text-xs text-slate-500">Clique para trocar. Máx. 2 MB.</p>
+              <p className="text-[11px] text-slate-500">Imagem panorâmica para topo do cardápio digital.</p>
               <input
                 ref={coverInputRef}
                 id="coverFile"
@@ -211,13 +224,15 @@ export const RestaurantDetailsForm = ({
             </div>
           </div>
 
-          <Button
-            type="submit"
-            className="w-full rounded-full"
-            disabled={isPending}
-          >
-            {isPending ? "Salvando..." : "Salvar Dados"}
-          </Button>
+          <div className="pt-2">
+            <Button
+              type="submit"
+              className="h-10 w-full rounded-full bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 transition"
+              disabled={isPending}
+            >
+              {isPending ? "Salvando alterações..." : "Salvar Dados do Estabelecimento"}
+            </Button>
+          </div>
         </form>
       </CardContent>
     </Card>

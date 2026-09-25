@@ -129,11 +129,11 @@ const ROLE_CONFIG: Record<string, RoleConfig> = {
     description: "Supervisão da operação, pedidos, mesas, cancelamentos e equipe",
   },
   WAITER: {
-    label: "Garçom / Atendente",
-    shortLabel: "Garçom",
+    label: "Operador de Comandas / Garçom (Mobile & Salão)",
+    shortLabel: "Comandas / Garçom",
     badgeClass: "bg-indigo-50 text-indigo-800 border-indigo-200/80 hover:bg-indigo-100",
     icon: UtensilsCrossedIcon,
-    description: "Lançamento de pedidos em mesas, comandas e salão",
+    description: "Acesso exclusivo ao painel de Comandas & Mesas, otimizado para celular como um aplicativo dedicado",
   },
   COURIER: {
     label: "Entregador / Motoboy",
@@ -488,7 +488,7 @@ export function UsuariosClient({ slug, users }: UsuariosClientProps) {
                     <SelectItem value="COURIER">Entregador / Motoboy</SelectItem>
                     <SelectItem value="ADMIN">Administrador</SelectItem>
                     <SelectItem value="MANAGER">Gerente</SelectItem>
-                    <SelectItem value="WAITER">Garçom</SelectItem>
+                    <SelectItem value="WAITER">Comandas / Garçom (Mobile)</SelectItem>
                     <SelectItem value="SUPER_ADMIN">Super Administrador</SelectItem>
                   </SelectContent>
                 </Select>

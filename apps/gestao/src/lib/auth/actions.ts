@@ -101,7 +101,7 @@ export async function loginAction(
           : user.role === "COURIER"
             ? "/entregas"
             : user.role === "WAITER"
-              ? "/mesas"
+              ? "/comandas"
               : "/pedidos";
 
     redirect(destinationRoute);

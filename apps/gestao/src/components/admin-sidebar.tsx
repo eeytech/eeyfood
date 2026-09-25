@@ -262,7 +262,7 @@ const AdminSidebar = ({
               {userRole === "KITCHEN"
                 ? "Cozinha / KDS"
                 : userRole === "WAITER"
-                  ? "Garçom"
+                  ? "Comandas / Garçom"
                   : userRole === "COURIER"
                     ? "Entregador"
                     : "Administrador"}

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { buscarRestauranteUnico } from "@fsw/db";
+import { buscarRestauranteParaGestao } from "@/lib/admin-queries";
 import { listarChamadosAction } from "./suporte-actions";
 import { SuporteClient } from "./suporte-client";
 
@@ -17,10 +17,11 @@ interface SuportePageProps {
 
 export default async function SuportePage({ params }: SuportePageProps) {
   const resolvedParams = params ? await params : undefined;
-  const restaurant = await buscarRestauranteUnico();
-  const slug = resolvedParams?.slug || restaurant?.slug || "";
+  const restaurant = await buscarRestauranteParaGestao(resolvedParams?.slug);
+  const slug = restaurant?.slug || resolvedParams?.slug || "";
 
   const initialTickets = await listarChamadosAction(slug);
 
   return <SuporteClient slug={slug} initialTickets={initialTickets} />;
 }
+

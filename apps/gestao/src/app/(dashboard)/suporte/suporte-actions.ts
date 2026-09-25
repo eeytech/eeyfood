@@ -219,3 +219,23 @@ export async function adicionarMensagemChamadoAction(
   revalidatePath("/suporte");
   return { success: true };
 }
+
+export async function excluirChamadoAction(
+  ticketId: string,
+  restaurantSlug?: string,
+): Promise<{ success: boolean; error?: string }> {
+  const index = globalTickets.findIndex((t) => t.id === ticketId);
+  if (index === -1) {
+    return { success: false, error: "Chamado não encontrado." };
+  }
+
+  globalTickets.splice(index, 1);
+
+  revalidatePath("/suporte");
+  if (restaurantSlug) {
+    revalidatePath(`/${restaurantSlug}/suporte`);
+  }
+
+  return { success: true };
+}
+

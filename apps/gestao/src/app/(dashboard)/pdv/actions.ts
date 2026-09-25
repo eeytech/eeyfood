@@ -1,6 +1,6 @@
 "use server";
 
-import { atualizarStatusPagamentoPedido, atualizarStatusPedido, buscarPedidoRecebimentoPorId, buscarRestaurantePorSlug, criarPedido, cashRegisterShiftsTable, cashMovementsTable, couponsTable, walletsTable, ordersTable, db, and, eq, sql, desc } from "@fsw/db";
+import { atualizarStatusPagamentoPedido, atualizarStatusPedido, buscarPedidoRecebimentoPorId, buscarProdutoDoRestaurante, buscarRestaurantePorSlug, criarPedido, cashRegisterShiftsTable, cashMovementsTable, couponsTable, walletsTable, ordersTable, db, and, eq, sql, desc } from "@fsw/db";
 import type { CashRegisterShift, PaymentMethod, PedidoRecebimento } from "@fsw/db";
 import { revalidatePath } from "next/cache";
 
@@ -353,7 +353,14 @@ export interface FinalizarVendaPdvInput {
   customerPhone?: string;
   paymentMethod: PdvPaymentMethod;
   paymentSplits?: Array<{ method: string; amount: number }>;
-  products: Array<{ id: string; quantity: number }>;
+  products: Array<{
+    id: string;
+    name?: string;
+    quantity: number;
+    selectedOptions?: string[];
+    notes?: string;
+  }>;
+
   couponCode?: string;
   useWalletBalance?: boolean;
   changeFor?: number;
@@ -367,6 +374,20 @@ interface FinalizarVendaPdvResult {
   orderId?: number;
   total?: number;
 }
+
+export const buscarProdutoComOpcoesPdv = async (
+  slug: string,
+  productId: string,
+) => {
+  try {
+    return await buscarProdutoDoRestaurante({ slug, productId });
+  } catch {
+    return null;
+  }
+};
+
+
+
 
 export const finalizarVendaPdv = async ({
   slug,

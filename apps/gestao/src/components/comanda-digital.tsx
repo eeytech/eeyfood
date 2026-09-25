@@ -9,20 +9,32 @@ import type {
   ComandaAvulsaComPedido,
 } from "@fsw/db";
 import {
+  ArrowLeftIcon,
   ArrowLeftRightIcon,
   BanknoteIcon,
+  CheckIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   ClockIcon,
   CreditCardIcon,
   GitMergeIcon,
   LayoutGridIcon,
   ListIcon,
   Loader2Icon,
+  LogOutIcon,
   MapIcon,
   PlusIcon,
   QrCodeIcon,
+  ReceiptTextIcon,
   ScissorsIcon,
   SearchIcon,
+  ShoppingBagIcon,
+  SparklesIcon,
+  UserIcon,
   UsersRoundIcon,
+  UtensilsCrossedIcon,
+  WifiIcon,
+  WifiOffIcon,
 } from "lucide-react";
 import {
   useCallback,
@@ -51,6 +63,7 @@ import {
   transferirMesaAction,
   unirMesasAction,
 } from "@/app/(dashboard)/comandas/actions";
+import { logoutAction } from "@/lib/auth/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -105,6 +118,9 @@ interface ComandaDigitalProps {
   initialReservations?: TableReservation[];
   initialQueue?: WaitingQueueEntry[];
   initialComandasAvulsas?: ComandaAvulsaComPedido[];
+  userName?: string;
+  userRole?: string;
+  isDedicatedMode?: boolean;
 }
 
 interface FeedbackState {
@@ -178,6 +194,9 @@ const ComandaDigital = ({
   initialReservations = [],
   initialQueue = [],
   initialComandasAvulsas = [],
+  userName,
+  userRole,
+  isDedicatedMode = false,
 }: ComandaDigitalProps) => {
   // ── Table / view state ──────────────────────────────────────────────────
   const [tables, setTables] = useState(initialTables);
@@ -185,6 +204,13 @@ const ComandaDigital = ({
   const [tableFilter, setTableFilter] = useState<TableFilter>("TODAS");
   const [mainView, setMainView] = useState<MainView>("MESAS");
   const [salonView, setSalonView] = useState<SalonView>("LISTA");
+
+  // ── Mobile App Navigation state ─────────────────────────────────────────
+  const [mobileScreen, setMobileScreen] = useState<"SALON" | "DETAIL">("SALON");
+  const [mobileDetailTab, setMobileDetailTab] = useState<"CARDAPIO" | "ITEMS">("CARDAPIO");
+  const [socketConnected, setSocketConnected] = useState(false);
+  const [recentlyAddedId, setRecentlyAddedId] = useState<string | null>(null);
+  const [mobileSearchTable, setMobileSearchTable] = useState("");
 
   // ── Waiters / reservations / queue / avulsas ────────────────────────────
   const [reservations, setReservations] = useState<TableReservation[]>(initialReservations);
@@ -292,6 +318,30 @@ const ComandaDigital = ({
     return tables;
   }, [tables, tableFilter]);
 
+  const mobileFilteredTables = useMemo(() => {
+    let list = displayedTables;
+    if (mobileSearchTable.trim()) {
+      const q = mobileSearchTable.toLowerCase().trim();
+      list = list.filter(
+        (m) =>
+          m.table.name.toLowerCase().includes(q) ||
+          m.currentOrder?.customerName?.toLowerCase().includes(q),
+      );
+    }
+    return list;
+  }, [displayedTables, mobileSearchTable]);
+
+  const filteredAvulsas = useMemo(() => {
+    if (!avulsaBarcodeInput.trim()) return comandasAvulsas;
+    const q = avulsaBarcodeInput.toLowerCase().trim();
+    return comandasAvulsas.filter(
+      (c) =>
+        String(c.numero).includes(q) ||
+        c.customerName?.toLowerCase().includes(q) ||
+        c.barcode?.toLowerCase().includes(q),
+    );
+  }, [comandasAvulsas, avulsaBarcodeInput]);
+
   const productCategories = useMemo(() => {
     const cats = Array.from(
       new Set(products.filter((p) => p.isActive).map((p) => p.categoryName)),
@@ -375,16 +425,24 @@ const ComandaDigital = ({
 
   useEffect(() => {
     const socket = io(websocketUrl, { transports: ["websocket"] });
-    const onConnect = () => socket.emit("JOIN_RESTAURANT_ROOM", slug);
+    const onConnect = () => {
+      setSocketConnected(true);
+      socket.emit("JOIN_RESTAURANT_ROOM", slug);
+    };
+    const onDisconnect = () => {
+      setSocketConnected(false);
+    };
     const onEvent = async (payload: { restaurantSlug: string }) => {
       if (payload.restaurantSlug !== slug) return;
       await syncTables();
     };
     socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
     socket.on("NEW_ORDER", onEvent);
     socket.on("ORDER_UPDATED", onEvent);
     return () => {
       socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
       socket.off("NEW_ORDER", onEvent);
       socket.off("ORDER_UPDATED", onEvent);
       socket.disconnect();
@@ -455,7 +513,8 @@ const ComandaDigital = ({
         });
         updateMesaOrder(order);
         setOpeningCustomerName("");
-        setFeedback({ type: "success", message: `${selectedMesa.table.name} aberta.` });
+        setFeedback({ type: "success", message: `${selectedMesa.table.name} aberta com sucesso!` });
+        setMobileDetailTab("CARDAPIO");
       } catch (e) {
         setFeedback({
           type: "error",
@@ -469,6 +528,13 @@ const ComandaDigital = ({
     const order = selectedMesa?.currentOrder ?? selectedAvulsa?.order;
     if (!order) return;
     setFeedback(null);
+    setRecentlyAddedId(productId);
+    setTimeout(() => setRecentlyAddedId(null), 1000);
+
+    if (typeof window !== "undefined" && "vibrate" in navigator) {
+      navigator.vibrate?.(40);
+    }
+
     startTransition(async () => {
       try {
         const updated = await adicionarItensComandaAction({
@@ -482,10 +548,15 @@ const ComandaDigital = ({
             prev.map((c) => (c.id === selectedAvulsaId ? { ...c, order: updated } : c)),
           );
         }
+        const prod = products.find((p) => p.id === productId);
+        setFeedback({
+          type: "success",
+          message: `${prod?.name ?? "Item"} lançado na comanda!`,
+        });
       } catch (e) {
         setFeedback({
           type: "error",
-          message: e instanceof Error ? e.message : "Erro ao lancar item.",
+          message: e instanceof Error ? e.message : "Erro ao lançar item.",
         });
       }
     });
@@ -510,6 +581,7 @@ const ComandaDigital = ({
           type: "success",
           message: `Conta da ${selectedMesa.table.name} encerrada — ${formatCurrency(order.total)}.`,
         });
+        setMobileScreen("SALON");
       } catch (e) {
         setFeedback({
           type: "error",
@@ -534,7 +606,8 @@ const ComandaDigital = ({
         });
         setComandasAvulsas((prev) => prev.filter((c) => c.id !== selectedAvulsaId));
         setSelectedAvulsaId(null);
-        setFeedback({ type: "success", message: "Comanda avulsa encerrada." });
+        setFeedback({ type: "success", message: "Comanda avulsa encerrada com sucesso." });
+        setMobileScreen("SALON");
       } catch (e) {
         setFeedback({
           type: "error",
@@ -821,13 +894,21 @@ const ComandaDigital = ({
                   </p>
                   <Button
                     size="icon"
-                    className="h-7 w-7 shrink-0"
+                    className={`h-7 w-7 shrink-0 transition-all ${
+                      recentlyAddedId === product.id
+                        ? "bg-emerald-600 text-white"
+                        : ""
+                    }`}
                     disabled={
                       isPending || (product.trackInventory && product.stockQuantity <= 0)
                     }
                     onClick={() => handleAddProduct(product.id)}
                   >
-                    <PlusIcon size={14} />
+                    {recentlyAddedId === product.id ? (
+                      <CheckIcon size={14} className="animate-in zoom-in" />
+                    ) : (
+                      <PlusIcon size={14} />
+                    )}
                   </Button>
                 </div>
               ))}
@@ -840,6 +921,941 @@ const ComandaDigital = ({
 
   return (
     <section className="space-y-4">
+      {/* ── App Top Header (visível em mobile e em terminais dedicados) ── */}
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200/90 bg-white/95 px-3 py-2.5 sm:px-4 backdrop-blur-md shadow-xs -mx-3 -mt-3 sm:mx-0 sm:mt-0 sm:rounded-2xl">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm">
+            <UtensilsCrossedIcon size={18} />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <h1 className="truncate font-display text-sm font-bold text-slate-900 sm:text-base leading-tight">
+                {restaurantName}
+              </h1>
+              <span className="hidden sm:inline-block rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">
+                Comandas
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-[11px] text-slate-500">
+              <span className="flex items-center gap-1">
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    socketConnected ? "bg-emerald-500 animate-pulse" : "bg-rose-400"
+                  }`}
+                />
+                <span
+                  className={
+                    socketConnected
+                      ? "font-medium text-emerald-700"
+                      : "font-medium text-rose-600"
+                  }
+                >
+                  {socketConnected ? "Ao vivo" : "Reconectando"}
+                </span>
+              </span>
+              {userName && (
+                <span className="truncate hidden sm:inline text-slate-400">
+                  · {userName}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsFilaOpen(true)}
+            className="h-8 gap-1 rounded-lg border-slate-200 px-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            title="Fila de espera"
+          >
+            <ClockIcon size={13} className="text-amber-600" />
+            <span className="hidden md:inline">Fila</span>
+            {queue.length > 0 && (
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white">
+                {queue.length}
+              </span>
+            )}
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsReservasOpen(true)}
+            className="h-8 gap-1 rounded-lg border-slate-200 px-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            title="Reservas do dia"
+          >
+            <UsersRoundIcon size={13} className="text-blue-600" />
+            <span className="hidden md:inline">Reservas</span>
+            {todayReservations.length > 0 && (
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white">
+                {todayReservations.length}
+              </span>
+            )}
+          </Button>
+
+          {/* Sair / Logout button */}
+          <button
+            type="button"
+            title="Desconectar do terminal de comandas"
+            onClick={async () => {
+              if (window.confirm("Deseja desconectar e sair do painel de comandas?")) {
+                await logoutAction();
+              }
+            }}
+            className="flex h-8 items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition-colors active:scale-95 cursor-pointer"
+          >
+            <LogOutIcon size={13} />
+            <span className="hidden sm:inline">Sair</span>
+          </button>
+        </div>
+      </header>
+
+      {/* ── MOBILE APP VIEW (< xl) ── */}
+      <div className="xl:hidden space-y-3 pb-24">
+        {mobileScreen === "SALON" ? (
+          /* ── MOBILE SALON SCREEN ── */
+          <div className="space-y-3">
+            {/* View Switcher: Mesas vs Comandas Avulsas */}
+            <div className="flex rounded-xl bg-slate-200/80 p-1">
+              <button
+                type="button"
+                onClick={() => setMainView("MESAS")}
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold transition-all ${
+                  mainView === "MESAS"
+                    ? "bg-white text-slate-900 shadow-xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <LayoutGridIcon size={14} />
+                <span>Mesas ({tables.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMainView("COMANDAS_AVULSAS")}
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold transition-all ${
+                  mainView === "COMANDAS_AVULSAS"
+                    ? "bg-white text-slate-900 shadow-xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <QrCodeIcon size={14} />
+                <span>Avulsas ({comandasAvulsas.length})</span>
+              </button>
+            </div>
+
+            {mainView === "MESAS" ? (
+              <div className="space-y-3">
+                {/* Status Filter Chips & Table Search */}
+                <div className="space-y-2">
+                  <div className="relative">
+                    <SearchIcon
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                      size={15}
+                    />
+                    <Input
+                      value={mobileSearchTable}
+                      onChange={(e) => setMobileSearchTable(e.target.value)}
+                      placeholder="Buscar mesa ou cliente..."
+                      className="h-10 pl-9 rounded-xl border-slate-200 bg-white text-sm"
+                    />
+                    {mobileSearchTable && (
+                      <button
+                        type="button"
+                        onClick={() => setMobileSearchTable("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
+                    <button
+                      type="button"
+                      onClick={() => setTableFilter("TODAS")}
+                      className={`shrink-0 rounded-full px-3 py-1 font-semibold transition-all ${
+                        tableFilter === "TODAS"
+                          ? "bg-slate-900 text-white shadow-xs"
+                          : "bg-white text-slate-600 border border-slate-200"
+                      }`}
+                    >
+                      Todas ({tables.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTableFilter("LIVRES")}
+                      className={`shrink-0 rounded-full px-3 py-1 font-semibold transition-all ${
+                        tableFilter === "LIVRES"
+                          ? "bg-emerald-600 text-white shadow-xs"
+                          : "bg-white text-emerald-700 border border-emerald-200"
+                      }`}
+                    >
+                      Livres ({freeTables})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTableFilter("OCUPADAS")}
+                      className={`shrink-0 rounded-full px-3 py-1 font-semibold transition-all ${
+                        tableFilter === "OCUPADAS"
+                          ? "bg-blue-600 text-white shadow-xs"
+                          : "bg-white text-blue-700 border border-blue-200"
+                      }`}
+                    >
+                      Ocupadas ({occupiedTables})
+                    </button>
+                  </div>
+                </div>
+
+                {/* Mobile Tables Grid */}
+                <div className="grid grid-cols-2 gap-2.5">
+                  {mobileFilteredTables.map((mesa) => {
+                    const isOccupied = !!mesa.currentOrder;
+                    const orderItemCount =
+                      mesa.currentOrder?.orderProducts?.reduce(
+                        (acc, i) => acc + i.quantity,
+                        0,
+                      ) ?? 0;
+
+                    return (
+                      <button
+                        key={mesa.table.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedTableId(mesa.table.id);
+                          setMobileScreen("DETAIL");
+                          if (isOccupied) {
+                            setMobileDetailTab("ITEMS");
+                          } else {
+                            setMobileDetailTab("CARDAPIO");
+                          }
+                        }}
+                        className={`relative flex min-h-[110px] flex-col justify-between rounded-2xl border-2 p-3 text-left transition-all active:scale-[0.98] ${
+                          isOccupied
+                            ? "border-blue-400/90 bg-blue-50/60 shadow-xs"
+                            : "border-slate-200/90 bg-white shadow-xs hover:border-slate-300"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-1">
+                          <div>
+                            <p className="font-display text-base font-bold text-slate-900 leading-tight">
+                              {mesa.table.name}
+                            </p>
+                            <p className="text-[10px] text-slate-500 font-medium">
+                              {mesa.table.seats} lug.
+                            </p>
+                          </div>
+                          <Badge
+                            variant={getMesaStatusBadgeVariant(mesa, reservedTableIds)}
+                            className="text-[10px] px-1.5 py-0.5 shrink-0"
+                          >
+                            {getMesaStatusLabel(mesa, reservedTableIds)}
+                          </Badge>
+                        </div>
+
+                        <div className="mt-2 border-t border-slate-100 pt-1.5">
+                          {mesa.currentOrder ? (
+                            <div>
+                              {mesa.currentOrder.customerName && (
+                                <p className="truncate text-xs font-semibold text-slate-800">
+                                  {mesa.currentOrder.customerName}
+                                </p>
+                              )}
+                              <div className="flex items-center justify-between">
+                                <span className="text-[11px] text-slate-500">
+                                  {orderItemCount} {orderItemCount === 1 ? "item" : "itens"}
+                                </span>
+                                <span className="font-display text-sm font-bold text-blue-700">
+                                  {formatCurrency(mesa.currentOrder.total)}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1 text-xs font-medium text-emerald-600">
+                              <PlusIcon size={13} />
+                              <span>Toque p/ abrir</span>
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {mobileFilteredTables.length === 0 && (
+                  <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-8 text-center">
+                    <p className="text-sm font-medium text-slate-600">Nenhuma mesa encontrada.</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Comandas Avulsas View */
+              <div className="space-y-3">
+                {/* Barcode Search / Number Input */}
+                <div className="relative">
+                  <QrCodeIcon
+                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                    size={16}
+                  />
+                  <Input
+                    ref={barcodeRef}
+                    value={avulsaBarcodeInput}
+                    onChange={(e) => setAvulsaBarcodeInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        const found = comandasAvulsas.find(
+                          (c) =>
+                            c.barcode === avulsaBarcodeInput ||
+                            String(c.numero) === avulsaBarcodeInput,
+                        );
+                        if (found) {
+                          setSelectedAvulsaId(found.id);
+                          setMobileScreen("DETAIL");
+                        }
+                        setAvulsaBarcodeInput("");
+                      }
+                    }}
+                    placeholder="Número ou código de barras..."
+                    className="h-10 pl-9 rounded-xl border-slate-200 bg-white text-sm"
+                  />
+                </div>
+
+                {/* Quick Open Form Card */}
+                <Card className="rounded-2xl border-slate-200 bg-white">
+                  <CardHeader className="p-3 pb-2">
+                    <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Abrir Nova Comanda Avulsa
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-3 pt-0 space-y-2">
+                    <Input
+                      value={avulsaCustomerName}
+                      onChange={(e) => setAvulsaCustomerName(e.target.value)}
+                      placeholder="Nome do cliente (opcional)"
+                      className="h-9 text-xs rounded-xl"
+                    />
+                    <Input
+                      value={avulsaBarcode}
+                      onChange={(e) => setAvulsaBarcode(e.target.value)}
+                      placeholder="Código/Cartão (opcional)"
+                      className="h-9 text-xs rounded-xl"
+                    />
+                    <Button
+                      size="sm"
+                      className="w-full h-9 rounded-xl text-xs font-semibold"
+                      disabled={isPending}
+                      onClick={handleAbrirComandaAvulsa}
+                    >
+                      {isPending ? (
+                        <Loader2Icon className="animate-spin" size={14} />
+                      ) : (
+                        <PlusIcon size={14} />
+                      )}
+                      <span>Abrir Comanda</span>
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Active Avulsas Cards */}
+                <div className="space-y-2">
+                  {filteredAvulsas.map((comanda) => {
+                    const itemCount =
+                      comanda.order?.orderProducts?.reduce(
+                        (a, b) => a + b.quantity,
+                        0,
+                      ) ?? 0;
+                    return (
+                      <button
+                        key={comanda.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedAvulsaId(comanda.id);
+                          setMobileScreen("DETAIL");
+                        }}
+                        className="w-full flex items-center justify-between rounded-2xl border-2 border-slate-200 bg-white p-3.5 text-left shadow-xs transition-all active:scale-[0.98]"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-display text-base font-bold text-slate-900">
+                              Comanda #{comanda.numero}
+                            </span>
+                            <Badge variant="warning" className="text-[10px]">
+                              Ativa
+                            </Badge>
+                          </div>
+                          {comanda.customerName && (
+                            <p className="text-xs text-slate-600 font-medium mt-0.5">
+                              {comanda.customerName}
+                            </p>
+                          )}
+                          {comanda.barcode && (
+                            <p className="text-[10px] text-slate-400">
+                              Cód: {comanda.barcode}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="font-display text-base font-bold text-amber-600">
+                            {formatCurrency(comanda.order?.total ?? 0)}
+                          </p>
+                          <p className="text-[11px] text-slate-500 font-medium">
+                            {itemCount} {itemCount === 1 ? "item" : "itens"}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+
+                  {filteredAvulsas.length === 0 && (
+                    <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-8 text-center">
+                      <p className="text-sm font-medium text-slate-600">
+                        Nenhuma comanda avulsa ativa.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* ── MOBILE DETAIL SCREEN (Operação da Mesa / Comanda) ── */
+          <div className="space-y-3">
+            {/* Top Detail Navigation Bar */}
+            <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-2.5 shadow-xs">
+              <button
+                type="button"
+                onClick={() => setMobileScreen("SALON")}
+                className="flex items-center gap-1 rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-800 active:bg-slate-200 transition-colors"
+              >
+                <ChevronLeftIcon size={16} />
+                <span>Salão</span>
+              </button>
+
+              <div className="text-center">
+                <h2 className="font-display text-base font-bold text-slate-900 leading-tight">
+                  {mainView === "MESAS"
+                    ? selectedMesa?.table.name ?? "Mesa"
+                    : `Comanda #${selectedAvulsa?.numero ?? ""}`}
+                </h2>
+                <p className="text-[11px] text-slate-500 font-medium truncate max-w-[150px]">
+                  {mainView === "MESAS"
+                    ? selectedMesa?.currentOrder?.customerName ||
+                      (selectedMesa?.currentOrder ? "Em atendimento" : "Mesa livre")
+                    : selectedAvulsa?.customerName || "Avulsa"}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-1">
+                {mainView === "MESAS" && selectedMesa?.currentOrder && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1 rounded-xl text-xs px-2.5"
+                    onClick={() => {
+                      setTargetTableId("");
+                      setIsTransferOpen(true);
+                    }}
+                    title="Transferir mesa"
+                  >
+                    <ArrowLeftRightIcon size={13} />
+                    <span className="hidden sm:inline">Transferir</span>
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* DETAIL CONTENT: Mesa Livre vs Mesa em Aberto */}
+            {mainView === "MESAS" && !selectedMesa?.currentOrder ? (
+              /* Abertura de Mesa */
+              <Card className="rounded-2xl border-slate-200 bg-white">
+                <CardHeader className="p-4 pb-2">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">Mesa Livre</Badge>
+                    <span className="text-xs text-slate-500 font-medium">
+                      {selectedMesa?.table.seats} lugares
+                    </span>
+                  </div>
+                  <CardTitle className="mt-2 text-lg font-bold text-slate-900">
+                    Abrir comanda na {selectedMesa?.table.name}
+                  </CardTitle>
+                  <CardDescription className="text-xs text-slate-500">
+                    Informe o nome do cliente ou referência para iniciar o atendimento.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-4 pt-2 space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-700">
+                      Nome do cliente / Identificação
+                    </label>
+                    <Input
+                      value={openingCustomerName}
+                      onChange={(e) => setOpeningCustomerName(e.target.value)}
+                      placeholder="Ex.: Lucas, Mesa Família, Aniversário..."
+                      className="h-11 rounded-xl text-sm"
+                      autoFocus
+                    />
+                  </div>
+                  <Button
+                    disabled={isPending}
+                    onClick={handleOpenTable}
+                    className="w-full h-11 rounded-xl font-semibold text-sm shadow-sm"
+                  >
+                    {isPending ? (
+                      <>
+                        <Loader2Icon className="animate-spin" size={16} />
+                        <span>Abrindo mesa...</span>
+                      </>
+                    ) : (
+                      <>
+                        <PlusIcon size={16} />
+                        <span>Abrir Comanda e Lançar Itens</span>
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              /* Mesa ou Comanda com Pedido Ativo */
+              <div className="space-y-3">
+                {/* Segmented Switcher: Cardápio & Lançar vs Conta */}
+                <div className="flex rounded-xl bg-slate-200/80 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setMobileDetailTab("CARDAPIO")}
+                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold transition-all ${
+                      mobileDetailTab === "CARDAPIO"
+                        ? "bg-white text-slate-900 shadow-xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <PlusIcon size={14} />
+                    <span>Lançar Itens</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMobileDetailTab("ITEMS")}
+                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold transition-all ${
+                      mobileDetailTab === "ITEMS"
+                        ? "bg-white text-slate-900 shadow-xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <ReceiptTextIcon size={14} />
+                    <span>
+                      Ver Conta (
+                      {mainView === "MESAS"
+                        ? selectedMesa?.currentOrder?.orderProducts?.reduce(
+                            (a, b) => a + b.quantity,
+                            0,
+                          ) ?? 0
+                        : selectedAvulsa?.order?.orderProducts?.reduce(
+                            (a, b) => a + b.quantity,
+                            0,
+                          ) ?? 0}
+                      )
+                    </span>
+                  </button>
+                </div>
+
+                {mobileDetailTab === "CARDAPIO" ? (
+                  /* Mobile Product Launcher */
+                  <div className="space-y-2.5">
+                    {/* Search & Category Pills */}
+                    <div className="space-y-2">
+                      <div className="relative">
+                        <SearchIcon
+                          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                          size={15}
+                        />
+                        <Input
+                          value={searchValue}
+                          onChange={(e) => setSearchValue(e.target.value)}
+                          placeholder="Buscar produto no cardápio..."
+                          className="h-10 pl-9 rounded-xl border-slate-200 bg-white text-sm"
+                        />
+                        {searchValue && (
+                          <button
+                            type="button"
+                            onClick={() => setSearchValue("")}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
+                        {productCategories.map((cat) => (
+                          <button
+                            key={cat}
+                            type="button"
+                            onClick={() => setSelectedProductCategory(cat)}
+                            className={`shrink-0 rounded-full px-3 py-1 font-semibold transition-all ${
+                              selectedProductCategory === cat
+                                ? "bg-slate-900 text-white shadow-xs"
+                                : "bg-white text-slate-700 border border-slate-200"
+                            }`}
+                          >
+                            {cat}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Products List for Thumb Tap */}
+                    <div className="space-y-2">
+                      {filteredProducts.map((product) => {
+                        const isRecentlyAdded = recentlyAddedId === product.id;
+                        return (
+                          <div
+                            key={product.id}
+                            className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200/90 bg-white p-3 shadow-xs transition-all"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold text-sm text-slate-900 leading-tight">
+                                {product.name}
+                              </p>
+                              {product.description && (
+                                <p className="mt-0.5 line-clamp-1 text-xs text-slate-500">
+                                  {product.description}
+                                </p>
+                              )}
+                              <div className="mt-1 flex items-center gap-2">
+                                <span className="font-display text-sm font-bold text-slate-900">
+                                  {formatCurrency(product.price)}
+                                </span>
+                                {product.trackInventory && (
+                                  <Badge
+                                    variant={
+                                      product.stockQuantity > 0 ? "success" : "danger"
+                                    }
+                                    className="text-[10px] px-1.5 py-0"
+                                  >
+                                    Est. {product.stockQuantity}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+
+                            <Button
+                              size="icon"
+                              className={`h-10 w-10 shrink-0 rounded-xl transition-all active:scale-90 ${
+                                isRecentlyAdded
+                                  ? "bg-emerald-600 text-white"
+                                  : "bg-slate-900 text-white hover:bg-slate-800"
+                              }`}
+                              disabled={
+                                isPending ||
+                                (product.trackInventory && product.stockQuantity <= 0)
+                              }
+                              onClick={() => handleAddProduct(product.id)}
+                            >
+                              {isRecentlyAdded ? (
+                                <CheckIcon size={18} className="animate-in zoom-in" />
+                              ) : (
+                                <PlusIcon size={18} />
+                              )}
+                            </Button>
+                          </div>
+                        );
+                      })}
+
+                      {filteredProducts.length === 0 && (
+                        <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-8 text-center">
+                          <p className="text-sm font-medium text-slate-600">
+                            Nenhum produto encontrado.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  /* Mobile Conta da Mesa / Fechamento */
+                  <div className="space-y-3">
+                    {/* Items List */}
+                    <Card className="rounded-2xl border-slate-200 bg-white">
+                      <CardHeader className="p-3 pb-2">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-sm font-bold text-slate-900">
+                            Itens Lançados
+                          </CardTitle>
+                          <span className="text-xs text-slate-500 font-medium">
+                            Toque para marcar divisão
+                          </span>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="p-3 pt-0 space-y-2">
+                        {mainView === "MESAS" ? (
+                          selectedMesa?.currentOrder?.orderProducts.length === 0 ? (
+                            <div className="rounded-xl border border-dashed bg-slate-50 p-4 text-center">
+                              <p className="text-xs font-medium text-slate-500">
+                                Nenhum item lançado ainda.
+                              </p>
+                            </div>
+                          ) : (
+                            selectedMesa?.currentOrder?.orderProducts.map((item) => (
+                              <div
+                                key={item.id}
+                                className={`flex items-center gap-2.5 rounded-xl border p-2.5 transition-all ${
+                                  selectedItemIds.has(item.id)
+                                    ? "border-amber-300 bg-amber-50/70"
+                                    : "border-slate-100 bg-slate-50/80"
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selectedItemIds.has(item.id)}
+                                  onChange={() => toggleSelectedItem(item.id)}
+                                  className="h-4 w-4 shrink-0 rounded accent-amber-500"
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-semibold text-slate-900 leading-tight">
+                                    {item.productNameSnapshot || item.product.name}
+                                  </p>
+                                  <p className="text-[11px] text-slate-500">
+                                    {item.quantity} × {formatCurrency(item.price)}
+                                  </p>
+                                  {item.notes && (
+                                    <p className="text-[10px] italic text-amber-700">
+                                      {item.notes}
+                                    </p>
+                                  )}
+                                </div>
+                                <p className="shrink-0 font-display text-xs font-bold text-slate-900">
+                                  {formatCurrency(item.lineTotal)}
+                                </p>
+                              </div>
+                            ))
+                          )
+                        ) : (
+                          /* Avulsa items */
+                          !selectedAvulsa?.order ||
+                          selectedAvulsa.order.orderProducts.length === 0 ? (
+                            <div className="rounded-xl border border-dashed bg-slate-50 p-4 text-center">
+                              <p className="text-xs font-medium text-slate-500">
+                                Nenhum item lançado.
+                              </p>
+                            </div>
+                          ) : (
+                            selectedAvulsa.order.orderProducts.map((item) => (
+                              <div
+                                key={item.id}
+                                className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/80 p-2.5"
+                              >
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-semibold text-slate-900">
+                                    {item.productNameSnapshot || item.product.name}
+                                  </p>
+                                  <p className="text-[11px] text-slate-500">
+                                    {item.quantity} × {formatCurrency(item.price)}
+                                  </p>
+                                </div>
+                                <p className="shrink-0 font-display text-xs font-bold text-slate-900">
+                                  {formatCurrency(item.lineTotal)}
+                                </p>
+                              </div>
+                            ))
+                          )
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Divisão de Conta & Pagamento Parcial (Mesas) */}
+                    {mainView === "MESAS" &&
+                      selectedMesa?.currentOrder &&
+                      selectedMesa.currentOrder.orderProducts.length > 0 && (
+                        <Card className="rounded-2xl border-slate-200 bg-white">
+                          <CardHeader className="p-3 pb-2">
+                            <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                              Divisão de Conta
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="p-3 pt-0 space-y-3">
+                            <div className="flex items-center justify-between rounded-xl bg-slate-50 p-2.5">
+                              <span className="text-xs text-slate-700 font-medium">
+                                Dividir por:
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setDivisaoPessoas((p) => Math.max(1, p - 1))
+                                  }
+                                  className="flex h-7 w-7 items-center justify-center rounded-lg bg-white border border-slate-200 font-bold"
+                                >
+                                  -
+                                </button>
+                                <span className="font-display text-sm font-bold text-slate-900 w-6 text-center">
+                                  {divisaoPessoas}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setDivisaoPessoas((p) => Math.min(30, p + 1))
+                                  }
+                                  className="flex h-7 w-7 items-center justify-center rounded-lg bg-white border border-slate-200 font-bold"
+                                >
+                                  +
+                                </button>
+                                <span className="font-display text-xs font-bold text-slate-900 ml-2">
+                                  {formatCurrency(valorPorPessoa)} / pessoa
+                                </span>
+                              </div>
+                            </div>
+
+                            {selectedItemIds.size > 0 && (
+                              <div className="rounded-xl border border-amber-200 bg-amber-50 p-2.5 space-y-2">
+                                <div className="flex items-center justify-between text-xs font-semibold text-amber-900">
+                                  <span>{selectedItemIds.size} itens marcados:</span>
+                                  <span>{formatCurrency(selectedItemsTotal)}</span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <Button
+                                    size="sm"
+                                    className="h-8 text-xs font-semibold"
+                                    disabled={isPending}
+                                    onClick={() => handlePagamentoParcial("DINHEIRO")}
+                                  >
+                                    <BanknoteIcon size={13} />
+                                    <span>Parcial Dinheiro</span>
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-8 text-xs font-semibold"
+                                    disabled={isPending}
+                                    onClick={() =>
+                                      handlePagamentoParcial("CARTAO_PRESENCIAL")
+                                    }
+                                  >
+                                    <CreditCardIcon size={13} />
+                                    <span>Parcial Cartão</span>
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      )}
+
+                    {/* Resumo de Pagamento e Fechamento */}
+                    <Card className="rounded-2xl border-slate-200 bg-slate-950 text-white">
+                      <CardContent className="p-4 space-y-3">
+                        <div className="flex items-center justify-between text-xs text-slate-300">
+                          <span>Total da Conta:</span>
+                          <span className="font-display text-lg font-bold text-white">
+                            {formatCurrency(
+                              mainView === "MESAS"
+                                ? selectedMesa?.currentOrder?.total ?? 0
+                                : selectedAvulsa?.order?.total ?? 0,
+                            )}
+                          </span>
+                        </div>
+                        {paidAmount > 0 && (
+                          <div className="flex items-center justify-between text-xs text-emerald-400">
+                            <span>Já pago anteriormente:</span>
+                            <span className="font-display font-semibold">
+                              {formatCurrency(paidAmount)}
+                            </span>
+                          </div>
+                        )}
+                        {paidAmount > 0 && (
+                          <div className="flex items-center justify-between text-xs font-bold text-amber-300 border-t border-white/10 pt-2">
+                            <span>Saldo Restante:</span>
+                            <span className="font-display text-base">
+                              {formatCurrency(remainingAmount)}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-2 pt-1">
+                          <Button
+                            disabled={isPending}
+                            onClick={() =>
+                              mainView === "MESAS"
+                                ? handleCloseBill("DINHEIRO")
+                                : handleCloseAvulsaBill("DINHEIRO")
+                            }
+                            className="h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-semibold text-xs"
+                          >
+                            <BanknoteIcon size={15} />
+                            <span>Fechar Dinheiro</span>
+                          </Button>
+                          <Button
+                            disabled={isPending}
+                            variant="outline"
+                            onClick={() =>
+                              mainView === "MESAS"
+                                ? handleCloseBill("CARTAO_PRESENCIAL")
+                                : handleCloseAvulsaBill("CARTAO_PRESENCIAL")
+                            }
+                            className="h-10 rounded-xl border-white/20 bg-white/10 text-white hover:bg-white/20 font-semibold text-xs"
+                          >
+                            <CreditCardIcon size={15} />
+                            <span>Fechar Cartão</span>
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+                {/* Sticky Mobile Bottom Bar */}
+                <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-slate-200/90 bg-white/95 p-3 shadow-lg backdrop-blur-md pb-safe">
+                  <div className="flex items-center justify-between gap-3 max-w-md mx-auto">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">
+                        Total
+                      </span>
+                      <p className="font-display text-lg font-bold text-slate-900 leading-none">
+                        {formatCurrency(
+                          mainView === "MESAS"
+                            ? selectedMesa?.currentOrder?.total ?? 0
+                            : selectedAvulsa?.order?.total ?? 0,
+                        )}
+                      </p>
+                    </div>
+
+                    {mobileDetailTab === "CARDAPIO" ? (
+                      <Button
+                        onClick={() => setMobileDetailTab("ITEMS")}
+                        className="h-10 gap-2 rounded-xl bg-slate-900 px-4 text-xs font-semibold text-white shadow-sm active:scale-95"
+                      >
+                        <ReceiptTextIcon size={15} />
+                        <span>
+                          Ver Conta (
+                          {mainView === "MESAS"
+                            ? selectedMesa?.currentOrder?.orderProducts?.reduce(
+                                (a, b) => a + b.quantity,
+                                0,
+                              ) ?? 0
+                            : selectedAvulsa?.order?.orderProducts?.reduce(
+                                (a, b) => a + b.quantity,
+                                0,
+                              ) ?? 0}
+                          )
+                        </span>
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => setMobileDetailTab("CARDAPIO")}
+                        className="h-10 gap-2 rounded-xl bg-amber-500 px-4 text-xs font-semibold text-slate-950 shadow-sm active:scale-95 hover:bg-amber-400"
+                      >
+                        <PlusIcon size={15} />
+                        <span>Lançar Mais Itens</span>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── DESKTOP VIEW (xl and up) ── */}
+      <div className="hidden xl:block space-y-4">
       {/* ── Page header ─────────────────────────────────────────────── */}
       <Card className="border-white/80 bg-white/85">
         <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
@@ -1607,6 +2623,7 @@ const ComandaDigital = ({
           </div>
         </div>
       )}
+      </div>
 
       {/* ── Feedback ────────────────────────────────────────────────── */}
       {feedback && (

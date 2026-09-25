@@ -89,9 +89,9 @@ export const OrderSchedulingForm = ({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Switch Principal: Ativar/Desativar Agendamento */}
-      <div className="flex items-center justify-between rounded-2xl border bg-slate-50/70 p-4 transition hover:bg-slate-50">
+      <div className="flex items-center justify-between rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4 transition hover:bg-slate-50 shadow-2xs">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white shadow-xs">
             <CalendarClockIcon size={20} />
           </div>
           <div>
@@ -102,7 +102,7 @@ export const OrderSchedulingForm = ({
               Ativar Agendamento de Pedidos
             </Label>
             <p className="text-xs text-slate-500">
-              Permite que os clientes agendem um horário futuro para entrega ou retirada no app de Vendas.
+              Permite que os clientes agendem um horário futuro para entrega ou retirada no App de Vendas.
             </p>
           </div>
         </div>
@@ -114,10 +114,10 @@ export const OrderSchedulingForm = ({
       </div>
 
       {!isOrderSchedulingEnabled && (
-        <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-800">
+        <div className="flex items-start gap-2.5 rounded-xl border border-amber-200/80 bg-amber-50/70 p-3.5 text-xs text-amber-800">
           <InfoIcon size={16} className="mt-0.5 shrink-0 text-amber-600" />
           <p>
-            Com o agendamento desativado, o app de Vendas não exibirá as opções &quot;Agendar horário&quot; nem &quot;O quanto antes&quot;, enviando os pedidos diretamente para preparo imediato.
+            Com o agendamento desativado, o app de Vendas não exibirá opções de horário futuro, enviando todos os pedidos para preparo imediato.
           </p>
         </div>
       )}
@@ -128,11 +128,11 @@ export const OrderSchedulingForm = ({
           <div className="grid gap-4 sm:grid-cols-3">
             {/* Antecedência Mínima */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold uppercase text-slate-500">
+              <Label className="text-xs font-semibold uppercase text-slate-600">
                 Antecedência Mínima
               </Label>
               <Select value={minAdvanceMinutes} onValueChange={setMinAdvanceMinutes}>
-                <SelectTrigger className="h-10 rounded-xl bg-white text-sm">
+                <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-sm">
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -152,11 +152,11 @@ export const OrderSchedulingForm = ({
 
             {/* Intervalo dos Slots */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold uppercase text-slate-500">
+              <Label className="text-xs font-semibold uppercase text-slate-600">
                 Intervalo dos Horários
               </Label>
               <Select value={slotIntervalMinutes} onValueChange={setSlotIntervalMinutes}>
-                <SelectTrigger className="h-10 rounded-xl bg-white text-sm">
+                <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-sm">
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -173,11 +173,11 @@ export const OrderSchedulingForm = ({
 
             {/* Janela de Dias */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold uppercase text-slate-500">
+              <Label className="text-xs font-semibold uppercase text-slate-600">
                 Dias Disponíveis
               </Label>
               <Select value={maxDays} onValueChange={setMaxDays}>
-                <SelectTrigger className="h-10 rounded-xl bg-white text-sm">
+                <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-sm">
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -196,23 +196,23 @@ export const OrderSchedulingForm = ({
           </div>
 
           {/* Origem dos Horários */}
-          <div className="space-y-3 rounded-2xl border bg-slate-50/50 p-4">
+          <div className="space-y-3 rounded-2xl border border-slate-200/80 bg-slate-50/50 p-4">
             <div>
-              <p className="text-xs font-bold uppercase text-slate-500">
+              <p className="text-xs font-bold uppercase text-slate-600">
                 Regra de Horários para Agendamento
               </p>
-              <p className="text-xs text-slate-600 mt-0.5">
-                Escolha se os horários permitidos devem seguir os horários de funcionamento semanais ou uma faixa específica.
+              <p className="text-xs text-slate-500 mt-0.5">
+                Escolha se os horários permitidos devem seguir os horários de funcionamento semanais ou uma faixa personalizada.
               </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
               {/* Opção 1: Horário de Funcionamento */}
               <label
-                className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition ${
+                className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition ${
                   hoursMode === "OPERATING_HOURS"
-                    ? "border-slate-950 bg-white ring-1 ring-slate-950"
-                    : "border-slate-200 bg-white/60 hover:bg-white"
+                    ? "border-slate-950 bg-white ring-1 ring-slate-950 shadow-2xs"
+                    : "border-slate-200 bg-white/70 hover:bg-white"
                 }`}
               >
                 <input
@@ -228,17 +228,17 @@ export const OrderSchedulingForm = ({
                     Horário de Funcionamento
                   </p>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Gera horários baseados no horário cadastrado para cada dia da semana. Dias marcados como fechados não terão opções.
+                    Gera horários baseados no horário cadastrado para cada dia da semana. Dias fechados não terão opções.
                   </p>
                 </div>
               </label>
 
               {/* Opção 2: Horário Específico (Sobreposição) */}
               <label
-                className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition ${
+                className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition ${
                   hoursMode === "CUSTOM"
-                    ? "border-slate-950 bg-white ring-1 ring-slate-950"
-                    : "border-slate-200 bg-white/60 hover:bg-white"
+                    ? "border-slate-950 bg-white ring-1 ring-slate-950 shadow-2xs"
+                    : "border-slate-200 bg-white/70 hover:bg-white"
                 }`}
               >
                 <input
@@ -254,7 +254,7 @@ export const OrderSchedulingForm = ({
                     Horário Fixo Específico (Sobreposição)
                   </p>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Sobrepõe o horário de funcionamento semanal, permitindo agendamentos em uma faixa de horário personalizada.
+                    Sobrepõe o horário semanal com uma faixa de agendamento exclusiva.
                   </p>
                 </div>
               </label>
@@ -271,14 +271,14 @@ export const OrderSchedulingForm = ({
                   type="time"
                   value={customStartTime}
                   onChange={(e) => setCustomStartTime(e.target.value)}
-                  className="w-28 h-9 text-xs"
+                  className="w-28 h-9 text-xs rounded-lg border-slate-200"
                 />
                 <span className="text-xs text-slate-400">até</span>
                 <Input
                   type="time"
                   value={customEndTime}
                   onChange={(e) => setCustomEndTime(e.target.value)}
-                  className="w-28 h-9 text-xs"
+                  className="w-28 h-9 text-xs rounded-lg border-slate-200"
                 />
               </div>
             )}
@@ -286,23 +286,25 @@ export const OrderSchedulingForm = ({
         </div>
       )}
 
-      <Button
-        type="submit"
-        disabled={isPending}
-        className="w-full h-11 rounded-full font-semibold"
-      >
-        {isPending ? (
-          <>
-            <Loader2Icon size={16} className="animate-spin mr-2" />
-            Salvando...
-          </>
-        ) : (
-          <>
-            <CheckIcon size={16} className="mr-2" />
-            Salvar Configurações de Agendamento
-          </>
-        )}
-      </Button>
+      <div className="pt-2">
+        <Button
+          type="submit"
+          disabled={isPending}
+          className="h-10 w-full rounded-full bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 transition"
+        >
+          {isPending ? (
+            <>
+              <Loader2Icon size={16} className="animate-spin mr-2" />
+              Salvando alterações...
+            </>
+          ) : (
+            <>
+              <CheckIcon size={16} className="mr-2" />
+              Salvar Configurações de Agendamento
+            </>
+          )}
+        </Button>
+      </div>
     </form>
   );
 };
