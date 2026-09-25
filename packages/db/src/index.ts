@@ -35,6 +35,7 @@ export {
   buscarEnderecosClientePorTelefone,
   salvarOuAtualizarEnderecoCliente,
   atualizarUsoEnderecoCliente,
+  salvarClienteCrm,
 } from "./queries";
 export type {
   TransferirItensInput,
@@ -49,6 +50,7 @@ export type {
   SalvarCarrinhoAbandonadoInput,
   ValidarBeneficiosPedidoInput,
   SalvarOuAtualizarEnderecoInput,
+  SalvarClienteCrmInput,
 } from "./queries";
 export {
   criarTransacaoFinanceira,

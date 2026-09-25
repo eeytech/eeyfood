@@ -51,7 +51,7 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
         userName={session.name}
         userEmail={session.email}
       />
-      <main className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-5">
+      <main className="flex-1 overflow-y-auto p-3 pt-12 md:p-4 lg:p-5 md:pt-4">
         <div className="mx-auto max-w-[1600px]">{children}</div>
       </main>
     </div>

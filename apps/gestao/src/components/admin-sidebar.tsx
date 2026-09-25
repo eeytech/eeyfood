@@ -26,10 +26,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { CompanySwitcher } from "@/components/auth/CompanySwitcher";
-import { SupportTicketForm } from "@/components/auth/SupportTicketForm";
 import { Button } from "@/components/ui/button";
 import { logoutAction } from "@/lib/auth/actions";
 import { cn } from "@/lib/utils";
@@ -117,6 +116,7 @@ const navigationGroups = [
       { href: "whatsapp", label: "WhatsApp", icon: MessageSquareIcon },
       { href: "configuracoes", label: "Configurações", icon: StoreIcon },
       { href: "configuracoes/usuarios", label: "Usuários", icon: Users2Icon },
+      { href: "suporte", label: "Suporte", icon: HeadphonesIcon },
     ],
   },
 ];
@@ -129,7 +129,20 @@ const AdminSidebar = ({
 }: AdminSidebarProps) => {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [showSupport, setShowSupport] = useState(false);
+
+  // No celular, inicia oculto para não ocupar a tela pequena
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      setIsCollapsed(true);
+    }
+  }, []);
+
+  // Ao navegar em uma rota no celular, oculta a sidebar automaticamente
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      setIsCollapsed(true);
+    }
+  }, [pathname]);
 
   const activeGroups =
     userRole === "KITCHEN"
@@ -139,30 +152,63 @@ const AdminSidebar = ({
         : navigationGroups;
 
   return (
-    <aside
-      className={cn(
-        "relative flex h-screen shrink-0 flex-col bg-slate-950 text-white transition-all duration-300 ease-in-out",
-        isCollapsed ? "w-16" : "w-[220px]",
+    <>
+      {/* Backdrop para fechar ao tocar fora no celular */}
+      {!isCollapsed && (
+        <div
+          onClick={() => setIsCollapsed(true)}
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity md:hidden"
+          aria-hidden="true"
+        />
       )}
-    >
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -right-3 top-10 z-50 h-6 w-6 rounded-full border border-white/20 bg-slate-900 text-white hover:bg-slate-800 hover:text-white"
-      >
-        {isCollapsed ? (
-          <ChevronRightIcon size={12} />
-        ) : (
-          <ChevronLeftIcon size={12} />
-        )}
-      </Button>
 
-      <CompanySwitcher
-        companies={companies}
-        currentCompanyId={currentCompanyId}
-        isCollapsed={isCollapsed}
-      />
+      {/* Botão flutuante para reexibir a sidebar no celular quando estiver totalmente ocultada */}
+      {isCollapsed && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setIsCollapsed(false)}
+          className="fixed left-3 top-2.5 z-50 flex h-8 w-8 items-center justify-center rounded-xl border border-white/20 bg-slate-900/95 text-white shadow-md backdrop-blur transition-transform active:scale-95 hover:bg-slate-800 hover:text-white md:hidden"
+          title="Exibir menu"
+        >
+          <ChevronRightIcon size={16} />
+        </Button>
+      )}
+
+      <aside
+        className={cn(
+          "flex h-screen shrink-0 flex-col bg-slate-950 text-white transition-all duration-300 ease-in-out",
+          // Mobile: fixo em tela cheia na lateral, acima do conteúdo
+          "max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-50 max-md:shadow-2xl",
+          // Desktop: posicionado no fluxo normal
+          "md:relative md:z-auto",
+          isCollapsed
+            ? "max-md:-translate-x-full max-md:w-0 md:translate-x-0 md:w-16"
+            : "max-md:translate-x-0 max-md:w-[240px] md:w-[220px]",
+        )}
+      >
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className={cn(
+            "absolute -right-3 top-10 z-50 h-6 w-6 rounded-full border border-white/20 bg-slate-900 text-white hover:bg-slate-800 hover:text-white shadow-md",
+            isCollapsed && "max-md:hidden",
+          )}
+          title={isCollapsed ? "Expandir menu" : "Recolher menu"}
+        >
+          {isCollapsed ? (
+            <ChevronRightIcon size={12} />
+          ) : (
+            <ChevronLeftIcon size={12} />
+          )}
+        </Button>
+
+        <CompanySwitcher
+          companies={companies}
+          currentCompanyId={currentCompanyId}
+          isCollapsed={isCollapsed}
+        />
 
       <nav className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden p-2 no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         {activeGroups.map((group, groupIndex) => (
@@ -224,44 +270,42 @@ const AdminSidebar = ({
           </div>
         )}
 
-        {showSupport && !isCollapsed ? (
-          <div className="rounded-md border border-white/10 bg-slate-900 p-3">
-            <SupportTicketForm onClose={() => setShowSupport(false)} />
-          </div>
-        ) : (
-          <div className={cn("flex flex-col gap-1", isCollapsed && "items-center")}>
-            {userRole !== "KITCHEN" && (
-              <button
-                onClick={() => setShowSupport(true)}
-                title={isCollapsed ? "Suporte" : undefined}
-                className={cn(
-                  "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-100",
-                  isCollapsed && "justify-center",
-                )}
-              >
-                <HeadphonesIcon size={15} className="shrink-0" />
-                {!isCollapsed && <span>Suporte</span>}
-              </button>
-            )}
+        <div className={cn("flex flex-col gap-1", isCollapsed && "items-center")}>
+          {userRole !== "KITCHEN" && (
+            <Link
+              href="/suporte"
+              title={isCollapsed ? "Central de Suporte" : undefined}
+              className={cn(
+                "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors duration-150",
+                pathname === "/suporte"
+                  ? "bg-white font-medium text-slate-950"
+                  : "text-slate-400 hover:bg-white/5 hover:text-slate-100",
+                isCollapsed && "justify-center",
+              )}
+            >
+              <HeadphonesIcon size={15} className="shrink-0" />
+              {!isCollapsed && <span>Suporte</span>}
+            </Link>
+          )}
 
-            <form action={logoutAction}>
-              <button
-                type="submit"
-                title={isCollapsed ? "Sair" : undefined}
-                className={cn(
-                  "flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-slate-400 transition-colors hover:bg-white/5 hover:text-red-400",
-                  isCollapsed && "justify-center",
-                )}
-              >
-                <LogOutIcon size={15} className="shrink-0" />
-                {!isCollapsed && <span>Sair</span>}
-              </button>
-            </form>
-          </div>
-        )}
+          <form action={logoutAction}>
+            <button
+              type="submit"
+              title={isCollapsed ? "Sair" : undefined}
+              className={cn(
+                "flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-slate-400 transition-colors hover:bg-white/5 hover:text-red-400",
+                isCollapsed && "justify-center",
+              )}
+            >
+              <LogOutIcon size={15} className="shrink-0" />
+              {!isCollapsed && <span>Sair</span>}
+            </button>
+          </form>
+        </div>
       </div>
     </aside>
-  );
+  </>
+);
 };
 
 export default AdminSidebar;

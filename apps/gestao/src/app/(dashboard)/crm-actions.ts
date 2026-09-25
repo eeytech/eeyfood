@@ -15,6 +15,7 @@ import {
   ne,
   or,
   ordersTable,
+  salvarClienteCrm,
   sql,
 } from "@fsw/db";
 import { revalidatePath } from "next/cache";
@@ -31,42 +32,13 @@ export async function upsertCustomerOnOrderAction(
     createdAt: Date;
   },
 ) {
-  const existing = await db.query.customersTable.findFirst({
-    where: and(
-      eq(customersTable.restaurantId, restaurantId),
-      eq(customersTable.phone, order.customerPhone),
-    ),
+  return salvarClienteCrm({
+    restaurantId,
+    customerName: order.customerName,
+    customerPhone: order.customerPhone,
+    orderTotal: order.total,
+    orderCreatedAt: order.createdAt,
   });
-
-  if (!existing) {
-    await db.insert(customersTable).values({
-      restaurantId,
-      name: order.customerName,
-      phone: order.customerPhone,
-      totalOrders: 1,
-      totalSpent: order.total,
-      avgTicket: order.total,
-      firstOrderAt: order.createdAt,
-      lastOrderAt: order.createdAt,
-      segment: "NEW",
-    });
-    return;
-  }
-
-  const newTotalOrders = existing.totalOrders + 1;
-  const newTotalSpent = existing.totalSpent + order.total;
-
-  await db
-    .update(customersTable)
-    .set({
-      name: order.customerName,
-      totalOrders: newTotalOrders,
-      totalSpent: newTotalSpent,
-      avgTicket: newTotalSpent / newTotalOrders,
-      lastOrderAt: order.createdAt,
-      updatedAt: new Date(),
-    })
-    .where(eq(customersTable.id, existing.id));
 }
 
 export async function classificarClientesRFMAction(slug: string) {

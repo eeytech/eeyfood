@@ -9,6 +9,7 @@ import {
   db,
   eq,
   ordersTable,
+  salvarClienteCrm,
   salvarOuAtualizarEnderecoCliente,
 } from "@/lib/db";
 import type { ConsumptionMethod, PaymentMethod } from "@/lib/db";
@@ -158,6 +159,18 @@ export const createOrder = async (input: CreateOrderInput) => {
     } catch (error) {
       console.error("Falha ao confirmar pagamento de pedido gratuito:", error);
     }
+  }
+
+  try {
+    await salvarClienteCrm({
+      restaurantId: restaurant.id,
+      customerName: input.customerName,
+      customerPhone: normalizedCustomerPhone,
+      orderTotal: numTotal,
+      orderCreatedAt: order.createdAt ?? new Date(),
+    });
+  } catch (crmError) {
+    console.error("Falha ao salvar informações do cliente no CRM:", crmError);
   }
 
   return {

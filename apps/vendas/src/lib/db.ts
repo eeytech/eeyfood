@@ -19,6 +19,7 @@ export type {
   CustomerAddress,
   SalvarCarrinhoAbandonadoInput,
   SalvarOuAtualizarEnderecoInput,
+  SalvarClienteCrmInput,
 } from "@fsw/db";
 export {
   atualizarStatusPagamentoPedido,
@@ -41,6 +42,7 @@ export {
   ordersTable,
   restaurantsTable,
   salvarCarrinhoAbandonado,
+  salvarClienteCrm,
   salvarOuAtualizarEnderecoCliente,
   validarBeneficiosPedido,
 } from "@fsw/db";

@@ -31,6 +31,7 @@ import {
   waitingQueueTable,
   comandasAvulsasTable,
   customerAddressesTable,
+  customersTable,
 } from "../schema";
 import type {
   AbandonedCart,
@@ -2920,4 +2921,125 @@ export const atualizarUsoEnderecoCliente = async (addressId: string) => {
     .returning();
   return updated;
 };
+
+export interface SalvarClienteCrmInput {
+  restaurantId: string;
+  customerName: string;
+  customerPhone: string;
+  orderTotal?: number;
+  orderCreatedAt?: Date;
+}
+
+export const salvarClienteCrm = async ({
+  restaurantId,
+  customerName,
+  customerPhone,
+  orderTotal = 0,
+  orderCreatedAt = new Date(),
+}: SalvarClienteCrmInput) => {
+  const normalizedPhone = normalizarTelefoneLead(customerPhone);
+  if (!normalizedPhone || !restaurantId) {
+    return null;
+  }
+
+  const trimmedName = customerName?.trim() || "Cliente";
+  const numOrderTotal = Number(orderTotal) || 0;
+
+  const existing = await db.query.customersTable.findFirst({
+    where: and(
+      eq(customersTable.restaurantId, restaurantId),
+      eq(customersTable.phone, normalizedPhone),
+    ),
+  });
+
+  if (!existing) {
+    try {
+      const [created] = await db
+        .insert(customersTable)
+        .values({
+          restaurantId,
+          name: trimmedName,
+          phone: normalizedPhone,
+          totalOrders: 1,
+          totalSpent: numOrderTotal,
+          avgTicket: numOrderTotal,
+          firstOrderAt: orderCreatedAt,
+          lastOrderAt: orderCreatedAt,
+          segment: "NEW",
+        })
+        .returning();
+
+      return created;
+    } catch {
+      // Caso ocorra inserção simultânea concorrente
+      const concurrentExisting = await db.query.customersTable.findFirst({
+        where: and(
+          eq(customersTable.restaurantId, restaurantId),
+          eq(customersTable.phone, normalizedPhone),
+        ),
+      });
+
+      if (!concurrentExisting) {
+        return null;
+      }
+
+      const currentTotalOrders = Number(concurrentExisting.totalOrders) || 0;
+      const currentTotalSpent = Number(concurrentExisting.totalSpent) || 0;
+      const newTotalOrders = currentTotalOrders + 1;
+      const newTotalSpent = Number((currentTotalSpent + numOrderTotal).toFixed(2));
+      const newAvgTicket = Number((newTotalSpent / newTotalOrders).toFixed(2));
+
+      let segment = concurrentExisting.segment;
+      if (segment === "INACTIVE" || segment === "AT_RISK") {
+        segment = "RECOVERED";
+      }
+
+      const [updated] = await db
+        .update(customersTable)
+        .set({
+          name: trimmedName !== "Cliente" ? trimmedName : concurrentExisting.name,
+          totalOrders: newTotalOrders,
+          totalSpent: newTotalSpent,
+          avgTicket: newAvgTicket,
+          lastOrderAt: orderCreatedAt,
+          firstOrderAt: concurrentExisting.firstOrderAt ?? orderCreatedAt,
+          segment,
+          updatedAt: new Date(),
+        })
+        .where(eq(customersTable.id, concurrentExisting.id))
+        .returning();
+
+      return updated;
+    }
+  }
+
+  const currentTotalOrders = Number(existing.totalOrders) || 0;
+  const currentTotalSpent = Number(existing.totalSpent) || 0;
+  const newTotalOrders = currentTotalOrders + 1;
+  const newTotalSpent = Number((currentTotalSpent + numOrderTotal).toFixed(2));
+  const newAvgTicket = Number((newTotalSpent / newTotalOrders).toFixed(2));
+
+  let segment = existing.segment;
+  if (segment === "INACTIVE" || segment === "AT_RISK") {
+    segment = "RECOVERED";
+  }
+
+  const [updated] = await db
+    .update(customersTable)
+    .set({
+      name: trimmedName !== "Cliente" ? trimmedName : existing.name,
+      totalOrders: newTotalOrders,
+      totalSpent: newTotalSpent,
+      avgTicket: newAvgTicket,
+      lastOrderAt: orderCreatedAt,
+      firstOrderAt: existing.firstOrderAt ?? orderCreatedAt,
+      segment,
+      updatedAt: new Date(),
+    })
+    .where(eq(customersTable.id, existing.id))
+    .returning();
+
+  return updated;
+};
+
 
