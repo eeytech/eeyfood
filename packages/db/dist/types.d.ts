@@ -111,6 +111,13 @@ export interface PedidoBeneficiosValidado {
         cashbackPercent: number;
         remainingAmount: number;
     } | null;
+    matchedDeliveryRule?: {
+        id: string;
+        name: string;
+        type: string;
+        fee: number;
+        minimumOrderValue?: number;
+    } | null;
 }
 export interface OrderComItens extends Order {
     restaurant: Pick<Restaurant, "name" | "avatarImageUrl" | "slug">;

@@ -143,6 +143,9 @@ export const FinishOrderSheet = ({
   const watchedName = form.watch("name");
   const watchedPhone = form.watch("phone");
   const watchedCouponCode = form.watch("couponCode");
+  const watchedNeighborhood = form.watch("neighborhood");
+  const watchedSelectedAddressId = form.watch("selectedAddressId");
+  const watchedAddressMode = form.watch("deliveryAddressMode");
   const fulfillmentTiming = form.watch("fulfillmentTiming");
   const watchedScheduledFor = form.watch("scheduledFor");
   const needsChangeField = paymentMethod === "DINHEIRO";
@@ -303,6 +306,19 @@ export const FinishOrderSheet = ({
     return () => window.clearTimeout(timeoutId);
   }, [watchedPhone]);
 
+  // Auto-validate benefits whenever the neighborhood or delivery address changes
+  useEffect(() => {
+    if (consumptionMethod !== "DELIVERY") return;
+    const digits = watchedPhone?.replace(/\D/g, "") ?? "";
+    if (digits.length !== 11 || !isValidPhoneNumber(watchedPhone)) return;
+
+    const timeoutId = window.setTimeout(() => {
+      void validateBenefitsRef.current?.();
+    }, 600);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [watchedNeighborhood, watchedSelectedAddressId, watchedAddressMode, consumptionMethod, watchedPhone]);
+
   useEffect(() => {
     if (!open || products.length === 0) return;
 
@@ -404,6 +420,17 @@ export const FinishOrderSheet = ({
       return;
     }
 
+    const currentAddressMode = form.getValues("deliveryAddressMode");
+    const currentSelectedId = form.getValues("selectedAddressId");
+    let currentNeighborhood: string | undefined;
+
+    if (currentAddressMode === "SAVED" && currentSelectedId) {
+      const saved = customerAddresses.find((a) => a.id === currentSelectedId);
+      currentNeighborhood = saved?.neighborhood;
+    } else {
+      currentNeighborhood = form.getValues("neighborhood");
+    }
+
     try {
       setIsValidatingBenefits(true);
 
@@ -413,6 +440,7 @@ export const FinishOrderSheet = ({
         consumptionMethod,
         couponCode: watchedCouponCode,
         useWalletBalance: nextUseWalletBalance,
+        deliveryNeighborhood: currentNeighborhood,
         products: products.map((product) => ({
           id: product.id,
           quantity: product.quantity,
@@ -505,6 +533,10 @@ export const FinishOrderSheet = ({
         deliveryAddress: formattedDeliveryAddress,
         customerAddressId,
         deliveryAddressData,
+        deliveryNeighborhood:
+          data.deliveryAddressMode === "SAVED" && data.selectedAddressId
+            ? customerAddresses.find((a) => a.id === data.selectedAddressId)?.neighborhood
+            : data.neighborhood,
         products: products.map((product) => ({
           id: product.id,
           name: product.name,

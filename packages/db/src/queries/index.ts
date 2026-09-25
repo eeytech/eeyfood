@@ -81,6 +81,8 @@ export interface CriarPedidoInput {
   customerAddressId?: string;
   deliveryLatitude?: number;
   deliveryLongitude?: number;
+  deliveryNeighborhood?: string;
+  deliveryCep?: string;
   marketplaceOrderId?: string;
   marketplaceType?: MarketplaceType;
   products: Array<{
@@ -101,6 +103,8 @@ export interface ValidarBeneficiosPedidoInput {
   useWalletBalance?: boolean;
   deliveryLatitude?: number;
   deliveryLongitude?: number;
+  deliveryNeighborhood?: string;
+  deliveryCep?: string;
   products: Array<{
     id: string;
     name?: string;
@@ -216,6 +220,13 @@ interface ContextoPedidoCalculado {
     minOrderValue: number;
     cashbackPercent: number;
     remainingAmount: number;
+  } | null;
+  matchedDeliveryRule: {
+    id: string;
+    name: string;
+    type: string;
+    fee: number;
+    minimumOrderValue?: number;
   } | null;
   recipeItems: RecipeItemParaConsumo[];
 }
@@ -841,25 +852,78 @@ const carregarContextoPedidoCalculado = async (
       : 0;
 
   let deliveryFee = Number(restaurant.deliveryFee ?? 0);
+  let matchedDeliveryRule: {
+    id: string;
+    name: string;
+    type: string;
+    fee: number;
+    minimumOrderValue?: number;
+  } | null = null;
 
   if (input.consumptionMethod === "DELIVERY" && feeRulesRaw.length > 0) {
-    const lat = (input as ValidarBeneficiosPedidoInput).deliveryLatitude;
-    const lng = (input as ValidarBeneficiosPedidoInput).deliveryLongitude;
+    const lat = (input as any).deliveryLatitude;
+    const lng = (input as any).deliveryLongitude;
+    const neighborhoodRaw =
+      (input as any).deliveryNeighborhood ||
+      (input as any).deliveryAddressData?.neighborhood ||
+      "";
+    const cepRaw = (input as any).deliveryCep || "";
 
-    const matchedRule = lat !== undefined && lng !== undefined && restaurant.latitude && restaurant.longitude
-      ? feeRulesRaw.find((rule) => {
-          if (rule.type === "RADIUS_KM" && rule.maxDistanceKm !== null) {
-            const distKm = calcularDistanciaKm(restaurant.latitude!, restaurant.longitude!, lat, lng);
-            return distKm <= rule.maxDistanceKm;
-          }
-          return false;
-        }) ?? feeRulesRaw[0]
-      : feeRulesRaw[0];
+    const normalizeText = (t?: string | null) =>
+      (t || "")
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
 
-    if (matchedRule) {
-      deliveryFee = matchedRule.freeDeliveryThreshold !== null && subtotal >= Number(matchedRule.freeDeliveryThreshold)
-        ? 0
-        : Number(matchedRule.fee);
+    const normNeighborhood = normalizeText(neighborhoodRaw);
+    const cleanCep = cepRaw.replace(/\D/g, "");
+
+    const matched = feeRulesRaw.find((rule) => {
+      if (rule.type === "RADIUS_KM" && rule.maxDistanceKm !== null) {
+        if (lat !== undefined && lng !== undefined && restaurant.latitude && restaurant.longitude) {
+          const distKm = calcularDistanciaKm(restaurant.latitude, restaurant.longitude, lat, lng);
+          return distKm <= rule.maxDistanceKm;
+        }
+        return false;
+      }
+
+      if (rule.type === "NEIGHBORHOOD" && rule.neighborhood) {
+        if (!normNeighborhood) return false;
+        const ruleNorm = normalizeText(rule.neighborhood);
+        return (
+          normNeighborhood === ruleNorm ||
+          normNeighborhood.includes(ruleNorm) ||
+          ruleNorm.includes(normNeighborhood)
+        );
+      }
+
+      if (rule.type === "CEP_RANGE" && rule.cepFrom && rule.cepTo) {
+        if (!cleanCep) return false;
+        const fromClean = rule.cepFrom.replace(/\D/g, "");
+        const toClean = rule.cepTo.replace(/\D/g, "");
+        return cleanCep >= fromClean && cleanCep <= toClean;
+      }
+
+      return false;
+    });
+
+    if (matched) {
+      matchedDeliveryRule = {
+        id: matched.id,
+        name: matched.name,
+        type: matched.type,
+        fee: Number(matched.fee),
+        minimumOrderValue: Number(matched.minimumOrderValue || 0),
+      };
+
+      deliveryFee =
+        matched.freeDeliveryThreshold !== null &&
+        subtotal >= Number(matched.freeDeliveryThreshold)
+          ? 0
+          : Number(matched.fee);
+    } else {
+      deliveryFee = Number(restaurant.deliveryFee ?? 0);
     }
   } else if (input.consumptionMethod !== "DELIVERY") {
     deliveryFee = 0;
@@ -982,6 +1046,7 @@ const carregarContextoPedidoCalculado = async (
     total,
     cashbackEarnedAmount,
     nextLoyaltyRule: nextLoyaltyRuleFormatted,
+    matchedDeliveryRule,
     recipeItems: allRecipeItems,
   };
 };
@@ -1321,6 +1386,7 @@ export const validarBeneficiosPedido = async (
     total: contexto.total,
     cashbackEarnedAmount: contexto.cashbackEarnedAmount,
     appliedCoupon: contexto.coupon?.coupon ?? null,
+    matchedDeliveryRule: contexto.matchedDeliveryRule,
     wallet: contexto.wallet
       ? {
           id: contexto.wallet.id,
@@ -1374,6 +1440,16 @@ export const buscarProximaRegraFidelidade = async (
 
 export const criarPedido = async (input: CriarPedidoInput): Promise<Order> => {
   const contexto = await carregarContextoPedidoCalculado(input);
+
+  if (input.consumptionMethod === "DELIVERY") {
+    if (contexto.restaurant.minimumOrderValue && contexto.subtotal < Number(contexto.restaurant.minimumOrderValue)) {
+      throw new Error(`O pedido mínimo para entrega é de R$ ${Number(contexto.restaurant.minimumOrderValue).toFixed(2).replace(".", ",")}.`);
+    }
+    if (contexto.matchedDeliveryRule && contexto.matchedDeliveryRule.minimumOrderValue && contexto.subtotal < contexto.matchedDeliveryRule.minimumOrderValue) {
+      throw new Error(`O pedido mínimo para entrega na região "${contexto.matchedDeliveryRule.name}" é de R$ ${contexto.matchedDeliveryRule.minimumOrderValue.toFixed(2).replace(".", ",")}.`);
+    }
+  }
+
   const scheduledFor = validarAgendamentoPedido({
     consumptionMethod: input.consumptionMethod,
     scheduledFor: input.scheduledFor,

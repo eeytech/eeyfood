@@ -8,6 +8,7 @@ import {
   criarPedido,
   db,
   eq,
+  geocodeAddress,
   ordersTable,
   salvarClienteCrm,
   salvarOuAtualizarEnderecoCliente,
@@ -46,6 +47,8 @@ interface CreateOrderInput {
   };
   deliveryLatitude?: number;
   deliveryLongitude?: number;
+  deliveryNeighborhood?: string;
+  deliveryCep?: string;
   slug: string;
 }
 
@@ -85,11 +88,15 @@ export const createOrder = async (input: CreateOrderInput) => {
   const normalizedCustomerPhone = normalizePhoneNumber(input.customerPhone);
   let resolvedAddressId = input.customerAddressId;
   let formattedDeliveryAddress = input.deliveryAddress;
+  let deliveryLat = input.deliveryLatitude;
+  let deliveryLng = input.deliveryLongitude;
+  const neighborhood =
+    input.deliveryNeighborhood || input.deliveryAddressData?.neighborhood;
 
   if (input.consumptionMethod === "DELIVERY") {
     if (input.deliveryAddressData) {
-      const { street, number, neighborhood, complement, reference } = input.deliveryAddressData;
-      const formatted = `${street}, ${number} - ${neighborhood}${complement ? ` (${complement})` : ""}`;
+      const { street, number, neighborhood: addrNeighborhood, complement, reference } = input.deliveryAddressData;
+      const formatted = `${street}, ${number} - ${addrNeighborhood}${complement ? ` (${complement})` : ""}`;
       formattedDeliveryAddress = formatted;
 
       try {
@@ -97,7 +104,7 @@ export const createOrder = async (input: CreateOrderInput) => {
           customerPhone: normalizedCustomerPhone,
           street,
           number,
-          neighborhood,
+          neighborhood: addrNeighborhood,
           complement,
           reference,
         });
@@ -112,6 +119,20 @@ export const createOrder = async (input: CreateOrderInput) => {
         await atualizarUsoEnderecoCliente(resolvedAddressId);
       } catch (err) {
         console.error("Falha ao atualizar uso do endereço:", err);
+      }
+    }
+
+    // Geocodificação automática se latitude e longitude ainda não foram passadas
+    if ((deliveryLat === undefined || deliveryLng === undefined) && formattedDeliveryAddress) {
+      try {
+        const geoQuery = `${formattedDeliveryAddress}, ${restaurant.name || ""}`;
+        const coords = await geocodeAddress(geoQuery);
+        if (coords) {
+          deliveryLat = coords.latitude;
+          deliveryLng = coords.longitude;
+        }
+      } catch (e) {
+        console.warn("⚠️ [createOrder] Geocodificação falhou:", e);
       }
     }
   }
@@ -130,8 +151,10 @@ export const createOrder = async (input: CreateOrderInput) => {
     diningTableId: input.diningTableId,
     deliveryAddress: formattedDeliveryAddress,
     customerAddressId: resolvedAddressId,
-    deliveryLatitude: input.deliveryLatitude,
-    deliveryLongitude: input.deliveryLongitude,
+    deliveryLatitude: deliveryLat,
+    deliveryLongitude: deliveryLng,
+    deliveryNeighborhood: neighborhood,
+    deliveryCep: input.deliveryCep,
   });
 
   revalidatePath("/orders");

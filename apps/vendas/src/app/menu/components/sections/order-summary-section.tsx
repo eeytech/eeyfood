@@ -18,6 +18,13 @@ export interface CheckoutSummary {
   total: number;
   cashbackEarnedAmount: number;
   nextLoyaltyRule?: NextLoyaltyRule | null;
+  matchedDeliveryRule?: {
+    id: string;
+    name: string;
+    type: string;
+    fee: number;
+    minimumOrderValue?: number;
+  } | null;
 }
 
 interface OrderSummarySectionProps {
@@ -51,8 +58,22 @@ export const OrderSummarySection = ({ checkoutSummary, isCashbackEnabled }: Orde
 
         {checkoutSummary.deliveryFee !== undefined && checkoutSummary.deliveryFee > 0 && (
           <div className="flex items-center justify-between text-sm">
-            <span className="text-slate-500">Taxa de Entrega</span>
+            <span className="text-slate-500">
+              Taxa de Entrega
+              {checkoutSummary.matchedDeliveryRule?.name && (
+                <span className="ml-1 text-xs text-primary font-medium">
+                  ({checkoutSummary.matchedDeliveryRule.name})
+                </span>
+              )}
+            </span>
             <span className="font-semibold">{formatCurrency(checkoutSummary.deliveryFee)}</span>
+          </div>
+        )}
+
+        {checkoutSummary.deliveryFee === 0 && (
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-slate-500">Taxa de Entrega</span>
+            <span className="font-semibold text-emerald-600">Grátis</span>
           </div>
         )}
 

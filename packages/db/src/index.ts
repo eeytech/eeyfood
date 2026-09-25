@@ -81,6 +81,8 @@ export {
   buscarRegrasFreteAtivas,
   criarRegraFrete,
   atualizarRegraFrete,
+  alternarStatusRegraFrete,
+  atualizarLocalizacaoRestaurante,
   excluirRegraFrete,
   buscarPedidosParaEntregador,
   atualizarLocalizacaoEntregador,
@@ -393,4 +395,7 @@ export type {
   NewUser,
   UserRole,
 } from "./types";
+export { geocodeAddress } from "./geocoding";
+export type { GeocodedCoordinates } from "./geocoding";
+
 

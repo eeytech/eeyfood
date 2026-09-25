@@ -1,7 +1,7 @@
 import { and, asc, eq } from "drizzle-orm";
 
 import { db } from "../client";
-import { couriersTable, courierTripsTable, deliveryFeeRulesTable, ordersTable } from "../schema";
+import { couriersTable, courierTripsTable, deliveryFeeRulesTable, ordersTable, restaurantsTable } from "../schema";
 import type { CourierTrip, DeliveryFeeRule } from "../types";
 
 export interface CriarRegraFreteInput {
@@ -16,6 +16,7 @@ export interface CriarRegraFreteInput {
   cepFrom?: string | null;
   cepTo?: string | null;
   displayOrder?: number;
+  isActive?: boolean;
 }
 
 export const buscarRegrasFreteAtivas = async (restaurantId: string): Promise<DeliveryFeeRule[]> => {
@@ -43,6 +44,29 @@ export const atualizarRegraFrete = async (
     .returning();
   if (!rule) throw new Error("Regra de frete não encontrada.");
   return rule;
+};
+
+export const alternarStatusRegraFrete = async (
+  id: string,
+  isActive: boolean,
+): Promise<DeliveryFeeRule> => {
+  const [rule] = await db
+    .update(deliveryFeeRulesTable)
+    .set({ isActive, updatedAt: new Date() })
+    .where(eq(deliveryFeeRulesTable.id, id))
+    .returning();
+  if (!rule) throw new Error("Regra de frete não encontrada.");
+  return rule;
+};
+
+export const atualizarLocalizacaoRestaurante = async (
+  restaurantId: string,
+  data: { address?: string; latitude?: number | null; longitude?: number | null },
+): Promise<void> => {
+  await db
+    .update(restaurantsTable)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(restaurantsTable.id, restaurantId));
 };
 
 export const excluirRegraFrete = async (id: string): Promise<void> => {

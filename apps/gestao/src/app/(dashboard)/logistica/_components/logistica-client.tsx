@@ -482,14 +482,6 @@ export function LogisticaClient({
 
         {/* ── Aba Roteirizador ── */}
         <TabsContent value="roteirizador" className="mt-4">
-          <div className="mb-3">
-            <h2 className="font-display text-base font-semibold">
-              Roteirizador de Entregas
-            </h2>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              Visualize pedidos prontos no mapa, selecione-os e atribua um motoboy em lote.
-            </p>
-          </div>
           <MapaRoteirizador slug={slug} restaurant={restaurant} />
         </TabsContent>
       </Tabs>

@@ -1147,13 +1147,13 @@ export function FreteClient({
             </div>
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0 pt-2">
+          <DialogFooter className="gap-2 pt-2">
             <Button
               type="button"
               variant="outline"
               onClick={handleCloseDialog}
               disabled={isPending}
-              className="rounded-xl border-slate-200"
+              className="rounded-full border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-100"
             >
               Cancelar
             </Button>
@@ -1161,10 +1161,16 @@ export function FreteClient({
               type="button"
               onClick={handleSaveRule}
               disabled={isPending}
-              className="rounded-xl gap-1.5"
+              className="rounded-full bg-slate-900 px-5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
             >
-              {isPending && <LoaderCircleIcon className="h-4 w-4 animate-spin" />}
-              {editingRule ? "Salvar Alterações" : "Criar Regra"}
+              {isPending && (
+                <LoaderCircleIcon size={14} className="mr-1.5 animate-spin" />
+              )}
+              {isPending
+                ? "Salvando..."
+                : editingRule
+                  ? "Salvar Alterações"
+                  : "Criar Regra"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1182,13 +1188,13 @@ export function FreteClient({
             </DialogDescription>
           </DialogHeader>
 
-          <DialogFooter className="gap-2 sm:gap-0 pt-3">
+          <DialogFooter className="gap-2 pt-3">
             <Button
               type="button"
               variant="outline"
               onClick={() => setDeletingRule(null)}
               disabled={isPending}
-              className="rounded-xl border-slate-200"
+              className="rounded-full border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-100"
             >
               Cancelar
             </Button>
@@ -1197,10 +1203,10 @@ export function FreteClient({
               variant="destructive"
               onClick={handleDeleteRule}
               disabled={isPending}
-              className="rounded-xl gap-1.5"
+              className="rounded-full bg-red-600 px-5 text-xs font-semibold text-white shadow-sm hover:bg-red-700 disabled:opacity-50"
             >
-              {isPending && <LoaderCircleIcon className="h-4 w-4 animate-spin" />}
-              Excluir Regra
+              {isPending && <LoaderCircleIcon size={14} className="mr-1.5 animate-spin" />}
+              {isPending ? "Excluindo..." : "Excluir Regra"}
             </Button>
           </DialogFooter>
         </DialogContent>

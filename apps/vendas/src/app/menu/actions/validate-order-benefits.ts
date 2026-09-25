@@ -13,6 +13,8 @@ interface ValidateOrderBenefitsInput {
   useWalletBalance?: boolean;
   deliveryLatitude?: number;
   deliveryLongitude?: number;
+  deliveryNeighborhood?: string;
+  deliveryCep?: string;
   products: Array<{
     id: string;
     quantity: number;
@@ -31,6 +33,8 @@ export const validateOrderBenefits = async (
     useWalletBalance: input.useWalletBalance,
     deliveryLatitude: input.deliveryLatitude,
     deliveryLongitude: input.deliveryLongitude,
+    deliveryNeighborhood: input.deliveryNeighborhood,
+    deliveryCep: input.deliveryCep,
     products: input.products,
   });
 };

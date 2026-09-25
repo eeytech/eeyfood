@@ -45,4 +45,5 @@ export {
   salvarClienteCrm,
   salvarOuAtualizarEnderecoCliente,
   validarBeneficiosPedido,
+  geocodeAddress,
 } from "@fsw/db";

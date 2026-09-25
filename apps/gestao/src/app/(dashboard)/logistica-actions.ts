@@ -1,6 +1,30 @@
 "use server";
 
-import { and, asc, buscarRestaurantePorSlug, buscarRegrasFreteAtivas, companyVehiclesTable, couriersTable, criarRegraFrete, atualizarRegraFrete, excluirRegraFrete, db, despacharPedido, eq, inArray, isNotNull, listarCouriersPorSlug, menuCategoriesTable, ordersTable, orderProductsTable, productsTable, restaurantsTable } from "@fsw/db";
+import {
+  alternarStatusRegraFrete,
+  and,
+  asc,
+  atualizarLocalizacaoRestaurante,
+  atualizarRegraFrete,
+  buscarRegrasFreteAtivas,
+  buscarRestaurantePorSlug,
+  companyVehiclesTable,
+  couriersTable,
+  criarRegraFrete,
+  criarViagemMotoboy,
+  db,
+  despacharPedido,
+  eq,
+  excluirRegraFrete,
+  geocodeAddress,
+  inArray,
+  listarCouriersPorSlug,
+  menuCategoriesTable,
+  orderProductsTable,
+  ordersTable,
+  productsTable,
+  restaurantsTable,
+} from "@fsw/db";
 import type { CriarRegraFreteInput } from "@fsw/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -189,13 +213,33 @@ export const buscarPedidosParaRoteirizadorAction = async (slug: string) => {
         eq(ordersTable.restaurantId, restaurant.id),
         eq(ordersTable.status, "READY_FOR_PICKUP"),
         eq(ordersTable.consumptionMethod, "DELIVERY"),
-        isNotNull(ordersTable.deliveryLatitude),
-        isNotNull(ordersTable.deliveryLongitude),
       ),
     )
     .orderBy(asc(ordersTable.createdAt));
 
-  if (orders.length === 0) return orders.map((o) => ({ ...o, hasPizza: false }));
+  if (orders.length === 0) return [];
+
+  // Geocodificação sob demanda para pedidos sem latitude/longitude
+  for (const order of orders) {
+    if ((order.deliveryLatitude == null || order.deliveryLongitude == null) && order.deliveryAddress) {
+      try {
+        const coords = await geocodeAddress(order.deliveryAddress);
+        if (coords) {
+          order.deliveryLatitude = coords.latitude;
+          order.deliveryLongitude = coords.longitude;
+          await db
+            .update(ordersTable)
+            .set({
+              deliveryLatitude: coords.latitude,
+              deliveryLongitude: coords.longitude,
+            })
+            .where(eq(ordersTable.id, order.id));
+        }
+      } catch (err) {
+        console.error(`Erro ao geocodificar pedido ${order.id}:`, err);
+      }
+    }
+  }
 
   const orderIds = orders.map((o) => o.id);
   const pizzaProducts = await db
@@ -231,6 +275,7 @@ const regraFreteSchema = z.object({
   cepFrom: z.string().trim().nullable().optional(),
   cepTo: z.string().trim().nullable().optional(),
   displayOrder: z.number().int().optional(),
+  isActive: z.boolean().default(true).optional(),
 });
 
 export const criarRegraFreteAction = async (slug: string, formData: FormData) => {
@@ -251,6 +296,7 @@ export const criarRegraFreteAction = async (slug: string, formData: FormData) =>
     cepFrom: getOptionalStringValue(formData.get("cepFrom")),
     cepTo: getOptionalStringValue(formData.get("cepTo")),
     displayOrder: parseInt(getStringValue(formData.get("displayOrder"))) || 0,
+    isActive: formData.has("isActive") ? getBooleanValue(formData.get("isActive")) : true,
   });
 
   if (!parsed.success) throw new Error("Dados inválidos.");
@@ -277,12 +323,52 @@ export const atualizarRegraFreteAction = async (slug: string, formData: FormData
     neighborhood: getOptionalStringValue(formData.get("neighborhood")),
     cepFrom: getOptionalStringValue(formData.get("cepFrom")),
     cepTo: getOptionalStringValue(formData.get("cepTo")),
+    displayOrder: parseInt(getStringValue(formData.get("displayOrder"))) || 0,
+    isActive: formData.has("isActive") ? getBooleanValue(formData.get("isActive")) : true,
   });
 
   if (!parsed.success) throw new Error("Dados inválidos.");
 
   await atualizarRegraFrete(ruleId, parsed.data);
   revalidatePath(`/${slug}/logistica`);
+};
+
+export const alternarStatusRegraFreteAction = async (
+  slug: string,
+  ruleId: string,
+  isActive: boolean,
+) => {
+  await getRestaurantOrThrow(slug);
+  await alternarStatusRegraFrete(ruleId, isActive);
+  revalidatePath(`/${slug}/logistica`);
+};
+
+export const atualizarLocalizacaoRestauranteAction = async (
+  slug: string,
+  address: string,
+  latitude?: number | null,
+  longitude?: number | null,
+) => {
+  const restaurant = await getRestaurantOrThrow(slug);
+  let finalLat = latitude;
+  let finalLng = longitude;
+
+  if ((finalLat == null || finalLng == null) && address) {
+    const coords = await geocodeAddress(address);
+    if (coords) {
+      finalLat = coords.latitude;
+      finalLng = coords.longitude;
+    }
+  }
+
+  await atualizarLocalizacaoRestaurante(restaurant.id, {
+    address,
+    latitude: finalLat,
+    longitude: finalLng,
+  });
+
+  revalidatePath(`/${slug}/logistica`);
+  return { success: true, latitude: finalLat, longitude: finalLng };
 };
 
 export const excluirRegraFreteAction = async (slug: string, formData: FormData) => {
@@ -295,8 +381,9 @@ export const despacharLoteAction = async (
   slug: string,
   orderIds: number[],
   courierId: string,
-): Promise<{ success: boolean }> => {
+): Promise<{ success: boolean; tripId?: string }> => {
   if (orderIds.length === 0) return { success: false };
+  const restaurant = await getRestaurantOrThrow(slug);
 
   await db
     .update(ordersTable)
@@ -308,10 +395,22 @@ export const despacharLoteAction = async (
     })
     .where(inArray(ordersTable.id, orderIds));
 
+  let tripId: string | undefined;
+  try {
+    const trip = await criarViagemMotoboy({
+      restaurantId: restaurant.id,
+      courierId,
+      orderIds,
+    });
+    tripId = trip.id;
+  } catch (err) {
+    console.error("Erro ao registrar viagem do motoboy:", err);
+  }
+
   revalidatePath(`/${slug}/pedidos`);
   revalidatePath(`/${slug}/logistica`);
 
-  return { success: true };
+  return { success: true, tripId };
 };
 
 export const createVehicleAction = async (slug: string, formData: FormData) => {
