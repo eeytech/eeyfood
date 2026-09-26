@@ -1,9 +1,29 @@
-CREATE TYPE "public"."TicketCategory" AS ENUM('PDV_CAIXA', 'KDS_COZINHA', 'CARDAPIO_ESTOQUE', 'IMPRESSAO_HARDWARE', 'FINANCEIRO_FISCAL', 'INTEGRACOES', 'OUTRO');--> statement-breakpoint
-CREATE TYPE "public"."TicketPriority" AS ENUM('LOW', 'NORMAL', 'HIGH', 'URGENT');--> statement-breakpoint
-CREATE TYPE "public"."TicketSender" AS ENUM('USER', 'SUPPORT');--> statement-breakpoint
-CREATE TYPE "public"."TicketStatus" AS ENUM('OPEN', 'IN_PROGRESS', 'WAITING_CUSTOMER', 'RESOLVED', 'CLOSED');--> statement-breakpoint
-ALTER TYPE "public"."UserRole" ADD VALUE 'PANEL';--> statement-breakpoint
-ALTER TYPE "public"."UserRole" ADD VALUE 'COURIER';--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "public"."TicketCategory" AS ENUM('PDV_CAIXA', 'KDS_COZINHA', 'CARDAPIO_ESTOQUE', 'IMPRESSAO_HARDWARE', 'FINANCEIRO_FISCAL', 'INTEGRACOES', 'OUTRO');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "public"."TicketPriority" AS ENUM('LOW', 'NORMAL', 'HIGH', 'URGENT');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "public"."TicketSender" AS ENUM('USER', 'SUPPORT');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "public"."TicketStatus" AS ENUM('OPEN', 'IN_PROGRESS', 'WAITING_CUSTOMER', 'RESOLVED', 'CLOSED');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+ALTER TYPE "public"."UserRole" ADD VALUE IF NOT EXISTS 'PANEL';--> statement-breakpoint
+ALTER TYPE "public"."UserRole" ADD VALUE IF NOT EXISTS 'COURIER';--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "FreeDeliveryRule" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"restaurantId" uuid NOT NULL,
