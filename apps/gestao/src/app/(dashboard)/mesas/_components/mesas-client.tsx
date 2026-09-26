@@ -12,14 +12,20 @@ import {
   HashIcon,
   LayoutGridIcon,
   LoaderCircleIcon,
+  CopyIcon,
+  ExternalLinkIcon,
   MoreHorizontalIcon,
   PencilIcon,
   PlusIcon,
+  PrinterIcon,
+  QrCodeIcon,
   SearchIcon,
   Trash2Icon,
   UsersIcon,
   XIcon,
 } from "lucide-react";
+import Link from "next/link";
+import { QRCodeSVG } from "qrcode.react";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -107,6 +113,9 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
 
   // Delete Dialog State
   const [deletingTable, setDeletingTable] = useState<DiningTable | null>(null);
+
+  // QR Code Quick Dialog State
+  const [qrTable, setQrTable] = useState<DiningTable | null>(null);
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState("");
@@ -309,13 +318,25 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
           </div>
         </div>
 
-        <Button
-          onClick={handleOpenCreate}
-          className="h-10 gap-2 rounded-full bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
-        >
-          <PlusIcon size={16} />
-          <span>Nova Mesa</span>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/mesas/qrcodes">
+            <Button
+              variant="outline"
+              className="h-10 gap-2 rounded-full border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+            >
+              <QrCodeIcon size={15} />
+              <span>Imprimir QR Codes</span>
+            </Button>
+          </Link>
+
+          <Button
+            onClick={handleOpenCreate}
+            className="h-10 gap-2 rounded-full bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+          >
+            <PlusIcon size={16} />
+            <span>Nova Mesa</span>
+          </Button>
+        </div>
       </div>
 
       {/* ── Metric Cards ────────────────────────────────── */}
@@ -702,6 +723,13 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
                                 Opções da Mesa
                               </DropdownMenuLabel>
                               <DropdownMenuItem
+                                onClick={() => setQrTable(table)}
+                                className="gap-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
+                              >
+                                <QrCodeIcon size={14} className="text-indigo-600" />
+                                Ver / Imprimir QR Code
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
                                 onClick={() => handleOpenEdit(table)}
                                 className="gap-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
                               >
@@ -788,6 +816,13 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
                           align="end"
                           className="w-48 rounded-xl border-slate-200 bg-white p-1 text-slate-900 shadow-xl"
                         >
+                          <DropdownMenuItem
+                            onClick={() => setQrTable(table)}
+                            className="gap-2 rounded-lg text-xs font-medium text-slate-700"
+                          >
+                            <QrCodeIcon size={14} className="text-indigo-600" />
+                            Ver / Imprimir QR Code
+                          </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleOpenEdit(table)}
                             className="gap-2 rounded-lg text-xs font-medium text-slate-700"
@@ -1254,6 +1289,100 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
               {isPending ? "Excluindo..." : "Sim, excluir mesa"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: QR Code Individual da Mesa ─────────────── */}
+      <Dialog open={qrTable !== null} onOpenChange={(open) => !open && setQrTable(null)}>
+        <DialogContent className="border-slate-200 bg-white sm:max-w-md shadow-2xl">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <div className="rounded-xl bg-indigo-100 p-2 text-indigo-700">
+                <QrCodeIcon size={20} />
+              </div>
+              <div>
+                <DialogTitle className="font-display text-lg font-bold text-slate-900">
+                  QR Code da {qrTable?.name}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500">
+                  Escaneie para acessar o cardápio com a mesa já conectada
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {qrTable && (
+            <div className="flex flex-col items-center py-2 space-y-4">
+              {/* QR Code Container */}
+              <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-md flex flex-col items-center">
+                <QRCodeSVG
+                  value={`${(process.env.NEXT_PUBLIC_VENDAS_URL || (typeof window !== "undefined" ? window.location.origin : "https://cardapio.digital")).replace(/\/$/, "")}/menu?consumptionMethod=DINE_IN&tableId=${encodeURIComponent(qrTable.id)}&slug=${encodeURIComponent(slug)}`}
+                  size={180}
+                  level="H"
+                />
+                <span className="mt-2.5 font-display text-sm font-bold text-slate-800">
+                  {qrTable.name}
+                </span>
+                <span className="text-[11px] text-slate-500">
+                  {qrTable.seats} lugares
+                </span>
+              </div>
+
+              {/* Direct Link & Copy */}
+              <div className="w-full space-y-1.5">
+                <Label className="text-xs font-medium text-slate-700">Link Direto da Mesa</Label>
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    readOnly
+                    value={`${(process.env.NEXT_PUBLIC_VENDAS_URL || (typeof window !== "undefined" ? window.location.origin : "https://cardapio.digital")).replace(/\/$/, "")}/menu?consumptionMethod=DINE_IN&tableId=${encodeURIComponent(qrTable.id)}&slug=${encodeURIComponent(slug)}`}
+                    className="h-8 text-xs font-mono text-slate-600 bg-slate-50"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      const url = `${(process.env.NEXT_PUBLIC_VENDAS_URL || (typeof window !== "undefined" ? window.location.origin : "https://cardapio.digital")).replace(/\/$/, "")}/menu?consumptionMethod=DINE_IN&tableId=${encodeURIComponent(qrTable.id)}&slug=${encodeURIComponent(slug)}`;
+                      await navigator.clipboard.writeText(url);
+                      toast.success("Link copiado para a área de transferência!");
+                    }}
+                    className="h-8 px-2.5 text-xs shrink-0"
+                    title="Copiar Link"
+                  >
+                    <CopyIcon size={13} className="mr-1" />
+                    Copiar
+                  </Button>
+                </div>
+              </div>
+
+              {/* Actions Footer */}
+              <div className="flex items-center justify-between w-full pt-2 border-t border-slate-100">
+                <a
+                  href={`${(process.env.NEXT_PUBLIC_VENDAS_URL || (typeof window !== "undefined" ? window.location.origin : "https://cardapio.digital")).replace(/\/$/, "")}/menu?consumptionMethod=DINE_IN&tableId=${encodeURIComponent(qrTable.id)}&slug=${encodeURIComponent(slug)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
+                >
+                  <ExternalLinkIcon size={12} />
+                  Testar Link
+                </a>
+
+                <div className="flex items-center gap-2">
+                  <Link href="/mesas/qrcodes">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs gap-1.5"
+                    >
+                      <PrinterIcon size={13} />
+                      Central de Impressão
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

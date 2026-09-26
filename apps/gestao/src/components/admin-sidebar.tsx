@@ -18,6 +18,8 @@ import {
   MessageSquareIcon,
   MonitorSmartphoneIcon,
   PanelLeftCloseIcon,
+  PrinterIcon,
+  QrCodeIcon,
   ShoppingBagIcon,
   ShoppingCartIcon,
   SparklesIcon,
@@ -79,6 +81,7 @@ const navigationGroups = [
       { href: "pdv", label: "PDV", icon: MonitorSmartphoneIcon },
       { href: "comandas", label: "Comandas", icon: UsersRoundIcon },
       { href: "mesas", label: "Mesas", icon: LayoutGridIcon },
+      { href: "mesas/qrcodes", label: "QR Codes das Mesas", icon: QrCodeIcon },
       { href: "kds", label: "Cozinha (KDS)", icon: ConciergeBellIcon },
       { href: "entregas", label: "Entregas", icon: BikeIcon },
     ],
@@ -87,6 +90,7 @@ const navigationGroups = [
     label: "Cardápio & Estoque",
     items: [
       { href: "cardapio", label: "Cardápio", icon: UtensilsCrossedIcon },
+      { href: "cardapio/impressao", label: "Impressão do Cardápio", icon: PrinterIcon },
       { href: "estoque", label: "Estoque", icon: BoxesIcon },
       { href: "estoque/compras", label: "Compras", icon: ShoppingCartIcon },
     ],
@@ -123,8 +127,6 @@ const navigationGroups = [
 ];
 
 const AdminSidebar = ({
-  companies,
-  currentCompanyId,
   userRole,
   userName,
   restaurantName,
@@ -250,6 +252,8 @@ const AdminSidebar = ({
                   pathname === href ||
                   (item.href !== "configuracoes" &&
                     item.href !== "estoque" &&
+                    item.href !== "cardapio" &&
+                    item.href !== "mesas" &&
                     pathname.startsWith(`${href}/`));
                 const Icon = item.icon;
 

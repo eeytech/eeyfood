@@ -115,6 +115,7 @@ export const FinishOrderSheet = ({
   const allowsMercadoPago =
     restaurant.acceptMercadoPago && consumptionMethod !== "DINE_IN";
 
+  const queryTableId = searchParams.get("tableId") || undefined;
   const abandonedCartSessionIdRef = useRef(createAbandonedCartSessionId());
   const validateBenefitsRef = useRef<(() => Promise<void>) | null>(null);
 
@@ -129,7 +130,7 @@ export const FinishOrderSheet = ({
       paymentMethod: allowsMercadoPago ? "MERCADO_PAGO" : "DINHEIRO",
       changeFor: "",
       consumptionMethod,
-      diningTableId: undefined,
+      diningTableId: consumptionMethod === "DINE_IN" ? queryTableId : undefined,
       deliveryAddressMode: "NEW",
       selectedAddressId: undefined,
       street: "",
@@ -205,13 +206,22 @@ export const FinishOrderSheet = ({
 
   // Fetch dining tables when sheet opens for DINE_IN orders
   useEffect(() => {
-    if (!open || consumptionMethod !== "DINE_IN" || tables.length > 0) return;
-    setIsLoadingTables(true);
-    void getTables(slug)
-      .then(setTables)
-      .catch(() => setTables([]))
-      .finally(() => setIsLoadingTables(false));
-  }, [open, consumptionMethod, slug, tables.length]);
+    if (!open || consumptionMethod !== "DINE_IN") return;
+    if (tables.length === 0) {
+      setIsLoadingTables(true);
+      void getTables(slug)
+        .then((fetchedTables) => {
+          setTables(fetchedTables);
+          if (queryTableId && !form.getValues("diningTableId")) {
+            form.setValue("diningTableId", queryTableId);
+          }
+        })
+        .catch(() => setTables([]))
+        .finally(() => setIsLoadingTables(false));
+    } else if (queryTableId && !form.getValues("diningTableId")) {
+      form.setValue("diningTableId", queryTableId);
+    }
+  }, [open, consumptionMethod, slug, tables.length, queryTableId, form]);
 
   // Fetch the proactive upsell rule whenever the sheet opens or cart total changes
   useEffect(() => {
@@ -387,7 +397,7 @@ export const FinishOrderSheet = ({
         paymentMethod: restaurant.acceptMercadoPago ? "MERCADO_PAGO" : "DINHEIRO",
         changeFor: "",
         consumptionMethod,
-        diningTableId: undefined,
+        diningTableId: consumptionMethod === "DINE_IN" ? queryTableId : undefined,
         deliveryAddressMode: "NEW",
         selectedAddressId: undefined,
         street: "",

@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { redirect } from "next/navigation";
 
 import { buscarRestaurantePorSlug, buscarRestauranteUnico } from "@/lib/db";
 
@@ -7,12 +8,18 @@ import ConsumptionMethodOption from "./components/consumption-method-option";
 export const dynamic = "force-dynamic";
 
 interface RestaurantPageProps {
-  searchParams?: Promise<{ slug?: string; restaurant?: string }>;
+  searchParams?: Promise<{ slug?: string; restaurant?: string; tableId?: string }>;
 }
 
 const RestaurantPage = async ({ searchParams }: RestaurantPageProps) => {
   const sp = searchParams ? await searchParams : undefined;
   const targetSlug = sp?.slug || sp?.restaurant;
+
+  if (sp?.tableId) {
+    const slugQuery = targetSlug ? `&slug=${encodeURIComponent(targetSlug)}` : "";
+    redirect(`/menu?consumptionMethod=DINE_IN&tableId=${encodeURIComponent(sp.tableId)}${slugQuery}`);
+  }
+
   const restaurant = targetSlug
     ? await buscarRestaurantePorSlug(targetSlug)
     : await buscarRestauranteUnico();

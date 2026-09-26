@@ -84,6 +84,12 @@ const RestaurantHeader = ({
           </Button>
           <div className="flex items-center gap-2">
             {showWaiterButton && (
+              <div className="hidden sm:flex items-center gap-1.5 rounded-full bg-slate-900/80 backdrop-blur-md px-3 py-1.5 text-xs font-semibold text-white border border-white/20 shadow-md">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Mesa Identificada</span>
+              </div>
+            )}
+            {showWaiterButton && (
               <Button
                 variant="secondary"
                 disabled={isPending}

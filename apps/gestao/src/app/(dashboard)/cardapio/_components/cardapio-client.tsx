@@ -12,10 +12,12 @@ import {
   PackageIcon,
   PencilIcon,
   PlusIcon,
+  PrinterIcon,
   SearchIcon,
   Trash2Icon,
   UtensilsCrossedIcon,
 } from "lucide-react";
+import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 
 import {
@@ -304,6 +306,16 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <Link href="/cardapio/impressao">
+            <Button
+              variant="outline"
+              className="h-10 gap-2 rounded-full border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+            >
+              <PrinterIcon size={14} />
+              <span>Imprimir Cardápio</span>
+            </Button>
+          </Link>
+
           <Button
             onClick={() => setCreateCategoryOpen(true)}
             variant="outline"
