@@ -29,22 +29,22 @@ import {
   UsersRoundIcon,
   UtensilsCrossedIcon,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { CompanySwitcher } from "@/components/auth/CompanySwitcher";
 import { Button } from "@/components/ui/button";
 import { logoutAction } from "@/lib/auth/actions";
 import { cn } from "@/lib/utils";
 import type { TokenCompany } from "@/lib/auth/types";
 
 interface AdminSidebarProps {
-  slug: string;
+  slug?: string;
   restaurantName: string;
-  companies: TokenCompany[];
-  currentCompanyId: string;
-  userPermissions: Record<string, string[]>;
+  companies?: TokenCompany[];
+  currentCompanyId?: string;
+  userPermissions?: Record<string, string[]>;
   userRole?: string;
   userName?: string;
   userEmail?: string;
@@ -192,20 +192,42 @@ const AdminSidebar = ({
             : "max-md:translate-x-0 max-md:visible md:w-[240px] md:opacity-100 md:visible",
         )}
       >
-        {/* Cabeçalho da Sidebar com Seletor e Botão de Recolher */}
-        <div className="relative flex items-center">
-          <div className="min-w-0 flex-1 pr-9">
-            <CompanySwitcher
-              companies={companies}
-              currentCompanyId={currentCompanyId}
-              isCollapsed={false}
-            />
-          </div>
+        {/* Cabeçalho da Sidebar: Logo do Sistema + Nome do Restaurante + Botão Recolher */}
+        <div className="flex h-16 shrink-0 items-center justify-between border-b border-white/10 px-3">
+          <Link
+            href="/pedidos"
+            className="group flex min-w-0 flex-1 items-center gap-2.5 rounded-lg p-1 transition-colors hover:bg-white/5"
+            title={restaurantName || "Painel de Gestão"}
+          >
+            {/* Ícone com Logo */}
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 border border-blue-500/25 p-1 shadow-xs transition-transform duration-200 group-hover:scale-105">
+              <Image
+                src="/logo-icon.png"
+                alt="Logo"
+                width={28}
+                height={28}
+                className="h-full w-full object-contain"
+                priority
+              />
+            </div>
+
+            {/* Nome do Restaurante */}
+            <div className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate text-sm font-semibold tracking-tight text-white transition-colors group-hover:text-blue-200">
+                {restaurantName || "Restaurante"}
+              </span>
+              <span className="flex items-center gap-1.5 text-[11px] font-medium text-slate-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                <span className="truncate">Painel de Gestão</span>
+              </span>
+            </div>
+          </Link>
+
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setCollapsed(true)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-lg text-slate-400 hover:bg-white/10 hover:text-white"
+            className="h-8 w-8 shrink-0 rounded-lg text-slate-400 hover:bg-white/10 hover:text-white"
             title="Recolher menu lateral"
           >
             <PanelLeftCloseIcon size={18} />
@@ -317,8 +339,16 @@ const AdminSidebar = ({
               <div className="h-4 w-px bg-slate-200" />
 
               <div className="flex items-center gap-2 min-w-0">
-                <StoreIcon size={14} className="text-slate-400 shrink-0" />
-                <span className="truncate text-xs font-medium text-slate-600">
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-blue-500/10 border border-blue-500/20 p-0.5">
+                  <Image
+                    src="/logo-icon.png"
+                    alt="Logo"
+                    width={18}
+                    height={18}
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+                <span className="truncate text-xs font-semibold text-slate-800">
                   {restaurantName || "Gestão"}
                 </span>
               </div>
