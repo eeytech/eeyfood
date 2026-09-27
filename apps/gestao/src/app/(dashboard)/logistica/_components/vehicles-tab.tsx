@@ -96,7 +96,7 @@ export function VehiclesTab({
   initialStatus,
 }: VehiclesTabProps) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editVehicle, setEditVehicle] = useState<CompanyVehicle | null>(null);

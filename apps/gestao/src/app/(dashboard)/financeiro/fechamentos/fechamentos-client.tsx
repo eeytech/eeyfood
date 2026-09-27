@@ -13,7 +13,6 @@ import {
   FileSpreadsheetIcon,
   LockIcon,
   PackageCheckIcon,
-  PercentIcon,
   RotateCcwIcon,
   TrendingUpIcon,
   UnlockIcon,
@@ -83,8 +82,8 @@ export function FechamentosClient({
   initialClosings,
   kpis: initialKpis,
 }: FechamentosClientProps) {
-  const [closings, setClosings] = useState<FechamentoResumoItem[]>(initialClosings);
-  const [kpis, setKpis] = useState(initialKpis);
+  const closings = initialClosings;
+  const kpis = initialKpis;
 
   // Período selecionado
   const now = new Date();

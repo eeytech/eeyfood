@@ -8,11 +8,9 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   FilterXIcon,
-  MoreHorizontalIcon,
   PackageIcon,
   PencilIcon,
   PlusIcon,
-  ScanLineIcon,
   SearchIcon,
   Trash2Icon,
   WarehouseIcon,
@@ -38,14 +36,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {

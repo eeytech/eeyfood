@@ -1,7 +1,6 @@
 import {
   AlertCircleIcon,
   BotIcon,
-  CheckCircle2Icon,
   MegaphoneIcon,
   MessageSquareIcon,
   QrCodeIcon,

@@ -37,6 +37,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { CompanySwitcher } from "@/components/auth/CompanySwitcher";
 import { logoutAction } from "@/lib/auth/actions";
 import { cn } from "@/lib/utils";
 import type { TokenCompany } from "@/lib/auth/types";
@@ -130,6 +131,8 @@ const AdminSidebar = ({
   userRole,
   userName,
   restaurantName,
+  companies,
+  currentCompanyId,
   children,
 }: AdminSidebarProps) => {
   const pathname = usePathname();
@@ -194,31 +197,31 @@ const AdminSidebar = ({
             : "max-md:translate-x-0 max-md:visible md:w-[240px] md:opacity-100 md:visible",
         )}
       >
-        {/* Cabeçalho da Sidebar: Logo do Sistema + Nome do Restaurante + Botão Recolher */}
-        <div className="flex h-16 shrink-0 items-center justify-between border-b border-white/10 px-3">
+        {/* Cabeçalho da Sidebar: Logo do Sistema + Nome do Sistema + Botão Recolher */}
+        <div className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 px-3">
           <Link
             href="/pedidos"
             className="group flex min-w-0 flex-1 items-center gap-2.5 rounded-lg p-1 transition-colors hover:bg-white/5"
-            title={restaurantName || "Painel de Gestão"}
+            title="Painel de Gestão"
           >
             {/* Ícone com Logo */}
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 border border-blue-500/25 p-1 shadow-xs transition-transform duration-200 group-hover:scale-105">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 border border-blue-500/25 p-1 shadow-xs transition-transform duration-200 group-hover:scale-105">
               <Image
                 src="/logo-icon.png"
                 alt="Logo"
-                width={28}
-                height={28}
+                width={24}
+                height={24}
                 className="h-full w-full object-contain"
                 priority
               />
             </div>
 
-            {/* Nome do Restaurante */}
+            {/* Nome do Sistema */}
             <div className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate text-sm font-semibold tracking-tight text-white transition-colors group-hover:text-blue-200">
-                {restaurantName || "Restaurante"}
+              <span className="truncate text-xs font-bold tracking-tight text-white transition-colors group-hover:text-blue-200">
+                EeyFood
               </span>
-              <span className="flex items-center gap-1.5 text-[11px] font-medium text-slate-400">
+              <span className="flex items-center gap-1.5 text-[10px] font-medium text-slate-400">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                 <span className="truncate">Painel de Gestão</span>
               </span>
@@ -235,6 +238,17 @@ const AdminSidebar = ({
             <PanelLeftCloseIcon size={18} />
           </Button>
         </div>
+
+        {/* Seletor de Unidades (Filiais) */}
+        {companies && companies.length > 0 && (
+          <div className="border-b border-white/10 bg-white/[0.02]">
+            <CompanySwitcher
+              companies={companies}
+              currentCompanyId={currentCompanyId || ""}
+              isCollapsed={isCollapsed}
+            />
+          </div>
+        )}
 
         {/* Links de navegação agrupados */}
         <nav className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden p-2 no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">

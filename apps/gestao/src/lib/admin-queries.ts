@@ -75,10 +75,12 @@ import {
   productToOptionGroupsTable,
   productsTable,
   purchaseInvoicesTable,
+  restaurantsTable,
   sql,
   suppliersTable,
   walletsTable,
 } from "@fsw/db";
+import { getSession } from "@/lib/auth/session";
 
 export interface CategoriaComProdutos extends MenuCategory {
   products: Product[];
@@ -145,6 +147,32 @@ export const listarMesasGestao = async (slug: string): Promise<DiningTable[]> =>
 export const buscarRestauranteParaGestao = async (
   slug?: string,
 ): Promise<Restaurant | null> => {
+  if (slug && slug !== "default") {
+    return buscarRestaurantePorSlug(slug);
+  }
+
+  try {
+    const session = await getSession();
+    const targetId = session?.activeCompanyId || session?.companyId;
+
+    if (targetId) {
+      const [found] = await db
+        .select()
+        .from(restaurantsTable)
+        .where(eq(restaurantsTable.id, targetId))
+        .limit(1);
+
+      if (found) return found;
+    }
+
+    if (session?.companySlug) {
+      const found = await buscarRestaurantePorSlug(session.companySlug);
+      if (found) return found;
+    }
+  } catch {
+    // Caso fora do contexto de requisição
+  }
+
   return buscarRestaurantePorSlug(slug);
 };
 

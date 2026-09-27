@@ -97,7 +97,7 @@ export function DatePicker({
       return;
     }
 
-    let finalDate = new Date(selectedDay);
+    const finalDate = new Date(selectedDay);
     if (withTime && time) {
       const [hours, minutes] = time.split(":").map((v) => parseInt(v, 10) || 0);
       finalDate.setHours(hours, minutes, 0, 0);

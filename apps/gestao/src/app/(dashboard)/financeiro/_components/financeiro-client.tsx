@@ -20,7 +20,7 @@ import {
   TrendingUpIcon,
   XIcon,
 } from "lucide-react";
-import { useMemo, useState, useTransition } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import {
@@ -153,40 +153,43 @@ export function FinanceiroClient({
     setCurrentPage(1);
   };
 
-  const applyFilters = (items: TransactionWithCategory[]) =>
-    items.filter((item) => {
-      // Search text
-      if (search.trim()) {
-        const query = search.toLowerCase().trim();
-        const matchesDesc = item.transaction.description
-          .toLowerCase()
-          .includes(query);
-        const matchesCat =
-          item.category?.name.toLowerCase().includes(query) ?? false;
-        if (!matchesDesc && !matchesCat) return false;
-      }
+  const applyFilters = useCallback(
+    (items: TransactionWithCategory[]) =>
+      items.filter((item) => {
+        // Search text
+        if (search.trim()) {
+          const query = search.toLowerCase().trim();
+          const matchesDesc = item.transaction.description
+            .toLowerCase()
+            .includes(query);
+          const matchesCat =
+            item.category?.name.toLowerCase().includes(query) ?? false;
+          if (!matchesDesc && !matchesCat) return false;
+        }
 
-      // Status
-      if (statusFilter !== "all" && item.transaction.status !== statusFilter) {
-        return false;
-      }
+        // Status
+        if (statusFilter !== "all" && item.transaction.status !== statusFilter) {
+          return false;
+        }
 
-      // Category
-      if (categoryFilter !== "all" && item.transaction.categoryId !== categoryFilter) {
-        return false;
-      }
+        // Category
+        if (categoryFilter !== "all" && item.transaction.categoryId !== categoryFilter) {
+          return false;
+        }
 
-      return true;
-    });
+        return true;
+      }),
+    [search, statusFilter, categoryFilter],
+  );
 
-  const allFiltered = useMemo(() => applyFilters(transacoes), [transacoes, search, statusFilter, categoryFilter]);
+  const allFiltered = useMemo(() => applyFilters(transacoes), [transacoes, applyFilters]);
   const revenueFiltered = useMemo(
     () => applyFilters(transacoes.filter((i) => i.transaction.type === "REVENUE")),
-    [transacoes, search, statusFilter, categoryFilter],
+    [transacoes, applyFilters],
   );
   const expenseFiltered = useMemo(
     () => applyFilters(transacoes.filter((i) => i.transaction.type === "EXPENSE")),
-    [transacoes, search, statusFilter, categoryFilter],
+    [transacoes, applyFilters],
   );
 
   const currentTabItems =

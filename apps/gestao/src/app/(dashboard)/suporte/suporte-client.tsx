@@ -1735,7 +1735,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
           <p className="text-sm text-slate-600">
             Tem certeza de que deseja remover permanentemente o chamado{" "}
             <strong className="text-slate-900">
-              {deletingTicket?.protocol} — "{deletingTicket?.title}"
+              {deletingTicket?.protocol} — &ldquo;{deletingTicket?.title}&rdquo;
             </strong>
             ?
           </p>

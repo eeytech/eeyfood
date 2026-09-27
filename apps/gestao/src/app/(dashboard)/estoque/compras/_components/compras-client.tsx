@@ -56,7 +56,6 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { NotaCompraComFornecedor } from "@/lib/admin-queries";
-import { cn } from "@/lib/utils";
 import type { InventoryItem, Supplier } from "@fsw/db";
 
 interface ComprasClientProps {

@@ -3,7 +3,6 @@
 import {
   Building2Icon,
   BuildingIcon,
-  CheckCircle2Icon,
   PencilIcon,
   PlusIcon,
   Trash2Icon,
@@ -17,7 +16,6 @@ import {
   atualizarContaBancariaAction,
   excluirContaBancariaAction,
 } from "../actions";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {

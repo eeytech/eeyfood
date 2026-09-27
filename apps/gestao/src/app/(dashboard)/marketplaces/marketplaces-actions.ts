@@ -4,7 +4,6 @@ import {
   and,
   buscarRestaurantePorSlug,
   db,
-  desc,
   eq,
   marketplaceIntegrationsTable,
   ordersTable,

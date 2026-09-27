@@ -5,7 +5,6 @@ import {
   couriersTable,
   db,
   eq,
-  restaurantsTable,
 } from "@fsw/db";
 import axios from "axios";
 

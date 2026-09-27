@@ -1,6 +1,7 @@
 export interface TokenCompany {
   id: string;
   name: string;
+  slug?: string;
 }
 
 export interface EeyCoreTokenPayload {

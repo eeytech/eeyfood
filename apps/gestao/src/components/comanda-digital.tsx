@@ -9,12 +9,10 @@ import type {
   ComandaAvulsaComPedido,
 } from "@fsw/db";
 import {
-  ArrowLeftIcon,
   ArrowLeftRightIcon,
   BanknoteIcon,
   CheckIcon,
   ChevronLeftIcon,
-  ChevronRightIcon,
   ClockIcon,
   CreditCardIcon,
   GitMergeIcon,
@@ -28,13 +26,8 @@ import {
   ReceiptTextIcon,
   ScissorsIcon,
   SearchIcon,
-  ShoppingBagIcon,
-  SparklesIcon,
-  UserIcon,
   UsersRoundIcon,
   UtensilsCrossedIcon,
-  WifiIcon,
-  WifiOffIcon,
 } from "lucide-react";
 import {
   useCallback,
@@ -195,8 +188,6 @@ const ComandaDigital = ({
   initialQueue = [],
   initialComandasAvulsas = [],
   userName,
-  userRole,
-  isDedicatedMode = false,
 }: ComandaDigitalProps) => {
   // ── Table / view state ──────────────────────────────────────────────────
   const [tables, setTables] = useState(initialTables);

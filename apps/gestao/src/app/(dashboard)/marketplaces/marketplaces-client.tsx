@@ -1,8 +1,6 @@
 "use client";
 
 import {
-  AlertCircleIcon,
-  CheckCircle2Icon,
   CopyIcon,
   ExternalLinkIcon,
   HelpCircleIcon,
@@ -10,7 +8,6 @@ import {
   RefreshCwIcon,
   ShieldCheckIcon,
   ShoppingBagIcon,
-  StoreIcon,
   ZapIcon,
 } from "lucide-react";
 import { useState, useTransition } from "react";
@@ -18,7 +15,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";

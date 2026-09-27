@@ -371,6 +371,7 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
       socket.off("CALL_WAITER", handleCallWaiter);
       socket.disconnect();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, websocketUrl]);
 
   const handleOrderPatch = async (

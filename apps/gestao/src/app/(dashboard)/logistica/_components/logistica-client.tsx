@@ -166,7 +166,7 @@ export function LogisticaClient({
   feeRules,
 }: LogisticaClientProps) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editCourier, setEditCourier] = useState<Courier | null>(null);

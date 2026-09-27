@@ -2,7 +2,6 @@
 
 import type { DeliveryFeeRule } from "@fsw/db";
 import {
-  AlertCircleIcon,
   CheckCircle2Icon,
   CompassIcon,
   FilterXIcon,
@@ -13,9 +12,7 @@ import {
   PencilIcon,
   PlusIcon,
   SearchIcon,
-  SparklesIcon,
   Trash2Icon,
-  TruckIcon,
   XIcon,
 } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";

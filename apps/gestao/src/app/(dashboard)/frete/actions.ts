@@ -45,7 +45,7 @@ function parseDate(val: FormDataEntryValue | null): Date | null {
   return isNaN(date.getTime()) ? null : date;
 }
 
-async function sincronizarThresholdRestaurante(restaurantId: string, slug: string) {
+async function sincronizarThresholdRestaurante(restaurantId: string) {
   try {
     const activeMinRules = await db
       .select({ minOrderValue: freeDeliveryRulesTable.minOrderValue })
@@ -146,7 +146,7 @@ export async function criarRegraFreteGratisAction(slug: string, formData: FormDa
       endsAt: parsed.data.endsAt ?? null,
     });
 
-    await sincronizarThresholdRestaurante(restaurant.id, slug);
+    await sincronizarThresholdRestaurante(restaurant.id);
     revalidateAll(slug);
 
     return { success: true };
@@ -235,7 +235,7 @@ export async function atualizarRegraFreteGratisAction(
         ),
       );
 
-    await sincronizarThresholdRestaurante(restaurant.id, slug);
+    await sincronizarThresholdRestaurante(restaurant.id);
     revalidateAll(slug);
 
     return { success: true };
@@ -274,7 +274,7 @@ export async function alternarStatusRegraFreteGratisAction(
         ),
       );
 
-    await sincronizarThresholdRestaurante(restaurant.id, slug);
+    await sincronizarThresholdRestaurante(restaurant.id);
     revalidateAll(slug);
 
     return { success: true };
@@ -305,7 +305,7 @@ export async function excluirRegraFreteGratisAction(slug: string, ruleId: string
         ),
       );
 
-    await sincronizarThresholdRestaurante(restaurant.id, slug);
+    await sincronizarThresholdRestaurante(restaurant.id);
     revalidateAll(slug);
 
     return { success: true };

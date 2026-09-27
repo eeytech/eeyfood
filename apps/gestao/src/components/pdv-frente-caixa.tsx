@@ -5,7 +5,6 @@ import {
   BanknoteIcon,
   CheckCircle2Icon,
   ChefHatIcon,
-  CircleAlertIcon,
   ClockIcon,
   CreditCardIcon,
   InfoIcon,
@@ -19,10 +18,8 @@ import {
   ScaleIcon,
   SearchIcon,
   ShoppingCartIcon,
-  SparklesIcon,
   TagIcon,
   Trash2Icon,
-  UserIcon,
   UtensilsCrossedIcon,
   WalletIcon,
   WifiOffIcon,
@@ -68,7 +65,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { QRCodeSVG } from "qrcode.react";
 import { gerarPayloadPix } from "@/lib/pix";
@@ -129,11 +125,6 @@ type PdvPaymentMethod =
 interface PaymentSplitItem {
   method: PdvPaymentMethod;
   amount: number;
-}
-
-interface FeedbackState {
-  type: "success" | "error" | "offline";
-  message: string;
 }
 
 interface AppliedCoupon {
@@ -315,41 +306,45 @@ const PdvFrenteCaixa = ({
 
   // ── Split payment ──────────────────────────────────────────────────────────
   const [paymentSplits, setPaymentSplits] = useState<PaymentSplitItem[]>([]);
-  const [splitPendingMethod, setSplitPendingMethod] = useState<PdvPaymentMethod>("DINHEIRO");
-  const [splitPendingAmount, setSplitPendingAmount] = useState("");
   const isSplitMode = paymentSplits.length > 0;
 
   // ── Service fee ────────────────────────────────────────────────────────────
   const [useServiceFee, setUseServiceFee] = useState(false);
-  const [serviceFeePercent, setServiceFeePercent] = useState(10);
 
   // ── Coupon ─────────────────────────────────────────────────────────────────
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
-  const [couponError, setCouponError] = useState<string | null>(null);
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
   // ── Wallet / cashback ──────────────────────────────────────────────────────
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [useWalletBalance, setUseWalletBalance] = useState(false);
-  const [isCheckingWallet, setIsCheckingWallet] = useState(false);
 
   // ── Post-sale print ────────────────────────────────────────────────────────
   const [completedOrderId, setCompletedOrderId] = useState<number | null>(null);
   const [isPrintLoading, setIsPrintLoading] = useState(false);
 
-  // ── Feedback ───────────────────────────────────────────────────────────────
-  const [feedback, setFeedback] = useState<FeedbackState | null>(null);
-
   // ── Offline ────────────────────────────────────────────────────────────────
   const [isOffline, setIsOffline] = useState(false);
   const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
-  const [isSyncing, setIsSyncing] = useState(false);
 
   // ── Hardware peripherals ───────────────────────────────────────────────────
   const { status: scaleStatus, captureWeight } = useWebSerial();
   const { openDrawerUsb } = useCashDrawer();
   const [capturedWeight, setCapturedWeight] = useState<number | null>(null);
+
+  const handleCaptureScaleWeight = useCallback(async () => {
+    const protocol = scaleProtocol || "TOLEDO";
+    const baudRate = scaleBaudRate || 9600;
+    toast.info("Aguardando leitura da balança serial...");
+    const weight = await captureWeight(protocol, baudRate);
+    if (weight !== null) {
+      setCapturedWeight(weight);
+      toast.success(`Peso capturado com sucesso: ${weight.toFixed(3)} kg`);
+    } else {
+      toast.error("Não foi possível ler o peso da balança serial.");
+    }
+  }, [captureWeight, scaleProtocol, scaleBaudRate]);
 
   // ── Modals: Pizza Builder ─────────────────────────────────────────────────
   const [selectedPizzaProduct, setSelectedPizzaProduct] = useState<PdvProduct | null>(null);
@@ -360,7 +355,6 @@ const PdvFrenteCaixa = ({
   const [selectedPizzaBorder, setSelectedPizzaBorder] = useState<{ id: string; name: string; price: number } | null>(null);
   const [pizzaNotes, setPizzaNotes] = useState("");
   const [pizzaQuantity, setPizzaQuantity] = useState(1);
-  const [isPizzaLoading, setIsPizzaLoading] = useState(false);
 
   // ── Modals: Product Customization / Adicionais ─────────────────────────────
   const [customizingProduct, setCustomizingProduct] = useState<PdvProduct | null>(null);
@@ -443,6 +437,7 @@ const PdvFrenteCaixa = ({
       : 0;
   const discountAmount = round2(couponDiscount + cashbackDiscount);
   const baseTotal = round2(Math.max(cartSubtotal - discountAmount, 0));
+  const serviceFeePercent = 10;
   const serviceFeeAmount = useServiceFee ? round2(baseTotal * (serviceFeePercent / 100)) : 0;
   const finalTotal = round2(baseTotal + serviceFeeAmount);
 
@@ -515,14 +510,12 @@ const PdvFrenteCaixa = ({
   // Clear coupon & cashback when cart changes
   useEffect(() => {
     setAppliedCoupon(null);
-    setCouponError(null);
     setUseWalletBalance(false);
   }, [cartItems]);
 
   // Clear splits when total changes
   useEffect(() => {
     setPaymentSplits([]);
-    setSplitPendingAmount("");
   }, [finalTotal]);
 
   // Look up wallet balance when phone reaches 11 digits
@@ -531,15 +524,12 @@ const PdvFrenteCaixa = ({
     if (!isCashbackEnabled || normalizedPhone.length !== 11) {
       setWalletBalance(null);
       setUseWalletBalance(false);
-      setIsCheckingWallet(false);
       return;
     }
 
-    setIsCheckingWallet(true);
     const timer = setTimeout(() => {
       void buscarSaldoCashbackPdv(slug, normalizedPhone).then((result) => {
         setWalletBalance(result && result.balance > 0 ? result.balance : null);
-        setIsCheckingWallet(false);
         if (!result || result.balance <= 0) setUseWalletBalance(false);
       });
     }, 600);
@@ -616,7 +606,6 @@ const PdvFrenteCaixa = ({
         setPendingOrdersCount(pending.length);
         if (pending.length === 0 || !navigator.onLine) return;
 
-        setIsSyncing(true);
         let synced = 0;
         for (const order of pending) {
           try {
@@ -629,13 +618,12 @@ const PdvFrenteCaixa = ({
             // Keep in offline queue
           }
         }
-        setIsSyncing(false);
         if (synced > 0) {
           toast.success(`${synced} venda(s) offline sincronizada(s) com sucesso!`);
           setPendingOrdersCount((prev) => prev - synced);
         }
       } catch {
-        setIsSyncing(false);
+        // Ignored
       }
     };
 
@@ -657,7 +645,6 @@ const PdvFrenteCaixa = ({
     setSelectedPizzaBorder(null);
     setPizzaNotes("");
     setPizzaQuantity(1);
-    setIsPizzaLoading(true);
 
     try {
       const full = await buscarProdutoComOpcoesPdv(slug, product.id);
@@ -681,8 +668,6 @@ const PdvFrenteCaixa = ({
       }
     } catch {
       setPizzaBorderOptions([]);
-    } finally {
-      setIsPizzaLoading(false);
     }
   };
 
@@ -743,7 +728,6 @@ const PdvFrenteCaixa = ({
 
   // ── Add simple product directly (no options) ──────────────────────────────
   const addSimpleProduct = (product: PdvProduct, overrideWeight?: number) => {
-    setFeedback(null);
     const weightToUse = overrideWeight ?? capturedWeight;
 
     if (weightToUse !== null) {
@@ -919,39 +903,18 @@ const PdvFrenteCaixa = ({
     setPaymentMethod("DINHEIRO");
     setReceivedAmount("");
     setPaymentSplits([]);
-    setSplitPendingAmount("");
     setUseServiceFee(false);
     setCouponCode("");
     setAppliedCoupon(null);
-    setCouponError(null);
     setWalletBalance(null);
     setUseWalletBalance(false);
     setCompletedOrderId(null);
-  };
-
-  // ── Split payment handlers ─────────────────────────────────────────────────
-  const handleAddSplit = () => {
-    const amount = parseFloat(splitPendingAmount.replace(",", ".")) || 0;
-    if (amount <= 0) return;
-    const clampedAmount = round2(Math.min(amount, splitRemaining > 0 ? splitRemaining : amount));
-    setPaymentSplits((prev) => [...prev, { method: splitPendingMethod, amount: clampedAmount }]);
-    setSplitPendingAmount("");
-  };
-
-  const handleRemoveSplit = (index: number) => {
-    setPaymentSplits((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleAddFullRemainingSplit = () => {
-    if (splitRemaining <= 0) return;
-    setPaymentSplits((prev) => [...prev, { method: splitPendingMethod, amount: splitRemaining }]);
   };
 
   // ── Coupon ─────────────────────────────────────────────────────────────────
   const handleApplyCoupon = useCallback(async () => {
     if (!couponCode.trim()) return;
     setIsValidatingCoupon(true);
-    setCouponError(null);
     setAppliedCoupon(null);
 
     const result = await validarCupomPdv({
@@ -971,7 +934,6 @@ const PdvFrenteCaixa = ({
       toast.success(`Cupom aplicado! Desconto de ${formatCurrency(result.discountAmount)}`);
     } else {
       const err = result.error || "Cupom inválido.";
-      setCouponError(err);
       toast.error(err);
     }
   }, [couponCode, slug, customerPhone, cartSubtotal]);
@@ -1362,10 +1324,20 @@ const PdvFrenteCaixa = ({
                 <ScaleIcon size={16} />
               </div>
             </div>
-            <div className="mt-2 flex items-center gap-2">
+            <div className="mt-2 flex items-center justify-between gap-2">
               <span className="font-display text-2xl font-bold text-slate-900">
                 {capturedWeight !== null ? `${capturedWeight.toFixed(3)} kg` : "—"}
               </span>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleCaptureScaleWeight}
+                disabled={scaleStatus === "requesting" || scaleStatus === "reading"}
+                className="h-7 px-2 text-[11px] font-semibold gap-1 border-slate-300 hover:bg-slate-100 text-slate-800"
+              >
+                {scaleStatus === "requesting" || scaleStatus === "reading" ? "Pesando..." : "Capturar"}
+              </Button>
             </div>
             <p className="mt-0.5 text-xs text-slate-500 truncate">
               {scaleStatus === "reading" || scaleStatus === "done"

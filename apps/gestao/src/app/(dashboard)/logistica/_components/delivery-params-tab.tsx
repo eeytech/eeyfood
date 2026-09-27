@@ -12,7 +12,7 @@ import { useState, useTransition } from "react";
 
 import { updateDeliveryParamsAction } from "@/app/(dashboard)/logistica-actions";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Restaurant } from "@fsw/db";

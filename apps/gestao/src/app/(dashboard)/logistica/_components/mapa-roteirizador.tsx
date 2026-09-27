@@ -9,15 +9,12 @@ import {
   BikeIcon,
   CheckCircle2Icon,
   CompassIcon,
-  FilterXIcon,
-  LayersIcon,
   Loader2Icon,
   MapPinIcon,
   NavigationIcon,
   RefreshCwIcon,
   RouteIcon,
   SearchIcon,
-  Settings2Icon,
   SparklesIcon,
   StoreIcon,
   XIcon,
@@ -151,7 +148,7 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
       ]);
       setOrders(fetchedOrders);
       setCouriers(fetchedCouriers);
-    } catch (err) {
+    } catch {
       toast.error("Erro ao carregar pedidos para o roteirizador.");
     } finally {
       setIsLoading(false);
@@ -617,7 +614,7 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
                   </p>
                 </div>
               ) : (
-                filteredOrders.map((order, idx) => {
+                filteredOrders.map((order) => {
                   const isSelected = selectedIds.has(order.id);
                   const hasCoords =
                     order.deliveryLatitude != null && order.deliveryLongitude != null;

@@ -1,23 +1,18 @@
 "use client";
 
 import {
-  AlertCircleIcon,
   BadgePercentIcon,
   CheckCircle2Icon,
-  CoinsIcon,
   DollarSignIcon,
   Edit2Icon,
-  FileTextIcon,
   HandCoinsIcon,
   Loader2Icon,
   MoreHorizontalIcon,
   PlusIcon,
   ReceiptIcon,
   Settings2Icon,
-  ShieldCheckIcon,
   Trash2Icon,
   UserCheckIcon,
-  UsersIcon,
   UserXIcon,
   UtensilsIcon,
 } from "lucide-react";

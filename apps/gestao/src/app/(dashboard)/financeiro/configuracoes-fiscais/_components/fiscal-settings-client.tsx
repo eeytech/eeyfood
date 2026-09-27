@@ -2,7 +2,6 @@
 
 import {
   AlertTriangleIcon,
-  CheckCircle2Icon,
   CheckCircleIcon,
   FileTextIcon,
   SaveIcon,

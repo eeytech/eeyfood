@@ -3,7 +3,6 @@
 import {
   BotIcon,
   HelpCircleIcon,
-  PizzaIcon,
   ShoppingBagIcon,
   ToggleRightIcon,
   TruckIcon,

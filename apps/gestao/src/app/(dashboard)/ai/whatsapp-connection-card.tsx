@@ -11,7 +11,6 @@ import {
   WifiIcon,
   WifiOffIcon,
 } from "lucide-react";
-import Image from "next/image";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
