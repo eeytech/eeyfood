@@ -20,7 +20,9 @@ export const getNumberValue = (
 };
 
 export const getBooleanValue = (value: FormDataEntryValue | null) => {
-  return value === "on";
+  if (!value) return false;
+  const str = String(value).toLowerCase().trim();
+  return str === "on" || str === "true" || str === "1";
 };
 
 export const getOptionalNumberValue = (value: FormDataEntryValue | null) => {

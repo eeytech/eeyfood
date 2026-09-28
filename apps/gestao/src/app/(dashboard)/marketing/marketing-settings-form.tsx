@@ -16,7 +16,8 @@ import {
   TrendingUpIcon,
   ZapIcon,
 } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -73,18 +74,50 @@ export function MarketingSettingsForm({
   settings,
   saveAction,
 }: MarketingSettingsFormProps) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [showToken, setShowToken] = useState(false);
   const [cartEnabled, setCartEnabled] = useState(
     settings?.abandonedCartEnabled ?? true,
   );
+  const [cartDelay, setCartDelay] = useState(
+    settings?.abandonedCartDelayMinutes ?? 120,
+  );
+  const [couponPercent, setCouponPercent] = useState(
+    settings?.abandonedCartCouponPercent ?? 5,
+  );
+  const [pixelId, setPixelId] = useState(settings?.metaPixelId ?? "");
+  const [tokenValue, setTokenValue] = useState(settings?.metaCapiToken ?? "");
+  const [ga4Id, setGa4Id] = useState(settings?.ga4MeasurementId ?? "");
+  const [gtmId, setGtmId] = useState(settings?.gtmContainerId ?? "");
+
+  useEffect(() => {
+    if (settings) {
+      setCartEnabled(settings.abandonedCartEnabled ?? true);
+      setCartDelay(settings.abandonedCartDelayMinutes ?? 120);
+      setCouponPercent(settings.abandonedCartCouponPercent ?? 5);
+      setPixelId(settings.metaPixelId ?? "");
+      setTokenValue(settings.metaCapiToken ?? "");
+      setGa4Id(settings.ga4MeasurementId ?? "");
+      setGtmId(settings.gtmContainerId ?? "");
+    }
+  }, [settings]);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+    fd.set("metaPixelId", pixelId.trim());
+    fd.set("metaCapiToken", tokenValue.trim());
+    fd.set("ga4MeasurementId", ga4Id.trim());
+    fd.set("gtmContainerId", gtmId.trim());
+    fd.set("abandonedCartEnabled", cartEnabled ? "true" : "false");
+    fd.set("abandonedCartDelayMinutes", String(cartDelay || 120));
+    fd.set("abandonedCartCouponPercent", String(couponPercent ?? 5));
+
     startTransition(async () => {
       try {
         await saveAction(fd);
+        router.refresh();
         toast.success("Configurações de marketing salvas com sucesso!");
       } catch (err) {
         toast.error(
@@ -94,10 +127,8 @@ export function MarketingSettingsForm({
     });
   };
 
-  const isMetaActive = Boolean(settings?.metaPixelId);
-  const isGoogleActive = Boolean(
-    settings?.ga4MeasurementId || settings?.gtmContainerId,
-  );
+  const isMetaActive = Boolean(pixelId.trim() || tokenValue.trim());
+  const isGoogleActive = Boolean(ga4Id.trim() || gtmId.trim());
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -109,7 +140,7 @@ export function MarketingSettingsForm({
           </div>
           <div>
             <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
-              Marketing & Rastreamento
+              Marketing e Rastreamento
             </h1>
             <p className="text-sm text-slate-500">
               Configure pixels de rastreamento de anúncios (Meta, Google) e recuperação de carrinho via WhatsApp.
@@ -156,7 +187,7 @@ export function MarketingSettingsForm({
               {isMetaActive ? "Configurado" : "Pendente"}
             </p>
             <p className="mt-0.5 text-xs text-slate-500 truncate">
-              {settings?.metaPixelId ? `ID: ${settings.metaPixelId}` : "Facebook & Instagram"}
+              {pixelId ? `ID: ${pixelId}` : tokenValue ? "CAPI Configurado" : "Facebook & Instagram"}
             </p>
           </CardContent>
         </Card>
@@ -176,7 +207,7 @@ export function MarketingSettingsForm({
               {isGoogleActive ? "Configurado" : "Pendente"}
             </p>
             <p className="mt-0.5 text-xs text-slate-500 truncate">
-              {settings?.ga4MeasurementId ? `GA4: ${settings.ga4MeasurementId}` : "GA4 & GTM Web"}
+              {ga4Id ? `GA4: ${ga4Id}` : gtmId ? `GTM: ${gtmId}` : "GA4 & GTM Web"}
             </p>
           </CardContent>
         </Card>
@@ -197,7 +228,7 @@ export function MarketingSettingsForm({
             </p>
             <p className="mt-0.5 text-xs text-slate-500 truncate">
               {cartEnabled
-                ? `Cupom com ${settings?.abandonedCartCouponPercent ?? 5}% OFF`
+                ? `Cupom com ${couponPercent}% OFF`
                 : "Automação pausada"}
             </p>
           </CardContent>
@@ -245,7 +276,7 @@ export function MarketingSettingsForm({
                     </CardDescription>
                   </div>
                 </div>
-                {settings?.metaPixelId ? (
+                {isMetaActive ? (
                   <Badge className="border-blue-200 bg-blue-50 text-[11px] font-medium text-blue-700">
                     Ativo
                   </Badge>
@@ -268,7 +299,8 @@ export function MarketingSettingsForm({
                   id="metaPixelId"
                   name="metaPixelId"
                   placeholder="Digite o ID do Pixel do Facebook"
-                  defaultValue={settings?.metaPixelId ?? ""}
+                  value={pixelId}
+                  onChange={(e) => setPixelId(e.target.value)}
                   className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white"
                 />
                 <p className="text-[11px] text-slate-500">
@@ -302,7 +334,10 @@ export function MarketingSettingsForm({
                   name="metaCapiToken"
                   type={showToken ? "text" : "password"}
                   placeholder="EAAxxxx... (Token de acesso do sistema)"
-                  defaultValue={settings?.metaCapiToken ?? ""}
+                  value={tokenValue}
+                  onChange={(e) => setTokenValue(e.target.value)}
+                  autoComplete="new-password"
+                  data-lpignore="true"
                   className="h-10 rounded-xl border-slate-200 bg-slate-50/70 font-mono text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white"
                 />
                 <p className="text-[11px] text-slate-500">
@@ -329,7 +364,7 @@ export function MarketingSettingsForm({
                     </CardDescription>
                   </div>
                 </div>
-                {settings?.ga4MeasurementId || settings?.gtmContainerId ? (
+                {isGoogleActive ? (
                   <Badge className="border-emerald-200 bg-emerald-50 text-[11px] font-medium text-emerald-700">
                     Ativo
                   </Badge>
@@ -352,7 +387,8 @@ export function MarketingSettingsForm({
                     id="ga4MeasurementId"
                     name="ga4MeasurementId"
                     placeholder="Ex: G-XXXXXXXXXX"
-                    defaultValue={settings?.ga4MeasurementId ?? ""}
+                    value={ga4Id}
+                    onChange={(e) => setGa4Id(e.target.value)}
                     className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white"
                   />
                   <p className="text-[11px] text-slate-500">ID de métrica do fluxo da web GA4.</p>
@@ -368,7 +404,8 @@ export function MarketingSettingsForm({
                     id="gtmContainerId"
                     name="gtmContainerId"
                     placeholder="Ex: GTM-XXXXXXX"
-                    defaultValue={settings?.gtmContainerId ?? ""}
+                    value={gtmId}
+                    onChange={(e) => setGtmId(e.target.value)}
                     className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white"
                   />
                   <p className="text-[11px] text-slate-500">Código do contêiner Web no GTM.</p>
@@ -395,6 +432,7 @@ export function MarketingSettingsForm({
                   </div>
                 </div>
                 <Switch
+                  id="abandonedCartSwitch"
                   checked={cartEnabled}
                   onCheckedChange={setCartEnabled}
                   className="data-[state=checked]:bg-emerald-600 data-[state=unchecked]:bg-slate-200"
@@ -418,7 +456,8 @@ export function MarketingSettingsForm({
                     type="number"
                     min={30}
                     max={1440}
-                    defaultValue={settings?.abandonedCartDelayMinutes ?? 120}
+                    value={cartDelay}
+                    onChange={(e) => setCartDelay(Number(e.target.value))}
                     disabled={!cartEnabled}
                     className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white disabled:opacity-50"
                   />
@@ -438,7 +477,8 @@ export function MarketingSettingsForm({
                     min={0}
                     max={50}
                     step={0.5}
-                    defaultValue={settings?.abandonedCartCouponPercent ?? 5}
+                    value={couponPercent}
+                    onChange={(e) => setCouponPercent(Number(e.target.value))}
                     disabled={!cartEnabled}
                     className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white disabled:opacity-50"
                   />

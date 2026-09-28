@@ -31,6 +31,10 @@ export default async function MarketingPage({ params }: PageProps) {
   }
 
   return (
-    <MarketingSettingsForm settings={settings ?? null} saveAction={save} />
+    <MarketingSettingsForm
+      key={settings?.updatedAt ? new Date(settings.updatedAt).getTime() : "initial"}
+      settings={settings ?? null}
+      saveAction={save}
+    />
   );
 }

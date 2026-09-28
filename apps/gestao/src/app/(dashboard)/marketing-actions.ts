@@ -23,27 +23,45 @@ import {
 } from "@/lib/admin-form-utils";
 
 const marketingSettingsSchema = z.object({
-  metaPixelId: z.string().optional(),
-  metaCapiToken: z.string().optional(),
-  ga4MeasurementId: z.string().optional(),
-  gtmContainerId: z.string().optional(),
+  metaPixelId: z.string().nullable().optional(),
+  metaCapiToken: z.string().nullable().optional(),
+  ga4MeasurementId: z.string().nullable().optional(),
+  gtmContainerId: z.string().nullable().optional(),
   abandonedCartEnabled: z.boolean(),
   abandonedCartDelayMinutes: z.number().int().min(30).max(1440),
   abandonedCartCouponPercent: z.number().min(0).max(50),
 });
 
+const getNullableStringValue = (value: FormDataEntryValue | null) => {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
 export async function salvarMarketingSettingsAction(slug: string, formData: FormData) {
   const restaurant = await buscarRestaurantePorSlug(slug);
   if (!restaurant) throw new Error("Restaurante não encontrado.");
 
+  const rawDelay = formData.get("abandonedCartDelayMinutes");
+  const rawCoupon = formData.get("abandonedCartCouponPercent");
+  const rawAbandonedEnabled = formData.get("abandonedCartEnabled");
+
+  const abandonedCartEnabled = getBooleanValue(rawAbandonedEnabled);
+
   const parsed = marketingSettingsSchema.safeParse({
-    metaPixelId: getOptionalStringValue(formData.get("metaPixelId")),
-    metaCapiToken: getOptionalStringValue(formData.get("metaCapiToken")),
-    ga4MeasurementId: getOptionalStringValue(formData.get("ga4MeasurementId")),
-    gtmContainerId: getOptionalStringValue(formData.get("gtmContainerId")),
-    abandonedCartEnabled: getBooleanValue(formData.get("abandonedCartEnabled")),
-    abandonedCartDelayMinutes: getNumberValue(formData.get("abandonedCartDelayMinutes")),
-    abandonedCartCouponPercent: getNumberValue(formData.get("abandonedCartCouponPercent")),
+    metaPixelId: getNullableStringValue(formData.get("metaPixelId")),
+    metaCapiToken: getNullableStringValue(formData.get("metaCapiToken")),
+    ga4MeasurementId: getNullableStringValue(formData.get("ga4MeasurementId")),
+    gtmContainerId: getNullableStringValue(formData.get("gtmContainerId")),
+    abandonedCartEnabled,
+    abandonedCartDelayMinutes:
+      rawDelay != null && String(rawDelay).trim() !== ""
+        ? getNumberValue(rawDelay, 120)
+        : 120,
+    abandonedCartCouponPercent:
+      rawCoupon != null && String(rawCoupon).trim() !== ""
+        ? getNumberValue(rawCoupon, 5)
+        : 5,
   });
 
   if (!parsed.success) {
@@ -51,8 +69,14 @@ export async function salvarMarketingSettingsAction(slug: string, formData: Form
   }
 
   const values = {
-    ...parsed.data,
     restaurantId: restaurant.id,
+    metaPixelId: parsed.data.metaPixelId ?? null,
+    metaCapiToken: parsed.data.metaCapiToken ?? null,
+    ga4MeasurementId: parsed.data.ga4MeasurementId ?? null,
+    gtmContainerId: parsed.data.gtmContainerId ?? null,
+    abandonedCartEnabled: parsed.data.abandonedCartEnabled,
+    abandonedCartDelayMinutes: parsed.data.abandonedCartDelayMinutes,
+    abandonedCartCouponPercent: parsed.data.abandonedCartCouponPercent,
     updatedAt: new Date(),
   };
 
@@ -61,10 +85,20 @@ export async function salvarMarketingSettingsAction(slug: string, formData: Form
     .values(values)
     .onConflictDoUpdate({
       target: [marketingSettingsTable.restaurantId],
-      set: values,
+      set: {
+        metaPixelId: values.metaPixelId,
+        metaCapiToken: values.metaCapiToken,
+        ga4MeasurementId: values.ga4MeasurementId,
+        gtmContainerId: values.gtmContainerId,
+        abandonedCartEnabled: values.abandonedCartEnabled,
+        abandonedCartDelayMinutes: values.abandonedCartDelayMinutes,
+        abandonedCartCouponPercent: values.abandonedCartCouponPercent,
+        updatedAt: values.updatedAt,
+      },
     });
 
   revalidatePath(`/${slug}/marketing`);
+  revalidatePath("/marketing");
 }
 
 export async function dispararCampanhaAction(
