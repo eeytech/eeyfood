@@ -75,6 +75,87 @@ export async function buscarIntegracoesMarketplaceAction(
   };
 }
 
+export async function salvarTodasIntegracoesMarketplaceAction(
+  slug: string,
+  integracoes: Array<{
+    type: MarketplaceType;
+    isActive: boolean;
+    merchantId: string | null;
+    apiToken: string | null;
+  }>,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const restaurant = await getRestaurantOrThrow(slug);
+
+    for (const item of integracoes) {
+      if (item.isActive && (!item.merchantId || !item.merchantId.trim())) {
+        const canal =
+          item.type === "IFOOD"
+            ? "iFood (Merchant ID)"
+            : item.type === "RAPPI"
+              ? "Rappi (Store ID)"
+              : item.type;
+        return {
+          success: false,
+          error: `O identificador do ${canal} é obrigatório quando a integração estiver ativada.`,
+        };
+      }
+    }
+
+    const now = new Date();
+
+    for (const item of integracoes) {
+      const merchantId = item.merchantId?.trim() || null;
+      const apiToken = item.apiToken?.trim() || null;
+
+      const [existing] = await db
+        .select({ id: marketplaceIntegrationsTable.id })
+        .from(marketplaceIntegrationsTable)
+        .where(
+          and(
+            eq(marketplaceIntegrationsTable.restaurantId, restaurant.id),
+            eq(marketplaceIntegrationsTable.type, item.type),
+          ),
+        )
+        .limit(1);
+
+      if (existing) {
+        await db
+          .update(marketplaceIntegrationsTable)
+          .set({
+            merchantId,
+            apiToken,
+            isActive: item.isActive,
+            updatedAt: now,
+          })
+          .where(eq(marketplaceIntegrationsTable.id, existing.id));
+      } else {
+        await db.insert(marketplaceIntegrationsTable).values({
+          restaurantId: restaurant.id,
+          type: item.type,
+          merchantId,
+          apiToken,
+          isActive: item.isActive,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+    }
+
+    revalidatePath(`/${slug}/marketplaces`);
+    revalidatePath("/marketplaces");
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Erro ao salvar integrações com marketplaces.",
+    };
+  }
+}
+
 export async function salvarIntegracaoMarketplaceAction(
   slug: string,
   formData: FormData,
@@ -151,22 +232,26 @@ export async function testarConexaoMarketplaceAction(
   merchantId: string,
   type: MarketplaceType,
 ): Promise<{ success: boolean; message: string }> {
-  if (!merchantId) {
-    return { success: false, message: "Informe o Merchant ID antes de testar." };
+  const idLabel = type === "RAPPI" ? "Store ID" : "Merchant ID";
+  const canalNome = type === "IFOOD" ? "iFood" : type === "RAPPI" ? "Rappi" : type;
+
+  if (!merchantId || !merchantId.trim()) {
+    return { success: false, message: `Informe o ${idLabel} antes de testar.` };
   }
 
   // Simulação de handshake de ping com o portal do iFood/Rappi
   await new Promise((res) => setTimeout(res, 800));
 
-  if (merchantId.length < 8) {
+  const minLength = type === "RAPPI" ? 5 : 8;
+  if (merchantId.trim().length < minLength) {
     return {
       success: false,
-      message: "Merchant ID inválido. Verifique o identificador da loja no portal parceiro.",
+      message: `${idLabel} inválido. Verifique o identificador da loja no portal parceiro.`,
     };
   }
 
   return {
     success: true,
-    message: `Conexão validada com sucesso! O webhook está apto a receber pedidos do ${type}.`,
+    message: `Conexão validada com sucesso! O canal ${canalNome} está apto a receber pedidos.`,
   };
 }
