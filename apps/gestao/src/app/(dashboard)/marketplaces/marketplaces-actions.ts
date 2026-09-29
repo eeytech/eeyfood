@@ -3,10 +3,12 @@
 import {
   and,
   buscarRestaurantePorSlug,
+  criarPedido,
   db,
   eq,
   marketplaceIntegrationsTable,
   ordersTable,
+  productsTable,
   sql,
 } from "@fsw/db";
 import type { MarketplaceType } from "@fsw/db";
@@ -254,4 +256,83 @@ export async function testarConexaoMarketplaceAction(
     success: true,
     message: `Conexão validada com sucesso! O canal ${canalNome} está apto a receber pedidos.`,
   };
+}
+
+const notificarNovoPedido = async (orderId: number, restaurantSlug: string) => {
+  const url = process.env.WEBSOCKET_SERVER_URL;
+  if (!url) return;
+  try {
+    await fetch(`${url}/eventos/novo-pedido`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderId, restaurantSlug }),
+      cache: "no-store",
+    });
+  } catch {
+    /* non-critical */
+  }
+};
+
+export async function simularPedidoMarketplaceAction(
+  slug: string,
+  type: MarketplaceType,
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const restaurant = await getRestaurantOrThrow(slug);
+
+    const [firstProduct] = await db
+      .select({ id: productsTable.id, name: productsTable.name })
+      .from(productsTable)
+      .where(
+        and(
+          eq(productsTable.restaurantId, restaurant.id),
+          eq(productsTable.isActive, true),
+        ),
+      )
+      .limit(1);
+
+    if (!firstProduct) {
+      return {
+        success: false,
+        message: "O restaurante não possui produtos ativos no cardápio para gerar o pedido de teste.",
+      };
+    }
+
+    const canalNome = type === "IFOOD" ? "iFood" : type === "RAPPI" ? "Rappi" : type;
+    const randomCode = Math.floor(1000 + Math.random() * 9000);
+    const orderId = `${type}-${randomCode}`;
+
+    const createdOrder = await criarPedido({
+      slug: restaurant.slug,
+      customerName: `Cliente Teste ${canalNome}`,
+      customerPhone: `1199999${randomCode}`,
+      consumptionMethod: "DELIVERY",
+      paymentMethod: "CARTAO_PRESENCIAL",
+      deliveryAddress: `Rua de Teste ${canalNome}, 100 - Bairro Centro`,
+      marketplaceOrderId: orderId,
+      marketplaceType: type,
+      notes: `[Origem: ${canalNome}] Pedido simulado de teste #${randomCode}`,
+      products: [{ id: firstProduct.id, quantity: 1 }],
+    });
+
+    await notificarNovoPedido(createdOrder.id, restaurant.slug);
+
+    revalidatePath(`/${slug}/marketplaces`);
+    revalidatePath("/marketplaces");
+    revalidatePath(`/${slug}/pedidos`);
+    revalidatePath("/pedidos");
+
+    return {
+      success: true,
+      message: `Pedido de teste #${createdOrder.id} (${canalNome}) gerado com sucesso! Verifique seu PDV e KDS.`,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Erro ao simular pedido de marketplace.",
+    };
+  }
 }

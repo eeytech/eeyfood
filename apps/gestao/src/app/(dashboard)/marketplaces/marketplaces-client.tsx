@@ -23,6 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   MarketplaceConfigItem,
   salvarTodasIntegracoesMarketplaceAction,
+  simularPedidoMarketplaceAction,
   testarConexaoMarketplaceAction,
 } from "./marketplaces-actions";
 
@@ -50,6 +51,7 @@ export function MarketplacesClient({
   const [ifoodMerchantId, setIfoodMerchantId] = useState(ifoodConfig.merchantId || "");
   const [ifoodToken, setIfoodToken] = useState(ifoodConfig.apiToken || "");
   const [isTestingIfood, setIsTestingIfood] = useState(false);
+  const [isSimulatingIfood, setIsSimulatingIfood] = useState(false);
 
   // Rappi State
   const rappiConfig = integracoes.find((i) => i.type === "RAPPI") || {
@@ -62,13 +64,15 @@ export function MarketplacesClient({
   const [rappiMerchantId, setRappiMerchantId] = useState(rappiConfig.merchantId || "");
   const [rappiToken, setRappiToken] = useState(rappiConfig.apiToken || "");
   const [isTestingRappi, setIsTestingRappi] = useState(false);
+  const [isSimulatingRappi, setIsSimulatingRappi] = useState(false);
 
-  // URL do webhook
+  // URLs dos webhooks
   const currentOrigin =
     typeof window !== "undefined"
       ? window.location.origin
       : process.env.NEXT_PUBLIC_APP_URL || "https://gestao.fswdonalds.eeytech.com";
   const ifoodWebhookUrl = `${currentOrigin}/api/webhooks/ifood`;
+  const rappiWebhookUrl = `${currentOrigin}/api/webhooks/rappi`;
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -116,6 +120,21 @@ export function MarketplacesClient({
     }
   };
 
+  // Simular Pedido iFood
+  const handleSimulateIfood = async () => {
+    setIsSimulatingIfood(true);
+    try {
+      const res = await simularPedidoMarketplaceAction(slug, "IFOOD");
+      if (res.success) {
+        toast.success(res.message);
+      } else {
+        toast.error(res.message);
+      }
+    } finally {
+      setIsSimulatingIfood(false);
+    }
+  };
+
   // Testar conexão Rappi
   const handleTestRappi = async () => {
     setIsTestingRappi(true);
@@ -128,6 +147,21 @@ export function MarketplacesClient({
       }
     } finally {
       setIsTestingRappi(false);
+    }
+  };
+
+  // Simular Pedido Rappi
+  const handleSimulateRappi = async () => {
+    setIsSimulatingRappi(true);
+    try {
+      const res = await simularPedidoMarketplaceAction(slug, "RAPPI");
+      if (res.success) {
+        toast.success(res.message);
+      } else {
+        toast.error(res.message);
+      }
+    } finally {
+      setIsSimulatingRappi(false);
     }
   };
 
@@ -277,7 +311,7 @@ export function MarketplacesClient({
                 </p>
               </div>
 
-              <div className="flex items-center justify-start pt-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -292,6 +326,22 @@ export function MarketplacesClient({
                     <RefreshCwIcon size={13} />
                   )}
                   Testar Conexão
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleSimulateIfood}
+                  disabled={isSimulatingIfood}
+                  className="h-9 gap-1.5 text-xs bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 font-semibold"
+                >
+                  {isSimulatingIfood ? (
+                    <Loader2Icon size={13} className="animate-spin" />
+                  ) : (
+                    <ZapIcon size={13} className="text-red-600 fill-red-600" />
+                  )}
+                  Simular Pedido iFood
                 </Button>
               </div>
             </CardContent>
@@ -363,7 +413,34 @@ export function MarketplacesClient({
                 />
               </div>
 
-              <div className="flex items-center justify-start pt-2">
+              <div className="space-y-1.5 rounded-xl bg-slate-50 p-3.5 border border-slate-200/80">
+                <Label className="text-xs font-semibold text-slate-800 flex items-center justify-between">
+                  <span>URL do Webhook da Rappi</span>
+                  <span className="text-[10px] text-orange-600 font-bold uppercase">Endpoint Pronto</span>
+                </Label>
+                <div className="mt-1 flex items-center gap-2">
+                  <Input
+                    readOnly
+                    value={rappiWebhookUrl}
+                    className="h-8 bg-white text-xs font-mono text-slate-600"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => copyToClipboard(rappiWebhookUrl, "URL do Webhook Rappi")}
+                    className="h-8 gap-1.5 shrink-0 text-xs border-slate-200"
+                  >
+                    <CopyIcon size={12} />
+                    Copiar
+                  </Button>
+                </div>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Cadastre este endereço nas configurações de integração do Portal Rappi Partners ou informe ao suporte POS da Rappi.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -378,6 +455,22 @@ export function MarketplacesClient({
                     <RefreshCwIcon size={13} />
                   )}
                   Testar Conexão
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleSimulateRappi}
+                  disabled={isSimulatingRappi}
+                  className="h-9 gap-1.5 text-xs bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200 font-semibold"
+                >
+                  {isSimulatingRappi ? (
+                    <Loader2Icon size={13} className="animate-spin" />
+                  ) : (
+                    <ZapIcon size={13} className="text-orange-600 fill-orange-600" />
+                  )}
+                  Simular Pedido Rappi
                 </Button>
               </div>
             </CardContent>
@@ -456,7 +549,7 @@ export function MarketplacesClient({
                   <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white mt-0.5">
                     3
                   </span>
-                  <span>Clique em <strong>Testar Conexão</strong> para validar o status e clique em <strong>Salvar Configurações</strong> no topo da página.</span>
+                  <span>Cadastre a <strong>URL do Webhook Rappi</strong> no portal ou simule pedidos pelo botão <strong>Simular Pedido Rappi</strong>.</span>
                 </div>
               </div>
 
