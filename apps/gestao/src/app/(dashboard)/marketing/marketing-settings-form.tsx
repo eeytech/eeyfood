@@ -140,10 +140,10 @@ export function MarketingSettingsForm({
           </div>
           <div>
             <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
-              Marketing e Rastreamento
+              Rastreamento
             </h1>
             <p className="text-sm text-slate-500">
-              Configure pixels de rastreamento de anúncios (Meta, Google) e recuperação de carrinho via WhatsApp.
+              Configure o rastreamento de anúncios (Meta, Google) e recuperação de carrinho via WhatsApp.
             </p>
           </div>
         </div>

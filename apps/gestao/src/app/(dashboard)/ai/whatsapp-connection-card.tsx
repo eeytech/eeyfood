@@ -4,7 +4,6 @@ import {
   CheckCircle2Icon,
   Loader2Icon,
   LogOutIcon,
-  MessageSquareIcon,
   QrCodeIcon,
   RefreshCwIcon,
   SmartphoneIcon,
@@ -171,33 +170,28 @@ export function WhatsAppConnectionCard({
     <>
       <Card className="border-emerald-500/20 bg-gradient-to-br from-emerald-50/40 via-white to-slate-50 shadow-sm">
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md shadow-emerald-600/20">
-              <MessageSquareIcon className="h-6 w-6" />
-            </div>
-            <div>
-              <CardTitle className="text-xl font-bold flex items-center gap-2">
-                Conexão do WhatsApp
-                {isConnected === true && (
-                  <Badge variant="success" className="gap-1 px-2.5 py-0.5 text-xs">
-                    <WifiIcon className="h-3 w-3 animate-pulse" /> Conectado
-                  </Badge>
-                )}
-                {isConnected === false && (
-                  <Badge variant="secondary" className="gap-1 px-2.5 py-0.5 text-xs text-muted-foreground">
-                    <WifiOffIcon className="h-3 w-3" /> Desconectado
-                  </Badge>
-                )}
-                {isConnected === null && (
-                  <Badge variant="outline" className="gap-1 px-2 py-0.5 text-xs">
-                    <Loader2Icon className="h-3 w-3 animate-spin" /> Verificando...
-                  </Badge>
-                )}
-              </CardTitle>
-              <CardDescription>
-                Conecte o número do seu restaurante para envio automático de mensagens e recuperação de carrinho.
-              </CardDescription>
-            </div>
+          <div>
+            <CardTitle className="text-xl font-bold flex items-center gap-2">
+              Conexão do WhatsApp
+              {isConnected === true && (
+                <Badge variant="success" className="gap-1 px-2.5 py-0.5 text-xs">
+                  <WifiIcon className="h-3 w-3 animate-pulse" /> Conectado
+                </Badge>
+              )}
+              {isConnected === false && (
+                <Badge variant="secondary" className="gap-1 px-2.5 py-0.5 text-xs text-muted-foreground">
+                  <WifiOffIcon className="h-3 w-3" /> Desconectado
+                </Badge>
+              )}
+              {isConnected === null && (
+                <Badge variant="outline" className="gap-1 px-2 py-0.5 text-xs">
+                  <Loader2Icon className="h-3 w-3 animate-spin" /> Verificando...
+                </Badge>
+              )}
+            </CardTitle>
+            <CardDescription className="mt-1">
+              Conecte o número do seu restaurante para envio automático de mensagens e recuperação de carrinho.
+            </CardDescription>
           </div>
 
           <div className="flex items-center gap-2">

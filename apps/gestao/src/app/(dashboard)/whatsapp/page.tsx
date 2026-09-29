@@ -6,13 +6,10 @@ import {
   QrCodeIcon,
   ShieldCheckIcon,
   ShoppingCartIcon,
-  SparklesIcon,
 } from "lucide-react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -46,32 +43,17 @@ export default async function WhatsAppPage({ params }: PageProps) {
   return (
     <div className="space-y-6">
       {/* ── Page Header ─────────────────────────────────── */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md shadow-emerald-600/20">
-            <MessageSquareIcon size={22} />
-          </div>
-          <div>
-            <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
-              WhatsApp
-            </h1>
-            <p className="text-sm text-slate-500">
-              Conecte o número do seu restaurante via QR Code para habilitar atendente com IA, disparo de campanhas e recuperação de carrinhos.
-            </p>
-          </div>
+      <div className="flex items-start gap-3">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md shadow-emerald-600/20">
+          <MessageSquareIcon size={22} />
         </div>
-
-        <div className="flex items-center gap-2">
-          <Link href="/ai">
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 rounded-full border-slate-200 bg-white text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50"
-            >
-              <SparklesIcon size={14} className="text-primary" />
-              Configurar Atendente IA
-            </Button>
-          </Link>
+        <div>
+          <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
+            WhatsApp
+          </h1>
+          <p className="text-sm text-slate-500">
+            Conecte o número do seu restaurante via QR Code para habilitar atendente com IA, disparo de campanhas e recuperação de carrinhos.
+          </p>
         </div>
       </div>
 

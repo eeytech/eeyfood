@@ -122,7 +122,7 @@ const navigationGroups = [
       { href: "marketplaces", label: "Marketplaces (iFood)", icon: ShoppingBagIcon },
       { href: "whatsapp", label: "WhatsApp", icon: MessageSquareIcon },
       { href: "ai", label: "IA", icon: SparklesIcon },
-      { href: "marketing", label: "Pixels & Rastreamento", icon: TargetIcon },
+      { href: "marketing", label: "Rastreamento", icon: TargetIcon },
     ],
   },
 ];
