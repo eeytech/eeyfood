@@ -9,15 +9,31 @@ import { Button } from "@/components/ui/button";
 
 interface ReativarBotButtonProps {
   slug: string;
+  customerPhone?: string;
+  label?: string;
+  variant?: "default" | "outline" | "secondary" | "ghost" | "destructive";
+  size?: "default" | "sm" | "lg" | "icon";
+  className?: string;
 }
 
-const ReativarBotButton = ({ slug }: ReativarBotButtonProps) => {
+const ReativarBotButton = ({
+  slug,
+  customerPhone,
+  label,
+  variant = "default",
+  size = "default",
+  className = "gap-2 bg-emerald-600 hover:bg-emerald-700 text-white",
+}: ReativarBotButtonProps) => {
   const [isPending, startTransition] = useTransition();
 
   const handleReativar = () => {
     startTransition(async () => {
-      await reativarBotAction(slug);
-      toast.success("Robô reativado com sucesso!");
+      await reativarBotAction(slug, customerPhone);
+      toast.success(
+        customerPhone
+          ? `Robô reativado para ${customerPhone}!`
+          : "Robô reativado com sucesso para todos os clientes!",
+      );
     });
   };
 
@@ -25,10 +41,12 @@ const ReativarBotButton = ({ slug }: ReativarBotButtonProps) => {
     <Button
       onClick={handleReativar}
       disabled={isPending}
-      className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+      variant={variant}
+      size={size}
+      className={className}
     >
-      <PlayIcon size={16} />
-      {isPending ? "Reativando..." : "Reativar Robô"}
+      <PlayIcon size={14} />
+      {isPending ? "Reativando..." : label || "Reativar Robô"}
     </Button>
   );
 };

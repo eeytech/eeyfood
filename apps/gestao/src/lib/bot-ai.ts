@@ -3,6 +3,7 @@ import {
   buscarRestauranteComCardapioPorSlug,
   db,
   eq,
+  isClientePausado,
   restaurantsTable,
   salvarCarrinhoAbandonado,
 } from "@fsw/db";
@@ -56,19 +57,16 @@ export const processarMensagemBot = async ({
     .where(eq(restaurantsTable.slug, slug))
     .limit(1);
 
-  if (
-    !aiSettings ||
-    !aiSettings.AiSettings.isBotActive ||
-    !aiSettings.AiSettings.openaiApiKey
-  ) {
+  if (!aiSettings || !aiSettings.AiSettings.isBotActive) {
     return null;
   }
 
-  // Se bot está pausado para este cliente, silenciar
-  if (
-    aiSettings.AiSettings.isBotPaused &&
-    aiSettings.AiSettings.pausedForPhone === customerPhone
-  ) {
+  // Verifica se o robô está pausado para este cliente específico
+  const pausado = await isClientePausado(
+    aiSettings.AiSettings.restaurantId,
+    customerPhone,
+  );
+  if (pausado) {
     return null;
   }
 
@@ -79,8 +77,50 @@ export const processarMensagemBot = async ({
     return HANDOFF_SIGNAL;
   }
 
+  // Configuração dinâmica do provedor (Google Gemini, Groq ou OpenAI)
+  const provider = (aiSettings.AiSettings.aiProvider || "GOOGLE_GEMINI").toUpperCase();
+  let apiKey = "";
+  let baseURL: string | undefined = undefined;
+  let model = "gemini-2.0-flash";
+
+  if (provider === "GOOGLE_GEMINI") {
+    apiKey = aiSettings.AiSettings.geminiApiKey || process.env.GEMINI_API_KEY || "";
+    baseURL = "https://generativelanguage.googleapis.com/v1beta/openai/";
+    model = "gemini-2.0-flash";
+  } else if (provider === "GROQ") {
+    apiKey = aiSettings.AiSettings.groqApiKey || process.env.GROQ_API_KEY || "";
+    baseURL = "https://api.groq.com/openai/v1";
+    model = "llama-3.3-70b-versatile";
+  } else {
+    // OPENAI
+    apiKey = aiSettings.AiSettings.openaiApiKey || process.env.OPENAI_API_KEY || "";
+    model = "gpt-4o";
+  }
+
+  // Fallback caso a chave do provedor não esteja configurada mas outra chave exista
+  if (!apiKey) {
+    if (aiSettings.AiSettings.geminiApiKey) {
+      apiKey = aiSettings.AiSettings.geminiApiKey;
+      baseURL = "https://generativelanguage.googleapis.com/v1beta/openai/";
+      model = "gemini-2.0-flash";
+    } else if (aiSettings.AiSettings.groqApiKey) {
+      apiKey = aiSettings.AiSettings.groqApiKey;
+      baseURL = "https://api.groq.com/openai/v1";
+      model = "llama-3.3-70b-versatile";
+    } else if (aiSettings.AiSettings.openaiApiKey) {
+      apiKey = aiSettings.AiSettings.openaiApiKey;
+      baseURL = undefined;
+      model = "gpt-4o";
+    }
+  }
+
+  if (!apiKey) {
+    return null;
+  }
+
   const openai = new OpenAI({
-    apiKey: aiSettings.AiSettings.openaiApiKey,
+    apiKey,
+    baseURL,
   });
 
   const textToProcess = messageText || "";
@@ -158,7 +198,7 @@ export const processarMensagemBot = async ({
     let response;
     try {
       response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model,
         messages,
         tools,
       });

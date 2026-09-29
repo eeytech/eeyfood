@@ -1,12 +1,22 @@
 "use server";
 
-import { aiSettingsTable, buscarRestaurantePorSlug, db, eq, reativarBot } from "@fsw/db";
+import {
+  aiSettingsTable,
+  buscarRestaurantePorSlug,
+  db,
+  eq,
+  reativarBotParaCliente,
+  reativarTodosClientes,
+} from "@fsw/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getBooleanValue, getStringValue } from "@/lib/admin-form-utils";
 
 const aiSettingsSchema = z.object({
+  aiProvider: z.string().default("GOOGLE_GEMINI"),
+  geminiApiKey: z.string().trim().optional(),
+  groqApiKey: z.string().trim().optional(),
   openaiApiKey: z.string().trim().optional(),
   evolutionInstanceName: z.string().trim().optional(),
   evolutionApiKey: z.string().trim().optional(),
@@ -35,6 +45,9 @@ export const updateAiSettingsAction = async (
     : (existing?.evolutionApiKey ?? "");
 
   const parsedData = aiSettingsSchema.safeParse({
+    aiProvider: getStringValue(formData.get("aiProvider")) || "GOOGLE_GEMINI",
+    geminiApiKey: getStringValue(formData.get("geminiApiKey")),
+    groqApiKey: getStringValue(formData.get("groqApiKey")),
     openaiApiKey: getStringValue(formData.get("openaiApiKey")),
     evolutionInstanceName,
     evolutionApiKey,
@@ -69,11 +82,25 @@ export const updateAiSettingsAction = async (
   revalidatePath("/whatsapp");
 };
 
-export const reativarBotAction = async (slug: string) => {
+export const reativarBotAction = async (slug: string, customerPhone?: string) => {
   const restaurant = await buscarRestaurantePorSlug(slug);
   if (!restaurant) throw new Error("Restaurante não encontrado.");
 
-  await reativarBot(restaurant.id);
+  if (customerPhone) {
+    await reativarBotParaCliente(restaurant.id, customerPhone);
+  } else {
+    await reativarTodosClientes(restaurant.id);
+  }
+
+  revalidatePath(`/${slug}/ai`);
+  revalidatePath("/ai");
+};
+
+export const reativarTodosClientesAction = async (slug: string) => {
+  const restaurant = await buscarRestaurantePorSlug(slug);
+  if (!restaurant) throw new Error("Restaurante não encontrado.");
+
+  await reativarTodosClientes(restaurant.id);
   revalidatePath(`/${slug}/ai`);
   revalidatePath("/ai");
 };

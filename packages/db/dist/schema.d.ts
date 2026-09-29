@@ -2177,6 +2177,7 @@ export declare const financialCategoriesTable: import("drizzle-orm/pg-core").PgT
     };
     dialect: "pg";
 }>;
+export declare const DEFAULT_AI_SYSTEM_PROMPT = "Voc\u00EA \u00E9 o atendente virtual inteligente oficial deste restaurante de delivery. Sua miss\u00E3o \u00E9 atender os clientes no WhatsApp de forma \u00E1gil, calorosa, educada e focada em converter pedidos com excel\u00EAncia.\n\n### SUAS DIRETRIZES DE COMUNICA\u00C7\u00C3O:\n1. Tom de voz: Muito cordial, acolhedor, profissional e prestativo. Use portugu\u00EAs do Brasil natural e amig\u00E1vel.\n2. Formata\u00E7\u00E3o para WhatsApp:\n   - Use frases e par\u00E1grafos curtos (f\u00E1ceis de ler na tela do celular).\n   - Use negrito com asteriscos (*exemplo*) para destacar pratos, categorias e pre\u00E7os.\n   - Use emojis de forma moderada e simp\u00E1tica (\uD83C\uDF54, \uD83C\uDF55, \uD83D\uDEF5, \u2728, \uD83D\uDE0A).\n3. Nunca invente produtos ou pre\u00E7os: Sempre que o cliente pedir o card\u00E1pio, perguntar sobre pratos ou valores, use obrigatoriamente a ferramenta listar_cardapio.\n\n### FLUXO DE ATENDIMENTO E VENDAS:\n1. Sauda\u00E7\u00E3o: Cumprimente o cliente pelo nome, seja receptivo e coloque-se \u00E0 disposi\u00E7\u00E3o para anotar o pedido ou tirar d\u00FAvidas do card\u00E1pio.\n2. Apresenta\u00E7\u00E3o do Card\u00E1pio: Ao listar op\u00E7\u00F5es, seja organizado. Destaque os pratos mais pedidos ou a categoria de interesse do cliente sem mensagens excessivamente longas.\n3. Montagem do Pedido:\n   - Confirme os itens e quantidades que o cliente deseja.\n   - Sugira gentilmente um acompanhamento, bebida ou sobremesa antes de fechar (upsell).\n   - Pergunte o m\u00E9todo de entrega: Entrega (DELIVERY), Retirar no Balc\u00E3o (TAKEAWAY) ou Consumo no Local (DINE_IN).\n4. Fechamento e Envio do Link:\n   - Assim que o cliente confirmar os itens e a forma de consumo, use a ferramenta gerar_link_confirmacao.\n   - Ao receber o link do carrinho, envie-o para o cliente com uma mensagem convidativa:\n     \"Perfeito! J\u00E1 separei seus itens. Para conferir seu pedido, escolher opcionais, informar seu endere\u00E7o de entrega e escolher a forma de pagamento, basta clicar no link abaixo:\n     \uD83D\uDC49 [Link do Carrinho]\"\n\n### ATENDIMENTO HUMANO E CASOS ESPECIAIS:\n- Se o cliente expressar insatisfa\u00E7\u00E3o ou solicitar atendente humano (\"atendente\", \"falar com humano\", \"suporte\"), seja gentil e informe que um atendente da equipe foi avisado e j\u00E1 vai assumir a conversa.";
 export declare const aiSettingsTable: import("drizzle-orm/pg-core").PgTableWithColumns<{
     name: "AiSettings";
     schema: undefined;
@@ -2211,6 +2212,57 @@ export declare const aiSettingsTable: import("drizzle-orm/pg-core").PgTableWithC
             isAutoincrement: false;
             hasRuntimeDefault: false;
             enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        aiProvider: import("drizzle-orm/pg-core").PgColumn<{
+            name: "aiProvider";
+            tableName: "AiSettings";
+            dataType: "string";
+            columnType: "PgText";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        geminiApiKey: import("drizzle-orm/pg-core").PgColumn<{
+            name: "geminiApiKey";
+            tableName: "AiSettings";
+            dataType: "string";
+            columnType: "PgText";
+            data: string;
+            driverParam: string;
+            notNull: false;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        groqApiKey: import("drizzle-orm/pg-core").PgColumn<{
+            name: "groqApiKey";
+            tableName: "AiSettings";
+            dataType: "string";
+            columnType: "PgText";
+            data: string;
+            driverParam: string;
+            notNull: false;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
             baseColumn: never;
             identity: undefined;
             generated: undefined;
@@ -2405,6 +2457,149 @@ export declare const aiSettingsTable: import("drizzle-orm/pg-core").PgTableWithC
         updatedAt: import("drizzle-orm/pg-core").PgColumn<{
             name: "updatedAt";
             tableName: "AiSettings";
+            dataType: "date";
+            columnType: "PgTimestamp";
+            data: Date;
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+    };
+    dialect: "pg";
+}>;
+export declare const aiCustomerHandoffTable: import("drizzle-orm/pg-core").PgTableWithColumns<{
+    name: "AiCustomerHandoff";
+    schema: undefined;
+    columns: {
+        id: import("drizzle-orm/pg-core").PgColumn<{
+            name: "id";
+            tableName: "AiCustomerHandoff";
+            dataType: "string";
+            columnType: "PgUUID";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: true;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        restaurantId: import("drizzle-orm/pg-core").PgColumn<{
+            name: "restaurantId";
+            tableName: "AiCustomerHandoff";
+            dataType: "string";
+            columnType: "PgUUID";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        customerPhone: import("drizzle-orm/pg-core").PgColumn<{
+            name: "customerPhone";
+            tableName: "AiCustomerHandoff";
+            dataType: "string";
+            columnType: "PgText";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        customerName: import("drizzle-orm/pg-core").PgColumn<{
+            name: "customerName";
+            tableName: "AiCustomerHandoff";
+            dataType: "string";
+            columnType: "PgText";
+            data: string;
+            driverParam: string;
+            notNull: false;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        pausedAt: import("drizzle-orm/pg-core").PgColumn<{
+            name: "pausedAt";
+            tableName: "AiCustomerHandoff";
+            dataType: "date";
+            columnType: "PgTimestamp";
+            data: Date;
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        status: import("drizzle-orm/pg-core").PgColumn<{
+            name: "status";
+            tableName: "AiCustomerHandoff";
+            dataType: "string";
+            columnType: "PgText";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        createdAt: import("drizzle-orm/pg-core").PgColumn<{
+            name: "createdAt";
+            tableName: "AiCustomerHandoff";
+            dataType: "date";
+            columnType: "PgTimestamp";
+            data: Date;
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        updatedAt: import("drizzle-orm/pg-core").PgColumn<{
+            name: "updatedAt";
+            tableName: "AiCustomerHandoff";
             dataType: "date";
             columnType: "PgTimestamp";
             data: Date;
@@ -11510,6 +11705,7 @@ export declare const restaurantsRelations: import("drizzle-orm").Relations<"Rest
     financialCategories: import("drizzle-orm").Many<"FinancialCategory">;
     financialTransactions: import("drizzle-orm").Many<"FinancialTransaction">;
     aiSettings: import("drizzle-orm").One<"AiSettings", false>;
+    aiCustomerHandoffs: import("drizzle-orm").Many<"AiCustomerHandoff">;
     ratings: import("drizzle-orm").Many<"OrderRating">;
     cashRegisterShifts: import("drizzle-orm").Many<"CashRegisterShift">;
     waiters: import("drizzle-orm").Many<"Waiter">;
@@ -11541,6 +11737,9 @@ export declare const operatingHoursRelations: import("drizzle-orm").Relations<"O
     restaurant: import("drizzle-orm").One<"Restaurant", true>;
 }>;
 export declare const aiSettingsRelations: import("drizzle-orm").Relations<"AiSettings", {
+    restaurant: import("drizzle-orm").One<"Restaurant", true>;
+}>;
+export declare const aiCustomerHandoffRelations: import("drizzle-orm").Relations<"AiCustomerHandoff", {
     restaurant: import("drizzle-orm").One<"Restaurant", true>;
 }>;
 export declare const financialCategoriesRelations: import("drizzle-orm").Relations<"FinancialCategory", {

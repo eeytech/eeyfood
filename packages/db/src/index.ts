@@ -96,12 +96,17 @@ export {
   salvarIntegracaoMarketplace,
   pausarBot,
   reativarBot,
+  pausarBotParaCliente,
+  reativarBotParaCliente,
+  reativarTodosClientes,
+  listarClientesPausados,
+  isClientePausado,
   buscarStatusHandoff,
   criarGastoMarketing,
   listarGastosMarketing,
   excluirGastoMarketing,
 } from "./queries/integration";
-export type { CriarGastoMarketingInput } from "./queries/integration";
+export type { ClientePausadoInfo, CriarGastoMarketingInput } from "./queries/integration";
 export { isRestaurantOpen, getNextOpeningTime, getBrazilTime } from "./restaurant-utils";
 export type { RestaurantOpenStatus } from "./restaurant-utils";
 export {
@@ -150,6 +155,9 @@ export {
   ledgerEntryTypeEnum,
   aiSettingsRelations,
   aiSettingsTable,
+  DEFAULT_AI_SYSTEM_PROMPT,
+  aiCustomerHandoffRelations,
+  aiCustomerHandoffTable,
   restaurantStatusEnum,
   operatingHoursRelations,
   operatingHoursTable,
@@ -392,6 +400,8 @@ export type {
   CustomerInteraction,
   NewCustomerInteraction,
   CustomerInteractionType,
+  AiCustomerHandoff,
+  NewAiCustomerHandoff,
   MarketingSettings,
   NewMarketingSettings,
   LoyaltyPrize,

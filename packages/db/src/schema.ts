@@ -432,24 +432,64 @@ export const financialCategoriesTable = pgTable("FinancialCategory", {
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
+export const DEFAULT_AI_SYSTEM_PROMPT = `Você é o atendente virtual inteligente oficial deste restaurante de delivery. Sua missão é atender os clientes no WhatsApp de forma ágil, calorosa, educada e focada em converter pedidos com excelência.
+
+### SUAS DIRETRIZES DE COMUNICAÇÃO:
+1. Tom de voz: Muito cordial, acolhedor, profissional e prestativo. Use português do Brasil natural e amigável.
+2. Formatação para WhatsApp:
+   - Use frases e parágrafos curtos (fáceis de ler na tela do celular).
+   - Use negrito com asteriscos (*exemplo*) para destacar pratos, categorias e preços.
+   - Use emojis de forma moderada e simpática (🍔, 🍕, 🛵, ✨, 😊).
+3. Nunca invente produtos ou preços: Sempre que o cliente pedir o cardápio, perguntar sobre pratos ou valores, use obrigatoriamente a ferramenta listar_cardapio.
+
+### FLUXO DE ATENDIMENTO E VENDAS:
+1. Saudação: Cumprimente o cliente pelo nome, seja receptivo e coloque-se à disposição para anotar o pedido ou tirar dúvidas do cardápio.
+2. Apresentação do Cardápio: Ao listar opções, seja organizado. Destaque os pratos mais pedidos ou a categoria de interesse do cliente sem mensagens excessivamente longas.
+3. Montagem do Pedido:
+   - Confirme os itens e quantidades que o cliente deseja.
+   - Sugira gentilmente um acompanhamento, bebida ou sobremesa antes de fechar (upsell).
+   - Pergunte o método de entrega: Entrega (DELIVERY), Retirar no Balcão (TAKEAWAY) ou Consumo no Local (DINE_IN).
+4. Fechamento e Envio do Link:
+   - Assim que o cliente confirmar os itens e a forma de consumo, use a ferramenta gerar_link_confirmacao.
+   - Ao receber o link do carrinho, envie-o para o cliente com uma mensagem convidativa:
+     "Perfeito! Já separei seus itens. Para conferir seu pedido, escolher opcionais, informar seu endereço de entrega e escolher a forma de pagamento, basta clicar no link abaixo:
+     👉 [Link do Carrinho]"
+
+### ATENDIMENTO HUMANO E CASOS ESPECIAIS:
+- Se o cliente expressar insatisfação ou solicitar atendente humano ("atendente", "falar com humano", "suporte"), seja gentil e informe que um atendente da equipe foi avisado e já vai assumir a conversa.`;
+
 export const aiSettingsTable = pgTable("AiSettings", {
   id: uuid("id").defaultRandom().primaryKey(),
   restaurantId: uuid("restaurantId")
     .notNull()
     .unique()
     .references(() => restaurantsTable.id, { onDelete: "cascade" }),
+  aiProvider: text("aiProvider").default("GOOGLE_GEMINI").notNull(),
+  geminiApiKey: text("geminiApiKey"),
+  groqApiKey: text("groqApiKey"),
   openaiApiKey: text("openaiApiKey"),
   evolutionInstanceName: text("evolutionInstanceName"),
   evolutionApiKey: text("evolutionApiKey"),
   botName: text("botName").default("EeyFood Bot").notNull(),
-  systemPrompt: text("systemPrompt").default(
-    "Você é um atendente virtual de delivery educado e eficiente. Ajude o cliente a escolher itens do cardápio e finalize o pedido capturando nome, telefone e itens."
-  ),
+  systemPrompt: text("systemPrompt").default(DEFAULT_AI_SYSTEM_PROMPT),
   isBotActive: boolean("isBotActive").default(false).notNull(),
   isBotPaused: boolean("isBotPaused").default(false).notNull(),
   pausedAt: timestamp("pausedAt"),
   pausedForPhone: text("pausedForPhone"),
   conversationStatus: conversationStatusEnum("conversationStatus").default("BOT_ACTIVE").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export const aiCustomerHandoffTable = pgTable("AiCustomerHandoff", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  restaurantId: uuid("restaurantId")
+    .notNull()
+    .references(() => restaurantsTable.id, { onDelete: "cascade" }),
+  customerPhone: text("customerPhone").notNull(),
+  customerName: text("customerName"),
+  pausedAt: timestamp("pausedAt").defaultNow().notNull(),
+  status: text("status").default("WAITING_HUMAN").notNull(), // WAITING_HUMAN | RESOLVED
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
@@ -1349,6 +1389,7 @@ export const restaurantsRelations = relations(
   financialCategories: many(financialCategoriesTable),
   financialTransactions: many(financialTransactionsTable),
   aiSettings: one(aiSettingsTable),
+  aiCustomerHandoffs: many(aiCustomerHandoffTable),
   ratings: many(orderRatingsTable),
   cashRegisterShifts: many(cashRegisterShiftsTable),
   waiters: many(waitersTable),
@@ -1400,6 +1441,13 @@ export const operatingHoursRelations = relations(
 export const aiSettingsRelations = relations(aiSettingsTable, ({ one }) => ({
   restaurant: one(restaurantsTable, {
     fields: [aiSettingsTable.restaurantId],
+    references: [restaurantsTable.id],
+  }),
+}));
+
+export const aiCustomerHandoffRelations = relations(aiCustomerHandoffTable, ({ one }) => ({
+  restaurant: one(restaurantsTable, {
+    fields: [aiCustomerHandoffTable.restaurantId],
     references: [restaurantsTable.id],
   }),
 }));

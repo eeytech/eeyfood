@@ -76,6 +76,7 @@ import {
   loyaltyRulesTable,
   freeDeliveryRulesTable,
   aiSettingsTable,
+  aiCustomerHandoffTable,
   waitersTable,
   waiterStatusEnum,
   commissionRulesTable,
@@ -117,6 +118,9 @@ export type NewProductToOptionGroup = InferInsertModel<typeof productToOptionGro
 
   export type AiSettings = InferSelectModel<typeof aiSettingsTable>;
 export type NewAiSettings = InferInsertModel<typeof aiSettingsTable>;
+
+export type AiCustomerHandoff = InferSelectModel<typeof aiCustomerHandoffTable>;
+export type NewAiCustomerHandoff = InferInsertModel<typeof aiCustomerHandoffTable>;
 
 
 // ... (rest of types)

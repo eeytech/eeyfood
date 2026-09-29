@@ -22,7 +22,7 @@ import type {
   Supplier,
   VehicleStatus,
 } from "@fsw/db";
-import type { FreeDeliveryRule, InventoryItem } from "@fsw/db";
+import type { ClientePausadoInfo, FreeDeliveryRule, InventoryItem } from "@fsw/db";
 import {
   aiSettingsTable,
   abandonedCartsTable,
@@ -53,6 +53,7 @@ import {
   inventoryLossesTable,
   isNotNull,
   listarCouriersPorSlug,
+  listarClientesPausados,
   listarGarconsPorSlug,
   listarReservasPorSlug,
   listarFilaEsperaPorSlug,
@@ -600,6 +601,14 @@ export const buscarAiSettingsPorSlug = async (slug: string) => {
     .limit(1);
 
   return settings ?? null;
+};
+
+export const buscarClientesPausadosPorSlug = async (
+  slug: string,
+): Promise<ClientePausadoInfo[]> => {
+  const restaurant = await buscarRestaurantePorSlug(slug);
+  if (!restaurant) return [];
+  return listarClientesPausados(restaurant.id);
 };
 
 export type GrupoAdicionalComOpcoes = ProductOptionGroup & { options: ProductOption[] };

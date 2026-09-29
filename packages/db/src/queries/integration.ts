@@ -1,7 +1,12 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 
 import { db } from "../client";
-import { aiSettingsTable, marketingSpendTable, marketplaceIntegrationsTable } from "../schema";
+import {
+  aiCustomerHandoffTable,
+  aiSettingsTable,
+  marketingSpendTable,
+  marketplaceIntegrationsTable,
+} from "../schema";
 import type { MarketplaceIntegration, MarketplaceType } from "../types";
 
 export const buscarIntegracaoMarketplace = async (
@@ -39,22 +44,126 @@ export const salvarIntegracaoMarketplace = async (
   return integration;
 };
 
-// ─── Handoff Bot ──────────────────────────────────────────────────────────────
+// ─── Handoff Bot Multicliente ──────────────────────────────────────────────────
 
-export const pausarBot = async (restaurantId: string, customerPhone: string): Promise<void> => {
+export interface ClientePausadoInfo {
+  id?: string;
+  customerPhone: string;
+  customerName?: string | null;
+  pausedAt: Date;
+}
+
+export const pausarBotParaCliente = async (
+  restaurantId: string,
+  customerPhone: string,
+  customerName?: string,
+): Promise<void> => {
+  const cleanPhone = customerPhone.trim();
+  const now = new Date();
+
+  // 1. Registra na tabela de handoff multicliente
+  try {
+    await db
+      .insert(aiCustomerHandoffTable)
+      .values({
+        restaurantId,
+        customerPhone: cleanPhone,
+        customerName: customerName || null,
+        pausedAt: now,
+        status: "WAITING_HUMAN",
+        updatedAt: now,
+      });
+  } catch (err) {
+    console.warn("Aviso ao registrar handoff em aiCustomerHandoffTable:", err);
+  }
+
+  // 2. Mantém compatibilidade com aiSettingsTable
   await db
     .update(aiSettingsTable)
     .set({
       isBotPaused: true,
-      pausedAt: new Date(),
-      pausedForPhone: customerPhone,
+      pausedAt: now,
+      pausedForPhone: cleanPhone,
       conversationStatus: "HUMAN_REQUIRED",
-      updatedAt: new Date(),
+      updatedAt: now,
     })
     .where(eq(aiSettingsTable.restaurantId, restaurantId));
 };
 
-export const reativarBot = async (restaurantId: string): Promise<void> => {
+export const reativarBotParaCliente = async (
+  restaurantId: string,
+  customerPhone: string,
+): Promise<void> => {
+  const cleanPhone = customerPhone.trim();
+
+  // Marca este cliente como resolvido
+  try {
+    await db
+      .update(aiCustomerHandoffTable)
+      .set({
+        status: "RESOLVED",
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(aiCustomerHandoffTable.restaurantId, restaurantId),
+          eq(aiCustomerHandoffTable.customerPhone, cleanPhone),
+          eq(aiCustomerHandoffTable.status, "WAITING_HUMAN"),
+        ),
+      );
+  } catch (err) {
+    console.warn("Aviso ao reativar cliente em aiCustomerHandoffTable:", err);
+  }
+
+  // Verifica se ainda resta algum cliente aguardando atendimento
+  let hasRemaining = false;
+  try {
+    const remaining = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(aiCustomerHandoffTable)
+      .where(
+        and(
+          eq(aiCustomerHandoffTable.restaurantId, restaurantId),
+          eq(aiCustomerHandoffTable.status, "WAITING_HUMAN"),
+        ),
+      );
+    hasRemaining = Number(remaining[0]?.count ?? 0) > 0;
+  } catch {
+    hasRemaining = false;
+  }
+
+  if (!hasRemaining) {
+    await db
+      .update(aiSettingsTable)
+      .set({
+        isBotPaused: false,
+        pausedAt: null,
+        pausedForPhone: null,
+        conversationStatus: "BOT_ACTIVE",
+        updatedAt: new Date(),
+      })
+      .where(eq(aiSettingsTable.restaurantId, restaurantId));
+  }
+};
+
+export const reativarTodosClientes = async (restaurantId: string): Promise<void> => {
+  try {
+    await db
+      .update(aiCustomerHandoffTable)
+      .set({
+        status: "RESOLVED",
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(aiCustomerHandoffTable.restaurantId, restaurantId),
+          eq(aiCustomerHandoffTable.status, "WAITING_HUMAN"),
+        ),
+      );
+  } catch (err) {
+    console.warn("Aviso ao reativar todos em aiCustomerHandoffTable:", err);
+  }
+
   await db
     .update(aiSettingsTable)
     .set({
@@ -65,6 +174,105 @@ export const reativarBot = async (restaurantId: string): Promise<void> => {
       updatedAt: new Date(),
     })
     .where(eq(aiSettingsTable.restaurantId, restaurantId));
+};
+
+export const listarClientesPausados = async (
+  restaurantId: string,
+): Promise<ClientePausadoInfo[]> => {
+  try {
+    const list = await db
+      .select({
+        id: aiCustomerHandoffTable.id,
+        customerPhone: aiCustomerHandoffTable.customerPhone,
+        customerName: aiCustomerHandoffTable.customerName,
+        pausedAt: aiCustomerHandoffTable.pausedAt,
+      })
+      .from(aiCustomerHandoffTable)
+      .where(
+        and(
+          eq(aiCustomerHandoffTable.restaurantId, restaurantId),
+          eq(aiCustomerHandoffTable.status, "WAITING_HUMAN"),
+        ),
+      )
+      .orderBy(desc(aiCustomerHandoffTable.pausedAt));
+
+    if (list.length > 0) {
+      return list;
+    }
+  } catch (err) {
+    console.warn("Aviso ao consultar aiCustomerHandoffTable:", err);
+  }
+
+  // Fallback caso a tabela ainda esteja vazia mas aiSettingsTable tenha dados
+  const [settings] = await db
+    .select({
+      isBotPaused: aiSettingsTable.isBotPaused,
+      pausedAt: aiSettingsTable.pausedAt,
+      pausedForPhone: aiSettingsTable.pausedForPhone,
+    })
+    .from(aiSettingsTable)
+    .where(eq(aiSettingsTable.restaurantId, restaurantId))
+    .limit(1);
+
+  if (settings?.isBotPaused && settings.pausedForPhone) {
+    return [
+      {
+        customerPhone: settings.pausedForPhone,
+        customerName: null,
+        pausedAt: settings.pausedAt || new Date(),
+      },
+    ];
+  }
+
+  return [];
+};
+
+export const isClientePausado = async (
+  restaurantId: string,
+  customerPhone: string,
+): Promise<boolean> => {
+  const cleanPhone = customerPhone.trim();
+
+  try {
+    const [found] = await db
+      .select({ id: aiCustomerHandoffTable.id })
+      .from(aiCustomerHandoffTable)
+      .where(
+        and(
+          eq(aiCustomerHandoffTable.restaurantId, restaurantId),
+          eq(aiCustomerHandoffTable.customerPhone, cleanPhone),
+          eq(aiCustomerHandoffTable.status, "WAITING_HUMAN"),
+        ),
+      )
+      .limit(1);
+
+    if (found) return true;
+  } catch {
+    // fallback
+  }
+
+  // Fallback para aiSettingsTable
+  const [settings] = await db
+    .select({
+      isBotPaused: aiSettingsTable.isBotPaused,
+      pausedForPhone: aiSettingsTable.pausedForPhone,
+    })
+    .from(aiSettingsTable)
+    .where(eq(aiSettingsTable.restaurantId, restaurantId))
+    .limit(1);
+
+  return Boolean(
+    settings?.isBotPaused && settings.pausedForPhone === cleanPhone,
+  );
+};
+
+// Wrappers para compatibilidade legada
+export const pausarBot = async (restaurantId: string, customerPhone: string): Promise<void> => {
+  await pausarBotParaCliente(restaurantId, customerPhone);
+};
+
+export const reativarBot = async (restaurantId: string): Promise<void> => {
+  await reativarTodosClientes(restaurantId);
 };
 
 export const buscarStatusHandoff = async (restaurantId: string) => {

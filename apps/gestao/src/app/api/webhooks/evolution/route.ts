@@ -1,4 +1,11 @@
-import { aiSettingsTable, db, eq, pausarBot, restaurantsTable } from "@fsw/db";
+import {
+  aiSettingsTable,
+  db,
+  eq,
+  isClientePausado,
+  pausarBotParaCliente,
+  restaurantsTable,
+} from "@fsw/db";
 import axios from "axios";
 import { NextResponse } from "next/server";
 import OpenAI, { toFile } from "openai";
@@ -30,6 +37,9 @@ export async function POST(request: Request) {
         slug: restaurantsTable.slug,
         restaurantId: restaurantsTable.id,
         evolutionApiKey: aiSettingsTable.evolutionApiKey,
+        aiProvider: aiSettingsTable.aiProvider,
+        geminiApiKey: aiSettingsTable.geminiApiKey,
+        groqApiKey: aiSettingsTable.groqApiKey,
         openaiApiKey: aiSettingsTable.openaiApiKey,
         isBotActive: aiSettingsTable.isBotActive,
         isBotPaused: aiSettingsTable.isBotPaused,
@@ -45,7 +55,8 @@ export async function POST(request: Request) {
     }
 
     // Bot pausado para este cliente específico — silenciar respostas automáticas
-    if (aiSettings.isBotPaused && aiSettings.pausedForPhone === customerPhone) {
+    const clientePausado = await isClientePausado(aiSettings.restaurantId, customerPhone);
+    if (clientePausado) {
       return NextResponse.json({ ok: true });
     }
 
@@ -54,11 +65,11 @@ export async function POST(request: Request) {
       messageData.message?.extendedTextMessage?.text ||
       "";
 
-    // Intercepta mensagens de áudio/voz e transcreve via Whisper
+    // Intercepta mensagens de áudio/voz e transcreve de acordo com o provedor
     const audioMessage =
       messageData.message?.audioMessage || messageData.message?.pttMessage;
 
-    if (!messageText && audioMessage && aiSettings.openaiApiKey) {
+    if (!messageText && audioMessage) {
       try {
         const mediaResponse = await axios.post<{ base64: string; mimetype: string }>(
           `${evolutionUrl}/chat/getBase64FromMediaMessage/${instanceName}`,
@@ -74,19 +85,81 @@ export async function POST(request: Request) {
             ? "mp3"
             : "ogg";
 
-        const buffer = Buffer.from(base64Data, "base64");
-        const audioFile = await toFile(buffer, `audio.${ext}`, { type: mimeType });
+        const provider = (aiSettings.aiProvider || "GOOGLE_GEMINI").toUpperCase();
 
-        const openai = new OpenAI({ apiKey: aiSettings.openaiApiKey });
-        const transcription = await openai.audio.transcriptions.create({
-          file: audioFile,
-          model: "whisper-1",
-          language: "pt",
-        });
+        // 1. Se for Groq: usa Whisper Large V3 gratuito e ultrarrápido
+        if (provider === "GROQ" && (aiSettings.groqApiKey || process.env.GROQ_API_KEY)) {
+          try {
+            const buffer = Buffer.from(base64Data, "base64");
+            const audioFile = await toFile(buffer, `audio.${ext}`, { type: mimeType });
+            const groq = new OpenAI({
+              apiKey: aiSettings.groqApiKey || process.env.GROQ_API_KEY,
+              baseURL: "https://api.groq.com/openai/v1",
+            });
+            const transcription = await groq.audio.transcriptions.create({
+              file: audioFile,
+              model: "whisper-large-v3",
+              language: "pt",
+            });
+            messageText = transcription.text;
+          } catch (groqErr) {
+            console.warn("Aviso ao transcrever com Groq:", groqErr);
+          }
+        }
 
-        messageText = transcription.text;
+        // 2. Se for Google Gemini (ou fallback): usa transcrição nativa multimodal gratuita
+        if (!messageText && (provider === "GOOGLE_GEMINI" || aiSettings.geminiApiKey)) {
+          const geminiKey = aiSettings.geminiApiKey || process.env.GEMINI_API_KEY;
+          if (geminiKey) {
+            try {
+              const geminiRes = await axios.post<{
+                candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+              }>(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+                {
+                  contents: [
+                    {
+                      parts: [
+                        {
+                          text: "Transcreva com máxima fidelidade em português o áudio a seguir. Retorne unicamente o texto falado, sem comentários ou formatação adicional.",
+                        },
+                        {
+                          inline_data: {
+                            mime_type: mimeType,
+                            data: base64Data,
+                          },
+                        },
+                      ],
+                    },
+                  ],
+                },
+                { timeout: 15000 },
+              );
+              messageText = geminiRes.data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+            } catch (geminiErr) {
+              console.warn("Aviso ao transcrever com Gemini:", geminiErr);
+            }
+          }
+        }
+
+        // 3. Fallback para OpenAI Whisper (se configurada)
+        if (!messageText && (aiSettings.openaiApiKey || process.env.OPENAI_API_KEY)) {
+          try {
+            const buffer = Buffer.from(base64Data, "base64");
+            const audioFile = await toFile(buffer, `audio.${ext}`, { type: mimeType });
+            const openai = new OpenAI({ apiKey: aiSettings.openaiApiKey || process.env.OPENAI_API_KEY });
+            const transcription = await openai.audio.transcriptions.create({
+              file: audioFile,
+              model: "whisper-1",
+              language: "pt",
+            });
+            messageText = transcription.text;
+          } catch (openaiErr) {
+            console.warn("Aviso ao transcrever com OpenAI Whisper:", openaiErr);
+          }
+        }
       } catch (audioError) {
-        console.error("Erro ao transcrever áudio:", audioError);
+        console.error("Erro ao obter/processar áudio:", audioError);
       }
     }
 
@@ -102,8 +175,8 @@ export async function POST(request: Request) {
     });
 
     if (botResponse === HANDOFF_SIGNAL) {
-      // Pausar bot e notificar painel via WebSocket
-      await pausarBot(aiSettings.restaurantId, customerPhone);
+      // Pausar bot para este cliente na lista de atendimento humano
+      await pausarBotParaCliente(aiSettings.restaurantId, customerPhone, customerName);
 
       const wsUrl = process.env.WEBSOCKET_URL || "http://localhost:4000";
       await axios
