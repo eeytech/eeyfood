@@ -16,11 +16,16 @@ export function AiPromptEditor({
   initialPrompt,
   defaultPrompt,
 }: AiPromptEditorProps) {
-  const [prompt, setPrompt] = useState(initialPrompt || defaultPrompt);
+  const hasValidInitial = Boolean(
+    initialPrompt && initialPrompt.trim().length >= 10,
+  );
+  const [prompt, setPrompt] = useState(
+    hasValidInitial ? (initialPrompt as string) : defaultPrompt,
+  );
 
   const handleRestaurarPadrao = () => {
     setPrompt(defaultPrompt);
-    toast.success("Prompt padrão de delivery restaurado!");
+    toast.success("Prompt padrão oficial de delivery restaurado!");
   };
 
   return (
@@ -35,7 +40,7 @@ export function AiPromptEditor({
           size="sm"
           onClick={handleRestaurarPadrao}
           className="h-7 gap-1.5 px-2 text-[11px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-          title="Substituir pelo prompt otimizado de vendas e delivery"
+          title="Substituir pelo prompt modelo de vendas e delivery"
         >
           <RotateCcwIcon size={12} />
           Restaurar Padrão
@@ -46,14 +51,16 @@ export function AiPromptEditor({
         name="systemPrompt"
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
-        className="min-h-[260px] rounded-xl border-slate-200 bg-slate-50/70 p-3 text-xs leading-relaxed font-sans focus:bg-white resize-y"
+        minLength={10}
+        rows={12}
+        className="min-h-[280px] rounded-xl border-slate-200 bg-slate-50/70 p-3 text-xs leading-relaxed font-sans focus:bg-white resize-y"
         placeholder="Instrua o robô sobre como atender seus clientes, ser simpático e orientar sobre pedidos..."
         required
       />
 
       <p className="text-[11px] text-muted-foreground flex items-center gap-1">
         <SparklesIcon size={12} className="text-amber-500 shrink-0" />
-        O prompt padrão já inclui regras para nunca inventar pratos, fazer sugestões de venda (upsell) e encaminhar para atendente humano quando solicitado.
+        O prompt modelo oficial orienta o robô a listar o cardápio com precisão, sugerir acompanhamentos, gerar o link do carrinho e transferir para atendimento humano quando solicitado.
       </p>
     </div>
   );

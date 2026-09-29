@@ -10,7 +10,6 @@ import { notFound } from "next/navigation";
 
 import { updateAiSettingsAction } from "@/app/(dashboard)/ai-actions";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -51,7 +50,11 @@ export default async function AiSettingsPage({ params }: AiSettingsPageProps) {
   ]);
 
   return (
-    <div className="space-y-6">
+    <form
+      id="ai-settings-form"
+      action={updateAiSettingsAction.bind(null, slug)}
+      className="space-y-6"
+    >
       {/* ── Page Header ─────────────────────────────────── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
@@ -85,103 +88,105 @@ export default async function AiSettingsPage({ params }: AiSettingsPageProps) {
             {aiSettings?.isBotActive ? "Robô Ativo" : "Robô Inativo"}
           </Badge>
 
-          <Link href="/whatsapp">
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 rounded-full border-slate-200 bg-white text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50"
-            >
-              <MessageSquareIcon size={14} className="text-emerald-600" />
-              Conexão WhatsApp
-            </Button>
-          </Link>
+          {/* Botão Salvar Configurações no cabeçalho substituindo Conexão WhatsApp */}
+          <SubmitButton
+            form="ai-settings-form"
+            className="gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-slate-800"
+          >
+            <SaveIcon size={14} />
+            Salvar Configurações
+          </SubmitButton>
         </div>
       </div>
 
-      {/* ── Alerta de Fila de Atendimento Humano (Handoff Multicliente) ── */}
+      {/* ── Alerta de Fila de Atendimento Humano (Handoff Multicliente — Sempre Visível) ── */}
       <AiHandoffCard slug={slug} clientesPausados={clientesPausados} />
 
       {/* ── Formulário de Configurações de IA ─────────────── */}
-      <form action={updateAiSettingsAction.bind(null, slug)}>
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Coluna Esquerda: Personalidade do Robô */}
-          <Card className="border-slate-200/80 bg-white shadow-sm">
-            <CardHeader className="p-4 sm:p-5 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <div className="rounded-lg bg-slate-100 p-2 text-slate-800">
-                  <BotIcon size={18} />
-                </div>
-                <div>
-                  <CardTitle className="font-display text-base font-semibold text-slate-900">
-                    Personalidade do Robô
-                  </CardTitle>
-                  <CardDescription className="text-xs text-slate-500">
-                    Defina como seu atendente virtual deve se apresentar e atender os clientes.
-                  </CardDescription>
-                </div>
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Coluna Esquerda: Personalidade do Robô */}
+        <Card className="border-slate-200/80 bg-white shadow-sm">
+          <CardHeader className="p-4 sm:p-5 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <div className="rounded-lg bg-slate-100 p-2 text-slate-800">
+                <BotIcon size={18} />
               </div>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-5 space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700">
-                  Nome do Atendente
-                </label>
-                <Input
-                  name="botName"
-                  defaultValue={aiSettings?.botName ?? "EeyFood Bot"}
-                  placeholder="Ex.: Bia do Delivery"
-                  className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm focus:bg-white"
-                  required
-                />
+              <div>
+                <CardTitle className="font-display text-base font-semibold text-slate-900">
+                  Personalidade do Robô
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-500">
+                  Defina como seu atendente virtual deve se apresentar e atender os clientes.
+                </CardDescription>
               </div>
-
-              {/* Editor de Prompt com botão Restaurar Padrão */}
-              <AiPromptEditor
-                initialPrompt={aiSettings?.systemPrompt}
-                defaultPrompt={DEFAULT_AI_SYSTEM_PROMPT}
-              />
-
-              <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-xs font-medium text-slate-800 hover:bg-slate-100/70 transition-colors">
-                <input
-                  type="checkbox"
-                  name="isBotActive"
-                  defaultChecked={aiSettings?.isBotActive ?? false}
-                  className="h-4 w-4 rounded accent-primary"
-                />
-                Ativar atendimento automático com IA no WhatsApp
+            </div>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-5 space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-700">
+                Nome do Atendente
               </label>
-            </CardContent>
-          </Card>
-
-          {/* Coluna Direita: Seletor de Provedor e Envio */}
-          <div className="space-y-6">
-            <AiProviderSelector
-              initialProvider={aiSettings?.aiProvider}
-              initialGeminiKey={aiSettings?.geminiApiKey}
-              initialGroqKey={aiSettings?.groqApiKey}
-              initialOpenAiKey={aiSettings?.openaiApiKey}
-            />
-
-            <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm space-y-2">
-              <p className="font-semibold text-xs text-slate-800 flex items-center gap-1.5">
-                <MessageSquareIcon size={14} className="text-emerald-600" />
-                Conexão do WhatsApp
-              </p>
-              <p className="text-[11px] leading-relaxed text-slate-500">
-                Para que o robô envie mensagens automaticamente, seu número de WhatsApp deve estar conectado no menu{" "}
-                <Link href="/whatsapp" className="font-semibold text-emerald-700 underline hover:text-emerald-800">
-                  Configurar &gt; WhatsApp
-                </Link>.
-              </p>
+              <Input
+                name="botName"
+                defaultValue={aiSettings?.botName ?? "EeyFood Bot"}
+                placeholder="Ex.: Bia do Delivery"
+                className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm focus:bg-white"
+                required
+              />
             </div>
 
-            <SubmitButton className="h-12 w-full gap-2 rounded-full bg-slate-900 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">
-              <SaveIcon size={16} />
-              Salvar Configurações de IA
-            </SubmitButton>
+            {/* Editor de Prompt com botão Restaurar Padrão */}
+            <AiPromptEditor
+              initialPrompt={aiSettings?.systemPrompt}
+              defaultPrompt={DEFAULT_AI_SYSTEM_PROMPT}
+            />
+
+            <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-xs font-medium text-slate-800 hover:bg-slate-100/70 transition-colors">
+              <input
+                type="checkbox"
+                name="isBotActive"
+                defaultChecked={aiSettings?.isBotActive ?? false}
+                className="h-4 w-4 rounded accent-primary"
+              />
+              Ativar atendimento automático com IA no WhatsApp
+            </label>
+          </CardContent>
+        </Card>
+
+        {/* Coluna Direita: Seletor de Provedor e Envio */}
+        <div className="space-y-6">
+          <AiProviderSelector
+            initialProvider={aiSettings?.aiProvider}
+            initialGeminiKey={aiSettings?.geminiApiKey}
+            initialGroqKey={aiSettings?.groqApiKey}
+            initialOpenAiKey={aiSettings?.openaiApiKey}
+          />
+
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm space-y-2">
+            <p className="font-semibold text-xs text-slate-800 flex items-center gap-1.5">
+              <MessageSquareIcon size={14} className="text-emerald-600" />
+              Conexão do WhatsApp
+            </p>
+            <p className="text-[11px] leading-relaxed text-slate-500">
+              Para que o robô envie mensagens automaticamente, seu número de WhatsApp deve estar conectado no menu{" "}
+              <Link
+                href="/whatsapp"
+                className="font-semibold text-emerald-700 underline hover:text-emerald-800"
+              >
+                Configurar &gt; WhatsApp
+              </Link>.
+            </p>
           </div>
+
+          <SubmitButton
+            form="ai-settings-form"
+            className="h-12 w-full gap-2 rounded-full bg-slate-900 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+          >
+            <SaveIcon size={16} />
+            Salvar Configurações
+          </SubmitButton>
         </div>
-      </form>
-    </div>
+      </div>
+    </form>
   );
 }

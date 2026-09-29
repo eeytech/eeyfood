@@ -1,6 +1,12 @@
 "use server";
 
-import { aiSettingsTable, buscarRestaurantePorSlug, db, eq } from "@fsw/db";
+import {
+  aiSettingsTable,
+  buscarRestaurantePorSlug,
+  db,
+  DEFAULT_AI_SYSTEM_PROMPT,
+  eq,
+} from "@fsw/db";
 import axios from "axios";
 import { revalidatePath } from "next/cache";
 
@@ -239,7 +245,7 @@ export async function gerarQrCodeWhatsAppAction(slug: string): Promise<QrCodeRes
         evolutionInstanceName: instanceName,
         evolutionApiKey: apiKey,
         botName: aiSettings?.botName ?? "EeyFood Bot",
-        systemPrompt: aiSettings?.systemPrompt ?? "Você é um atendente virtual de delivery.",
+        systemPrompt: aiSettings?.systemPrompt ?? DEFAULT_AI_SYSTEM_PROMPT,
         isBotActive: aiSettings?.isBotActive ?? false,
         updatedAt: new Date(),
       })

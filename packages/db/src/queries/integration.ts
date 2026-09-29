@@ -61,11 +61,31 @@ export const pausarBotParaCliente = async (
   const cleanPhone = customerPhone.trim();
   const now = new Date();
 
-  // 1. Registra na tabela de handoff multicliente
+  // 1. Registra ou atualiza na tabela de handoff multicliente
   try {
-    await db
-      .insert(aiCustomerHandoffTable)
-      .values({
+    const existing = await db
+      .select({ id: aiCustomerHandoffTable.id })
+      .from(aiCustomerHandoffTable)
+      .where(
+        and(
+          eq(aiCustomerHandoffTable.restaurantId, restaurantId),
+          eq(aiCustomerHandoffTable.customerPhone, cleanPhone),
+          eq(aiCustomerHandoffTable.status, "WAITING_HUMAN"),
+        ),
+      )
+      .limit(1);
+
+    if (existing.length > 0) {
+      await db
+        .update(aiCustomerHandoffTable)
+        .set({
+          pausedAt: now,
+          customerName: customerName || undefined,
+          updatedAt: now,
+        })
+        .where(eq(aiCustomerHandoffTable.id, existing[0].id));
+    } else {
+      await db.insert(aiCustomerHandoffTable).values({
         restaurantId,
         customerPhone: cleanPhone,
         customerName: customerName || null,
@@ -73,6 +93,7 @@ export const pausarBotParaCliente = async (
         status: "WAITING_HUMAN",
         updatedAt: now,
       });
+    }
   } catch (err) {
     console.warn("Aviso ao registrar handoff em aiCustomerHandoffTable:", err);
   }
@@ -115,24 +136,43 @@ export const reativarBotParaCliente = async (
     console.warn("Aviso ao reativar cliente em aiCustomerHandoffTable:", err);
   }
 
-  // Verifica se ainda resta algum cliente aguardando atendimento
-  let hasRemaining = false;
+  // Verifica os clientes que ainda continuam aguardando atendimento
+  let nextRemaining: { customerPhone: string; pausedAt: Date } | null = null;
   try {
     const remaining = await db
-      .select({ count: sql<number>`count(*)` })
+      .select({
+        customerPhone: aiCustomerHandoffTable.customerPhone,
+        pausedAt: aiCustomerHandoffTable.pausedAt,
+      })
       .from(aiCustomerHandoffTable)
       .where(
         and(
           eq(aiCustomerHandoffTable.restaurantId, restaurantId),
           eq(aiCustomerHandoffTable.status, "WAITING_HUMAN"),
         ),
-      );
-    hasRemaining = Number(remaining[0]?.count ?? 0) > 0;
+      )
+      .orderBy(desc(aiCustomerHandoffTable.pausedAt))
+      .limit(1);
+
+    if (remaining.length > 0) {
+      nextRemaining = remaining[0];
+    }
   } catch {
-    hasRemaining = false;
+    nextRemaining = null;
   }
 
-  if (!hasRemaining) {
+  if (nextRemaining) {
+    await db
+      .update(aiSettingsTable)
+      .set({
+        isBotPaused: true,
+        pausedAt: nextRemaining.pausedAt,
+        pausedForPhone: nextRemaining.customerPhone,
+        conversationStatus: "HUMAN_REQUIRED",
+        updatedAt: new Date(),
+      })
+      .where(eq(aiSettingsTable.restaurantId, restaurantId));
+  } else {
     await db
       .update(aiSettingsTable)
       .set({
@@ -197,13 +237,22 @@ export const listarClientesPausados = async (
       .orderBy(desc(aiCustomerHandoffTable.pausedAt));
 
     if (list.length > 0) {
-      return list;
+      // Deduplica por telefone (mantendo a ocorrência mais recente)
+      const seen = new Set<string>();
+      const deduplicated: ClientePausadoInfo[] = [];
+      for (const item of list) {
+        if (!seen.has(item.customerPhone)) {
+          seen.add(item.customerPhone);
+          deduplicated.push(item);
+        }
+      }
+      return deduplicated;
     }
   } catch (err) {
     console.warn("Aviso ao consultar aiCustomerHandoffTable:", err);
   }
 
-  // Fallback caso a tabela ainda esteja vazia mas aiSettingsTable tenha dados
+  // Fallback caso a tabela ainda esteja vazia mas aiSettingsTable tenha dados legados
   const [settings] = await db
     .select({
       isBotPaused: aiSettingsTable.isBotPaused,

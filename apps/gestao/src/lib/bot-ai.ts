@@ -2,6 +2,7 @@ import {
   aiSettingsTable,
   buscarRestauranteComCardapioPorSlug,
   db,
+  DEFAULT_AI_SYSTEM_PROMPT,
   eq,
   isClientePausado,
   restaurantsTable,
@@ -181,8 +182,7 @@ export const processarMensagemBot = async ({
     {
       role: "system",
       content:
-        aiSettings.AiSettings.systemPrompt ||
-        "Você é um atendente virtual de delivery educado e eficiente. Ajude o cliente a escolher itens do cardápio e, quando ele confirmar os itens desejados, gere o link de confirmação do carrinho.",
+        aiSettings.AiSettings.systemPrompt || DEFAULT_AI_SYSTEM_PROMPT,
     },
     {
       role: "user",

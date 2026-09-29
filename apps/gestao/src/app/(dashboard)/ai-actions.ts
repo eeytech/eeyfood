@@ -4,6 +4,7 @@ import {
   aiSettingsTable,
   buscarRestaurantePorSlug,
   db,
+  DEFAULT_AI_SYSTEM_PROMPT,
   eq,
   reativarBotParaCliente,
   reativarTodosClientes,
@@ -20,8 +21,12 @@ const aiSettingsSchema = z.object({
   openaiApiKey: z.string().trim().optional(),
   evolutionInstanceName: z.string().trim().optional(),
   evolutionApiKey: z.string().trim().optional(),
-  botName: z.string().trim().min(2),
-  systemPrompt: z.string().trim().min(10),
+  botName: z.string().trim().min(2, "O nome do atendente deve ter no mínimo 2 caracteres"),
+  systemPrompt: z
+    .string()
+    .trim()
+    .min(10, "O prompt deve ter no mínimo 10 caracteres")
+    .default(DEFAULT_AI_SYSTEM_PROMPT),
   isBotActive: z.boolean(),
 });
 
@@ -44,6 +49,10 @@ export const updateAiSettingsAction = async (
     ? getStringValue(formData.get("evolutionApiKey"))
     : (existing?.evolutionApiKey ?? "");
 
+  const rawPrompt = getStringValue(formData.get("systemPrompt"));
+  const systemPrompt =
+    rawPrompt && rawPrompt.length >= 10 ? rawPrompt : DEFAULT_AI_SYSTEM_PROMPT;
+
   const parsedData = aiSettingsSchema.safeParse({
     aiProvider: getStringValue(formData.get("aiProvider")) || "GOOGLE_GEMINI",
     geminiApiKey: getStringValue(formData.get("geminiApiKey")),
@@ -51,15 +60,16 @@ export const updateAiSettingsAction = async (
     openaiApiKey: getStringValue(formData.get("openaiApiKey")),
     evolutionInstanceName,
     evolutionApiKey,
-    botName: getStringValue(formData.get("botName")),
-    systemPrompt: getStringValue(formData.get("systemPrompt")),
+    botName: getStringValue(formData.get("botName")) || "EeyFood Bot",
+    systemPrompt,
     isBotActive: getBooleanValue(formData.get("isBotActive")),
   });
 
   if (!parsedData.success) {
-    throw new Error(
-      "Dados inválidos: " + JSON.stringify(parsedData.error.flatten()),
-    );
+    const errorMsg =
+      parsedData.error.issues.map((i) => i.message).join(", ") ||
+      "Dados inválidos nas configurações de IA.";
+    throw new Error(errorMsg);
   }
 
   const values = {
