@@ -218,6 +218,13 @@
       "when": 1790378300648,
       "tag": "0030_slim_maria_hill",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1790678300000,
+      "tag": "0031_ai_multiprovider_and_handoff",
+      "breakpoints": true
     }
   ]
 }
