@@ -173,18 +173,10 @@ export default async function AiSettingsPage({ params }: AiSettingsPageProps) {
                 href="/whatsapp"
                 className="font-semibold text-emerald-700 underline hover:text-emerald-800"
               >
-                Configurar &gt; WhatsApp
+                Configurações &gt; WhatsApp
               </Link>.
             </p>
           </div>
-
-          <SubmitButton
-            form="ai-settings-form"
-            className="h-12 w-full gap-2 rounded-full bg-slate-900 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
-          >
-            <SaveIcon size={16} />
-            Salvar Configurações
-          </SubmitButton>
         </div>
       </div>
     </form>
