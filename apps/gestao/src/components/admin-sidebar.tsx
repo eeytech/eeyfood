@@ -17,6 +17,7 @@ import {
   MenuIcon,
   MessageSquareIcon,
   MonitorSmartphoneIcon,
+  PaletteIcon,
   PanelLeftCloseIcon,
   PrinterIcon,
   QrCodeIcon,
@@ -318,6 +319,19 @@ const AdminSidebar = ({
           )}
 
           <div className="flex flex-col gap-1">
+            {["SUPER_ADMIN", "ADMIN", "MANAGER"].includes(userRole || "") && (
+              <Link
+                href="/configuracoes?tab=tema"
+                className={cn(
+                  "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors duration-150 text-slate-400 hover:bg-white/5 hover:text-slate-100",
+                )}
+                title="Configurar tema e cores do sistema"
+              >
+                <PaletteIcon size={15} className="shrink-0 text-primary" />
+                <span>Tema & Aparência</span>
+              </Link>
+            )}
+
             {["SUPER_ADMIN", "ADMIN", "MANAGER", "ATTENDANT"].includes(userRole || "") && (
               <Link
                 href="/suporte"

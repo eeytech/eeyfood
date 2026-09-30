@@ -6,8 +6,11 @@ import {
   ArrowRightIcon,
   BadgeDollarSignIcon,
   BikeIcon,
+  CheckCircle2Icon,
+  ChefHatIcon,
   ChevronDownIcon,
   ClockIcon,
+  InboxIcon,
   Loader2Icon,
   MapPinIcon,
   PackageCheckIcon,
@@ -75,40 +78,168 @@ interface PedidoAtualizadoEvento extends NovoPedidoEvento {
 
 type ActiveView = "PRODUCAO" | "LOGISTICA" | "HISTORICO" | "GERAL";
 
-const KANBAN_COLUMNS: Array<{
+export interface KanbanColumnConfig {
   status: OrderStatus;
   title: string;
   description: string;
-}> = [
+  icon: React.ComponentType<{ className?: string; size?: number }>;
+  theme: {
+    headerBg: string;
+    headerBorder: string;
+    headerBorderTop: string;
+    headerTitle: string;
+    iconColor: string;
+    badgeClass: string;
+    dotClass: string;
+    columnBg: string;
+    columnBorder: string;
+    cardBorderLeft: string;
+    cardHoverBorder: string;
+    idBadgeClass: string;
+    advanceButtonClass: string;
+    emptyCard: string;
+    emptyIcon: string;
+  };
+}
+
+const KANBAN_COLUMNS: KanbanColumnConfig[] = [
   {
     status: "PENDING",
     title: "Solicitados",
-    description: "Pedidos recém-criados aguardando triagem.",
+    description: "Pedidos recém-chegados aguardando triagem.",
+    icon: InboxIcon,
+    theme: {
+      headerBg: "bg-gradient-to-br from-amber-50 to-amber-100/60",
+      headerBorder: "border-amber-200",
+      headerBorderTop: "border-t-[4px] border-t-amber-500",
+      headerTitle: "text-amber-950",
+      iconColor: "text-amber-600",
+      badgeClass: "bg-amber-500 text-white font-bold shadow-xs",
+      dotClass: "bg-amber-500 ring-2 ring-amber-200",
+      columnBg: "bg-amber-50/20",
+      columnBorder: "border-amber-200/60",
+      cardBorderLeft: "border-l-[4px] border-l-amber-500",
+      cardHoverBorder: "hover:border-amber-300 hover:shadow-md",
+      idBadgeClass: "bg-amber-100/90 text-amber-900 border border-amber-300/80 font-mono font-bold",
+      advanceButtonClass: "bg-amber-600 hover:bg-amber-700 text-white shadow-xs",
+      emptyCard: "border-amber-200/80 bg-amber-50/40 text-amber-800",
+      emptyIcon: "text-amber-500",
+    },
   },
   {
     status: "IN_PREPARATION",
     title: "Em produção",
-    description: "Pedidos em preparo na cozinha ou no balcão.",
+    description: "Pedidos em preparo na cozinha ou montagem.",
+    icon: ChefHatIcon,
+    theme: {
+      headerBg: "bg-gradient-to-br from-blue-50 to-blue-100/60",
+      headerBorder: "border-blue-200",
+      headerBorderTop: "border-t-[4px] border-t-blue-500",
+      headerTitle: "text-blue-950",
+      iconColor: "text-blue-600",
+      badgeClass: "bg-blue-600 text-white font-bold shadow-xs",
+      dotClass: "bg-blue-500 ring-2 ring-blue-200",
+      columnBg: "bg-blue-50/20",
+      columnBorder: "border-blue-200/60",
+      cardBorderLeft: "border-l-[4px] border-l-blue-500",
+      cardHoverBorder: "hover:border-blue-300 hover:shadow-md",
+      idBadgeClass: "bg-blue-100/90 text-blue-900 border border-blue-300/80 font-mono font-bold",
+      advanceButtonClass: "bg-blue-600 hover:bg-blue-700 text-white shadow-xs",
+      emptyCard: "border-blue-200/80 bg-blue-50/40 text-blue-800",
+      emptyIcon: "text-blue-500",
+    },
   },
   {
     status: "READY_FOR_PICKUP",
     title: "Prontos",
-    description: "Pedidos finalizados e aguardando retirada.",
+    description: "Finalizados, aguardando retirada ou expedição.",
+    icon: PackageCheckIcon,
+    theme: {
+      headerBg: "bg-gradient-to-br from-teal-50 to-teal-100/60",
+      headerBorder: "border-teal-200",
+      headerBorderTop: "border-t-[4px] border-t-teal-500",
+      headerTitle: "text-teal-950",
+      iconColor: "text-teal-600",
+      badgeClass: "bg-teal-600 text-white font-bold shadow-xs",
+      dotClass: "bg-teal-500 ring-2 ring-teal-200",
+      columnBg: "bg-teal-50/20",
+      columnBorder: "border-teal-200/60",
+      cardBorderLeft: "border-l-[4px] border-l-teal-500",
+      cardHoverBorder: "hover:border-teal-300 hover:shadow-md",
+      idBadgeClass: "bg-teal-100/90 text-teal-900 border border-teal-300/80 font-mono font-bold",
+      advanceButtonClass: "bg-teal-600 hover:bg-teal-700 text-white shadow-xs",
+      emptyCard: "border-teal-200/80 bg-teal-50/40 text-teal-800",
+      emptyIcon: "text-teal-500",
+    },
   },
   {
     status: "OUT_FOR_DELIVERY",
     title: "Em entrega",
-    description: "Pedidos que já saíram para entrega.",
+    description: "Despachados em rota com o entregador.",
+    icon: BikeIcon,
+    theme: {
+      headerBg: "bg-gradient-to-br from-purple-50 to-purple-100/60",
+      headerBorder: "border-purple-200",
+      headerBorderTop: "border-t-[4px] border-t-purple-500",
+      headerTitle: "text-purple-950",
+      iconColor: "text-purple-600",
+      badgeClass: "bg-purple-600 text-white font-bold shadow-xs",
+      dotClass: "bg-purple-500 ring-2 ring-purple-200",
+      columnBg: "bg-purple-50/20",
+      columnBorder: "border-purple-200/60",
+      cardBorderLeft: "border-l-[4px] border-l-purple-500",
+      cardHoverBorder: "hover:border-purple-300 hover:shadow-md",
+      idBadgeClass: "bg-purple-100/90 text-purple-900 border border-purple-300/80 font-mono font-bold",
+      advanceButtonClass: "bg-purple-600 hover:bg-purple-700 text-white shadow-xs",
+      emptyCard: "border-purple-200/80 bg-purple-50/40 text-purple-800",
+      emptyIcon: "text-purple-500",
+    },
   },
   {
     status: "FINISHED",
     title: "Finalizados",
-    description: "Pedidos concluídos com sucesso.",
+    description: "Pedidos concluídos e entregues com sucesso.",
+    icon: CheckCircle2Icon,
+    theme: {
+      headerBg: "bg-gradient-to-br from-emerald-50 to-emerald-100/60",
+      headerBorder: "border-emerald-200",
+      headerBorderTop: "border-t-[4px] border-t-emerald-500",
+      headerTitle: "text-emerald-950",
+      iconColor: "text-emerald-600",
+      badgeClass: "bg-emerald-600 text-white font-bold shadow-xs",
+      dotClass: "bg-emerald-500 ring-2 ring-emerald-200",
+      columnBg: "bg-emerald-50/20",
+      columnBorder: "border-emerald-200/60",
+      cardBorderLeft: "border-l-[4px] border-l-emerald-500",
+      cardHoverBorder: "hover:border-emerald-300 hover:shadow-md",
+      idBadgeClass: "bg-emerald-100/90 text-emerald-900 border border-emerald-300/80 font-mono font-bold",
+      advanceButtonClass: "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs",
+      emptyCard: "border-emerald-200/80 bg-emerald-50/40 text-emerald-800",
+      emptyIcon: "text-emerald-500",
+    },
   },
   {
     status: "CANCELLED",
     title: "Cancelados",
-    description: "Pedidos interrompidos ou estornados.",
+    description: "Pedidos interrompidos ou cancelados.",
+    icon: XCircleIcon,
+    theme: {
+      headerBg: "bg-gradient-to-br from-rose-50 to-rose-100/60",
+      headerBorder: "border-rose-200",
+      headerBorderTop: "border-t-[4px] border-t-rose-500",
+      headerTitle: "text-rose-950",
+      iconColor: "text-rose-600",
+      badgeClass: "bg-rose-600 text-white font-bold shadow-xs",
+      dotClass: "bg-rose-500 ring-2 ring-rose-200",
+      columnBg: "bg-rose-50/20",
+      columnBorder: "border-rose-200/60",
+      cardBorderLeft: "border-l-[4px] border-l-rose-500",
+      cardHoverBorder: "hover:border-rose-300 hover:shadow-md",
+      idBadgeClass: "bg-rose-100/90 text-rose-900 border border-rose-300/80 font-mono font-bold",
+      advanceButtonClass: "bg-rose-600 hover:bg-rose-700 text-white shadow-xs",
+      emptyCard: "border-rose-200/80 bg-rose-50/40 text-rose-800",
+      emptyIcon: "text-rose-500",
+    },
   },
 ];
 
@@ -228,6 +359,18 @@ const getPreviousStatus = (order: PedidoRecebimento): OrderStatus | null => {
   }
 
   return null;
+};
+
+const getNextStatusLabel = (order: PedidoRecebimento): string => {
+  if (order.status === "PENDING") return "Iniciar preparo";
+  if (order.status === "IN_PREPARATION") {
+    return order.consumptionMethod === "DELIVERY"
+      ? "Despachar"
+      : "Marcar pronto";
+  }
+  if (order.status === "READY_FOR_PICKUP") return "Concluir pedido";
+  if (order.status === "OUT_FOR_DELIVERY") return "Concluir entrega";
+  return "Avançar";
 };
 
 const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
@@ -925,6 +1068,7 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
             )}
           >
             {activeColumns.map((column) => {
+              const ColumnIcon = column.icon;
               const ordersByColumn = filteredOrders
                 .filter((order) => order.status === column.status)
                 .sort(
@@ -933,26 +1077,69 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                 );
 
               return (
-                <div key={column.status} className="flex h-full flex-col gap-3">
-                  <Card className="border-white/80 bg-slate-50/90">
-                    <CardHeader className="space-y-1 py-2.5 px-3.5">
+                <div
+                  key={column.status}
+                  className={cn(
+                    "flex h-full flex-col gap-3 rounded-2xl p-2.5 transition-colors border",
+                    column.theme.columnBg,
+                    column.theme.columnBorder,
+                  )}
+                >
+                  <Card
+                    className={cn(
+                      "overflow-hidden shadow-xs border transition-all",
+                      column.theme.headerBorderTop,
+                      column.theme.headerBorder,
+                      column.theme.headerBg,
+                    )}
+                  >
+                    <CardHeader className="space-y-0.5 py-2.5 px-3.5">
                       <div className="flex items-center justify-between gap-2">
-                        <CardTitle className="text-sm font-semibold text-slate-800">
-                          {column.title}
-                        </CardTitle>
-                        <Badge variant="secondary" className="px-2 py-0 text-xs font-bold">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className={cn(
+                              "h-2.5 w-2.5 rounded-full shrink-0",
+                              column.theme.dotClass,
+                            )}
+                          />
+                          <CardTitle
+                            className={cn(
+                              "text-sm font-bold tracking-tight truncate",
+                              column.theme.headerTitle,
+                            )}
+                          >
+                            {column.title}
+                          </CardTitle>
+                        </div>
+                        <span
+                          className={cn(
+                            "rounded-full px-2.5 py-0.5 text-xs font-bold transition-transform",
+                            column.theme.badgeClass,
+                          )}
+                        >
                           {String(ordersByColumn.length)}
-                        </Badge>
+                        </span>
                       </div>
+                      <p className="text-[11px] text-slate-500 font-medium line-clamp-1">
+                        {column.description}
+                      </p>
                     </CardHeader>
                   </Card>
 
                   {ordersByColumn.length === 0 ? (
-                    <Card className="border-dashed bg-white/60">
-                      <CardContent className="flex min-h-[110px] flex-col items-center justify-center gap-1.5 p-4 text-center">
-                        <PackageCheckIcon className="text-slate-400" size={18} />
-                        <p className="text-xs font-medium text-slate-600">
-                          {searchQuery ? "Nenhum pedido filtrado" : "Nenhum pedido aqui"}
+                    <Card
+                      className={cn(
+                        "border-dashed bg-white/70 shadow-none",
+                        column.theme.emptyCard,
+                      )}
+                    >
+                      <CardContent className="flex min-h-[120px] flex-col items-center justify-center gap-1.5 p-4 text-center">
+                        <ColumnIcon className={cn("opacity-70", column.theme.emptyIcon)} size={22} />
+                        <p className="text-xs font-semibold text-slate-700">
+                          {searchQuery ? "Nenhum pedido filtrado" : "Nenhum pedido nesta etapa"}
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                          {searchQuery ? "Tente outro termo de busca" : column.description}
                         </p>
                       </CardContent>
                     </Card>
@@ -969,13 +1156,22 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                       return (
                         <Card
                           key={order.id}
-                          className="border border-slate-200/80 bg-white/95 shadow-sm transition-all hover:border-slate-300 hover:shadow"
+                          className={cn(
+                            "border border-slate-200/90 bg-white/95 shadow-xs transition-all duration-200 hover:shadow-md",
+                            column.theme.cardBorderLeft,
+                            column.theme.cardHoverBorder,
+                          )}
                         >
                           <CardHeader className="space-y-2.5 p-3.5 pb-2">
                             {/* Linha 1: ID, Impressão e Status de Pagamento */}
                             <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
                               <div className="flex items-center gap-1">
-                                <span className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-[11px] font-bold text-slate-800">
+                                <span
+                                  className={cn(
+                                    "rounded-md px-2 py-0.5 font-mono text-[11px] font-bold shadow-2xs",
+                                    column.theme.idBadgeClass,
+                                  )}
+                                >
                                   #{String(order.id)}
                                 </span>
                                 <Button
@@ -1185,7 +1381,10 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                                 {nextStatus ? (
                                   <Button
                                     size="sm"
-                                    className="h-8 flex-1 text-xs px-2 font-semibold"
+                                    className={cn(
+                                      "h-8 flex-1 text-xs px-2 font-semibold shadow-xs transition-all",
+                                      column.theme.advanceButtonClass,
+                                    )}
                                     disabled={isLoading}
                                     onClick={() =>
                                       handleOrderPatch(order.id, {
@@ -1194,11 +1393,7 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                                     }
                                   >
                                     <ArrowRightIcon size={12} className="mr-1 shrink-0" />
-                                    <span>
-                                      {nextStatus === "OUT_FOR_DELIVERY"
-                                        ? "Despachar"
-                                        : "Avançar"}
-                                    </span>
+                                    <span>{getNextStatusLabel(order)}</span>
                                   </Button>
                                 ) : null}
 

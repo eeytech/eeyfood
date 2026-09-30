@@ -1,6 +1,7 @@
 import {
   CheckCircle2Icon,
   ClockIcon,
+  PaletteIcon,
   PizzaIcon,
   Settings2Icon,
   ShoppingBagIcon,
@@ -22,13 +23,27 @@ import {
 import { RestaurantDetailsForm } from "./restaurant-details-form";
 import { RestaurantFeaturesForm } from "./restaurant-features-form";
 import { RestaurantHoursSchedulingForm } from "./restaurant-hours-scheduling-form";
+import { ThemeSettings } from "./theme-settings";
 
 interface ConfiguracoesPageProps {
   params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ tab?: string }>;
 }
 
-const ConfiguracoesPage = async ({ params }: ConfiguracoesPageProps) => {
+const ConfiguracoesPage = async ({
+  params,
+  searchParams,
+}: ConfiguracoesPageProps) => {
   const { slug } = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const defaultTab =
+    resolvedSearchParams?.tab &&
+    ["estabelecimento", "modulos", "funcionamento", "tema"].includes(
+      resolvedSearchParams.tab,
+    )
+      ? resolvedSearchParams.tab
+      : "estabelecimento";
+
   const [config, aiSettings] = await Promise.all([
     buscarConfiguracoesRestaurante(slug),
     buscarAiSettingsPorSlug(slug),
@@ -163,7 +178,7 @@ const ConfiguracoesPage = async ({ params }: ConfiguracoesPageProps) => {
       </div>
 
       {/* ── Tabs Navigation ──────────────────────────────── */}
-      <Tabs defaultValue="estabelecimento">
+      <Tabs defaultValue={defaultTab}>
         <TabsList className="h-auto flex-wrap gap-1.5 rounded-2xl border border-slate-200/80 bg-slate-100/90 p-1.5 shadow-xs">
           <TabsTrigger
             value="estabelecimento"
@@ -185,6 +200,13 @@ const ConfiguracoesPage = async ({ params }: ConfiguracoesPageProps) => {
           >
             <Settings2Icon size={15} className="mr-1.5" />
             Horários e Agendamento
+          </TabsTrigger>
+          <TabsTrigger
+            value="tema"
+            className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 transition data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-xs"
+          >
+            <PaletteIcon size={15} className="mr-1.5" />
+            Aparência e Tema
           </TabsTrigger>
         </TabsList>
 
@@ -238,6 +260,10 @@ const ConfiguracoesPage = async ({ params }: ConfiguracoesPageProps) => {
               schedulingCustomEndTime: restaurant.schedulingCustomEndTime,
             }}
           />
+        </TabsContent>
+
+        <TabsContent value="tema" className="mt-5">
+          <ThemeSettings />
         </TabsContent>
       </Tabs>
     </main>
