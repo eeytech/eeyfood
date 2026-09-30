@@ -55,8 +55,11 @@ export async function criarUsuarioAction(
     return { error: "Todos os campos obrigatórios devem ser preenchidos." };
   }
 
-  if (password.length < 6) {
-    return { error: "A senha deve ter pelo menos 6 caracteres." };
+  if (password.length < 8 || !/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+    return {
+      error:
+        "A senha deve ter no mínimo 8 caracteres e conter pelo menos uma letra e um número.",
+    };
   }
 
   if (role === "SUPER_ADMIN") {
@@ -143,8 +146,14 @@ export async function atualizarUsuarioAction(params: {
     return { error: "O nome do usuário não pode ficar vazio." };
   }
 
-  if (password && password.trim().length < 6) {
-    return { error: "A nova senha deve ter pelo menos 6 caracteres." };
+  if (password && password.trim()) {
+    const pwd = password.trim();
+    if (pwd.length < 8 || !/[a-zA-Z]/.test(pwd) || !/[0-9]/.test(pwd)) {
+      return {
+        error:
+          "A nova senha deve ter no mínimo 8 caracteres e conter pelo menos uma letra e um número.",
+      };
+    }
   }
 
   try {

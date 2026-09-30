@@ -19,7 +19,6 @@ import {
   Settings2Icon,
   Trash2Icon,
   UserCheckIcon,
-  UserPlusIcon,
   UserXIcon,
   UtensilsIcon,
   XIcon,
@@ -101,6 +100,26 @@ const formatDate = (dateStr: string) => {
   }
 };
 
+const formatPhone = (v: string) => {
+  const d = v.replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 10) {
+    return d
+      .replace(/(\d{2})(\d)/, "($1) $2")
+      .replace(/(\d{4})(\d{1,4})$/, "$1-$2");
+  }
+  return d
+    .replace(/(\d{2})(\d)/, "($1) $2")
+    .replace(/(\d{5})(\d{1,4})$/, "$1-$2");
+};
+
+const formatCpf = (v: string) => {
+  const d = v.replace(/\D/g, "").slice(0, 11);
+  return d
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+};
+
 export function GarconsTab({
   slug,
   garcons,
@@ -114,6 +133,8 @@ export function GarconsTab({
   // Dialog de Criar/Editar Garçom
   const [garcomDialogOpen, setGarcomDialogOpen] = useState(false);
   const [editingGarcom, setEditingGarcom] = useState<GarcomMetricas | null>(null);
+  const [garcomPhone, setGarcomPhone] = useState("");
+  const [garcomCpf, setGarcomCpf] = useState("");
 
   // Dialog de Regra de Serviço
   const [ruleDialogOpen, setRuleDialogOpen] = useState(false);
@@ -127,18 +148,28 @@ export function GarconsTab({
   const [closingNotes, setClosingNotes] = useState<string>("");
   const [createFinancialExpense, setCreateFinancialExpense] = useState(true);
 
-  // Filtros e busca
+  // Filtros e busca da tabela de garçons
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
-  // Paginação
+  // Paginação da tabela de garçons
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  // Filtros e busca de Fechamentos / Histórico
+  const [fechamentosSearchQuery, setFechamentosSearchQuery] = useState("");
+  const [fechamentosWaiterFilter, setFechamentosWaiterFilter] = useState("ALL");
+
+  // Paginação de Fechamentos / Histórico
+  const [fechamentosCurrentPage, setFechamentosCurrentPage] = useState(1);
+  const [fechamentosPageSize, setFechamentosPageSize] = useState(10);
 
   // Sincronização com botão do cabeçalho da página
   useEffect(() => {
     if (isNewGarcomOpen) {
       setEditingGarcom(null);
+      setGarcomPhone("");
+      setGarcomCpf("");
       setGarcomDialogOpen(true);
       onNewGarcomOpenChange?.(false);
     }
@@ -152,7 +183,7 @@ export function GarconsTab({
   const totalGorjetasPagas = garcons.reduce((acc, g) => acc + g.totalTipsPaid, 0);
   const totalPendente = garcons.reduce((acc, g) => acc + g.pendingBalance, 0);
 
-  // Filtragem
+  // Filtragem de garçons
   const filteredGarcons = useMemo(() => {
     return garcons.filter((g) => {
       // Busca por nome, telefone ou CPF
@@ -172,7 +203,7 @@ export function GarconsTab({
     });
   }, [garcons, searchQuery, statusFilter]);
 
-  // Paginação calculada
+  // Paginação de garçons
   const totalPages = Math.max(1, Math.ceil(filteredGarcons.length / pageSize));
   const validCurrentPage = Math.min(currentPage, totalPages);
   const startIndex = (validCurrentPage - 1) * pageSize;
@@ -187,15 +218,61 @@ export function GarconsTab({
     setCurrentPage(1);
   };
 
+  // Filtragem de Fechamentos
+  const filteredFechamentos = useMemo(() => {
+    return fechamentos.filter((f) => {
+      if (fechamentosSearchQuery.trim()) {
+        const query = fechamentosSearchQuery.toLowerCase().trim();
+        const matchesName = f.waiterName.toLowerCase().includes(query);
+        const matchesNotes = f.notes ? f.notes.toLowerCase().includes(query) : false;
+        const matchesRef = f.referenceDate ? f.referenceDate.toLowerCase().includes(query) : false;
+        if (!matchesName && !matchesNotes && !matchesRef) return false;
+      }
+
+      if (fechamentosWaiterFilter !== "ALL" && f.waiterId !== fechamentosWaiterFilter) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [fechamentos, fechamentosSearchQuery, fechamentosWaiterFilter]);
+
+  // Paginação de Fechamentos
+  const totalFechamentos = fechamentos.length;
+  const fechamentosTotalPages = Math.max(
+    1,
+    Math.ceil(filteredFechamentos.length / fechamentosPageSize),
+  );
+  const validFechamentosPage = Math.min(fechamentosCurrentPage, fechamentosTotalPages);
+  const startFechamentosIndex = (validFechamentosPage - 1) * fechamentosPageSize;
+  const endFechamentosIndex = startFechamentosIndex + fechamentosPageSize;
+  const paginatedFechamentos = filteredFechamentos.slice(
+    startFechamentosIndex,
+    endFechamentosIndex,
+  );
+
+  const isFilteringFechamentos =
+    fechamentosSearchQuery.trim() !== "" || fechamentosWaiterFilter !== "ALL";
+
+  const handleClearFechamentosFilters = () => {
+    setFechamentosSearchQuery("");
+    setFechamentosWaiterFilter("ALL");
+    setFechamentosCurrentPage(1);
+  };
+
   // Abrir Modal para Novo Garçom
   const handleOpenNewGarcom = () => {
     setEditingGarcom(null);
+    setGarcomPhone("");
+    setGarcomCpf("");
     setGarcomDialogOpen(true);
   };
 
   // Abrir Modal para Editar Garçom
   const handleOpenEditGarcom = (g: GarcomMetricas) => {
     setEditingGarcom(g);
+    setGarcomPhone(formatPhone(g.waiter.phone || ""));
+    setGarcomCpf(formatCpf(g.waiter.cpf || ""));
     setGarcomDialogOpen(true);
   };
 
@@ -206,6 +283,8 @@ export function GarconsTab({
     if (editingGarcom) {
       formData.set("id", editingGarcom.waiter.id);
     }
+    formData.set("phone", garcomPhone);
+    formData.set("cpf", garcomCpf);
 
     startTransition(async () => {
       const res = await criarOuEditarGarcomAction(slug, formData);
@@ -406,7 +485,7 @@ export function GarconsTab({
         </Button>
       </div>
 
-      {/* ── Filters Card ────────────────────────────────── */}
+      {/* ── Filters Card (Garçons) ──────────────────────── */}
       <Card className="border-slate-200/80 bg-white shadow-sm">
         <CardContent className="p-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -489,7 +568,7 @@ export function GarconsTab({
         </CardContent>
       </Card>
 
-      {/* ── Table & List Container ───────────────────────── */}
+      {/* ── Table & List Container (Garçons) ─────────────── */}
       <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
         {filteredGarcons.length === 0 ? (
           <div className="flex min-h-[260px] flex-col items-center justify-center p-8 text-center">
@@ -770,7 +849,7 @@ export function GarconsTab({
               })}
             </div>
 
-            {/* Pagination Controls */}
+            {/* Pagination Controls (Garçons) */}
             <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               {/* Items per page selector */}
               <div className="flex items-center gap-2 text-xs text-slate-500">
@@ -852,63 +931,259 @@ export function GarconsTab({
 
       {/* ── Histórico de Fechamentos de Gorjetas ───────────────────────── */}
       <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
-        <CardHeader className="p-4 sm:p-5 border-b border-slate-100">
-          <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-900">
-            <ReceiptIcon size={18} className="text-purple-600" />
-            Histórico de Repasses de Gorjetas e Comissões
-          </CardTitle>
-          <CardDescription className="text-xs text-slate-500">
-            Registro dos pagamentos de comissões e taxas de serviço efetuados para a equipe.
-          </CardDescription>
+        <CardHeader className="p-4 sm:p-5 border-b border-slate-100 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-900">
+              <ReceiptIcon size={18} className="text-purple-600" />
+              Histórico de Repasses de Gorjetas e Comissões
+            </CardTitle>
+            <CardDescription className="text-xs text-slate-500">
+              Registro dos pagamentos de comissões e taxas de serviço efetuados para a equipe.
+            </CardDescription>
+          </div>
+
+          <div className="text-xs text-slate-500">
+            Total apurado: <strong className="font-semibold text-slate-900">{formatCurrency(totalGorjetasPagas)}</strong>
+          </div>
         </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-slate-100 hover:bg-transparent">
-                <TableHead className="text-xs font-semibold text-slate-600">Data / Hora</TableHead>
-                <TableHead className="text-xs font-semibold text-slate-600">Garçom</TableHead>
-                <TableHead className="text-xs font-semibold text-slate-600">Competência</TableHead>
-                <TableHead className="text-right text-xs font-semibold text-slate-600">Valor Repassado</TableHead>
-                <TableHead className="text-xs font-semibold text-slate-600">Observações</TableHead>
-                <TableHead className="text-center text-xs font-semibold text-slate-600">Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {fechamentos.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center text-sm text-slate-500">
-                    Nenhum fechamento de comissão registrado até o momento.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                fechamentos.map((f) => (
-                  <TableRow key={f.id} className="border-slate-100 hover:bg-slate-50/50">
-                    <TableCell className="text-xs text-slate-700 font-medium">
-                      {formatDate(f.createdAt)}
-                    </TableCell>
-                    <TableCell className="text-xs font-bold text-slate-900">
-                      {f.waiterName}
-                    </TableCell>
-                    <TableCell className="text-xs text-slate-500">
-                      {f.referenceDate}
-                    </TableCell>
-                    <TableCell className="text-right text-xs font-bold text-emerald-700">
-                      {formatCurrency(f.amount)}
-                    </TableCell>
-                    <TableCell className="text-xs text-slate-500 truncate max-w-[250px]">
-                      {f.notes || "—"}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge className="bg-emerald-100 text-[10px] font-semibold text-emerald-800 hover:bg-emerald-100 border-none">
-                        <CheckCircle2Icon size={11} className="mr-1 text-emerald-600" />
-                        Pago
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))
+
+        {/* ── Filtros da Tabela de Fechamentos ── */}
+        <div className="border-b border-slate-100 bg-slate-50/50 p-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            {/* Campo de Busca */}
+            <div className="relative flex-1">
+              <SearchIcon
+                size={16}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+              <Input
+                placeholder="Buscar por garçom, observação ou competência..."
+                value={fechamentosSearchQuery}
+                onChange={(e) => {
+                  setFechamentosSearchQuery(e.target.value);
+                  setFechamentosCurrentPage(1);
+                }}
+                className="h-10 rounded-xl border-slate-200 bg-white pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white"
+              />
+              {fechamentosSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFechamentosSearchQuery("");
+                    setFechamentosCurrentPage(1);
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  <XIcon size={14} />
+                </button>
               )}
-            </TableBody>
-          </Table>
+            </div>
+
+            {/* Select: Garçom */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="w-full sm:w-48">
+                <Select
+                  value={fechamentosWaiterFilter}
+                  onValueChange={(val) => {
+                    setFechamentosWaiterFilter(val);
+                    setFechamentosCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs font-medium text-slate-700">
+                    <SelectValue placeholder="Filtrar por garçom..." />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+                    <SelectItem value="ALL">Todos os garçons</SelectItem>
+                    {garcons.map((g) => (
+                      <SelectItem key={g.waiter.id} value={g.waiter.id}>
+                        {g.waiter.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {isFilteringFechamentos && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearFechamentosFilters}
+                  className="h-10 gap-1.5 rounded-xl px-3 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                >
+                  <FilterXIcon size={14} />
+                  Limpar
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Contador de resultados */}
+          <div className="mt-3 flex items-center justify-between border-t border-slate-200/60 pt-3 text-xs text-slate-500">
+            <span>
+              Exibindo{" "}
+              <strong className="font-semibold text-slate-900">
+                {filteredFechamentos.length}
+              </strong>{" "}
+              de {totalFechamentos} repasse{totalFechamentos !== 1 ? "s" : ""}
+            </span>
+            {isFilteringFechamentos && (
+              <span className="text-[11px] text-amber-600 font-medium">
+                Filtros aplicados
+              </span>
+            )}
+          </div>
+        </div>
+
+        <CardContent className="p-0">
+          {filteredFechamentos.length === 0 ? (
+            <div className="flex min-h-[180px] flex-col items-center justify-center p-8 text-center">
+              <div className="rounded-full bg-slate-100 p-3 text-slate-400">
+                <ReceiptIcon size={24} />
+              </div>
+              <h3 className="mt-2 text-sm font-semibold text-slate-900">
+                {isFilteringFechamentos
+                  ? "Nenhum repasse encontrado para os filtros selecionados"
+                  : "Nenhum repasse registrado até o momento"}
+              </h3>
+              <p className="mt-1 max-w-sm text-xs text-slate-500">
+                {isFilteringFechamentos
+                  ? "Tente ajustar ou limpar os filtros de busca para ver outros registros."
+                  : "Quando houver fechamento e repasse de comissões, eles aparecerão detalhados aqui."}
+              </p>
+              {isFilteringFechamentos && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClearFechamentosFilters}
+                  className="mt-3 gap-1.5 rounded-full border-slate-200 text-xs"
+                >
+                  <FilterXIcon size={14} />
+                  Limpar filtros
+                </Button>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-slate-100 hover:bg-transparent">
+                      <TableHead className="text-xs font-semibold text-slate-600">Data / Hora</TableHead>
+                      <TableHead className="text-xs font-semibold text-slate-600">Garçom</TableHead>
+                      <TableHead className="text-xs font-semibold text-slate-600">Competência</TableHead>
+                      <TableHead className="text-right text-xs font-semibold text-slate-600">Valor Repassado</TableHead>
+                      <TableHead className="text-xs font-semibold text-slate-600">Observações</TableHead>
+                      <TableHead className="text-center text-xs font-semibold text-slate-600">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedFechamentos.map((f) => (
+                      <TableRow key={f.id} className="border-slate-100 hover:bg-slate-50/50">
+                        <TableCell className="text-xs text-slate-700 font-medium">
+                          {formatDate(f.createdAt)}
+                        </TableCell>
+                        <TableCell className="text-xs font-bold text-slate-900">
+                          {f.waiterName}
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-500">
+                          {f.referenceDate}
+                        </TableCell>
+                        <TableCell className="text-right text-xs font-bold text-emerald-700">
+                          {formatCurrency(f.amount)}
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-500 truncate max-w-[250px]">
+                          {f.notes || "—"}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge className="bg-emerald-100 text-[10px] font-semibold text-emerald-800 hover:bg-emerald-100 border-none">
+                            <CheckCircle2Icon size={11} className="mr-1 text-emerald-600" />
+                            Pago
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Paginação de Fechamentos */}
+              <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <span>Exibir</span>
+                  <Select
+                    value={String(fechamentosPageSize)}
+                    onValueChange={(val) => {
+                      setFechamentosPageSize(Number(val));
+                      setFechamentosCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="h-8 w-16 rounded-lg border-slate-200 bg-white text-xs font-medium text-slate-700">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-lg border-slate-200 bg-white">
+                      <SelectItem value="5">5</SelectItem>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="20">20</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span>repasses por página</span>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 sm:justify-end">
+                  <span className="text-xs text-slate-500">
+                    Página <strong className="font-semibold text-slate-900">{validFechamentosPage}</strong> de{" "}
+                    <strong className="font-semibold text-slate-900">{fechamentosTotalPages}</strong>
+                  </span>
+
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      disabled={validFechamentosPage <= 1}
+                      onClick={() => setFechamentosCurrentPage(1)}
+                      className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                      title="Primeira página"
+                    >
+                      <ChevronsLeftIcon size={14} />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      disabled={validFechamentosPage <= 1}
+                      onClick={() => setFechamentosCurrentPage((p) => Math.max(1, p - 1))}
+                      className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                      title="Página anterior"
+                    >
+                      <ChevronLeftIcon size={14} />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      disabled={validFechamentosPage >= fechamentosTotalPages}
+                      onClick={() =>
+                        setFechamentosCurrentPage((p) => Math.min(fechamentosTotalPages, p + 1))
+                      }
+                      className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                      title="Próxima página"
+                    >
+                      <ChevronRightIcon size={14} />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      disabled={validFechamentosPage >= fechamentosTotalPages}
+                      onClick={() => setFechamentosCurrentPage(fechamentosTotalPages)}
+                      className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                      title="Última página"
+                    >
+                      <ChevronsRightIcon size={14} />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -918,7 +1193,7 @@ export function GarconsTab({
           <form onSubmit={handleGarcomSubmit}>
             <DialogHeader>
               <DialogTitle className="text-lg font-bold text-slate-900">
-                {editingGarcom ? "Editar Garçom" : "Novo Garçom do Salão"}
+                {editingGarcom ? "Editar Garçom" : "Cadastrar Novo Garçom do Salão"}
               </DialogTitle>
               <DialogDescription className="text-xs text-slate-500">
                 Cadastre o profissional que atenderá mesas no salão e registrará pedidos via Comanda Mobile.
@@ -928,7 +1203,7 @@ export function GarconsTab({
             <div className="space-y-4 py-4">
               <div className="space-y-1.5">
                 <Label htmlFor="name" className="text-xs font-semibold text-slate-700">
-                  Nome Completo / Apelido no Salão *
+                  Nome Completo / Apelido no Salão
                 </Label>
                 <Input
                   id="name"
@@ -948,7 +1223,8 @@ export function GarconsTab({
                   <Input
                     id="phone"
                     name="phone"
-                    defaultValue={editingGarcom?.waiter.phone || ""}
+                    value={garcomPhone}
+                    onChange={(e) => setGarcomPhone(formatPhone(e.target.value))}
                     placeholder="(11) 98765-4321"
                     className="h-9 text-xs"
                   />
@@ -961,7 +1237,8 @@ export function GarconsTab({
                   <Input
                     id="cpf"
                     name="cpf"
-                    defaultValue={editingGarcom?.waiter.cpf || ""}
+                    value={garcomCpf}
+                    onChange={(e) => setGarcomCpf(formatCpf(e.target.value))}
                     placeholder="000.000.000-00"
                     className="h-9 text-xs"
                   />
@@ -1165,7 +1442,7 @@ export function GarconsTab({
 
               <div className="space-y-1.5">
                 <Label htmlFor="closingAmount" className="text-xs font-semibold text-slate-700">
-                  Valor a Pagar / Repassar (R$) *
+                  Valor a Pagar / Repassar (R$)
                 </Label>
                 <Input
                   id="closingAmount"

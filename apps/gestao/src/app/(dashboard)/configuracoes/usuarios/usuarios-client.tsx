@@ -282,6 +282,14 @@ export function UsuariosClient({
     formData.set("role", selectedRole);
     formData.append("restaurantSlug", slug);
 
+    const password = formData.get("password")?.toString() || "";
+    if (password.length < 8 || !/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+      setCreateError(
+        "A senha deve ter no mínimo 8 caracteres e conter pelo menos uma letra e um número.",
+      );
+      return;
+    }
+
     startTransition(async () => {
       const result = await criarUsuarioAction(null, formData);
       if (result.error) {
@@ -307,6 +315,16 @@ export function UsuariosClient({
     e.preventDefault();
     if (!editingUser) return;
     setEditError(null);
+
+    if (editPassword.trim()) {
+      const pwd = editPassword.trim();
+      if (pwd.length < 8 || !/[a-zA-Z]/.test(pwd) || !/[0-9]/.test(pwd)) {
+        setEditError(
+          "A nova senha deve ter no mínimo 8 caracteres e conter pelo menos uma letra e um número.",
+        );
+        return;
+      }
+    }
 
     startTransition(async () => {
       const result = await atualizarUsuarioAction({
@@ -1084,10 +1102,13 @@ export function UsuariosClient({
                 name="password"
                 type="password"
                 required
-                minLength={6}
-                placeholder="Mínimo de 6 caracteres"
+                minLength={8}
+                placeholder="Mínimo de 8 caracteres (letras e números)"
                 className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400"
               />
+              <p className="text-[11px] text-slate-500">
+                A senha deve ter no mínimo 8 caracteres e conter pelo menos uma letra e um número.
+              </p>
             </div>
 
             {/* Shadcn UI Select for Role */}
@@ -1266,12 +1287,15 @@ export function UsuariosClient({
               <Input
                 id="edit-password"
                 type="password"
-                minLength={6}
+                minLength={8}
                 value={editPassword}
                 onChange={(e) => setEditPassword(e.target.value)}
                 placeholder="Deixe em branco para manter a senha atual"
                 className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400"
               />
+              <p className="text-[11px] text-slate-500">
+                Se informada, a nova senha deve ter no mínimo 8 caracteres com letra e número.
+              </p>
             </div>
 
             <DialogFooter className="gap-2 pt-2">
