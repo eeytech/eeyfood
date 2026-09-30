@@ -18,6 +18,7 @@ import {
 } from "../actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import {
   Dialog,
   DialogContent,
@@ -162,6 +163,7 @@ function ContaForm({
 export function ContasBancariasClient({ slug, contas }: ContasBancariasClientProps) {
   const [createOpen, setCreateOpen] = useState(false);
   const [editConta, setEditConta] = useState<BankAccount | null>(null);
+  const [deletingConta, setDeletingConta] = useState<{ id: string; name: string } | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
@@ -193,13 +195,13 @@ export function ContasBancariasClient({ slug, contas }: ContasBancariasClientPro
     });
   };
 
-  const handleDelete = (contaId: string, name: string) => {
-    if (!confirm(`Deseja realmente excluir a conta "${name}"? A ação não pode ser desfeita.`))
-      return;
+  const handleDeleteConfirm = () => {
+    if (!deletingConta) return;
     startTransition(async () => {
       try {
-        await excluirContaBancariaAction(slug, contaId);
-        toast.success(`Conta "${name}" excluída.`);
+        await excluirContaBancariaAction(slug, deletingConta.id);
+        toast.success(`Conta "${deletingConta.name}" excluída.`);
+        setDeletingConta(null);
       } catch {
         toast.error("Erro ao excluir conta bancária.");
       }
@@ -465,7 +467,7 @@ export function ContasBancariasClient({ slug, contas }: ContasBancariasClientPro
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 rounded-full text-slate-400 hover:bg-rose-50 hover:text-rose-700"
-                      onClick={() => handleDelete(conta.id, conta.name)}
+                      onClick={() => setDeletingConta({ id: conta.id, name: conta.name })}
                       disabled={isPending}
                       title="Excluir conta"
                     >
@@ -478,6 +480,27 @@ export function ContasBancariasClient({ slug, contas }: ContasBancariasClientPro
           ))}
         </div>
       )}
+
+      {/* ── Dialog: Confirmar Exclusão de Conta Bancária ── */}
+      <ConfirmDeleteDialog
+        open={Boolean(deletingConta)}
+        onOpenChange={(open) => {
+          if (!open) setDeletingConta(null);
+        }}
+        title="Excluir conta bancária"
+        description={
+          <>
+            Tem certeza que deseja remover a conta{" "}
+            <strong className="text-slate-900 font-semibold">
+              {deletingConta?.name}
+            </strong>
+            ? Esta ação não pode ser desfeita.
+          </>
+        }
+        confirmLabel="Sim, excluir conta"
+        isPending={isPending}
+        onConfirm={handleDeleteConfirm}
+      />
     </div>
   );
 }

@@ -17,12 +17,18 @@ import {
   TagIcon,
   Trash2Icon,
   TrendingDownIcon,
+  HandCoinsIcon,
+  Loader2Icon,
   TrendingUpIcon,
   XIcon,
 } from "lucide-react";
 import { useCallback, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
+import {
+  fecharGorjetaGarcomAction,
+  type GarcomMetricas,
+} from "@/app/(dashboard)/configuracoes/garcons-actions";
 import {
   createFinancialCategoryAction,
   createTransactionAction,
@@ -33,14 +39,17 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -79,6 +88,7 @@ interface FinanceiroClientProps {
   slug: string;
   transacoes: TransactionWithCategory[];
   categorias: FinancialCategory[];
+  garcons?: GarcomMetricas[];
   receitasPendentes: number;
   despesasPendentes: number;
 }
@@ -124,6 +134,7 @@ export function FinanceiroClient({
   slug,
   transacoes,
   categorias,
+  garcons = [],
   receitasPendentes,
   despesasPendentes,
 }: FinanceiroClientProps) {
@@ -140,6 +151,16 @@ export function FinanceiroClient({
   const [createCategoryOpen, setCreateCategoryOpen] = useState(false);
   const [editTransaction, setEditTransaction] =
     useState<FinancialTransaction | null>(null);
+  const [deletingTransaction, setDeletingTransaction] =
+    useState<{ id: string; description: string } | null>(null);
+
+  // Fechar Gorjetas / Repasse
+  const [closingDialogOpen, setClosingDialogOpen] = useState(false);
+  const [selectedGarcomForClosing, setSelectedGarcomForClosing] =
+    useState<GarcomMetricas | null>(null);
+  const [closingAmount, setClosingAmount] = useState<string>("");
+  const [closingNotes, setClosingNotes] = useState<string>("");
+  const [createFinancialExpense, setCreateFinancialExpense] = useState(true);
 
   const [isPending, startTransition] = useTransition();
 
@@ -206,12 +227,13 @@ export function FinanceiroClient({
   const endIndex = startIndex + pageSize;
   const paginatedItems = currentTabItems.slice(startIndex, endIndex);
 
-  const handleDelete = (transactionId: string, description: string) => {
-    if (!confirm(`Deseja realmente excluir a transação "${description}"?`)) return;
+  const handleDeleteConfirm = () => {
+    if (!deletingTransaction) return;
     startTransition(async () => {
       try {
-        await deleteTransactionAction(slug, transactionId);
-        toast.success(`Transação "${description}" excluída.`);
+        await deleteTransactionAction(slug, deletingTransaction.id);
+        toast.success(`Transação "${deletingTransaction.description}" excluída.`);
+        setDeletingTransaction(null);
       } catch {
         toast.error("Não foi possível excluir a transação.");
       }
@@ -275,6 +297,38 @@ export function FinanceiroClient({
         setCreateCategoryOpen(false);
       } catch {
         toast.error("Erro ao criar categoria.");
+      }
+    });
+  };
+
+  const handleOpenClosing = (g?: GarcomMetricas) => {
+    const target = g || garcons[0] || null;
+    setSelectedGarcomForClosing(target);
+    setClosingAmount(
+      target && target.pendingBalance > 0 ? String(target.pendingBalance) : "",
+    );
+    setClosingNotes("");
+    setCreateFinancialExpense(true);
+    setClosingDialogOpen(true);
+  };
+
+  const handleClosingSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!selectedGarcomForClosing) return;
+
+    const formData = new FormData();
+    formData.set("waiterId", selectedGarcomForClosing.waiter.id);
+    formData.set("amount", closingAmount);
+    formData.set("notes", closingNotes);
+    formData.set("createFinancialExpense", String(createFinancialExpense));
+
+    startTransition(async () => {
+      const res = await fecharGorjetaGarcomAction(slug, formData);
+      if (res.success) {
+        toast.success("Repasse de gorjeta registrado com sucesso!");
+        setClosingDialogOpen(false);
+      } else {
+        toast.error(res.error || "Erro ao registrar repasse.");
       }
     });
   };
@@ -401,6 +455,164 @@ export function FinanceiroClient({
         </DialogContent>
       </Dialog>
 
+      {/* ── Dialog: Fechar Gorjetas / Repasse ────────────────────────────── */}
+      <Dialog open={closingDialogOpen} onOpenChange={setClosingDialogOpen}>
+        <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-[480px]">
+          <form onSubmit={handleClosingSubmit}>
+            <DialogHeader>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-purple-100 text-purple-700">
+                  <HandCoinsIcon size={20} />
+                </div>
+                <div>
+                  <DialogTitle className="font-display text-lg font-bold text-slate-900">
+                    Registrar Repasse de Gorjetas / Comissão
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-slate-500">
+                    Dê baixa nas comissões apuradas para o garçom e registre o lançamento no financeiro.
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+
+            {garcons.length === 0 ? (
+              <div className="py-6 text-center text-xs text-slate-500">
+                Nenhum garçom cadastrado na equipe. Cadastre garçons em Acessos &gt; Garçons e Salão.
+              </div>
+            ) : (
+              <div className="space-y-4 py-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="closingWaiter" className="text-xs font-semibold text-slate-700">
+                    Selecione o Garçom
+                  </Label>
+                  <Select
+                    value={selectedGarcomForClosing?.waiter.id}
+                    onValueChange={(val) => {
+                      const found = garcons.find((g) => g.waiter.id === val) || null;
+                      setSelectedGarcomForClosing(found);
+                      if (found && found.pendingBalance > 0) {
+                        setClosingAmount(String(found.pendingBalance));
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-xs">
+                      <SelectValue placeholder="Selecione o garçom" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {garcons.map((g) => (
+                        <SelectItem key={g.waiter.id} value={g.waiter.id}>
+                          {g.waiter.name} — Saldo pendente: {formatCurrency(g.pendingBalance)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {selectedGarcomForClosing && (
+                  <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-200/80 text-xs space-y-1.5">
+                    <div className="flex justify-between text-slate-600">
+                      <span>
+                        {selectedGarcomForClosing.waiter.commissionPercent > 0
+                          ? `Comissão Apurada (${selectedGarcomForClosing.waiter.commissionPercent}% s/ itens):`
+                          : "Taxa de Serviço Devida:"}
+                      </span>
+                      <span className="font-semibold text-slate-800">
+                        {formatCurrency(
+                          selectedGarcomForClosing.commissionDue ??
+                            (selectedGarcomForClosing.waiter.commissionPercent > 0
+                              ? ((selectedGarcomForClosing.totalSubtotal ??
+                                  selectedGarcomForClosing.totalSales) *
+                                  selectedGarcomForClosing.waiter.commissionPercent) /
+                                100
+                              : selectedGarcomForClosing.totalServiceFee),
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-slate-600">
+                      <span>Já Repassado Anteriormente:</span>
+                      <span className="font-semibold text-slate-700">
+                        {formatCurrency(selectedGarcomForClosing.totalTipsPaid)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-purple-700 font-bold border-t border-slate-200/60 pt-1.5 mt-1">
+                      <span>Saldo Pendente Atual:</span>
+                      <span>{formatCurrency(selectedGarcomForClosing.pendingBalance)}</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="closingAmount" className="text-xs font-semibold text-slate-700">
+                    Valor a Pagar / Repassar (R$)
+                  </Label>
+                  <Input
+                    id="closingAmount"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    required
+                    value={closingAmount}
+                    onChange={(e) => setClosingAmount(e.target.value)}
+                    placeholder="0,00"
+                    className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-xs font-semibold text-slate-900 focus:bg-white"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="closingNotes" className="text-xs font-semibold text-slate-700">
+                    Observações / Comprovante
+                  </Label>
+                  <Input
+                    id="closingNotes"
+                    value={closingNotes}
+                    onChange={(e) => setClosingNotes(e.target.value)}
+                    placeholder="Ex: Pagamento Pix semanal (semana 38)"
+                    className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-xs focus:bg-white"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between rounded-xl border border-slate-200 p-3.5 bg-slate-50/50">
+                  <div className="space-y-0.5">
+                    <Label className="text-xs font-semibold text-slate-800">
+                      Lançar Despesa no Financeiro
+                    </Label>
+                    <p className="text-[11px] text-slate-500">
+                      Registra automaticamente uma saída de caixa em Financeiro &gt; Transações.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={createFinancialExpense}
+                    onCheckedChange={setCreateFinancialExpense}
+                  />
+                </div>
+              </div>
+            )}
+
+            <DialogFooter className="gap-2 sm:gap-0 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setClosingDialogOpen(false)}
+                disabled={isPending}
+                className="h-10 rounded-full text-xs font-semibold"
+              >
+                Cancelar
+              </Button>
+              {garcons.length > 0 && (
+                <Button
+                  type="submit"
+                  disabled={isPending}
+                  className="h-10 gap-1.5 rounded-full bg-purple-600 px-5 text-xs font-semibold text-white shadow-sm hover:bg-purple-700"
+                >
+                  {isPending && <Loader2Icon size={14} className="animate-spin" />}
+                  Confirmar Repasse
+                </Button>
+              )}
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       {/* ── Page Header ─────────────────────────────────── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
@@ -418,6 +630,14 @@ export function FinanceiroClient({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => handleOpenClosing()}
+            className="h-10 gap-1.5 rounded-full border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:text-slate-900"
+          >
+            <HandCoinsIcon size={14} className="text-purple-600" />
+            <span>Fechar Gorjetas / Repasse</span>
+          </Button>
           <Button
             variant="outline"
             onClick={() => setCreateCategoryOpen(true)}
@@ -831,10 +1051,10 @@ export function FinanceiroClient({
                                   <DropdownMenuSeparator className="bg-slate-100" />
                                   <DropdownMenuItem
                                     onClick={() =>
-                                      handleDelete(
-                                        item.transaction.id,
-                                        item.transaction.description,
-                                      )
+                                      setDeletingTransaction({
+                                        id: item.transaction.id,
+                                        description: item.transaction.description,
+                                      })
                                     }
                                     className="gap-2 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-700"
                                   >
@@ -928,10 +1148,10 @@ export function FinanceiroClient({
                               <DropdownMenuSeparator className="bg-slate-100" />
                               <DropdownMenuItem
                                 onClick={() =>
-                                  handleDelete(
-                                    item.transaction.id,
-                                    item.transaction.description,
-                                  )
+                                  setDeletingTransaction({
+                                    id: item.transaction.id,
+                                    description: item.transaction.description,
+                                  })
                                 }
                                 className="gap-2 rounded-lg text-xs font-medium text-red-600"
                               >
@@ -1057,6 +1277,27 @@ export function FinanceiroClient({
           </TabsContent>
         </Tabs>
       </Card>
+
+      {/* ── Dialog: Confirmar Exclusão de Transação ───────── */}
+      <ConfirmDeleteDialog
+        open={Boolean(deletingTransaction)}
+        onOpenChange={(open) => {
+          if (!open) setDeletingTransaction(null);
+        }}
+        title="Excluir lançamento"
+        description={
+          <>
+            Tem certeza que deseja remover o lançamento{" "}
+            <strong className="text-slate-900 font-semibold">
+              &quot;{deletingTransaction?.description}&quot;
+            </strong>
+            ? Esta ação não pode ser desfeita.
+          </>
+        }
+        confirmLabel="Sim, excluir lançamento"
+        isPending={isPending}
+        onConfirm={handleDeleteConfirm}
+      />
     </div>
   );
 }

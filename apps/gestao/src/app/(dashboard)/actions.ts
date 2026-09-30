@@ -888,6 +888,101 @@ export const updateOperatingHoursAction = async (
   revalidateRestaurantPaths(slug);
 };
 
+export const updateOperatingHoursAndSchedulingAction = async (
+  slug: string,
+  formData: FormData,
+) => {
+  const restaurant = await getRestaurantOrThrow(slug);
+
+  // 1. Status Operacional
+  const rawStatus = getStringValue(formData.get("status"));
+  const status = (
+    ["AUTO", "ALWAYS_OPEN", "ALWAYS_CLOSED"].includes(rawStatus)
+      ? rawStatus
+      : restaurant.status
+  ) as RestaurantStatus;
+
+  // 2. Agendamento de Pedidos
+  const isOrderSchedulingEnabled = getBooleanValue(
+    formData.get("isOrderSchedulingEnabled"),
+  );
+  const schedulingMinAdvanceMinutes = Math.max(
+    5,
+    getNumberValue(formData.get("schedulingMinAdvanceMinutes"), 45),
+  );
+  const schedulingSlotIntervalMinutes = Math.max(
+    5,
+    getNumberValue(formData.get("schedulingSlotIntervalMinutes"), 30),
+  );
+  const schedulingMaxDays = Math.max(
+    1,
+    Math.min(30, getNumberValue(formData.get("schedulingMaxDays"), 3)),
+  );
+  const schedulingHoursMode =
+    getStringValue(formData.get("schedulingHoursMode")) === "CUSTOM"
+      ? "CUSTOM"
+      : "OPERATING_HOURS";
+  const schedulingCustomStartTime =
+    getStringValue(formData.get("schedulingCustomStartTime")) || "11:00";
+  const schedulingCustomEndTime =
+    getStringValue(formData.get("schedulingCustomEndTime")) || "23:00";
+
+  await db
+    .update(restaurantsTable)
+    .set({
+      status,
+      isOrderSchedulingEnabled,
+      schedulingMinAdvanceMinutes,
+      schedulingSlotIntervalMinutes,
+      schedulingMaxDays,
+      schedulingHoursMode,
+      schedulingCustomStartTime,
+      schedulingCustomEndTime,
+      updatedAt: new Date(),
+    })
+    .where(eq(restaurantsTable.id, restaurant.id));
+
+  // 3. Horário de Atendimento Semanal
+  const days = [0, 1, 2, 3, 4, 5, 6];
+
+  await db.transaction(async (tx) => {
+    for (const day of days) {
+      const openTime = formData.get(`openTime-${day}`) as string;
+      const closeTime = formData.get(`closeTime-${day}`) as string;
+      const isOpen = getBooleanValue(formData.get(`isOpen-${day}`));
+
+      if (isOpen && openTime && closeTime) {
+        await tx
+          .delete(operatingHoursTable)
+          .where(
+            and(
+              eq(operatingHoursTable.restaurantId, restaurant.id),
+              eq(operatingHoursTable.dayOfWeek, day),
+            ),
+          );
+
+        await tx.insert(operatingHoursTable).values({
+          restaurantId: restaurant.id,
+          dayOfWeek: day,
+          openTime,
+          closeTime,
+        });
+      } else {
+        await tx
+          .delete(operatingHoursTable)
+          .where(
+            and(
+              eq(operatingHoursTable.restaurantId, restaurant.id),
+              eq(operatingHoursTable.dayOfWeek, day),
+            ),
+          );
+      }
+    }
+  });
+
+  revalidateRestaurantPaths(slug);
+};
+
 // ─── Inventário Geral ─────────────────────────────────────────────────────────
 
 const inventoryItemSchema = z.object({

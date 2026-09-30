@@ -4,6 +4,7 @@ import { deleteCourierAction } from "@/app/(dashboard)/logistica-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import {
   Dialog,
   DialogContent,
@@ -166,10 +167,11 @@ export function LogisticaClient({
   feeRules,
 }: LogisticaClientProps) {
   const router = useRouter();
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editCourier, setEditCourier] = useState<Courier | null>(null);
+  const [deletingCourier, setDeletingCourier] = useState<{ id: string; name: string } | null>(null);
 
   // filtros dos motoboys (locais — aplicados via URL ao confirmar)
   const [localSearch, setLocalSearch] = useState(initialSearch);
@@ -216,14 +218,15 @@ export function LogisticaClient({
     router.push(`?${params.toString()}`);
   };
 
-  const handleDelete = (courierId: string, courierName: string) => {
-    if (!confirm(`Deseja realmente excluir o motoboy "${courierName}"?`)) return;
+  const handleDeleteConfirm = () => {
+    if (!deletingCourier) return;
     startTransition(async () => {
       try {
         const formData = new FormData();
-        formData.set("courierId", courierId);
+        formData.set("courierId", deletingCourier.id);
         await deleteCourierAction(slug, formData);
-        toast.success(`Motoboy "${courierName}" excluído com sucesso.`);
+        toast.success(`Motoboy "${deletingCourier.name}" excluído com sucesso.`);
+        setDeletingCourier(null);
       } catch {
         toast.error("Não foi possível excluir o motoboy.");
       }
@@ -788,7 +791,7 @@ export function LogisticaClient({
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator className="bg-slate-100" />
                                   <DropdownMenuItem
-                                    onClick={() => handleDelete(courier.id, courier.name)}
+                                    onClick={() => setDeletingCourier({ id: courier.id, name: courier.name })}
                                     className="gap-2 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-700"
                                   >
                                     <Trash2Icon size={14} />
@@ -850,7 +853,7 @@ export function LogisticaClient({
                               </DropdownMenuItem>
                               <DropdownMenuSeparator className="bg-slate-100" />
                               <DropdownMenuItem
-                                onClick={() => handleDelete(courier.id, courier.name)}
+                                onClick={() => setDeletingCourier({ id: courier.id, name: courier.name })}
                                 className="gap-2 rounded-lg text-xs font-medium text-red-600"
                               >
                                 <Trash2Icon size={14} />
@@ -1014,6 +1017,27 @@ export function LogisticaClient({
           <MapaRoteirizador slug={slug} restaurant={restaurant} />
         </TabsContent>
       </Tabs>
+
+      {/* ── Dialog: Confirmar Exclusão de Motoboy ─────────── */}
+      <ConfirmDeleteDialog
+        open={Boolean(deletingCourier)}
+        onOpenChange={(open) => {
+          if (!open) setDeletingCourier(null);
+        }}
+        title="Excluir motoboy"
+        description={
+          <>
+            Tem certeza que deseja remover o motoboy{" "}
+            <strong className="text-slate-900 font-semibold">
+              {deletingCourier?.name}
+            </strong>
+            ? Esta ação não pode ser desfeita.
+          </>
+        }
+        confirmLabel="Sim, excluir motoboy"
+        isPending={isPending}
+        onConfirm={handleDeleteConfirm}
+      />
     </div>
   );
 }

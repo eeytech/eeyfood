@@ -27,6 +27,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import {
   Dialog,
   DialogContent,
@@ -98,9 +99,11 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
   // ── Dialogs ─────────────────────────────────────────────
   const [createProductOpen, setCreateProductOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<ProductWithCategory | null>(null);
+  const [deletingProduct, setDeletingProduct] = useState<{ id: string; name: string } | null>(null);
 
   const [createCategoryOpen, setCreateCategoryOpen] = useState(false);
   const [editCategory, setEditCategory] = useState<CategoriaComProdutos | null>(null);
+  const [deletingCategory, setDeletingCategory] = useState<{ id: string; name: string } | null>(null);
 
   const [isPending, startTransition] = useTransition();
 
@@ -183,19 +186,23 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
   };
 
   // ── Actions ─────────────────────────────────────────────
-  const handleDeleteProduct = (productId: string) => {
+  const handleDeleteProductConfirm = () => {
+    if (!deletingProduct) return;
     startTransition(async () => {
       const formData = new FormData();
-      formData.set("productId", productId);
+      formData.set("productId", deletingProduct.id);
       await deleteProductAction(slug, formData);
+      setDeletingProduct(null);
     });
   };
 
-  const handleDeleteCategory = (categoryId: string) => {
+  const handleDeleteCategoryConfirm = () => {
+    if (!deletingCategory) return;
     startTransition(async () => {
       const formData = new FormData();
-      formData.set("categoryId", categoryId);
+      formData.set("categoryId", deletingCategory.id);
       await deleteCategoryAction(slug, formData);
+      setDeletingCategory(null);
     });
   };
 
@@ -671,7 +678,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
-                                  onClick={() => handleDeleteProduct(product.id)}
+                                  onClick={() => setDeletingProduct({ id: product.id, name: product.name })}
                                   disabled={isPending}
                                   className="cursor-pointer gap-2 text-xs font-medium text-rose-600 focus:bg-rose-50 focus:text-rose-700"
                                 >
@@ -789,7 +796,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                             variant="ghost"
                             size="sm"
                             className="h-8 gap-1 rounded-lg px-2.5 text-xs text-rose-600 hover:bg-rose-50"
-                            onClick={() => handleDeleteProduct(product.id)}
+                            onClick={() => setDeletingProduct({ id: product.id, name: product.name })}
                             disabled={isPending}
                           >
                             <Trash2Icon size={14} />
@@ -1010,7 +1017,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
-                                onClick={() => handleDeleteCategory(category.id)}
+                                onClick={() => setDeletingCategory({ id: category.id, name: category.name })}
                                 disabled={isPending}
                                 className="cursor-pointer gap-2 text-xs font-medium text-rose-600 focus:bg-rose-50 focus:text-rose-700"
                               >
@@ -1089,7 +1096,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                           variant="ghost"
                           size="sm"
                           className="h-8 gap-1 rounded-lg px-2.5 text-xs text-rose-600 hover:bg-rose-50"
-                          onClick={() => handleDeleteCategory(category.id)}
+                          onClick={() => setDeletingCategory({ id: category.id, name: category.name })}
                           disabled={isPending}
                         >
                           <Trash2Icon size={14} />
@@ -1182,6 +1189,48 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* ── Dialog: Confirmar Exclusão de Produto ─────────── */}
+      <ConfirmDeleteDialog
+        open={Boolean(deletingProduct)}
+        onOpenChange={(open) => {
+          if (!open) setDeletingProduct(null);
+        }}
+        title="Excluir produto"
+        description={
+          <>
+            Tem certeza que deseja remover o produto{" "}
+            <strong className="text-slate-900 font-semibold">
+              {deletingProduct?.name}
+            </strong>
+            ? Esta ação não pode ser desfeita e removerá o item do cardápio.
+          </>
+        }
+        confirmLabel="Sim, excluir produto"
+        isPending={isPending}
+        onConfirm={handleDeleteProductConfirm}
+      />
+
+      {/* ── Dialog: Confirmar Exclusão de Categoria ───────── */}
+      <ConfirmDeleteDialog
+        open={Boolean(deletingCategory)}
+        onOpenChange={(open) => {
+          if (!open) setDeletingCategory(null);
+        }}
+        title="Excluir categoria"
+        description={
+          <>
+            Tem certeza que deseja remover a categoria{" "}
+            <strong className="text-slate-900 font-semibold">
+              {deletingCategory?.name}
+            </strong>
+            ? Esta ação não pode ser desfeita.
+          </>
+        }
+        confirmLabel="Sim, excluir categoria"
+        isPending={isPending}
+        onConfirm={handleDeleteCategoryConfirm}
+      />
     </div>
   );
 }

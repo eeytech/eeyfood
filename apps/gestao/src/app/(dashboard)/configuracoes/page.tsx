@@ -1,9 +1,7 @@
 import {
-  CalendarClockIcon,
   CheckCircle2Icon,
   ClockIcon,
   PizzaIcon,
-  SaveIcon,
   Settings2Icon,
   ShoppingBagIcon,
   StoreIcon,
@@ -12,41 +10,22 @@ import {
 import { notFound } from "next/navigation";
 
 import {
-  updateOperatingHoursAction,
-  updateRestaurantStatusAction,
-} from "@/app/(dashboard)/actions";
-import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { SubmitButton } from "@/components/ui/submit-button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   buscarAiSettingsPorSlug,
   buscarConfiguracoesRestaurante,
 } from "@/lib/admin-queries";
 
-import { OrderSchedulingForm } from "./order-scheduling-form";
 import { RestaurantDetailsForm } from "./restaurant-details-form";
 import { RestaurantFeaturesForm } from "./restaurant-features-form";
+import { RestaurantHoursSchedulingForm } from "./restaurant-hours-scheduling-form";
 
 interface ConfiguracoesPageProps {
   params: Promise<{ slug: string }>;
 }
-
-const daysOfWeek = [
-  "Domingo",
-  "Segunda-feira",
-  "Terça-feira",
-  "Quarta-feira",
-  "Quinta-feira",
-  "Sexta-feira",
-  "Sábado",
-];
 
 const ConfiguracoesPage = async ({ params }: ConfiguracoesPageProps) => {
   const { slug } = await params;
@@ -242,186 +221,23 @@ const ConfiguracoesPage = async ({ params }: ConfiguracoesPageProps) => {
           />
         </TabsContent>
 
-        <TabsContent value="funcionamento" className="mt-5 space-y-5">
-          {/* Status Real de Funcionamento */}
-          <Card className="border-slate-200/80 bg-white shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 font-display text-lg text-slate-900">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
-                  <Settings2Icon size={18} />
-                </div>
-                Status Operacional da Loja
-              </CardTitle>
-              <CardDescription className="text-sm text-slate-500">
-                Abra ou feche a loja imediatamente, ou deixe no modo automático seguindo os horários cadastrados.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form
-                action={updateRestaurantStatusAction.bind(null, slug)}
-                className="space-y-4"
-              >
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {[
-                    {
-                      value: "AUTO",
-                      label: "Automático (Horários)",
-                      description: "Abre e fecha automaticamente conforme os horários abaixo.",
-                    },
-                    {
-                      value: "ALWAYS_OPEN",
-                      label: "Forçar Aberto",
-                      description: "Ignora os horários e mantém a loja e cardápio sempre abertos.",
-                    },
-                    {
-                      value: "ALWAYS_CLOSED",
-                      label: "Forçar Fechado",
-                      description: "Fecha imediatamente a loja, impedindo novos pedidos online.",
-                    },
-                  ].map((item) => (
-                    <label
-                      key={item.value}
-                      className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-all ${
-                        restaurant.status === item.value
-                          ? "border-slate-950 bg-slate-50/80 ring-1 ring-slate-950 shadow-2xs"
-                          : "border-slate-200/80 bg-white hover:border-slate-300"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="status"
-                        value={item.value}
-                        defaultChecked={restaurant.status === item.value}
-                        className="mt-0.5 h-4 w-4 accent-slate-950"
-                      />
-                      <div>
-                        <p className="text-sm font-semibold text-slate-950">
-                          {item.label}
-                        </p>
-                        <p className="mt-0.5 text-xs text-slate-500">
-                          {item.description}
-                        </p>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-
-                <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-xs text-slate-500">
-                    O status define se o cardápio aceita novos pedidos imediatamente.
-                  </p>
-                  <SubmitButton className="h-10 gap-2 rounded-xl bg-slate-900 px-5 text-xs font-semibold text-white shadow-xs hover:bg-slate-800 transition w-full sm:w-auto">
-                    <SaveIcon size={15} />
-                    <span>Salvar Status Operacional</span>
-                  </SubmitButton>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-
-          {/* Horário de Funcionamento Semanal */}
-          <Card className="border-slate-200/80 bg-white shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 font-display text-lg text-slate-900">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
-                  <ClockIcon size={18} />
-                </div>
-                Horário de Atendimento Semanal
-              </CardTitle>
-              <CardDescription className="text-sm text-slate-500">
-                Defina o expediente padrão para cada dia da semana. Dias desmarcados serão considerados fechados.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form
-                action={updateOperatingHoursAction.bind(null, slug)}
-                className="space-y-4"
-              >
-                <div className="space-y-2.5">
-                  {daysOfWeek.map((dayName, index) => {
-                    const hours = operatingHours.find((h) => h.dayOfWeek === index);
-                    return (
-                      <div
-                        key={index}
-                        className="flex flex-col gap-3 rounded-xl border border-slate-200/80 bg-slate-50/50 p-3.5 transition hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between"
-                      >
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="checkbox"
-                            name={`isOpen-${index}`}
-                            id={`isOpen-${index}`}
-                            defaultChecked={!!hours}
-                            className="h-4 w-4 accent-slate-950 rounded cursor-pointer"
-                          />
-                          <label
-                            htmlFor={`isOpen-${index}`}
-                            className="text-sm font-semibold text-slate-900 cursor-pointer"
-                          >
-                            {dayName}
-                          </label>
-                        </div>
-
-                        <div className="flex items-center gap-2.5">
-                          <Input
-                            name={`openTime-${index}`}
-                            type="time"
-                            defaultValue={hours?.openTime ?? "08:00"}
-                            className="h-9 w-28 rounded-lg border-slate-200 bg-white text-xs text-slate-900"
-                          />
-                          <span className="text-xs font-medium text-slate-400">até</span>
-                          <Input
-                            name={`closeTime-${index}`}
-                            type="time"
-                            defaultValue={hours?.closeTime ?? "22:00"}
-                            className="h-9 w-28 rounded-lg border-slate-200 bg-white text-xs text-slate-900"
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-xs text-slate-500">
-                    Dias desmarcados serão considerados fechados no cardápio online.
-                  </p>
-                  <SubmitButton className="h-10 gap-2 rounded-xl bg-slate-900 px-5 text-xs font-semibold text-white shadow-xs hover:bg-slate-800 transition w-full sm:w-auto">
-                    <SaveIcon size={15} />
-                    <span>Salvar Horários de Atendimento</span>
-                  </SubmitButton>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-
-          {/* Agendamento de Pedidos */}
-          <Card className="border-slate-200/80 bg-white shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 font-display text-lg text-slate-900">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
-                  <CalendarClockIcon size={18} />
-                </div>
-                Agendamento de Pedidos
-              </CardTitle>
-              <CardDescription className="text-sm text-slate-500">
-                Configure a antecedência, intervalos dos horários e regras para agendamento (Delivery e Retirada).
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <OrderSchedulingForm
-                slug={slug}
-                initialValues={{
-                  isOrderSchedulingEnabled: restaurant.isOrderSchedulingEnabled,
-                  schedulingMinAdvanceMinutes: restaurant.schedulingMinAdvanceMinutes,
-                  schedulingSlotIntervalMinutes: restaurant.schedulingSlotIntervalMinutes,
-                  schedulingMaxDays: restaurant.schedulingMaxDays,
-                  schedulingHoursMode: restaurant.schedulingHoursMode,
-                  schedulingCustomStartTime: restaurant.schedulingCustomStartTime,
-                  schedulingCustomEndTime: restaurant.schedulingCustomEndTime,
-                }}
-              />
-            </CardContent>
-          </Card>
+        <TabsContent value="funcionamento" className="mt-5">
+          <RestaurantHoursSchedulingForm
+            slug={slug}
+            initialStatus={restaurant.status}
+            initialHours={operatingHours}
+            initialScheduling={{
+              isOrderSchedulingEnabled: restaurant.isOrderSchedulingEnabled,
+              schedulingMinAdvanceMinutes:
+                restaurant.schedulingMinAdvanceMinutes,
+              schedulingSlotIntervalMinutes:
+                restaurant.schedulingSlotIntervalMinutes,
+              schedulingMaxDays: restaurant.schedulingMaxDays,
+              schedulingHoursMode: restaurant.schedulingHoursMode,
+              schedulingCustomStartTime: restaurant.schedulingCustomStartTime,
+              schedulingCustomEndTime: restaurant.schedulingCustomEndTime,
+            }}
+          />
         </TabsContent>
       </Tabs>
     </main>

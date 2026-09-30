@@ -27,6 +27,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
   Dialog,
@@ -379,39 +380,23 @@ export function EstoqueClient({
       </Dialog>
 
       {/* ── Dialog: Confirmar Exclusão de Insumo ────────── */}
-      <Dialog
+      <ConfirmDeleteDialog
         open={deleteConfirmItem !== null}
         onOpenChange={(open) => !open && setDeleteConfirmItem(null)}
-      >
-        <DialogContent className="border-slate-200 bg-white shadow-2xl sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold text-slate-900">
-              Excluir item de inventário
-            </DialogTitle>
-            <DialogDescription className="text-slate-500">
-              Tem certeza que deseja excluir <strong>{deleteConfirmItem?.name}</strong>?
-              Esta ação removerá o insumo do controle de estoque.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 pt-2">
-            <Button
-              variant="outline"
-              onClick={() => setDeleteConfirmItem(null)}
-              className="h-10 rounded-full border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              Cancelar
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={isDeleting}
-              onClick={handleDeleteConfirm}
-              className="h-10 rounded-full text-xs font-semibold"
-            >
-              {isDeleting ? "Excluindo..." : "Confirmar Exclusão"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title="Excluir item de inventário"
+        description={
+          <>
+            Tem certeza que deseja excluir{" "}
+            <strong className="text-slate-900 font-semibold">
+              {deleteConfirmItem?.name}
+            </strong>
+            ? Esta ação removerá o insumo do controle de estoque.
+          </>
+        }
+        confirmLabel="Sim, excluir item"
+        isPending={isDeleting}
+        onConfirm={handleDeleteConfirm}
+      />
 
       {/* ── Dialog: Registrar Perda ──────────────────────── */}
       <Dialog open={lossDialogOpen} onOpenChange={setLossDialogOpen}>

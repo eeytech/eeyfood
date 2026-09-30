@@ -31,6 +31,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
   Dialog,
@@ -1176,40 +1177,25 @@ export function FreteClient({
       </Dialog>
 
       {/* ── Dialog Delete Confirmation ── */}
-      <Dialog open={!!deletingRule} onOpenChange={(open) => !open && setDeletingRule(null)}>
-        <DialogContent className="max-w-md rounded-2xl bg-white p-6 shadow-xl border-slate-200">
-          <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold text-slate-900">
-              Excluir Regra de Frete Grátis
-            </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
-              Tem certeza que deseja excluir a regra &quot;{deletingRule?.name}&quot;? Esta ação não pode ser desfeita.
-            </DialogDescription>
-          </DialogHeader>
-
-          <DialogFooter className="gap-2 pt-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setDeletingRule(null)}
-              disabled={isPending}
-              className="rounded-full border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-100"
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={handleDeleteRule}
-              disabled={isPending}
-              className="rounded-full bg-red-600 px-5 text-xs font-semibold text-white shadow-sm hover:bg-red-700 disabled:opacity-50"
-            >
-              {isPending && <LoaderCircleIcon size={14} className="mr-1.5 animate-spin" />}
-              {isPending ? "Excluindo..." : "Excluir Regra"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDeleteDialog
+        open={Boolean(deletingRule)}
+        onOpenChange={(open) => {
+          if (!open) setDeletingRule(null);
+        }}
+        title="Excluir regra de frete grátis"
+        description={
+          <>
+            Tem certeza que deseja excluir a regra{" "}
+            <strong className="text-slate-900 font-semibold">
+              &quot;{deletingRule?.name}&quot;
+            </strong>
+            ? Esta ação não pode ser desfeita.
+          </>
+        }
+        confirmLabel="Sim, excluir regra"
+        isPending={isPending}
+        onConfirm={handleDeleteRule}
+      />
     </div>
   );
 }

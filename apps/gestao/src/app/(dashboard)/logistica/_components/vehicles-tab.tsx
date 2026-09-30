@@ -22,6 +22,7 @@ import { deleteVehicleAction } from "@/app/(dashboard)/logistica-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import {
   Dialog,
   DialogContent,
@@ -96,10 +97,11 @@ export function VehiclesTab({
   initialStatus,
 }: VehiclesTabProps) {
   const router = useRouter();
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editVehicle, setEditVehicle] = useState<CompanyVehicle | null>(null);
+  const [deletingVehicle, setDeletingVehicle] = useState<{ id: string; model: string } | null>(null);
   const [localSearch, setLocalSearch] = useState(initialSearch);
   const [localStatus, setLocalStatus] = useState(initialStatus);
 
@@ -127,14 +129,15 @@ export function VehiclesTab({
     router.push(`?${params.toString()}`);
   };
 
-  const handleDelete = (vehicleId: string, model: string) => {
-    if (!confirm(`Deseja realmente excluir o veículo "${model}"?`)) return;
+  const handleDeleteConfirm = () => {
+    if (!deletingVehicle) return;
     startTransition(async () => {
       try {
         const formData = new FormData();
-        formData.set("vehicleId", vehicleId);
+        formData.set("vehicleId", deletingVehicle.id);
         await deleteVehicleAction(slug, formData);
-        toast.success(`Veículo "${model}" excluído com sucesso.`);
+        toast.success(`Veículo "${deletingVehicle.model}" excluído com sucesso.`);
+        setDeletingVehicle(null);
       } catch {
         toast.error("Não foi possível excluir o veículo.");
       }
@@ -419,7 +422,7 @@ export function VehiclesTab({
                               </DropdownMenuItem>
                               <DropdownMenuSeparator className="bg-slate-100" />
                               <DropdownMenuItem
-                                onClick={() => handleDelete(vehicle.id, vehicle.model)}
+                                onClick={() => setDeletingVehicle({ id: vehicle.id, model: vehicle.model })}
                                 className="gap-2 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-700"
                               >
                                 <Trash2Icon size={14} />
@@ -478,7 +481,7 @@ export function VehiclesTab({
                           </DropdownMenuItem>
                           <DropdownMenuSeparator className="bg-slate-100" />
                           <DropdownMenuItem
-                            onClick={() => handleDelete(vehicle.id, vehicle.model)}
+                            onClick={() => setDeletingVehicle({ id: vehicle.id, model: vehicle.model })}
                             className="gap-2 rounded-lg text-xs font-medium text-red-600"
                           >
                             <Trash2Icon size={14} />
@@ -577,6 +580,27 @@ export function VehiclesTab({
           </>
         )}
       </Card>
+
+      {/* ── Dialog: Confirmar Exclusão de Veículo ─────────── */}
+      <ConfirmDeleteDialog
+        open={Boolean(deletingVehicle)}
+        onOpenChange={(open) => {
+          if (!open) setDeletingVehicle(null);
+        }}
+        title="Excluir veículo"
+        description={
+          <>
+            Tem certeza que deseja remover o veículo{" "}
+            <strong className="text-slate-900 font-semibold">
+              {deletingVehicle?.model}
+            </strong>
+            ? Esta ação não pode ser desfeita.
+          </>
+        }
+        confirmLabel="Sim, excluir veículo"
+        isPending={isPending}
+        onConfirm={handleDeleteConfirm}
+      />
     </div>
   );
 }

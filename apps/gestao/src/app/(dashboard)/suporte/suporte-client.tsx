@@ -37,6 +37,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import {
   Dialog,
   DialogContent,
@@ -1705,60 +1706,25 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
       </Dialog>
 
       {/* ── Dialog: Excluir Chamado (matching usuarios-client delete dialog) ─────────────── */}
-      <Dialog
+      <ConfirmDeleteDialog
         open={Boolean(deletingTicket)}
         onOpenChange={(open) => {
           if (!open) setDeletingTicket(null);
         }}
-      >
-        <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-md">
-          <DialogHeader>
-            <div className="flex items-center gap-2">
-              <div className="rounded-xl bg-red-100 p-2 text-red-600">
-                <Trash2Icon size={20} />
-              </div>
-              <div>
-                <DialogTitle className="font-display text-lg font-bold text-slate-900">
-                  Excluir Chamado
-                </DialogTitle>
-                <DialogDescription className="text-xs text-slate-500">
-                  Esta ação removerá o histórico desta solicitação de suporte.
-                </DialogDescription>
-              </div>
-            </div>
-          </DialogHeader>
-
-          <p className="text-sm text-slate-600">
+        title="Excluir Chamado"
+        description={
+          <>
             Tem certeza de que deseja remover permanentemente o chamado{" "}
-            <strong className="text-slate-900">
+            <strong className="text-slate-900 font-semibold">
               {deletingTicket?.protocol} — &ldquo;{deletingTicket?.title}&rdquo;
             </strong>
-            ?
-          </p>
-
-          <DialogFooter className="gap-2 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setDeletingTicket(null)}
-              className="rounded-full border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-100"
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="button"
-              disabled={isPending}
-              onClick={handleDeleteConfirm}
-              className="rounded-full bg-red-600 px-5 text-xs font-semibold text-white shadow-sm hover:bg-red-700 disabled:opacity-50"
-            >
-              {isPending && (
-                <LoaderCircleIcon size={14} className="mr-1.5 animate-spin" />
-              )}
-              {isPending ? "Excluindo..." : "Excluir Chamado"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            ? Esta ação removerá o histórico desta solicitação de suporte.
+          </>
+        }
+        confirmLabel="Sim, excluir chamado"
+        isPending={isPending}
+        onConfirm={handleDeleteConfirm}
+      />
     </div>
   );
 }

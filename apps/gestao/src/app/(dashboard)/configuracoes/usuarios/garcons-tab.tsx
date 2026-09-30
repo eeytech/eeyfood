@@ -29,6 +29,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import {
   Dialog,
   DialogContent,
@@ -68,7 +69,6 @@ import {
   CommissionRuleData,
   criarOuEditarGarcomAction,
   excluirGarcomAction,
-  fecharGorjetaGarcomAction,
   GarcomMetricas,
   salvarRegraComissaoAction,
   TipClosingItem,
@@ -135,18 +135,11 @@ export function GarconsTab({
   const [editingGarcom, setEditingGarcom] = useState<GarcomMetricas | null>(null);
   const [garcomPhone, setGarcomPhone] = useState("");
   const [garcomCpf, setGarcomCpf] = useState("");
+  const [deletingGarcom, setDeletingGarcom] = useState<{ id: string; name: string } | null>(null);
 
   // Dialog de Regra de Serviço
   const [ruleDialogOpen, setRuleDialogOpen] = useState(false);
 
-  // Dialog de Fechar Gorjetas
-  const [closingDialogOpen, setClosingDialogOpen] = useState(false);
-  const [selectedGarcomForClosing, setSelectedGarcomForClosing] = useState<GarcomMetricas | null>(
-    null,
-  );
-  const [closingAmount, setClosingAmount] = useState<string>("");
-  const [closingNotes, setClosingNotes] = useState<string>("");
-  const [createFinancialExpense, setCreateFinancialExpense] = useState(true);
 
   // Filtros e busca da tabela de garçons
   const [searchQuery, setSearchQuery] = useState("");
@@ -311,13 +304,14 @@ export function GarconsTab({
   };
 
   // Excluir Garçom
-  const handleDeleteGarcom = (waiterId: string, name: string) => {
-    if (!confirm(`Tem certeza que deseja remover o garçom ${name}?`)) return;
+  const handleDeleteConfirm = () => {
+    if (!deletingGarcom) return;
 
     startTransition(async () => {
-      const res = await excluirGarcomAction(slug, waiterId);
+      const res = await excluirGarcomAction(slug, deletingGarcom.id);
       if (res.success) {
         toast.success("Garçom removido com sucesso.");
+        setDeletingGarcom(null);
       } else {
         toast.error(res.error || "Erro ao remover garçom.");
       }
@@ -340,37 +334,6 @@ export function GarconsTab({
     });
   };
 
-  // Abrir Modal de Fechamento de Gorjetas
-  const handleOpenClosing = (g?: GarcomMetricas) => {
-    const target = g || garcons[0] || null;
-    setSelectedGarcomForClosing(target);
-    setClosingAmount(target && target.pendingBalance > 0 ? String(target.pendingBalance) : "");
-    setClosingNotes("");
-    setCreateFinancialExpense(true);
-    setClosingDialogOpen(true);
-  };
-
-  // Submeter Fechamento de Gorjetas
-  const handleClosingSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!selectedGarcomForClosing) return;
-
-    const formData = new FormData();
-    formData.set("waiterId", selectedGarcomForClosing.waiter.id);
-    formData.set("amount", closingAmount);
-    formData.set("notes", closingNotes);
-    formData.set("createFinancialExpense", String(createFinancialExpense));
-
-    startTransition(async () => {
-      const res = await fecharGorjetaGarcomAction(slug, formData);
-      if (res.success) {
-        toast.success("Repasse de gorjeta registrado com sucesso!");
-        setClosingDialogOpen(false);
-      } else {
-        toast.error(res.error || "Erro ao registrar repasse.");
-      }
-    });
-  };
 
   return (
     <div className="space-y-6">
@@ -453,7 +416,7 @@ export function GarconsTab({
         </Card>
       </div>
 
-      {/* ── Sub-Bar: Regra de Serviço e Ação de Repasse ──── */}
+      {/* ── Sub-Bar: Regra de Serviço ──── */}
       <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline" className="border-slate-200 bg-white py-1 px-2.5 text-xs font-medium text-slate-700 shadow-2xs">
@@ -472,17 +435,6 @@ export function GarconsTab({
             <span>Configurar Regra</span>
           </Button>
         </div>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => handleOpenClosing()}
-          disabled={garcons.length === 0}
-          className="h-9 gap-1.5 rounded-xl border-slate-200 bg-white px-3 text-xs font-semibold text-slate-800 shadow-2xs hover:bg-slate-50"
-        >
-          <HandCoinsIcon size={14} className="text-purple-600" />
-          <span>Fechar Gorjetas / Repasse</span>
-        </Button>
       </div>
 
       {/* ── Table & List Container (Garçons) ─────────────── */}
@@ -700,13 +652,6 @@ export function GarconsTab({
                                 Editar dados
                               </DropdownMenuItem>
 
-                              <DropdownMenuItem
-                                onClick={() => handleOpenClosing(g)}
-                                className="gap-2 text-xs font-medium text-purple-600"
-                              >
-                                <HandCoinsIcon size={13} />
-                                Fechar gorjetas
-                              </DropdownMenuItem>
 
                               <DropdownMenuItem
                                 onClick={() =>
@@ -733,7 +678,7 @@ export function GarconsTab({
                               <DropdownMenuSeparator />
 
                               <DropdownMenuItem
-                                onClick={() => handleDeleteGarcom(g.waiter.id, g.waiter.name)}
+                                onClick={() => setDeletingGarcom({ id: g.waiter.id, name: g.waiter.name })}
                                 className="gap-2 text-xs text-red-600 focus:text-red-600"
                               >
                                 <Trash2Icon size={13} />
@@ -779,12 +724,8 @@ export function GarconsTab({
                             <Edit2Icon size={13} />
                             Editar dados
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleOpenClosing(g)} className="gap-2 text-xs font-medium text-purple-600">
-                            <HandCoinsIcon size={13} />
-                            Fechar gorjetas
-                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleDeleteGarcom(g.waiter.id, g.waiter.name)} className="gap-2 text-xs text-red-600">
+                          <DropdownMenuItem onClick={() => setDeletingGarcom({ id: g.waiter.id, name: g.waiter.name })} className="gap-2 text-xs text-red-600">
                             <Trash2Icon size={13} />
                             Excluir garçom
                           </DropdownMenuItem>
@@ -1377,144 +1318,27 @@ export function GarconsTab({
         </DialogContent>
       </Dialog>
 
-      {/* ── Dialog: Fechar Gorjetas / Repasse ────────────────────────────── */}
-      <Dialog open={closingDialogOpen} onOpenChange={setClosingDialogOpen}>
-        <DialogContent className="sm:max-w-[480px]">
-          <form onSubmit={handleClosingSubmit}>
-            <DialogHeader>
-              <DialogTitle className="text-lg font-bold text-slate-900">
-                Registrar Repasse de Gorjetas / Comissão
-              </DialogTitle>
-              <DialogDescription className="text-xs text-slate-500">
-                Dê baixa nas comissões apuradas para o garçom e opcionalmente gere o lançamento no financeiro.
-              </DialogDescription>
-            </DialogHeader>
 
-            <div className="space-y-4 py-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="closingWaiter" className="text-xs font-semibold text-slate-700">
-                  Selecione o Garçom
-                </Label>
-                <Select
-                  value={selectedGarcomForClosing?.waiter.id}
-                  onValueChange={(val) => {
-                    const found = garcons.find((g) => g.waiter.id === val) || null;
-                    setSelectedGarcomForClosing(found);
-                    if (found && found.pendingBalance > 0) {
-                      setClosingAmount(String(found.pendingBalance));
-                    }
-                  }}
-                >
-                  <SelectTrigger className="h-9 text-xs">
-                    <SelectValue placeholder="Selecione o garçom" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {garcons.map((g) => (
-                      <SelectItem key={g.waiter.id} value={g.waiter.id}>
-                        {g.waiter.name} — Saldo pendente: {formatCurrency(g.pendingBalance)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {selectedGarcomForClosing && (
-                <div className="rounded-lg bg-slate-50 p-3 border border-slate-200/80 text-xs space-y-1.5">
-                  <div className="flex justify-between text-slate-600">
-                    <span>
-                      {selectedGarcomForClosing.waiter.commissionPercent > 0
-                        ? `Comissão Apurada (${selectedGarcomForClosing.waiter.commissionPercent}% s/ itens):`
-                        : "Taxa de Serviço Devida:"}
-                    </span>
-                    <span className="font-semibold text-slate-800">
-                      {formatCurrency(
-                        selectedGarcomForClosing.commissionDue ??
-                          (selectedGarcomForClosing.waiter.commissionPercent > 0
-                            ? ((selectedGarcomForClosing.totalSubtotal ??
-                                selectedGarcomForClosing.totalSales) *
-                                selectedGarcomForClosing.waiter.commissionPercent) /
-                              100
-                            : selectedGarcomForClosing.totalServiceFee),
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-slate-600">
-                    <span>Já Repassado Anteriormente:</span>
-                    <span className="font-semibold text-slate-700">
-                      {formatCurrency(selectedGarcomForClosing.totalTipsPaid)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-purple-700 font-bold border-t border-slate-200/60 pt-1.5 mt-1">
-                    <span>Saldo Pendente Atual:</span>
-                    <span>{formatCurrency(selectedGarcomForClosing.pendingBalance)}</span>
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-1.5">
-                <Label htmlFor="closingAmount" className="text-xs font-semibold text-slate-700">
-                  Valor a Pagar / Repassar (R$)
-                </Label>
-                <Input
-                  id="closingAmount"
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  required
-                  value={closingAmount}
-                  onChange={(e) => setClosingAmount(e.target.value)}
-                  placeholder="0,00"
-                  className="h-9 text-xs font-semibold text-slate-900"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="closingNotes" className="text-xs font-semibold text-slate-700">
-                  Observações / Comprovante
-                </Label>
-                <Input
-                  id="closingNotes"
-                  value={closingNotes}
-                  onChange={(e) => setClosingNotes(e.target.value)}
-                  placeholder="Ex: Pagamento Pix semanal (semana 38)"
-                  className="h-9 text-xs"
-                />
-              </div>
-
-              <div className="flex items-center justify-between rounded-lg border border-slate-200 p-3">
-                <div className="space-y-0.5">
-                  <Label className="text-xs font-semibold text-slate-800">
-                    Lançar Despesa no Financeiro
-                  </Label>
-                  <p className="text-[11px] text-slate-500">
-                    Registra automaticamente uma saída de caixa em Financeiro &gt; Transações.
-                  </p>
-                </div>
-                <Switch
-                  checked={createFinancialExpense}
-                  onCheckedChange={setCreateFinancialExpense}
-                />
-              </div>
-            </div>
-
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setClosingDialogOpen(false)}
-                disabled={isPending}
-                className="h-9 text-xs"
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isPending} className="h-9 gap-1.5 bg-purple-600 text-xs font-semibold text-white hover:bg-purple-700">
-                {isPending && <Loader2Icon size={14} className="animate-spin" />}
-                Confirmar Repasse
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* ── Dialog: Confirmar Exclusão de Garçom ────────── */}
+      <ConfirmDeleteDialog
+        open={Boolean(deletingGarcom)}
+        onOpenChange={(open) => {
+          if (!open) setDeletingGarcom(null);
+        }}
+        title="Excluir garçom"
+        description={
+          <>
+            Tem certeza que deseja remover o garçom{" "}
+            <strong className="text-slate-900 font-semibold">
+              {deletingGarcom?.name}
+            </strong>
+            ? Esta ação não pode ser desfeita e removerá o garçom da lista do salão.
+          </>
+        }
+        confirmLabel="Sim, excluir garçom"
+        isPending={isPending}
+        onConfirm={handleDeleteConfirm}
+      />
     </div>
   );
 }

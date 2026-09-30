@@ -29,6 +29,7 @@ import {
 import type { MapeamentoItem } from "@/app/(dashboard)/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import {
   Dialog,
   DialogContent,
@@ -345,37 +346,26 @@ export function ComprasClient({
       </Dialog>
 
       {/* ── Dialog: Confirmar Exclusão de Fornecedor ──────── */}
-      <Dialog open={deletingSupplier !== null} onOpenChange={(o) => !o && setDeletingSupplier(null)}>
-        <DialogContent className="border-slate-200 bg-white shadow-2xl sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold text-slate-900">
-              Remover Fornecedor
-            </DialogTitle>
-            <DialogDescription className="text-slate-500">
-              Tem certeza que deseja remover <strong>{deletingSupplier?.companyName}</strong>?
-              As notas fiscais já vinculadas continuarão no histórico.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 pt-2">
-            <Button
-              variant="outline"
-              onClick={() => setDeletingSupplier(null)}
-              disabled={isSupplierPending}
-              className="h-10 rounded-full border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              Cancelar
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={isSupplierPending}
-              onClick={() => deletingSupplier && handleSupplierDelete(deletingSupplier)}
-              className="h-10 rounded-full px-5 text-xs font-semibold"
-            >
-              {isSupplierPending ? "Removendo..." : "Remover"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDeleteDialog
+        open={deletingSupplier !== null}
+        onOpenChange={(o) => !o && setDeletingSupplier(null)}
+        title="Remover fornecedor"
+        description={
+          <>
+            Tem certeza que deseja remover{" "}
+            <strong className="text-slate-900 font-semibold">
+              {deletingSupplier?.companyName}
+            </strong>
+            ? As notas fiscais já vinculadas continuarão no histórico.
+          </>
+        }
+        confirmLabel="Sim, remover fornecedor"
+        loadingLabel="Removendo..."
+        isPending={isSupplierPending}
+        onConfirm={() => {
+          if (deletingSupplier) handleSupplierDelete(deletingSupplier);
+        }}
+      />
 
       {/* ── Page Header ─────────────────────────────────── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

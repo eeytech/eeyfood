@@ -25,6 +25,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import {
   Dialog,
   DialogContent,
@@ -249,6 +250,7 @@ export function FiadosClient({ slug, fiados, contas }: FiadosClientProps) {
   const [createOpen, setCreateOpen] = useState(false);
   const [editFiado, setEditFiado] = useState<CustomerLedger | null>(null);
   const [pagamentoFiado, setPagamentoFiado] = useState<CustomerLedger | null>(null);
+  const [inativandoFiado, setInativandoFiado] = useState<{ id: string; name: string } | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const filtered = fiados.filter(
@@ -305,12 +307,13 @@ export function FiadosClient({ slug, fiados, contas }: FiadosClientProps) {
     });
   };
 
-  const handleInativar = (ledgerId: string, name: string) => {
-    if (!confirm(`Deseja inativar o cliente "${name}" do livro de fiados?`)) return;
+  const handleInativarConfirm = () => {
+    if (!inativandoFiado) return;
     startTransition(async () => {
       try {
-        await inativarFiadoAction(slug, ledgerId);
-        toast.success(`Cliente "${name}" inativado.`);
+        await inativarFiadoAction(slug, inativandoFiado.id);
+        toast.success(`Cliente "${inativandoFiado.name}" inativado.`);
+        setInativandoFiado(null);
       } catch {
         toast.error("Erro ao inativar cliente.");
       }
@@ -704,7 +707,7 @@ export function FiadosClient({ slug, fiados, contas }: FiadosClientProps) {
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator className="bg-slate-100" />
                                 <DropdownMenuItem
-                                  onClick={() => handleInativar(fiado.id, fiado.customerName)}
+                                  onClick={() => setInativandoFiado({ id: fiado.id, name: fiado.customerName })}
                                   className="gap-2 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50"
                                 >
                                   <XCircleIcon size={14} />
@@ -795,6 +798,28 @@ export function FiadosClient({ slug, fiados, contas }: FiadosClientProps) {
           </>
         )}
       </Card>
+
+      {/* ── Dialog: Confirmar Inativação de Cliente Fiado ── */}
+      <ConfirmDeleteDialog
+        open={Boolean(inativandoFiado)}
+        onOpenChange={(open) => {
+          if (!open) setInativandoFiado(null);
+        }}
+        title="Inativar cliente"
+        description={
+          <>
+            Deseja realmente inativar o cliente{" "}
+            <strong className="text-slate-900 font-semibold">
+              {inativandoFiado?.name}
+            </strong>{" "}
+            do livro de fiados?
+          </>
+        }
+        confirmLabel="Sim, inativar cliente"
+        loadingLabel="Inativando..."
+        isPending={isPending}
+        onConfirm={handleInativarConfirm}
+      />
     </div>
   );
 }

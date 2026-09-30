@@ -37,6 +37,7 @@ import {
 } from "@/app/(dashboard)/mesas-actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import {
   Dialog,
   DialogContent,
@@ -1239,54 +1240,25 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
       </Dialog>
 
       {/* ── Dialog: Confirmar Exclusão ─────────────────── */}
-      <Dialog
+      <ConfirmDeleteDialog
         open={Boolean(deletingTable)}
         onOpenChange={(open) => {
           if (!open) setDeletingTable(null);
         }}
-      >
-        <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-md">
-          <DialogHeader>
-            <div className="flex items-center gap-2 text-red-600">
-              <div className="rounded-xl bg-red-100 p-2 text-red-700">
-                <Trash2Icon size={20} />
-              </div>
-              <DialogTitle className="font-display text-lg font-bold text-slate-900">
-                Excluir Mesa
-              </DialogTitle>
-            </div>
-            <DialogDescription className="pt-1 text-xs text-slate-500">
-              Tem certeza que deseja remover a mesa{" "}
-              <strong className="font-semibold text-slate-900">
-                {deletingTable?.name}
-              </strong>
-              ? Esta ação não pode ser desfeita.
-            </DialogDescription>
-          </DialogHeader>
-
-          <DialogFooter className="gap-2 pt-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setDeletingTable(null)}
-              className="rounded-full border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-100"
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="button"
-              disabled={isPending}
-              onClick={handleDeleteConfirm}
-              className="rounded-full bg-red-600 px-5 text-xs font-semibold text-white shadow-sm hover:bg-red-700 disabled:opacity-50"
-            >
-              {isPending && (
-                <LoaderCircleIcon size={14} className="mr-1.5 animate-spin" />
-              )}
-              {isPending ? "Excluindo..." : "Sim, excluir mesa"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title="Excluir Mesa"
+        description={
+          <>
+            Tem certeza que deseja remover a mesa{" "}
+            <strong className="font-semibold text-slate-900">
+              {deletingTable?.name}
+            </strong>
+            ? Esta ação não pode ser desfeita.
+          </>
+        }
+        confirmLabel="Sim, excluir mesa"
+        isPending={isPending}
+        onConfirm={handleDeleteConfirm}
+      />
 
       {/* ── Dialog: QR Code Individual da Mesa ─────────────── */}
       <Dialog open={qrTable !== null} onOpenChange={(open) => !open && setQrTable(null)}>

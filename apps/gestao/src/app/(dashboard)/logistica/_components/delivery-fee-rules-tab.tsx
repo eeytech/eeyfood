@@ -27,6 +27,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import {
   Dialog,
   DialogContent,
@@ -878,43 +879,23 @@ export function DeliveryFeeRulesTab({ slug, rules: initialRules }: DeliveryFeeRu
       </Dialog>
 
       {/* ── Dialog Confirmação Exclusão ───────────────────── */}
-      <Dialog open={!!deletingRule} onOpenChange={(open) => !open && setDeletingRule(null)}>
-        <DialogContent className="max-w-md rounded-2xl p-6">
-          <DialogHeader>
-            <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-rose-100 text-rose-600">
-              <Trash2Icon size={20} />
-            </div>
-            <DialogTitle className="font-display text-lg font-bold text-slate-900">
-              Excluir Zona de Frete
-            </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
-              Tem certeza que deseja remover a zona{" "}
-              <strong className="text-slate-900">{deletingRule?.name}</strong>? Os clientes deste
-              endereço passarão a usar a taxa padrão da loja.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 pt-4 sm:gap-0">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setDeletingRule(null)}
-              className="rounded-full text-slate-600"
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              disabled={isPending}
-              onClick={handleDelete}
-              className="rounded-full bg-rose-600 font-semibold text-white hover:bg-rose-700"
-            >
-              {isPending && <Loader2Icon size={14} className="mr-2 animate-spin" />}
-              Confirmar Exclusão
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDeleteDialog
+        open={Boolean(deletingRule)}
+        onOpenChange={(open) => {
+          if (!open) setDeletingRule(null);
+        }}
+        title="Excluir Zona de Frete"
+        description={
+          <>
+            Tem certeza que deseja remover a zona{" "}
+            <strong className="text-slate-900 font-semibold">{deletingRule?.name}</strong>? Os clientes deste
+            endereço passarão a usar a taxa padrão da loja.
+          </>
+        }
+        confirmLabel="Sim, excluir zona"
+        isPending={isPending}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

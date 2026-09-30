@@ -6,6 +6,7 @@ import {
   listarCategoriasFinanceirasGestao,
   listarTransacoesFinanceirasPorSlug,
 } from "@/lib/admin-queries";
+import { listarGarconsComMetricasAction } from "@/app/(dashboard)/configuracoes/garcons-actions";
 
 import { FinanceiroClient } from "./_components/financeiro-client";
 
@@ -24,6 +25,7 @@ const FinanceiroPage = async ({ params }: FinanceiroPageProps) => {
   const restaurant = await buscarRestauranteParaGestao(slug);
   const transacoes = await listarTransacoesFinanceirasPorSlug(slug);
   const categorias = await listarCategoriasFinanceirasGestao(slug);
+  const garconsData = await listarGarconsComMetricasAction(slug);
 
   if (!restaurant) {
     return notFound();
@@ -48,6 +50,7 @@ const FinanceiroPage = async ({ params }: FinanceiroPageProps) => {
       slug={slug}
       transacoes={transacoes}
       categorias={categorias}
+      garcons={garconsData.garcons}
       receitasPendentes={receitasPendentes}
       despesasPendentes={despesasPendentes}
     />
