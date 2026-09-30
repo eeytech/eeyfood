@@ -51,6 +51,15 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
     );
   }
 
+  // Perfil de Entregador / Motoboy opera em tela dedicada sem sidebar (estilo kds, tv senha e garçom)
+  if (session.role === "COURIER") {
+    return (
+      <div className="min-h-screen w-screen overflow-x-hidden bg-slate-100 p-3 sm:p-6 text-slate-900">
+        <div className="mx-auto max-w-[1600px]">{children}</div>
+      </div>
+    );
+  }
+
   // 1. Identificar a unidade ativa baseada na sessão JWT
   const targetId = session.activeCompanyId || session.companyId;
   let restaurant: Restaurant | null = null;

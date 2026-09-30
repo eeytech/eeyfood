@@ -362,7 +362,7 @@ export const RestaurantHoursSchedulingForm = ({
               {/* Parâmetros de Tempo e Intervalo */}
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold uppercase text-slate-600">
+                  <Label className="text-xs font-semibold text-slate-700">
                     Antecedência Mínima
                   </Label>
                   <Select
@@ -388,7 +388,7 @@ export const RestaurantHoursSchedulingForm = ({
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold uppercase text-slate-600">
+                  <Label className="text-xs font-semibold text-slate-700">
                     Intervalo dos Horários
                   </Label>
                   <Select
@@ -411,7 +411,7 @@ export const RestaurantHoursSchedulingForm = ({
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold uppercase text-slate-600">
+                  <Label className="text-xs font-semibold text-slate-700">
                     Dias Disponíveis
                   </Label>
                   <Select value={maxDays} onValueChange={setMaxDays}>
@@ -436,7 +436,7 @@ export const RestaurantHoursSchedulingForm = ({
               {/* Origem dos Horários */}
               <div className="space-y-3 rounded-2xl border border-slate-200/80 bg-slate-50/50 p-4">
                 <div>
-                  <p className="text-xs font-bold uppercase text-slate-600">
+                  <p className="text-xs font-semibold text-slate-700">
                     Regra de Horários para Agendamento
                   </p>
                   <p className="text-xs text-slate-500 mt-0.5">

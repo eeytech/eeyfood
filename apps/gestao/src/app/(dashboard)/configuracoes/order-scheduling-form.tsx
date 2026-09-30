@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarClockIcon, CheckIcon, ClockIcon, InfoIcon, Loader2Icon, SaveIcon } from "lucide-react";
+import { CalendarClockIcon, ClockIcon, InfoIcon, Loader2Icon, SaveIcon } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -128,7 +128,7 @@ export const OrderSchedulingForm = ({
           <div className="grid gap-4 sm:grid-cols-3">
             {/* Antecedência Mínima */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold uppercase text-slate-600">
+              <Label className="text-xs font-semibold text-slate-700">
                 Antecedência Mínima
               </Label>
               <Select value={minAdvanceMinutes} onValueChange={setMinAdvanceMinutes}>
@@ -152,7 +152,7 @@ export const OrderSchedulingForm = ({
 
             {/* Intervalo dos Slots */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold uppercase text-slate-600">
+              <Label className="text-xs font-semibold text-slate-700">
                 Intervalo dos Horários
               </Label>
               <Select value={slotIntervalMinutes} onValueChange={setSlotIntervalMinutes}>
@@ -173,7 +173,7 @@ export const OrderSchedulingForm = ({
 
             {/* Janela de Dias */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold uppercase text-slate-600">
+              <Label className="text-xs font-semibold text-slate-700">
                 Dias Disponíveis
               </Label>
               <Select value={maxDays} onValueChange={setMaxDays}>
@@ -198,7 +198,7 @@ export const OrderSchedulingForm = ({
           {/* Origem dos Horários */}
           <div className="space-y-3 rounded-2xl border border-slate-200/80 bg-slate-50/50 p-4">
             <div>
-              <p className="text-xs font-bold uppercase text-slate-600">
+              <p className="text-xs font-semibold text-slate-700">
                 Regra de Horários para Agendamento
               </p>
               <p className="text-xs text-slate-500 mt-0.5">

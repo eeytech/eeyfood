@@ -76,6 +76,18 @@ export async function middleware(request: NextRequest) {
       }
     }
 
+    // Se o usuário for Entregador / Motoboy, restringir exclusivamente ao /entregas e APIs
+    if (userRole === "COURIER") {
+      const isAllowed =
+        pathname === "/entregas" ||
+        pathname.startsWith("/entregas/") ||
+        pathname.startsWith("/api/");
+
+      if (!isAllowed) {
+        return NextResponse.redirect(new URL("/entregas", request.url));
+      }
+    }
+
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set("x-pathname", pathname);
     requestHeaders.set("x-user-id", String(payload.sub ?? ""));

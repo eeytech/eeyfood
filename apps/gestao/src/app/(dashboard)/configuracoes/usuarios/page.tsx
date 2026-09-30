@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { buscarRestauranteParaGestao } from "@/lib/admin-queries";
+import { getSession } from "@/lib/auth/session";
 import { listarUsuariosAction } from "../usuarios-actions";
 import { listarGarconsComMetricasAction } from "../garcons-actions";
 import { UsuariosClient } from "./usuarios-client";
@@ -24,6 +25,8 @@ export default async function UsuariosPage({ params }: UsuariosPageProps) {
     return notFound();
   }
 
+  const session = await getSession();
+
   const [users, garconsData] = await Promise.all([
     listarUsuariosAction(restaurant.slug),
     listarGarconsComMetricasAction(restaurant.slug).catch(() => ({
@@ -38,6 +41,7 @@ export default async function UsuariosPage({ params }: UsuariosPageProps) {
       slug={restaurant.slug}
       users={users}
       garconsData={garconsData}
+      currentUserRole={session?.role}
     />
   );
 }

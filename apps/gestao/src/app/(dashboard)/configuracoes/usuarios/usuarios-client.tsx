@@ -12,6 +12,7 @@ import {
   ChevronsRightIcon,
   FilterXIcon,
   LoaderCircleIcon,
+  LockIcon,
   MailIcon,
   MonitorSmartphoneIcon,
   MoreHorizontalIcon,
@@ -102,6 +103,7 @@ interface UsuariosClientProps {
     regraComissao: CommissionRuleData | null;
     fechamentos: TipClosingItem[];
   };
+  currentUserRole?: string;
 }
 
 interface RoleConfig {
@@ -197,6 +199,7 @@ export function UsuariosClient({
   slug,
   users,
   garconsData,
+  currentUserRole,
 }: UsuariosClientProps) {
   const [isPending, startTransition] = useTransition();
 
@@ -279,6 +282,15 @@ export function UsuariosClient({
   const handleCreateSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setCreateError(null);
+
+    if (currentUserRole === "MANAGER" && (selectedRole === "ADMIN" || selectedRole === "SUPER_ADMIN")) {
+      setCreateError(
+        "Usuários com perfil de Gerente não têm permissão para cadastrar Administradores.",
+      );
+      toast.error("Usuários com perfil de Gerente não têm permissão para cadastrar Administradores.");
+      return;
+    }
+
     const formData = new FormData(e.currentTarget);
     formData.set("role", selectedRole);
     formData.append("restaurantSlug", slug);
@@ -305,6 +317,10 @@ export function UsuariosClient({
   };
 
   const handleOpenEdit = (user: UserItem) => {
+    if (currentUserRole === "MANAGER" && (user.role === "ADMIN" || user.role === "SUPER_ADMIN")) {
+      toast.error("Usuários com perfil de Gerente não têm permissão para editar Administradores.");
+      return;
+    }
     setEditingUser(user);
     setEditName(user.name);
     setEditRole((user.role as UserRole) || "KITCHEN");
@@ -316,6 +332,13 @@ export function UsuariosClient({
     e.preventDefault();
     if (!editingUser) return;
     setEditError(null);
+
+    if (currentUserRole === "MANAGER" && (editRole === "ADMIN" || editRole === "SUPER_ADMIN")) {
+      setEditError(
+        "Usuários com perfil de Gerente não têm permissão para atribuir o cargo de Administrador.",
+      );
+      return;
+    }
 
     if (editPassword.trim()) {
       const pwd = editPassword.trim();
@@ -346,7 +369,16 @@ export function UsuariosClient({
     });
   };
 
-  const handleToggleStatus = (userId: string, currentStatus: boolean, userName: string) => {
+  const handleToggleStatus = (
+    userId: string,
+    currentStatus: boolean,
+    userName: string,
+    userRole?: string,
+  ) => {
+    if (currentUserRole === "MANAGER" && (userRole === "ADMIN" || userRole === "SUPER_ADMIN")) {
+      toast.error("Usuários com perfil de Gerente não têm permissão para alterar o status de Administradores.");
+      return;
+    }
     startTransition(async () => {
       try {
         await alternarStatusUsuarioAction(userId, !currentStatus, slug);
@@ -361,6 +393,14 @@ export function UsuariosClient({
 
   const handleDeleteConfirm = () => {
     if (!deletingUser) return;
+    if (
+      currentUserRole === "MANAGER" &&
+      (deletingUser.role === "ADMIN" || deletingUser.role === "SUPER_ADMIN")
+    ) {
+      toast.error("Usuários com perfil de Gerente não têm permissão para excluir Administradores.");
+      setDeletingUser(null);
+      return;
+    }
     startTransition(async () => {
       const result = await excluirUsuarioAction(deletingUser.id, slug);
       if (result.error) {
@@ -743,81 +783,105 @@ export function UsuariosClient({
 
                         {/* Status Switch */}
                         <TableCell className="py-3.5 text-center">
-                          <div className="inline-flex items-center gap-2">
-                            <Switch
-                              checked={u.isActive}
-                              disabled={isPending}
-                              onCheckedChange={() =>
-                                handleToggleStatus(u.id, u.isActive, u.name)
-                              }
-                              className="data-[state=checked]:bg-emerald-600 data-[state=unchecked]:bg-slate-200"
-                            />
-                            <span
-                              className={cn(
-                                "text-xs font-medium",
-                                u.isActive ? "text-emerald-700" : "text-slate-400",
-                              )}
-                            >
-                              {u.isActive ? "Ativo" : "Inativo"}
-                            </span>
-                          </div>
+                          {(() => {
+                            const isTargetAdmin = u.role === "ADMIN" || u.role === "SUPER_ADMIN";
+                            const isRestrictedForManager = currentUserRole === "MANAGER" && isTargetAdmin;
+                            return (
+                              <div className="inline-flex items-center gap-2">
+                                <Switch
+                                  checked={u.isActive}
+                                  disabled={isPending || isRestrictedForManager}
+                                  onCheckedChange={() =>
+                                    handleToggleStatus(u.id, u.isActive, u.name, u.role)
+                                  }
+                                  className="data-[state=checked]:bg-emerald-600 data-[state=unchecked]:bg-slate-200"
+                                />
+                                <span
+                                  className={cn(
+                                    "text-xs font-medium",
+                                    u.isActive ? "text-emerald-700" : "text-slate-400",
+                                  )}
+                                >
+                                  {u.isActive ? "Ativo" : "Inativo"}
+                                </span>
+                              </div>
+                            );
+                          })()}
                         </TableCell>
 
                         {/* Ações */}
                         <TableCell className="py-3.5 text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-                              >
-                                <MoreHorizontalIcon size={16} />
-                                <span className="sr-only">Opções</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                              align="end"
-                              className="w-48 rounded-xl border-slate-200 bg-white p-1 text-slate-900 shadow-xl"
-                            >
-                              <DropdownMenuLabel className="px-2 py-1.5 text-xs font-semibold text-slate-500">
-                                Opções de Acesso
-                              </DropdownMenuLabel>
-                              <DropdownMenuItem
-                                onClick={() => handleOpenEdit(u)}
-                                className="gap-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
-                              >
-                                <PencilIcon size={14} className="text-slate-500" />
-                                Editar dados
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  handleToggleStatus(u.id, u.isActive, u.name)
-                                }
-                                className="gap-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
-                              >
-                                {u.isActive ? (
-                                  <>
-                                    <UserXIcon size={14} className="text-amber-500" />
-                                    Desativar acesso
-                                  </>
-                                ) : (
-                                  <>
-                                    <UserCheckIcon size={14} className="text-emerald-600" />
-                                    Ativar acesso
-                                  </>
-                                )}
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator className="bg-slate-100" />
-                              <DropdownMenuItem
-                                onClick={() => setDeletingUser(u)}
-                                className="gap-2 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-700"
-                              >
-                                <Trash2Icon size={14} />
-                                Excluir usuário
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          {(() => {
+                            const isTargetAdmin = u.role === "ADMIN" || u.role === "SUPER_ADMIN";
+                            const isRestrictedForManager = currentUserRole === "MANAGER" && isTargetAdmin;
+
+                            if (isRestrictedForManager) {
+                              return (
+                                <div className="flex items-center justify-end pr-2" title="Administradores estão acima do perfil de Gerente">
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-500">
+                                    <LockIcon size={11} className="text-slate-400" />
+                                    Protegido
+                                  </span>
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                                  >
+                                    <MoreHorizontalIcon size={16} />
+                                    <span className="sr-only">Opções</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                  align="end"
+                                  className="w-48 rounded-xl border-slate-200 bg-white p-1 text-slate-900 shadow-xl"
+                                >
+                                  <DropdownMenuLabel className="px-2 py-1.5 text-xs font-semibold text-slate-500">
+                                    Opções de Acesso
+                                  </DropdownMenuLabel>
+                                  <DropdownMenuItem
+                                    onClick={() => handleOpenEdit(u)}
+                                    className="gap-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
+                                  >
+                                    <PencilIcon size={14} className="text-slate-500" />
+                                    Editar dados
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      handleToggleStatus(u.id, u.isActive, u.name, u.role)
+                                    }
+                                    className="gap-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
+                                  >
+                                    {u.isActive ? (
+                                      <>
+                                        <UserXIcon size={14} className="text-amber-500" />
+                                        Desativar acesso
+                                      </>
+                                    ) : (
+                                      <>
+                                        <UserCheckIcon size={14} className="text-emerald-600" />
+                                        Ativar acesso
+                                      </>
+                                    )}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator className="bg-slate-100" />
+                                  <DropdownMenuItem
+                                    onClick={() => setDeletingUser(u)}
+                                    className="gap-2 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-700"
+                                  >
+                                    <Trash2Icon size={14} />
+                                    Excluir usuário
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            );
+                          })()}
                         </TableCell>
                       </TableRow>
                     );
@@ -837,6 +901,8 @@ export function UsuariosClient({
                   description: "",
                 };
                 const RoleIcon = roleInfo.icon;
+                const isTargetAdmin = u.role === "ADMIN" || u.role === "SUPER_ADMIN";
+                const isRestrictedForManager = currentUserRole === "MANAGER" && isTargetAdmin;
 
                 return (
                   <div key={u.id} className="space-y-3 p-4">
@@ -851,59 +917,69 @@ export function UsuariosClient({
                         </div>
                       </div>
 
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-900"
-                          >
-                            <MoreHorizontalIcon size={16} />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          className="w-48 rounded-xl border-slate-200 bg-white p-1 text-slate-900 shadow-xl"
+                      {isRestrictedForManager ? (
+                        <span
+                          title="Administradores estão acima do perfil de Gerente"
+                          className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-500"
                         >
-                          <DropdownMenuItem
-                            onClick={() => handleOpenEdit(u)}
-                            className="gap-2 rounded-lg text-xs font-medium text-slate-700"
+                          <LockIcon size={11} className="text-slate-400" />
+                          Protegido
+                        </span>
+                      ) : (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-900"
+                            >
+                              <MoreHorizontalIcon size={16} />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            className="w-48 rounded-xl border-slate-200 bg-white p-1 text-slate-900 shadow-xl"
                           >
-                            <PencilIcon size={14} />
-                            Editar dados
-                          </DropdownMenuItem>
-                          {u.role !== "SUPER_ADMIN" && (
-                            <>
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  handleToggleStatus(u.id, u.isActive, u.name)
-                                }
-                                className="gap-2 rounded-lg text-xs font-medium text-slate-700"
-                              >
-                                {u.isActive ? (
-                                  <>
-                                    <UserXIcon size={14} className="text-amber-500" />
-                                    Desativar acesso
-                                  </>
-                                ) : (
-                                  <>
-                                    <UserCheckIcon size={14} className="text-emerald-600" />
-                                    Ativar acesso
-                                  </>
-                                )}
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator className="bg-slate-100" />
-                              <DropdownMenuItem
-                                onClick={() => setDeletingUser(u)}
-                                className="gap-2 rounded-lg text-xs font-medium text-red-600"
-                              >
-                                <Trash2Icon size={14} />
-                                Excluir usuário
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                            <DropdownMenuItem
+                              onClick={() => handleOpenEdit(u)}
+                              className="gap-2 rounded-lg text-xs font-medium text-slate-700"
+                            >
+                              <PencilIcon size={14} />
+                              Editar dados
+                            </DropdownMenuItem>
+                            {u.role !== "SUPER_ADMIN" && (
+                              <>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleToggleStatus(u.id, u.isActive, u.name, u.role)
+                                  }
+                                  className="gap-2 rounded-lg text-xs font-medium text-slate-700"
+                                >
+                                  {u.isActive ? (
+                                    <>
+                                      <UserXIcon size={14} className="text-amber-500" />
+                                      Desativar acesso
+                                    </>
+                                  ) : (
+                                    <>
+                                      <UserCheckIcon size={14} className="text-emerald-600" />
+                                      Ativar acesso
+                                    </>
+                                  )}
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator className="bg-slate-100" />
+                                <DropdownMenuItem
+                                  onClick={() => setDeletingUser(u)}
+                                  className="gap-2 rounded-lg text-xs font-medium text-red-600"
+                                >
+                                  <Trash2Icon size={14} />
+                                  Excluir usuário
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </div>
 
                     <div className="flex items-center justify-between pt-1">
@@ -928,9 +1004,9 @@ export function UsuariosClient({
                         </span>
                         <Switch
                           checked={u.isActive}
-                          disabled={isPending}
+                          disabled={isPending || isRestrictedForManager}
                           onCheckedChange={() =>
-                            handleToggleStatus(u.id, u.isActive, u.name)
+                            handleToggleStatus(u.id, u.isActive, u.name, u.role)
                           }
                           className="data-[state=checked]:bg-emerald-600 data-[state=unchecked]:bg-slate-200"
                         />
@@ -1125,7 +1201,11 @@ export function UsuariosClient({
                 </SelectTrigger>
                 <SelectContent className="max-h-80 rounded-xl border-slate-200 bg-white shadow-xl">
                   {Object.entries(ROLE_CONFIG)
-                    .filter(([roleKey]) => roleKey !== "SUPER_ADMIN")
+                    .filter(([roleKey]) => {
+                      if (roleKey === "SUPER_ADMIN") return false;
+                      if (currentUserRole === "MANAGER" && roleKey === "ADMIN") return false;
+                      return true;
+                    })
                     .map(([roleKey, config]) => {
                     const RoleIcon = config.icon;
                     return (
@@ -1250,7 +1330,11 @@ export function UsuariosClient({
                 </SelectTrigger>
                 <SelectContent className="max-h-80 rounded-xl border-slate-200 bg-white shadow-xl">
                   {Object.entries(ROLE_CONFIG)
-                    .filter(([roleKey]) => roleKey !== "SUPER_ADMIN")
+                    .filter(([roleKey]) => {
+                      if (roleKey === "SUPER_ADMIN") return false;
+                      if (currentUserRole === "MANAGER" && roleKey === "ADMIN") return false;
+                      return true;
+                    })
                     .map(([roleKey, config]) => {
                     const RoleIcon = config.icon;
                     return (

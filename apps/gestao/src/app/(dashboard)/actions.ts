@@ -718,7 +718,29 @@ export const updateRestaurantDetailsAction = async (
   const description = getStringValue(formData.get("description"));
   const cnpj = getOptionalStringValue(formData.get("cnpj"));
   const phone = getOptionalStringValue(formData.get("phone"));
-  const address = getOptionalStringValue(formData.get("address"));
+  let address = getOptionalStringValue(formData.get("address"));
+  if (!address) {
+    const logradouro = getOptionalStringValue(formData.get("logradouro"));
+    const numero = getOptionalStringValue(formData.get("numero"));
+    const complemento = getOptionalStringValue(formData.get("complemento"));
+    const bairro = getOptionalStringValue(formData.get("bairro"));
+    const cidade = getOptionalStringValue(formData.get("cidade"));
+    const estado = getOptionalStringValue(formData.get("estado"));
+    const cep = getOptionalStringValue(formData.get("cep"));
+
+    if (logradouro || cidade) {
+      const parts: string[] = [];
+      let street = logradouro || "";
+      if (numero) street = street ? `${street}, ${numero}` : numero;
+      if (complemento) street = street ? `${street} - ${complemento}` : complemento;
+      if (street) parts.push(street);
+      if (bairro) parts.push(bairro);
+      if (cidade && estado) parts.push(`${cidade} - ${estado}`);
+      else if (cidade) parts.push(cidade);
+      if (cep) parts.push(`CEP: ${cep}`);
+      address = parts.join(" - ");
+    }
+  }
 
   if (!name || !description) {
     throw new Error("Preencha todos os campos obrigatórios.");

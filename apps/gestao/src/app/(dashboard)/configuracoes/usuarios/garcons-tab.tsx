@@ -1129,7 +1129,7 @@ export function GarconsTab({
           <form onSubmit={handleGarcomSubmit}>
             <DialogHeader>
               <DialogTitle className="text-lg font-bold text-slate-900">
-                {editingGarcom ? "Editar Garçom" : "Cadastrar Novo Garçom do Salão"}
+                {editingGarcom ? "Editar Garçom" : "Cadastrar Novo Garçom"}
               </DialogTitle>
               <DialogDescription className="text-xs text-slate-500">
                 Cadastre o profissional que atenderá mesas no salão e registrará pedidos via Comanda Mobile.
@@ -1325,7 +1325,7 @@ export function GarconsTab({
         onOpenChange={(open) => {
           if (!open) setDeletingGarcom(null);
         }}
-        title="Excluir garçom"
+        title="Excluir Garçom"
         description={
           <>
             Tem certeza que deseja remover o garçom{" "}

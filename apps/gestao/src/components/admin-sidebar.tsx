@@ -30,6 +30,7 @@ import {
   Users2Icon,
   UsersRoundIcon,
   UtensilsCrossedIcon,
+  type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -99,10 +100,10 @@ const AdminSidebar = ({
     const isAttendant = role === "ATTENDANT";
     const isWaiter = role === "WAITER";
     const isKitchen = role === "KITCHEN";
-    const isCourier = role === "COURIER";
 
     // Operações: Super Admin, Admin, Gerente e Atendente têm acesso total.
-    // Garçom, Cozinha e Entregador têm acesso aos seus módulos específicos.
+    // Garçom e Cozinha têm acesso aos seus módulos específicos caso utilizem a sidebar.
+    // O entregador, assim como KDS, TV e Garçom dedicado, não utiliza a sidebar.
     const operacoesItems = [
       { href: "pedidos", label: "Pedidos", icon: ClipboardListIcon, specificRoles: [] },
       { href: "pdv", label: "PDV", icon: MonitorSmartphoneIcon, specificRoles: [] },
@@ -110,18 +111,17 @@ const AdminSidebar = ({
       { href: "mesas", label: "Mesas", icon: LayoutGridIcon, specificRoles: ["WAITER"] },
       { href: "mesas/qrcodes", label: "QR Codes das Mesas", icon: QrCodeIcon, specificRoles: ["WAITER"] },
       { href: "kds", label: "Cozinha (KDS)", icon: ConciergeBellIcon, specificRoles: ["KITCHEN"] },
-      { href: "entregas", label: "Entregas", icon: BikeIcon, specificRoles: ["COURIER"] },
+      { href: "entregas", label: "Entregas", icon: BikeIcon, specificRoles: [] },
     ].filter((item) => {
       if (isManagement || isAttendant) return true;
       if (isWaiter && item.specificRoles.includes("WAITER")) return true;
       if (isKitchen && item.specificRoles.includes("KITCHEN")) return true;
-      if (isCourier && item.specificRoles.includes("COURIER")) return true;
       return false;
     });
 
     const groups: Array<{
       label: string;
-      items: Array<{ href: string; label: string; icon: any }>;
+      items: Array<{ href: string; label: string; icon: LucideIcon }>;
     }> = [];
 
     if (operacoesItems.length > 0) {
@@ -308,13 +308,17 @@ const AdminSidebar = ({
                     ? "Comandas / Garçom"
                     : userRole === "COURIER"
                       ? "Entregador"
-                      : "Administrador"}
+                      : userRole === "MANAGER"
+                        ? "Gerente"
+                        : userRole === "ATTENDANT"
+                          ? "Atendente"
+                          : "Administrador"}
               </span>
             </div>
           )}
 
           <div className="flex flex-col gap-1">
-            {userRole !== "KITCHEN" && (
+            {["SUPER_ADMIN", "ADMIN", "MANAGER", "ATTENDANT"].includes(userRole || "") && (
               <Link
                 href="/suporte"
                 className={cn(

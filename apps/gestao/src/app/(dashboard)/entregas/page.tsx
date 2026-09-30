@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import EntregasPainel from "@/components/entregas-painel";
 import { buscarRestauranteParaGestao } from "@/lib/admin-queries";
+import { getSession } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,8 @@ const EntregasPage = async ({ params }: EntregasPageProps) => {
     return notFound();
   }
 
+  const session = await getSession();
+
   const [orders, couriers] = await Promise.all([
     listarPedidosRecebimentoPorSlug(restaurant.slug),
     listarCouriersPorSlug(restaurant.slug),
@@ -36,6 +39,8 @@ const EntregasPage = async ({ params }: EntregasPageProps) => {
       initialCouriers={couriers}
       slug={restaurant.slug}
       restaurantName={restaurant.name}
+      isDedicatedMode={session?.role === "COURIER"}
+      userName={session?.name}
     />
   );
 };

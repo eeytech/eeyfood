@@ -9,6 +9,7 @@ import {
   ClockIcon,
   ExternalLinkIcon,
   Loader2Icon,
+  LogOutIcon,
   MapPinIcon,
   MessageCircleIcon,
   PackageCheckIcon,
@@ -27,6 +28,7 @@ import { io } from "socket.io-client";
 import { toast } from "sonner";
 
 import { dispatchOrderAction, getCouriersAction } from "@/app/(dashboard)/logistica-actions";
+import { logoutAction } from "@/lib/auth/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,6 +56,8 @@ interface EntregasPainelProps {
   restaurantName: string;
   initialOrders: PedidoRecebimento[];
   initialCouriers: Courier[];
+  isDedicatedMode?: boolean;
+  userName?: string;
 }
 
 type TabFiltro = "TODOS" | "PRONTOS" | "EM_ROTA" | "COZINHA" | "CONCLUIDOS";
@@ -63,6 +67,8 @@ export default function EntregasPainel({
   restaurantName,
   initialOrders,
   initialCouriers,
+  isDedicatedMode,
+  userName,
 }: EntregasPainelProps) {
   const [orders, setOrders] = useState<PedidoRecebimento[]>(initialOrders);
   const [couriers, setCouriers] = useState<Courier[]>(initialCouriers);
@@ -571,6 +577,30 @@ export default function EntregasPainel({
               <RefreshCwIcon size={13} className="mr-1" />
               Atualizar
             </Button>
+
+            {isDedicatedMode && userName && (
+              <div className="flex h-8 items-center gap-1.5 rounded-full border border-cyan-200 bg-cyan-50 px-3 text-xs font-semibold text-cyan-800">
+                <BikeIcon size={13} className="text-cyan-600" />
+                <span>{userName}</span>
+              </div>
+            )}
+
+            {isDedicatedMode && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  if (window.confirm("Deseja desconectar e sair do painel de entregas?")) {
+                    await logoutAction();
+                  }
+                }}
+                className="h-8 gap-1.5 rounded-full border-rose-200 bg-rose-50 text-xs font-semibold text-rose-700 hover:bg-rose-100 hover:text-rose-800 cursor-pointer active:scale-95 transition-all"
+                title="Desconectar do painel de entregas"
+              >
+                <LogOutIcon size={13} />
+                <span>Sair</span>
+              </Button>
+            )}
           </div>
         </CardHeader>
       </Card>

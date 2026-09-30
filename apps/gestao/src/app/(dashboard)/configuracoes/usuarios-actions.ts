@@ -12,6 +12,7 @@ import {
   usersTable,
 } from "@fsw/db";
 import type { UserRole } from "@fsw/db";
+import { getSession } from "@/lib/auth/session";
 
 export async function listarUsuariosAction(restaurantSlug?: string) {
   const restaurant = await buscarRestaurantePorSlug(restaurantSlug);
@@ -69,6 +70,14 @@ export async function criarUsuarioAction(
     };
   }
 
+  const session = await getSession();
+  if (session?.role === "MANAGER" && role === "ADMIN") {
+    return {
+      error:
+        "Usuários com perfil de Gerente não têm permissão para cadastrar Administradores, pois este cargo está acima na hierarquia.",
+    };
+  }
+
   try {
     const [existingUser] = await db
       .select({ id: usersTable.id })
@@ -122,6 +131,21 @@ export async function alternarStatusUsuarioAction(
   isActive: boolean,
   restaurantSlug?: string,
 ) {
+  const session = await getSession();
+  if (session?.role === "MANAGER") {
+    const [existing] = await db
+      .select({ id: usersTable.id, role: usersTable.role })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1);
+
+    if (existing?.role === "ADMIN" || existing?.role === "SUPER_ADMIN") {
+      throw new Error(
+        "Usuários com perfil de Gerente não têm permissão para alterar o status de Administradores.",
+      );
+    }
+  }
+
   await db
     .update(usersTable)
     .set({ isActive, updatedAt: new Date() })
@@ -172,6 +196,23 @@ export async function atualizarUsuarioAction(params: {
         error:
           "Não é permitido promover usuários para Super Administrador.",
       };
+    }
+
+    const session = await getSession();
+    if (session?.role === "MANAGER") {
+      if (role === "ADMIN" || role === "SUPER_ADMIN") {
+        return {
+          error:
+            "Usuários com perfil de Gerente não têm permissão para atribuir o cargo de Administrador.",
+        };
+      }
+
+      if (existing?.role === "ADMIN" || existing?.role === "SUPER_ADMIN") {
+        return {
+          error:
+            "Usuários com perfil de Gerente não têm permissão para alterar dados de Administradores.",
+        };
+      }
     }
 
     const updateData: {
@@ -228,6 +269,14 @@ export async function excluirUsuarioAction(
 
     if (existing?.role === "SUPER_ADMIN") {
       return { error: "O Super Administrador não pode ser excluído." };
+    }
+
+    const session = await getSession();
+    if (session?.role === "MANAGER" && existing?.role === "ADMIN") {
+      return {
+        error:
+          "Usuários com perfil de Gerente não têm permissão para excluir Administradores.",
+      };
     }
 
     await db.delete(usersTable).where(eq(usersTable.id, userId));
