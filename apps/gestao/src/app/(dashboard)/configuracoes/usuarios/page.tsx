@@ -9,7 +9,7 @@ import { UsuariosClient } from "./usuarios-client";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Equipe, Usuários e Garçons | Gestão",
+  title: "Acessos | Gestão",
 };
 
 interface UsuariosPageProps {

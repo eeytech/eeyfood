@@ -13,6 +13,7 @@ import {
   FilterXIcon,
   LoaderCircleIcon,
   MailIcon,
+  MonitorSmartphoneIcon,
   MoreHorizontalIcon,
   PencilIcon,
   PlusIcon,
@@ -152,6 +153,13 @@ const ROLE_CONFIG: Record<string, RoleConfig> = {
     badgeClass: "bg-cyan-50 text-cyan-800 border-cyan-200/80 hover:bg-cyan-100",
     icon: BikeIcon,
     description: "Acesso ao Painel de Entregas & Expedição para consulta de rotas e despacho de pedidos",
+  },
+  ATTENDANT: {
+    label: "Atendente (Operações)",
+    shortLabel: "Atendente",
+    badgeClass: "bg-violet-50 text-violet-800 border-violet-200/80 hover:bg-violet-100",
+    icon: MonitorSmartphoneIcon,
+    description: "Acesso completo às operações de atendimento, balcão, PDV e pedidos",
   },
   SUPER_ADMIN: {
     label: "Super Administrador (Global)",
@@ -354,10 +362,10 @@ export function UsuariosClient({
           </div>
           <div>
             <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
-              Usuários e Permissões
+              Acessos
             </h1>
             <p className="text-sm text-slate-500">
-              Cadastre operadores da cozinha (KDS), garçons e gerentes com permissões personalizadas.
+              Gerencie os acessos da equipe, operadores de salão, cozinha e gerentes.
             </p>
           </div>
         </div>
@@ -853,32 +861,36 @@ export function UsuariosClient({
                             <PencilIcon size={14} />
                             Editar dados
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleToggleStatus(u.id, u.isActive, u.name)
-                            }
-                            className="gap-2 rounded-lg text-xs font-medium text-slate-700"
-                          >
-                            {u.isActive ? (
-                              <>
-                                <UserXIcon size={14} className="text-amber-500" />
-                                Desativar acesso
-                              </>
-                            ) : (
-                              <>
-                                <UserCheckIcon size={14} className="text-emerald-600" />
-                                Ativar acesso
-                              </>
-                            )}
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator className="bg-slate-100" />
-                          <DropdownMenuItem
-                            onClick={() => setDeletingUser(u)}
-                            className="gap-2 rounded-lg text-xs font-medium text-red-600"
-                          >
-                            <Trash2Icon size={14} />
-                            Excluir usuário
-                          </DropdownMenuItem>
+                          {u.role !== "SUPER_ADMIN" && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleToggleStatus(u.id, u.isActive, u.name)
+                                }
+                                className="gap-2 rounded-lg text-xs font-medium text-slate-700"
+                              >
+                                {u.isActive ? (
+                                  <>
+                                    <UserXIcon size={14} className="text-amber-500" />
+                                    Desativar acesso
+                                  </>
+                                ) : (
+                                  <>
+                                    <UserCheckIcon size={14} className="text-emerald-600" />
+                                    Ativar acesso
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator className="bg-slate-100" />
+                              <DropdownMenuItem
+                                onClick={() => setDeletingUser(u)}
+                                className="gap-2 rounded-lg text-xs font-medium text-red-600"
+                              >
+                                <Trash2Icon size={14} />
+                                Excluir usuário
+                              </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -1083,7 +1095,9 @@ export function UsuariosClient({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="max-h-80 rounded-xl border-slate-200 bg-white shadow-xl">
-                  {Object.entries(ROLE_CONFIG).map(([roleKey, config]) => {
+                  {Object.entries(ROLE_CONFIG)
+                    .filter(([roleKey]) => roleKey !== "SUPER_ADMIN")
+                    .map(([roleKey, config]) => {
                     const RoleIcon = config.icon;
                     return (
                       <SelectItem
@@ -1206,7 +1220,9 @@ export function UsuariosClient({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="max-h-80 rounded-xl border-slate-200 bg-white shadow-xl">
-                  {Object.entries(ROLE_CONFIG).map(([roleKey, config]) => {
+                  {Object.entries(ROLE_CONFIG)
+                    .filter(([roleKey]) => roleKey !== "SUPER_ADMIN")
+                    .map(([roleKey, config]) => {
                     const RoleIcon = config.icon;
                     return (
                       <SelectItem

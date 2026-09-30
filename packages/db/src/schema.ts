@@ -219,6 +219,7 @@ export const userRoleEnum = pgEnum("UserRole", [
   "KITCHEN",
   "PANEL",
   "COURIER",
+  "ATTENDANT",
 ]);
 
 export const ticketStatusEnum = pgEnum("TicketStatus", [

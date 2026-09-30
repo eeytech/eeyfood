@@ -59,6 +59,13 @@ export async function criarUsuarioAction(
     return { error: "A senha deve ter pelo menos 6 caracteres." };
   }
 
+  if (role === "SUPER_ADMIN") {
+    return {
+      error:
+        "Não é permitido cadastrar novos usuários com o perfil Super Administrador. Esse usuário é único e gerado pelo sistema.",
+    };
+  }
+
   try {
     const [existingUser] = await db
       .select({ id: usersTable.id })
@@ -78,9 +85,7 @@ export async function criarUsuarioAction(
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    const isSuperAdmin = role === "SUPER_ADMIN";
-
-    if (role === "PANEL" || role === "COURIER") {
+    if (role === "PANEL" || role === "COURIER" || role === "ATTENDANT") {
       try {
         await db.execute(sql`ALTER TYPE "public"."UserRole" ADD VALUE IF NOT EXISTS ${sql.raw(`'${role}'`)}`);
       } catch {
@@ -93,7 +98,7 @@ export async function criarUsuarioAction(
       email,
       passwordHash,
       role,
-      restaurantId: isSuperAdmin ? null : restaurant.id,
+      restaurantId: restaurant.id,
     });
 
     if (restaurant.slug) {
@@ -143,6 +148,23 @@ export async function atualizarUsuarioAction(params: {
   }
 
   try {
+    const [existing] = await db
+      .select({ id: usersTable.id, role: usersTable.role })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1);
+
+    if (existing?.role === "SUPER_ADMIN" && role !== "SUPER_ADMIN") {
+      return { error: "O cargo do Super Administrador não pode ser alterado." };
+    }
+
+    if (existing?.role !== "SUPER_ADMIN" && role === "SUPER_ADMIN") {
+      return {
+        error:
+          "Não é permitido promover usuários para Super Administrador.",
+      };
+    }
+
     const updateData: {
       name: string;
       role: UserRole;
@@ -158,7 +180,7 @@ export async function atualizarUsuarioAction(params: {
       updateData.passwordHash = await bcrypt.hash(password.trim(), 10);
     }
 
-    if (role === "PANEL" || role === "COURIER") {
+    if (role === "PANEL" || role === "COURIER" || role === "ATTENDANT") {
       try {
         await db.execute(sql`ALTER TYPE "public"."UserRole" ADD VALUE IF NOT EXISTS ${sql.raw(`'${role}'`)}`);
       } catch {
@@ -189,6 +211,16 @@ export async function excluirUsuarioAction(
   restaurantSlug?: string,
 ): Promise<{ error?: string; success?: boolean }> {
   try {
+    const [existing] = await db
+      .select({ id: usersTable.id, role: usersTable.role })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1);
+
+    if (existing?.role === "SUPER_ADMIN") {
+      return { error: "O Super Administrador não pode ser excluído." };
+    }
+
     await db.delete(usersTable).where(eq(usersTable.id, userId));
 
     if (restaurantSlug) {

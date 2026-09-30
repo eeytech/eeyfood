@@ -13,6 +13,7 @@ import {
 } from "@fsw/db";
 import type { MarketplaceType } from "@fsw/db";
 import { revalidatePath } from "next/cache";
+import { getSession } from "@/lib/auth/session";
 
 export interface MarketplaceConfigItem {
   id?: string;
@@ -278,6 +279,14 @@ export async function simularPedidoMarketplaceAction(
   type: MarketplaceType,
 ): Promise<{ success: boolean; message: string }> {
   try {
+    const session = await getSession();
+    if (session?.role !== "SUPER_ADMIN") {
+      return {
+        success: false,
+        message: "Apenas Super Administradores têm permissão para simular pedidos de teste.",
+      };
+    }
+
     const restaurant = await getRestaurantOrThrow(slug);
 
     const [firstProduct] = await db

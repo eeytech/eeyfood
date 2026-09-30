@@ -34,7 +34,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { CompanySwitcher } from "@/components/auth/CompanySwitcher";
@@ -53,79 +53,6 @@ interface AdminSidebarProps {
   userEmail?: string;
   children?: React.ReactNode;
 }
-
-const kitchenGroups = [
-  {
-    label: "Cozinha & KDS",
-    items: [
-      { href: "kds", label: "Painel KDS", icon: ConciergeBellIcon },
-      { href: "senha", label: "Painel de Senhas", icon: MonitorSmartphoneIcon },
-    ],
-  },
-];
-
-const courierGroups = [
-  {
-    label: "Entregas & Expedição",
-    items: [
-      { href: "entregas", label: "Painel de Entregas", icon: BikeIcon },
-      { href: "pedidos", label: "Pedidos", icon: ClipboardListIcon },
-    ],
-  },
-];
-
-const navigationGroups = [
-  {
-    label: "Operações",
-    items: [
-      { href: "pedidos", label: "Pedidos", icon: ClipboardListIcon },
-      { href: "pdv", label: "PDV", icon: MonitorSmartphoneIcon },
-      { href: "comandas", label: "Comandas", icon: UsersRoundIcon },
-      { href: "mesas", label: "Mesas", icon: LayoutGridIcon },
-      { href: "mesas/qrcodes", label: "QR Codes das Mesas", icon: QrCodeIcon },
-      { href: "kds", label: "Cozinha (KDS)", icon: ConciergeBellIcon },
-      { href: "entregas", label: "Entregas", icon: BikeIcon },
-    ],
-  },
-  {
-    label: "Cardápio & Estoque",
-    items: [
-      { href: "cardapio", label: "Cardápio", icon: UtensilsCrossedIcon },
-      { href: "cardapio/impressao", label: "Impressão do Cardápio", icon: PrinterIcon },
-      { href: "estoque", label: "Estoque", icon: BoxesIcon },
-      { href: "estoque/compras", label: "Compras", icon: ShoppingCartIcon },
-    ],
-  },
-  {
-    label: "Financeiro & Métricas",
-    items: [
-      { href: "financeiro", label: "Financeiro", icon: CircleDollarSignIcon },
-      { href: "relatorios", label: "Relatórios", icon: BarChart3Icon },
-    ],
-  },
-  {
-    label: "Marketing & Clientes",
-    items: [
-      { href: "crm", label: "Clientes (CRM)", icon: HeartHandshakeIcon },
-      { href: "campanhas", label: "Campanhas", icon: MegaphoneIcon },
-      { href: "cupons", label: "Cupons", icon: TagIcon },
-      { href: "cashback", label: "Cashback", icon: CoinsIcon },
-      { href: "frete", label: "Frete Grátis", icon: GiftIcon },
-    ],
-  },
-  {
-    label: "Configurações",
-    items: [
-      { href: "configuracoes", label: "Geral", icon: StoreIcon },
-      { href: "logistica", label: "Logística & Motoboys", icon: TruckIcon },
-      { href: "configuracoes/usuarios", label: "Equipe & Acessos", icon: Users2Icon },
-      { href: "marketplaces", label: "Marketplaces", icon: ShoppingBagIcon },
-      { href: "whatsapp", label: "WhatsApp", icon: MessageSquareIcon },
-      { href: "ai", label: "IA", icon: SparklesIcon },
-      { href: "marketing", label: "Rastreamento", icon: TargetIcon },
-    ],
-  },
-];
 
 const AdminSidebar = ({
   userRole,
@@ -166,12 +93,90 @@ const AdminSidebar = ({
     }
   };
 
-  const activeGroups =
-    userRole === "KITCHEN"
-      ? kitchenGroups
-      : userRole === "COURIER"
-        ? courierGroups
-        : navigationGroups;
+  const activeGroups = useMemo(() => {
+    const role = userRole || "ADMIN";
+    const isManagement = ["SUPER_ADMIN", "ADMIN", "MANAGER"].includes(role);
+    const isAttendant = role === "ATTENDANT";
+    const isWaiter = role === "WAITER";
+    const isKitchen = role === "KITCHEN";
+    const isCourier = role === "COURIER";
+
+    // Operações: Super Admin, Admin, Gerente e Atendente têm acesso total.
+    // Garçom, Cozinha e Entregador têm acesso aos seus módulos específicos.
+    const operacoesItems = [
+      { href: "pedidos", label: "Pedidos", icon: ClipboardListIcon, specificRoles: [] },
+      { href: "pdv", label: "PDV", icon: MonitorSmartphoneIcon, specificRoles: [] },
+      { href: "comandas", label: "Comandas", icon: UsersRoundIcon, specificRoles: ["WAITER"] },
+      { href: "mesas", label: "Mesas", icon: LayoutGridIcon, specificRoles: ["WAITER"] },
+      { href: "mesas/qrcodes", label: "QR Codes das Mesas", icon: QrCodeIcon, specificRoles: ["WAITER"] },
+      { href: "kds", label: "Cozinha (KDS)", icon: ConciergeBellIcon, specificRoles: ["KITCHEN"] },
+      { href: "entregas", label: "Entregas", icon: BikeIcon, specificRoles: ["COURIER"] },
+    ].filter((item) => {
+      if (isManagement || isAttendant) return true;
+      if (isWaiter && item.specificRoles.includes("WAITER")) return true;
+      if (isKitchen && item.specificRoles.includes("KITCHEN")) return true;
+      if (isCourier && item.specificRoles.includes("COURIER")) return true;
+      return false;
+    });
+
+    const groups: Array<{
+      label: string;
+      items: Array<{ href: string; label: string; icon: any }>;
+    }> = [];
+
+    if (operacoesItems.length > 0) {
+      groups.push({
+        label: "Operações",
+        items: operacoesItems,
+      });
+    }
+
+    // Configurações, Marketing, Financeiro e Cardápio são exclusivos para gestão
+    if (isManagement) {
+      groups.push(
+        {
+          label: "Cardápio & Estoque",
+          items: [
+            { href: "cardapio", label: "Cardápio", icon: UtensilsCrossedIcon },
+            { href: "cardapio/impressao", label: "Impressão do Cardápio", icon: PrinterIcon },
+            { href: "estoque", label: "Estoque", icon: BoxesIcon },
+            { href: "estoque/compras", label: "Compras", icon: ShoppingCartIcon },
+          ],
+        },
+        {
+          label: "Financeiro & Métricas",
+          items: [
+            { href: "financeiro", label: "Financeiro", icon: CircleDollarSignIcon },
+            { href: "relatorios", label: "Relatórios", icon: BarChart3Icon },
+          ],
+        },
+        {
+          label: "Marketing & Clientes",
+          items: [
+            { href: "crm", label: "Clientes (CRM)", icon: HeartHandshakeIcon },
+            { href: "campanhas", label: "Campanhas", icon: MegaphoneIcon },
+            { href: "cupons", label: "Cupons", icon: TagIcon },
+            { href: "cashback", label: "Cashback", icon: CoinsIcon },
+            { href: "frete", label: "Frete Grátis", icon: GiftIcon },
+          ],
+        },
+        {
+          label: "Configurações",
+          items: [
+            { href: "configuracoes", label: "Geral", icon: StoreIcon },
+            { href: "logistica", label: "Logística & Motoboys", icon: TruckIcon },
+            { href: "configuracoes/usuarios", label: "Acessos", icon: Users2Icon },
+            { href: "marketplaces", label: "Marketplaces", icon: ShoppingBagIcon },
+            { href: "whatsapp", label: "WhatsApp", icon: MessageSquareIcon },
+            { href: "ai", label: "IA", icon: SparklesIcon },
+            { href: "marketing", label: "Rastreamento", icon: TargetIcon },
+          ],
+        },
+      );
+    }
+
+    return groups;
+  }, [userRole]);
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-slate-50">

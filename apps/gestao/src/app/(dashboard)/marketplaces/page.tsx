@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { buscarRestauranteParaGestao } from "@/lib/admin-queries";
+import { getSession } from "@/lib/auth/session";
 import { buscarIntegracoesMarketplaceAction } from "./marketplaces-actions";
 import { MarketplacesClient } from "./marketplaces-client";
 
@@ -24,6 +25,9 @@ export default async function MarketplacesPage({ params }: MarketplacesPageProps
     return notFound();
   }
 
+  const session = await getSession();
+  const isSuperAdmin = session?.role === "SUPER_ADMIN";
+
   const { integracoes, recentMarketplaceOrdersCount } =
     await buscarIntegracoesMarketplaceAction(restaurant.slug);
 
@@ -32,6 +36,7 @@ export default async function MarketplacesPage({ params }: MarketplacesPageProps
       slug={restaurant.slug}
       integracoes={integracoes}
       recentMarketplaceOrdersCount={recentMarketplaceOrdersCount}
+      isSuperAdmin={isSuperAdmin}
     />
   );
 }

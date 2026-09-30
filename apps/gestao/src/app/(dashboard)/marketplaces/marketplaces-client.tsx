@@ -31,12 +31,14 @@ interface MarketplacesClientProps {
   slug: string;
   integracoes: MarketplaceConfigItem[];
   recentMarketplaceOrdersCount: number;
+  isSuperAdmin?: boolean;
 }
 
 export function MarketplacesClient({
   slug,
   integracoes,
   recentMarketplaceOrdersCount,
+  isSuperAdmin = false,
 }: MarketplacesClientProps) {
   const [isPending, startTransition] = useTransition();
 
@@ -328,21 +330,23 @@ export function MarketplacesClient({
                   Testar Conexão
                 </Button>
 
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleSimulateIfood}
-                  disabled={isSimulatingIfood}
-                  className="h-9 gap-1.5 text-xs bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 font-semibold"
-                >
-                  {isSimulatingIfood ? (
-                    <Loader2Icon size={13} className="animate-spin" />
-                  ) : (
-                    <ZapIcon size={13} className="text-red-600 fill-red-600" />
-                  )}
-                  Simular Pedido iFood
-                </Button>
+                {isSuperAdmin && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleSimulateIfood}
+                    disabled={isSimulatingIfood}
+                    className="h-9 gap-1.5 text-xs bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 font-semibold"
+                  >
+                    {isSimulatingIfood ? (
+                      <Loader2Icon size={13} className="animate-spin" />
+                    ) : (
+                      <ZapIcon size={13} className="text-red-600 fill-red-600" />
+                    )}
+                    Simular Pedido iFood
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -457,21 +461,23 @@ export function MarketplacesClient({
                   Testar Conexão
                 </Button>
 
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleSimulateRappi}
-                  disabled={isSimulatingRappi}
-                  className="h-9 gap-1.5 text-xs bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200 font-semibold"
-                >
-                  {isSimulatingRappi ? (
-                    <Loader2Icon size={13} className="animate-spin" />
-                  ) : (
-                    <ZapIcon size={13} className="text-orange-600 fill-orange-600" />
-                  )}
-                  Simular Pedido Rappi
-                </Button>
+                {isSuperAdmin && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleSimulateRappi}
+                    disabled={isSimulatingRappi}
+                    className="h-9 gap-1.5 text-xs bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200 font-semibold"
+                  >
+                    {isSimulatingRappi ? (
+                      <Loader2Icon size={13} className="animate-spin" />
+                    ) : (
+                      <ZapIcon size={13} className="text-orange-600 fill-orange-600" />
+                    )}
+                    Simular Pedido Rappi
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
