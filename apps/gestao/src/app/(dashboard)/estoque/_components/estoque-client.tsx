@@ -896,9 +896,10 @@ export function EstoqueClient({
 
         {/* ── Tab 1: Produtos do Cardápio ─────────────────── */}
         <TabsContent value="cardapio" className="space-y-4">
-          {/* Card de Filtros */}
-          <Card className="border-slate-200/80 bg-white shadow-sm">
-            <CardContent className="p-4 sm:p-5">
+          {/* Tabela de Produtos com Filtros Integrados */}
+          <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+            {/* Filtros de Produtos */}
+            <div className="border-b border-slate-100 bg-slate-50/50 p-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="grid flex-1 grid-cols-1 gap-2.5 sm:grid-cols-3">
                   <div className="relative">
@@ -913,7 +914,7 @@ export function EstoqueClient({
                         setSearch(e.target.value);
                         setProductPage(1);
                       }}
-                      className="h-10 rounded-xl border-slate-200 bg-slate-50/70 pl-9 text-xs transition-colors focus:bg-white sm:text-sm"
+                      className="h-10 rounded-xl border-slate-200 bg-white pl-9 text-xs transition-colors focus:bg-white sm:text-sm"
                     />
                   </div>
 
@@ -924,7 +925,7 @@ export function EstoqueClient({
                       setProductPage(1);
                     }}
                   >
-                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-xs sm:text-sm">
+                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs sm:text-sm">
                       <SelectValue placeholder="Todas as categorias" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl border-slate-200 bg-white">
@@ -944,7 +945,7 @@ export function EstoqueClient({
                       setProductPage(1);
                     }}
                   >
-                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-xs sm:text-sm">
+                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs sm:text-sm">
                       <SelectValue placeholder="Controle de estoque" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl border-slate-200 bg-white">
@@ -956,29 +957,19 @@ export function EstoqueClient({
                   </Select>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {isFilteringProducts && (
-                    <Button
-                      variant="ghost"
-                      onClick={handleClearProductFilters}
-                      className="h-10 gap-1.5 rounded-xl px-3 text-xs text-slate-500 hover:text-slate-900"
-                    >
-                      <FilterXIcon size={14} />
-                      <span>Limpar</span>
-                    </Button>
-                  )}
-
-                  <span className="text-xs font-medium text-slate-500">
-                    {filteredProducts.length}{" "}
-                    {filteredProducts.length === 1 ? "produto" : "produtos"}
-                  </span>
-                </div>
+                {isFilteringProducts && (
+                  <Button
+                    variant="ghost"
+                    onClick={handleClearProductFilters}
+                    className="h-10 gap-1.5 rounded-xl px-3 text-xs text-slate-500 hover:text-slate-900"
+                  >
+                    <FilterXIcon size={14} />
+                    <span>Limpar</span>
+                  </Button>
+                )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          {/* Tabela de Produtos */}
-          <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
             <div className="hidden md:block">
               <Table>
                 <TableHeader className="bg-slate-50/80">
@@ -1141,46 +1132,67 @@ export function EstoqueClient({
               )}
             </div>
 
-            {/* Pagination Controls */}
-            {totalProductPages > 1 && (
-              <div className="flex items-center justify-between border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:px-6">
-                <span className="text-xs text-slate-500">
-                  Página <strong>{validProductPage}</strong> de{" "}
-                  <strong>{totalProductPages}</strong>
+            {/* Rodapé / Paginação de Produtos do Cardápio */}
+            <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                <span>
+                  Exibindo <strong className="font-semibold text-slate-900">{filteredProducts.length > 0 ? (validProductPage - 1) * productPageSize + 1 : 0}</strong> a{" "}
+                  <strong className="font-semibold text-slate-900">{Math.min(validProductPage * productPageSize, filteredProducts.length)}</strong> de{" "}
+                  <strong className="font-semibold text-slate-900">{filteredProducts.length}</strong> {filteredProducts.length === 1 ? "produto" : "produtos"}
+                  {filteredProducts.length !== products.length && (
+                    <span className="ml-1 text-slate-400">
+                      (total: {products.length})
+                    </span>
+                  )}
                 </span>
-
-                <div className="flex items-center gap-1.5">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setProductPage((p) => Math.max(1, p - 1))}
-                    disabled={validProductPage <= 1}
-                    className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
-                  >
-                    <ChevronLeftIcon size={14} />
-                    <span>Anterior</span>
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setProductPage((p) => Math.min(totalProductPages, p + 1))}
-                    disabled={validProductPage >= totalProductPages}
-                    className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
-                  >
-                    <span>Próxima</span>
-                    <ChevronRightIcon size={14} />
-                  </Button>
-                </div>
+                {isFilteringProducts && (
+                  <span className="text-[11px] font-medium text-amber-600">
+                    (Filtros aplicados)
+                  </span>
+                )}
               </div>
-            )}
+
+              {totalProductPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500">
+                    Página <strong>{validProductPage}</strong> de{" "}
+                    <strong>{totalProductPages}</strong>
+                  </span>
+
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setProductPage((p) => Math.max(1, p - 1))}
+                      disabled={validProductPage <= 1}
+                      className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
+                    >
+                      <ChevronLeftIcon size={14} />
+                      <span>Anterior</span>
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setProductPage((p) => Math.min(totalProductPages, p + 1))}
+                      disabled={validProductPage >= totalProductPages}
+                      className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
+                    >
+                      <span>Próxima</span>
+                      <ChevronRightIcon size={14} />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </Card>
         </TabsContent>
 
         {/* ── Tab 2: Inventário e Bastidores ─────────────── */}
         <TabsContent value="inventario" className="space-y-4">
-          <Card className="border-slate-200/80 bg-white shadow-sm">
-            <CardContent className="p-4 sm:p-5">
+          <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+            {/* Filtros de Inventário */}
+            <div className="border-b border-slate-100 bg-slate-50/50 p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="grid flex-1 grid-cols-1 gap-2.5 sm:grid-cols-2">
                   <div className="relative">
@@ -1195,7 +1207,7 @@ export function EstoqueClient({
                         setInvSearch(e.target.value);
                         setInvPage(1);
                       }}
-                      className="h-10 rounded-xl border-slate-200 bg-slate-50/70 pl-9 text-xs transition-colors focus:bg-white sm:text-sm"
+                      className="h-10 rounded-xl border-slate-200 bg-white pl-9 text-xs transition-colors focus:bg-white sm:text-sm"
                     />
                   </div>
 
@@ -1206,7 +1218,7 @@ export function EstoqueClient({
                       setInvPage(1);
                     }}
                   >
-                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-xs sm:text-sm">
+                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs sm:text-sm">
                       <SelectValue placeholder="Todos os tipos" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl border-slate-200 bg-white">
@@ -1220,28 +1232,19 @@ export function EstoqueClient({
                   </Select>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {isFilteringInv && (
-                    <Button
-                      variant="ghost"
-                      onClick={handleClearInvFilters}
-                      className="h-10 gap-1.5 rounded-xl px-3 text-xs text-slate-500 hover:text-slate-900"
-                    >
-                      <FilterXIcon size={14} />
-                      <span>Limpar</span>
-                    </Button>
-                  )}
-
-                  <span className="text-xs font-medium text-slate-500">
-                    {filteredInv.length}{" "}
-                    {filteredInv.length === 1 ? "item" : "itens"}
-                  </span>
-                </div>
+                {isFilteringInv && (
+                  <Button
+                    variant="ghost"
+                    onClick={handleClearInvFilters}
+                    className="h-10 gap-1.5 rounded-xl px-3 text-xs text-slate-500 hover:text-slate-900"
+                  >
+                    <FilterXIcon size={14} />
+                    <span>Limpar</span>
+                  </Button>
+                )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
             <div className="hidden md:block">
               <Table>
                 <TableHeader className="bg-slate-50/80">
@@ -1398,38 +1401,59 @@ export function EstoqueClient({
               ))}
             </div>
 
-            {totalInvPages > 1 && (
-              <div className="flex items-center justify-between border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:px-6">
-                <span className="text-xs text-slate-500">
-                  Página <strong>{validInvPage}</strong> de{" "}
-                  <strong>{totalInvPages}</strong>
+            {/* Rodapé / Paginação do Inventário */}
+            <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                <span>
+                  Exibindo <strong className="font-semibold text-slate-900">{filteredInv.length > 0 ? (validInvPage - 1) * invPageSize + 1 : 0}</strong> a{" "}
+                  <strong className="font-semibold text-slate-900">{Math.min(validInvPage * invPageSize, filteredInv.length)}</strong> de{" "}
+                  <strong className="font-semibold text-slate-900">{filteredInv.length}</strong> {filteredInv.length === 1 ? "item" : "itens"}
+                  {filteredInv.length !== inventoryItems.length && (
+                    <span className="ml-1 text-slate-400">
+                      (total: {inventoryItems.length})
+                    </span>
+                  )}
                 </span>
-
-                <div className="flex items-center gap-1.5">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setInvPage((p) => Math.max(1, p - 1))}
-                    disabled={validInvPage <= 1}
-                    className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
-                  >
-                    <ChevronLeftIcon size={14} />
-                    <span>Anterior</span>
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setInvPage((p) => Math.min(totalInvPages, p + 1))}
-                    disabled={validInvPage >= totalInvPages}
-                    className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
-                  >
-                    <span>Próxima</span>
-                    <ChevronRightIcon size={14} />
-                  </Button>
-                </div>
+                {isFilteringInv && (
+                  <span className="text-[11px] font-medium text-amber-600">
+                    (Filtros aplicados)
+                  </span>
+                )}
               </div>
-            )}
+
+              {totalInvPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500">
+                    Página <strong>{validInvPage}</strong> de{" "}
+                    <strong>{totalInvPages}</strong>
+                  </span>
+
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setInvPage((p) => Math.max(1, p - 1))}
+                      disabled={validInvPage <= 1}
+                      className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
+                    >
+                      <ChevronLeftIcon size={14} />
+                      <span>Anterior</span>
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setInvPage((p) => Math.min(totalInvPages, p + 1))}
+                      disabled={validInvPage >= totalInvPages}
+                      className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
+                    >
+                      <span>Próxima</span>
+                      <ChevronRightIcon size={14} />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </Card>
         </TabsContent>
 
@@ -1569,38 +1593,49 @@ export function EstoqueClient({
               })}
             </div>
 
-            {totalBatchPages > 1 && (
-              <div className="flex items-center justify-between border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:px-6">
-                <span className="text-xs text-slate-500">
-                  Página <strong>{validBatchPage}</strong> de{" "}
-                  <strong>{totalBatchPages}</strong>
+            {/* Rodapé / Paginação de Lotes */}
+            <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-xs text-slate-500">
+                <span>
+                  Exibindo <strong className="font-semibold text-slate-900">{lotes.length > 0 ? (validBatchPage - 1) * batchPageSize + 1 : 0}</strong> a{" "}
+                  <strong className="font-semibold text-slate-900">{Math.min(validBatchPage * batchPageSize, lotes.length)}</strong> de{" "}
+                  <strong className="font-semibold text-slate-900">{lotes.length}</strong> {lotes.length === 1 ? "lote" : "lotes"}
                 </span>
-
-                <div className="flex items-center gap-1.5">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setBatchPage((p) => Math.max(1, p - 1))}
-                    disabled={validBatchPage <= 1}
-                    className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
-                  >
-                    <ChevronLeftIcon size={14} />
-                    <span>Anterior</span>
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setBatchPage((p) => Math.min(totalBatchPages, p + 1))}
-                    disabled={validBatchPage >= totalBatchPages}
-                    className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
-                  >
-                    <span>Próxima</span>
-                    <ChevronRightIcon size={14} />
-                  </Button>
-                </div>
               </div>
-            )}
+
+              {totalBatchPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500">
+                    Página <strong>{validBatchPage}</strong> de{" "}
+                    <strong>{totalBatchPages}</strong>
+                  </span>
+
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setBatchPage((p) => Math.max(1, p - 1))}
+                      disabled={validBatchPage <= 1}
+                      className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
+                    >
+                      <ChevronLeftIcon size={14} />
+                      <span>Anterior</span>
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setBatchPage((p) => Math.min(totalBatchPages, p + 1))}
+                      disabled={validBatchPage >= totalBatchPages}
+                      className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
+                    >
+                      <span>Próxima</span>
+                      <ChevronRightIcon size={14} />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </Card>
         </TabsContent>
 
@@ -1709,38 +1744,49 @@ export function EstoqueClient({
               ))}
             </div>
 
-            {totalLossPages > 1 && (
-              <div className="flex items-center justify-between border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:px-6">
-                <span className="text-xs text-slate-500">
-                  Página <strong>{validLossPage}</strong> de{" "}
-                  <strong>{totalLossPages}</strong>
+            {/* Rodapé / Paginação de Perdas */}
+            <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-xs text-slate-500">
+                <span>
+                  Exibindo <strong className="font-semibold text-slate-900">{perdas.length > 0 ? (validLossPage - 1) * lossPageSize + 1 : 0}</strong> a{" "}
+                  <strong className="font-semibold text-slate-900">{Math.min(validLossPage * lossPageSize, perdas.length)}</strong> de{" "}
+                  <strong className="font-semibold text-slate-900">{perdas.length}</strong> {perdas.length === 1 ? "registro" : "registros"}
                 </span>
-
-                <div className="flex items-center gap-1.5">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setLossPage((p) => Math.max(1, p - 1))}
-                    disabled={validLossPage <= 1}
-                    className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
-                  >
-                    <ChevronLeftIcon size={14} />
-                    <span>Anterior</span>
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setLossPage((p) => Math.min(totalLossPages, p + 1))}
-                    disabled={validLossPage >= totalLossPages}
-                    className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
-                  >
-                    <span>Próxima</span>
-                    <ChevronRightIcon size={14} />
-                  </Button>
-                </div>
               </div>
-            )}
+
+              {totalLossPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500">
+                    Página <strong>{validLossPage}</strong> de{" "}
+                    <strong>{totalLossPages}</strong>
+                  </span>
+
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setLossPage((p) => Math.max(1, p - 1))}
+                      disabled={validLossPage <= 1}
+                      className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
+                    >
+                      <ChevronLeftIcon size={14} />
+                      <span>Anterior</span>
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setLossPage((p) => Math.min(totalLossPages, p + 1))}
+                      disabled={validLossPage >= totalLossPages}
+                      className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
+                    >
+                      <span>Próxima</span>
+                      <ChevronRightIcon size={14} />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </Card>
         </TabsContent>
       </Tabs>

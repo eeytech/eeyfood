@@ -441,9 +441,10 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
         </Card>
       </div>
 
-      {/* ── Filters Card ────────────────────────────────── */}
-      <Card className="border-slate-200/80 bg-white shadow-sm">
-        <CardContent className="p-4">
+      {/* ── Table & List Container ───────────────────────── */}
+      <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+        {/* Filtros da Tabela de Mesas */}
+        <div className="border-b border-slate-100 bg-slate-50/50 p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             {/* Search Input */}
             <div className="relative flex-1">
@@ -458,7 +459,7 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
                   setSearchQuery(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="h-10 rounded-xl border-slate-200 bg-slate-50/70 pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white"
+                className="h-10 rounded-xl border-slate-200 bg-white pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white"
               />
               {searchQuery && (
                 <button
@@ -548,27 +549,7 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
               )}
             </div>
           </div>
-
-          {/* Results counter indicator */}
-          <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500">
-            <span>
-              Exibindo{" "}
-              <strong className="font-semibold text-slate-900">
-                {filteredTables.length}
-              </strong>{" "}
-              de {totalCount} mesa{totalCount !== 1 ? "s" : ""}
-            </span>
-            {isFiltering && (
-              <span className="text-[11px] font-medium text-amber-600">
-                Filtros aplicados
-              </span>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ── Table & List Container ───────────────────────── */}
-      <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+        </div>
         {/* Empty state */}
         {filteredTables.length === 0 ? (
           <div className="flex min-h-[260px] flex-col items-center justify-center p-8 text-center">
@@ -908,27 +889,42 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
 
             {/* Pagination Controls */}
             <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              {/* Items per page selector */}
-              <div className="flex items-center gap-2 text-xs text-slate-500">
-                <span>Exibir</span>
-                <Select
-                  value={String(pageSize)}
-                  onValueChange={(val) => {
-                    setPageSize(Number(val));
-                    setCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger className="h-8 w-16 rounded-lg border-slate-200 bg-white text-xs font-medium text-slate-700">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-lg border-slate-200 bg-white">
-                    <SelectItem value="5">5</SelectItem>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="20">20</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                  </SelectContent>
-                </Select>
-                <span>mesas por página</span>
+              {/* Items per page selector & Result counter */}
+              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                <span>
+                  Exibindo{" "}
+                  <strong className="font-semibold text-slate-900">
+                    {filteredTables.length}
+                  </strong>{" "}
+                  de {totalCount} mesa{totalCount !== 1 ? "s" : ""}
+                </span>
+                {isFiltering && (
+                  <span className="text-[11px] font-medium text-amber-600">
+                    (Filtros aplicados)
+                  </span>
+                )}
+                <span className="hidden sm:inline text-slate-300">|</span>
+                <div className="flex items-center gap-1.5">
+                  <span>Exibir</span>
+                  <Select
+                    value={String(pageSize)}
+                    onValueChange={(val) => {
+                      setPageSize(Number(val));
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="h-8 w-16 rounded-lg border-slate-200 bg-white text-xs font-medium text-slate-700">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-lg border-slate-200 bg-white">
+                      <SelectItem value="5">5</SelectItem>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="20">20</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span>por página</span>
+                </div>
               </div>
 
               {/* Page numbers & navigations */}

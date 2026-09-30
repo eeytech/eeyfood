@@ -773,8 +773,9 @@ export function ComprasClient({
 
         {/* ── Tab 2: Histórico de Compras ─────────────────── */}
         <TabsContent value="historico" className="space-y-4">
-          <Card className="border-slate-200/80 bg-white shadow-sm">
-            <CardContent className="p-4 sm:p-5">
+          <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+            {/* Filtros de Histórico */}
+            <div className="border-b border-slate-100 bg-slate-50/50 p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="relative max-w-sm flex-1">
                   <SearchIcon
@@ -788,35 +789,26 @@ export function ComprasClient({
                       setHistorySearch(e.target.value);
                       setHistoryPage(1);
                     }}
-                    className="h-10 rounded-xl border-slate-200 bg-slate-50/70 pl-9 text-xs transition-colors focus:bg-white sm:text-sm"
+                    className="h-10 rounded-xl border-slate-200 bg-white pl-9 text-xs transition-colors focus:bg-white sm:text-sm"
                   />
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {historySearch.trim() && (
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        setHistorySearch("");
-                        setHistoryPage(1);
-                      }}
-                      className="h-10 gap-1.5 rounded-xl px-3 text-xs text-slate-500 hover:text-slate-900"
-                    >
-                      <FilterXIcon size={14} />
-                      <span>Limpar</span>
-                    </Button>
-                  )}
-
-                  <span className="text-xs font-medium text-slate-500">
-                    {filteredHistory.length}{" "}
-                    {filteredHistory.length === 1 ? "nota encontrada" : "notas encontradas"}
-                  </span>
-                </div>
+                {historySearch.trim() && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setHistorySearch("");
+                      setHistoryPage(1);
+                    }}
+                    className="h-10 gap-1.5 rounded-xl px-3 text-xs text-slate-500 hover:text-slate-900"
+                  >
+                    <FilterXIcon size={14} />
+                    <span>Limpar</span>
+                  </Button>
+                )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
             <div className="hidden md:block">
               <Table>
                 <TableHeader className="bg-slate-50/80">
@@ -903,45 +895,67 @@ export function ComprasClient({
               ))}
             </div>
 
-            {totalHistoryPages > 1 && (
-              <div className="flex items-center justify-between border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:px-6">
-                <span className="text-xs text-slate-500">
-                  Página <strong>{validHistoryPage}</strong> de{" "}
-                  <strong>{totalHistoryPages}</strong>
+            {/* Rodapé / Paginação do Histórico de Compras */}
+            <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                <span>
+                  Exibindo <strong className="font-semibold text-slate-900">{filteredHistory.length > 0 ? (validHistoryPage - 1) * historyPageSize + 1 : 0}</strong> a{" "}
+                  <strong className="font-semibold text-slate-900">{Math.min(validHistoryPage * historyPageSize, filteredHistory.length)}</strong> de{" "}
+                  <strong className="font-semibold text-slate-900">{filteredHistory.length}</strong> {filteredHistory.length === 1 ? "nota" : "notas"}
+                  {filteredHistory.length !== notasCompra.length && (
+                    <span className="ml-1 text-slate-400">
+                      (total: {notasCompra.length})
+                    </span>
+                  )}
                 </span>
-
-                <div className="flex items-center gap-1.5">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
-                    disabled={validHistoryPage <= 1}
-                    className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
-                  >
-                    <ChevronLeftIcon size={14} />
-                    <span>Anterior</span>
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setHistoryPage((p) => Math.min(totalHistoryPages, p + 1))}
-                    disabled={validHistoryPage >= totalHistoryPages}
-                    className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
-                  >
-                    <span>Próxima</span>
-                    <ChevronRightIcon size={14} />
-                  </Button>
-                </div>
+                {historySearch.trim() && (
+                  <span className="text-[11px] font-medium text-amber-600">
+                    (Filtro aplicado)
+                  </span>
+                )}
               </div>
-            )}
+
+              {totalHistoryPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500">
+                    Página <strong>{validHistoryPage}</strong> de{" "}
+                    <strong>{totalHistoryPages}</strong>
+                  </span>
+
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
+                      disabled={validHistoryPage <= 1}
+                      className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
+                    >
+                      <ChevronLeftIcon size={14} />
+                      <span>Anterior</span>
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setHistoryPage((p) => Math.min(totalHistoryPages, p + 1))}
+                      disabled={validHistoryPage >= totalHistoryPages}
+                      className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
+                    >
+                      <span>Próxima</span>
+                      <ChevronRightIcon size={14} />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </Card>
         </TabsContent>
 
         {/* ── Tab 3: Fornecedores ─────────────────────────── */}
         <TabsContent value="fornecedores" className="space-y-4">
-          <Card className="border-slate-200/80 bg-white shadow-sm">
-            <CardContent className="p-4 sm:p-5">
+          <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+            {/* Filtros de Fornecedores */}
+            <div className="border-b border-slate-100 bg-slate-50/50 p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="relative max-w-sm flex-1">
                   <SearchIcon
@@ -955,35 +969,26 @@ export function ComprasClient({
                       setSupplierSearch(e.target.value);
                       setSupplierPage(1);
                     }}
-                    className="h-10 rounded-xl border-slate-200 bg-slate-50/70 pl-9 text-xs transition-colors focus:bg-white sm:text-sm"
+                    className="h-10 rounded-xl border-slate-200 bg-white pl-9 text-xs transition-colors focus:bg-white sm:text-sm"
                   />
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {supplierSearch.trim() && (
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        setSupplierSearch("");
-                        setSupplierPage(1);
-                      }}
-                      className="h-10 gap-1.5 rounded-xl px-3 text-xs text-slate-500 hover:text-slate-900"
-                    >
-                      <FilterXIcon size={14} />
-                      <span>Limpar</span>
-                    </Button>
-                  )}
-
-                  <span className="text-xs font-medium text-slate-500">
-                    {filteredSuppliers.length}{" "}
-                    {filteredSuppliers.length === 1 ? "fornecedor" : "fornecedores"}
-                  </span>
-                </div>
+                {supplierSearch.trim() && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setSupplierSearch("");
+                      setSupplierPage(1);
+                    }}
+                    className="h-10 gap-1.5 rounded-xl px-3 text-xs text-slate-500 hover:text-slate-900"
+                  >
+                    <FilterXIcon size={14} />
+                    <span>Limpar</span>
+                  </Button>
+                )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
             <div className="hidden md:block">
               <Table>
                 <TableHeader className="bg-slate-50/80">
@@ -1073,38 +1078,59 @@ export function ComprasClient({
               ))}
             </div>
 
-            {totalSupplierPages > 1 && (
-              <div className="flex items-center justify-between border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:px-6">
-                <span className="text-xs text-slate-500">
-                  Página <strong>{validSupplierPage}</strong> de{" "}
-                  <strong>{totalSupplierPages}</strong>
+            {/* Rodapé / Paginação de Fornecedores */}
+            <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                <span>
+                  Exibindo <strong className="font-semibold text-slate-900">{filteredSuppliers.length > 0 ? (validSupplierPage - 1) * supplierPageSize + 1 : 0}</strong> a{" "}
+                  <strong className="font-semibold text-slate-900">{Math.min(validSupplierPage * supplierPageSize, filteredSuppliers.length)}</strong> de{" "}
+                  <strong className="font-semibold text-slate-900">{filteredSuppliers.length}</strong> {filteredSuppliers.length === 1 ? "fornecedor" : "fornecedores"}
+                  {filteredSuppliers.length !== fornecedores.length && (
+                    <span className="ml-1 text-slate-400">
+                      (total: {fornecedores.length})
+                    </span>
+                  )}
                 </span>
-
-                <div className="flex items-center gap-1.5">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSupplierPage((p) => Math.max(1, p - 1))}
-                    disabled={validSupplierPage <= 1}
-                    className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
-                  >
-                    <ChevronLeftIcon size={14} />
-                    <span>Anterior</span>
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSupplierPage((p) => Math.min(totalSupplierPages, p + 1))}
-                    disabled={validSupplierPage >= totalSupplierPages}
-                    className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
-                  >
-                    <span>Próxima</span>
-                    <ChevronRightIcon size={14} />
-                  </Button>
-                </div>
+                {supplierSearch.trim() && (
+                  <span className="text-[11px] font-medium text-amber-600">
+                    (Filtro aplicado)
+                  </span>
+                )}
               </div>
-            )}
+
+              {totalSupplierPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500">
+                    Página <strong>{validSupplierPage}</strong> de{" "}
+                    <strong>{totalSupplierPages}</strong>
+                  </span>
+
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSupplierPage((p) => Math.max(1, p - 1))}
+                      disabled={validSupplierPage <= 1}
+                      className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
+                    >
+                      <ChevronLeftIcon size={14} />
+                      <span>Anterior</span>
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSupplierPage((p) => Math.min(totalSupplierPages, p + 1))}
+                      disabled={validSupplierPage >= totalSupplierPages}
+                      className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
+                    >
+                      <span>Próxima</span>
+                      <ChevronRightIcon size={14} />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </Card>
         </TabsContent>
       </Tabs>

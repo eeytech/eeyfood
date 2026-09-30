@@ -216,9 +216,10 @@ export function VehiclesTab({
         </Button>
       </div>
 
-      {/* ── Filtros ─────────────────────────────────────── */}
-      <Card className="border-slate-200/80 bg-white shadow-sm">
-        <CardContent className="p-4">
+      {/* ── Tabela e Cards ───────────────────────────────── */}
+      <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+        {/* Filtros da Frota */}
+        <div className="border-b border-slate-100 bg-slate-50/50 p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative flex-1">
               <SearchIcon
@@ -230,7 +231,7 @@ export function VehiclesTab({
                 value={localSearch}
                 onChange={(e) => setLocalSearch(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-                className="h-10 rounded-xl border-slate-200 bg-slate-50/70 pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white"
+                className="h-10 rounded-xl border-slate-200 bg-white pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white"
               />
               {localSearch && (
                 <button
@@ -280,23 +281,7 @@ export function VehiclesTab({
               )}
             </div>
           </div>
-
-          <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500">
-            <span>
-              Exibindo <strong className="font-semibold text-slate-900">{vehicles.length}</strong> de{" "}
-              {total} veículo{total !== 1 ? "s" : ""}
-            </span>
-            {isFiltering && (
-              <span className="text-[11px] font-medium text-amber-600">
-                Filtros aplicados
-              </span>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ── Tabela e Cards ───────────────────────────────── */}
-      <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+        </div>
         {vehicles.length === 0 ? (
           <div className="flex min-h-[240px] flex-col items-center justify-center p-8 text-center">
             <div className="rounded-full bg-slate-100 p-3.5 text-slate-400">
@@ -521,60 +506,74 @@ export function VehiclesTab({
               })}
             </div>
 
-            {/* Paginação */}
-            {totalPages > 1 && (
-              <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                <span className="text-xs text-slate-500">
-                  Página <strong className="font-semibold text-slate-900">{currentPage}</strong> de{" "}
-                  <strong className="font-semibold text-slate-900">{totalPages}</strong>
+            {/* Paginação e Contador */}
+            <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <span>
+                  Exibindo <strong className="font-semibold text-slate-900">{vehicles.length}</strong> de{" "}
+                  {total} veículo{total !== 1 ? "s" : ""}
                 </span>
-
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    disabled={currentPage <= 1}
-                    onClick={() => navigate({ vpage: "1" })}
-                    className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
-                    title="Primeira página"
-                  >
-                    <ChevronsLeftIcon size={14} />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    disabled={currentPage <= 1}
-                    onClick={() => navigate({ vpage: String(Math.max(1, currentPage - 1)) })}
-                    className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
-                    title="Página anterior"
-                  >
-                    <ChevronLeftIcon size={14} />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    disabled={currentPage >= totalPages}
-                    onClick={() =>
-                      navigate({ vpage: String(Math.min(totalPages, currentPage + 1)) })
-                    }
-                    className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
-                    title="Próxima página"
-                  >
-                    <ChevronRightIcon size={14} />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    disabled={currentPage >= totalPages}
-                    onClick={() => navigate({ vpage: String(totalPages) })}
-                    className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
-                    title="Última página"
-                  >
-                    <ChevronsRightIcon size={14} />
-                  </Button>
-                </div>
+                {isFiltering && (
+                  <span className="text-[11px] font-medium text-amber-600">
+                    (Filtros aplicados)
+                  </span>
+                )}
               </div>
-            )}
+
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between gap-2 sm:justify-end">
+                  <span className="text-xs text-slate-500">
+                    Página <strong className="font-semibold text-slate-900">{currentPage}</strong> de{" "}
+                    <strong className="font-semibold text-slate-900">{totalPages}</strong>
+                  </span>
+
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      disabled={currentPage <= 1}
+                      onClick={() => navigate({ vpage: "1" })}
+                      className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                      title="Primeira página"
+                    >
+                      <ChevronsLeftIcon size={14} />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      disabled={currentPage <= 1}
+                      onClick={() => navigate({ vpage: String(Math.max(1, currentPage - 1)) })}
+                      className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                      title="Página anterior"
+                    >
+                      <ChevronLeftIcon size={14} />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      disabled={currentPage >= totalPages}
+                      onClick={() =>
+                        navigate({ vpage: String(Math.min(totalPages, currentPage + 1)) })
+                      }
+                      className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                      title="Próxima página"
+                    >
+                      <ChevronRightIcon size={14} />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      disabled={currentPage >= totalPages}
+                      onClick={() => navigate({ vpage: String(totalPages) })}
+                      className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                      title="Última página"
+                    >
+                      <ChevronsRightIcon size={14} />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </>
         )}
       </Card>

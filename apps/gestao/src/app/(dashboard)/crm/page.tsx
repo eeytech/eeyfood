@@ -183,22 +183,22 @@ export default async function CrmPage({ params, searchParams }: PageProps) {
         })}
       </div>
 
-      {/* ── Filters Card ─────────────────────────────────── */}
-      <CrmFilters
-        currentSegment={sp.segment}
-        currentSearch={sp.search}
-        totalShowing={data.customers.length}
-        totalCount={data.total}
-      />
-
-      {/* ── Customer Table & Cards ───────────────────────── */}
-      <CustomerTable
-        customers={data.customers}
-        total={data.total}
-        page={data.page}
-        pageSize={data.pageSize}
-        slug={restaurantSlug}
-      />
+      {/* ── Customer Table & Cards com Filtros Integrados ── */}
+      <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+        <CrmFilters
+          currentSegment={sp.segment}
+          currentSearch={sp.search}
+          totalShowing={data.customers.length}
+          totalCount={data.total}
+        />
+        <CustomerTable
+          customers={data.customers}
+          total={data.total}
+          page={data.page}
+          pageSize={data.pageSize}
+          slug={restaurantSlug}
+        />
+      </Card>
     </div>
   );
 }

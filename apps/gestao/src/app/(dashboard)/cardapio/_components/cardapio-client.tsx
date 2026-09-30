@@ -468,9 +468,10 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
 
         {/* ── Tab 1: Produtos ─────────────────────────────── */}
         <TabsContent value="products" className="space-y-4">
-          {/* Card de Filtros */}
-          <Card className="border-slate-200/80 bg-white shadow-sm">
-            <CardContent className="p-4 sm:p-5">
+          {/* Tabela de Produtos com Filtros Integrados */}
+          <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+            {/* Filtros de Produtos */}
+            <div className="border-b border-slate-100 bg-slate-50/50 p-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="grid flex-1 grid-cols-1 gap-2.5 sm:grid-cols-3">
                   {/* Busca */}
@@ -486,7 +487,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                         setProductSearch(e.target.value);
                         setProductPage(1);
                       }}
-                      className="h-10 rounded-xl border-slate-200 bg-slate-50/70 pl-9 text-xs transition-colors focus:bg-white sm:text-sm"
+                      className="h-10 rounded-xl border-slate-200 bg-white pl-9 text-xs transition-colors focus:bg-white sm:text-sm"
                     />
                   </div>
 
@@ -498,7 +499,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                       setProductPage(1);
                     }}
                   >
-                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-xs sm:text-sm">
+                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs sm:text-sm">
                       <SelectValue placeholder="Todas as categorias" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl border-slate-200 bg-white">
@@ -519,7 +520,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                       setProductPage(1);
                     }}
                   >
-                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-xs sm:text-sm">
+                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs sm:text-sm">
                       <SelectValue placeholder="Todos os status" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl border-slate-200 bg-white">
@@ -530,29 +531,19 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                   </Select>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {isFilteringProducts && (
-                    <Button
-                      variant="ghost"
-                      onClick={handleClearProductFilters}
-                      className="h-10 gap-1.5 rounded-xl px-3 text-xs text-slate-500 hover:text-slate-900"
-                    >
-                      <FilterXIcon size={14} />
-                      <span>Limpar</span>
-                    </Button>
-                  )}
-
-                  <span className="text-xs font-medium text-slate-500">
-                    {filteredProducts.length}{" "}
-                    {filteredProducts.length === 1 ? "produto" : "produtos"}
-                  </span>
-                </div>
+                {isFilteringProducts && (
+                  <Button
+                    variant="ghost"
+                    onClick={handleClearProductFilters}
+                    className="h-10 gap-1.5 rounded-xl px-3 text-xs text-slate-500 hover:text-slate-900"
+                  >
+                    <FilterXIcon size={14} />
+                    <span>Limpar</span>
+                  </Button>
+                )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          {/* Tabela de Produtos */}
-          <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
             {/* Desktop Table View */}
             <div className="hidden md:block">
               <Table>
@@ -812,47 +803,68 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
               )}
             </div>
 
-            {/* Pagination Controls */}
-            {totalProductPages > 1 && (
-              <div className="flex items-center justify-between border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:px-6">
-                <span className="text-xs text-slate-500">
-                  Página <strong>{validProductPage}</strong> de{" "}
-                  <strong>{totalProductPages}</strong>
+            {/* Rodapé / Paginação de Produtos */}
+            <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                <span>
+                  Exibindo <strong className="font-semibold text-slate-900">{filteredProducts.length > 0 ? (validProductPage - 1) * productPageSize + 1 : 0}</strong> a{" "}
+                  <strong className="font-semibold text-slate-900">{Math.min(validProductPage * productPageSize, filteredProducts.length)}</strong> de{" "}
+                  <strong className="font-semibold text-slate-900">{filteredProducts.length}</strong> {filteredProducts.length === 1 ? "produto" : "produtos"}
+                  {filteredProducts.length !== cardapio.products.length && (
+                    <span className="ml-1 text-slate-400">
+                      (total: {cardapio.products.length})
+                    </span>
+                  )}
                 </span>
-
-                <div className="flex items-center gap-1.5">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setProductPage((p) => Math.max(1, p - 1))}
-                    disabled={validProductPage <= 1}
-                    className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
-                  >
-                    <ChevronLeftIcon size={14} />
-                    <span>Anterior</span>
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setProductPage((p) => Math.min(totalProductPages, p + 1))}
-                    disabled={validProductPage >= totalProductPages}
-                    className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
-                  >
-                    <span>Próxima</span>
-                    <ChevronRightIcon size={14} />
-                  </Button>
-                </div>
+                {isFilteringProducts && (
+                  <span className="text-[11px] font-medium text-amber-600">
+                    (Filtros aplicados)
+                  </span>
+                )}
               </div>
-            )}
+
+              {totalProductPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500">
+                    Página <strong>{validProductPage}</strong> de{" "}
+                    <strong>{totalProductPages}</strong>
+                  </span>
+
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setProductPage((p) => Math.max(1, p - 1))}
+                      disabled={validProductPage <= 1}
+                      className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
+                    >
+                      <ChevronLeftIcon size={14} />
+                      <span>Anterior</span>
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setProductPage((p) => Math.min(totalProductPages, p + 1))}
+                      disabled={validProductPage >= totalProductPages}
+                      className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
+                    >
+                      <span>Próxima</span>
+                      <ChevronRightIcon size={14} />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </Card>
         </TabsContent>
 
         {/* ── Tab 2: Categorias ───────────────────────────── */}
         <TabsContent value="categories" className="space-y-4">
-          {/* Card de Filtros de Categorias */}
-          <Card className="border-slate-200/80 bg-white shadow-sm">
-            <CardContent className="p-4 sm:p-5">
+          {/* Tabela de Categorias com Filtros Integrados */}
+          <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+            {/* Filtros de Categorias */}
+            <div className="border-b border-slate-100 bg-slate-50/50 p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="grid flex-1 grid-cols-1 gap-2.5 sm:grid-cols-2">
                   <div className="relative">
@@ -867,7 +879,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                         setCategorySearch(e.target.value);
                         setCategoryPage(1);
                       }}
-                      className="h-10 rounded-xl border-slate-200 bg-slate-50/70 pl-9 text-xs transition-colors focus:bg-white sm:text-sm"
+                      className="h-10 rounded-xl border-slate-200 bg-white pl-9 text-xs transition-colors focus:bg-white sm:text-sm"
                     />
                   </div>
 
@@ -878,7 +890,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                       setCategoryPage(1);
                     }}
                   >
-                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-xs sm:text-sm">
+                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs sm:text-sm">
                       <SelectValue placeholder="Todos os status" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl border-slate-200 bg-white">
@@ -889,29 +901,19 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                   </Select>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {isFilteringCategories && (
-                    <Button
-                      variant="ghost"
-                      onClick={handleClearCategoryFilters}
-                      className="h-10 gap-1.5 rounded-xl px-3 text-xs text-slate-500 hover:text-slate-900"
-                    >
-                      <FilterXIcon size={14} />
-                      <span>Limpar</span>
-                    </Button>
-                  )}
-
-                  <span className="text-xs font-medium text-slate-500">
-                    {filteredCategories.length}{" "}
-                    {filteredCategories.length === 1 ? "categoria" : "categorias"}
-                  </span>
-                </div>
+                {isFilteringCategories && (
+                  <Button
+                    variant="ghost"
+                    onClick={handleClearCategoryFilters}
+                    className="h-10 gap-1.5 rounded-xl px-3 text-xs text-slate-500 hover:text-slate-900"
+                  >
+                    <FilterXIcon size={14} />
+                    <span>Limpar</span>
+                  </Button>
+                )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          {/* Tabela de Categorias */}
-          <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
             {/* Desktop Table */}
             <div className="hidden md:block">
               <Table>
@@ -1100,39 +1102,59 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
               )}
             </div>
 
-            {/* Pagination Controls */}
-            {totalCategoryPages > 1 && (
-              <div className="flex items-center justify-between border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:px-6">
-                <span className="text-xs text-slate-500">
-                  Página <strong>{validCategoryPage}</strong> de{" "}
-                  <strong>{totalCategoryPages}</strong>
+            {/* Rodapé / Paginação de Categorias */}
+            <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                <span>
+                  Exibindo <strong className="font-semibold text-slate-900">{filteredCategories.length > 0 ? (validCategoryPage - 1) * categoryPageSize + 1 : 0}</strong> a{" "}
+                  <strong className="font-semibold text-slate-900">{Math.min(validCategoryPage * categoryPageSize, filteredCategories.length)}</strong> de{" "}
+                  <strong className="font-semibold text-slate-900">{filteredCategories.length}</strong> {filteredCategories.length === 1 ? "categoria" : "categorias"}
+                  {filteredCategories.length !== cardapio.categories.length && (
+                    <span className="ml-1 text-slate-400">
+                      (total: {cardapio.categories.length})
+                    </span>
+                  )}
                 </span>
-
-                <div className="flex items-center gap-1.5">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCategoryPage((p) => Math.max(1, p - 1))}
-                    disabled={validCategoryPage <= 1}
-                    className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
-                  >
-                    <ChevronLeftIcon size={14} />
-                    <span>Anterior</span>
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCategoryPage((p) => Math.min(totalCategoryPages, p + 1))}
-                    disabled={validCategoryPage >= totalCategoryPages}
-                    className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
-                  >
-                    <span>Próxima</span>
-                    <ChevronRightIcon size={14} />
-                  </Button>
-                </div>
+                {isFilteringCategories && (
+                  <span className="text-[11px] font-medium text-amber-600">
+                    (Filtros aplicados)
+                  </span>
+                )}
               </div>
-            )}
+
+              {totalCategoryPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500">
+                    Página <strong>{validCategoryPage}</strong> de{" "}
+                    <strong>{totalCategoryPages}</strong>
+                  </span>
+
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCategoryPage((p) => Math.max(1, p - 1))}
+                      disabled={validCategoryPage <= 1}
+                      className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
+                    >
+                      <ChevronLeftIcon size={14} />
+                      <span>Anterior</span>
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCategoryPage((p) => Math.min(totalCategoryPages, p + 1))}
+                      disabled={validCategoryPage >= totalCategoryPages}
+                      className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
+                    >
+                      <span>Próxima</span>
+                      <ChevronRightIcon size={14} />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </Card>
         </TabsContent>
 

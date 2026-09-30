@@ -488,9 +488,10 @@ export function FreteClient({
         </Card>
       </div>
 
-      {/* ── Search & Filter Bar ── */}
-      <Card className="border-slate-200/80 bg-white shadow-sm">
-        <CardContent className="p-4">
+      {/* ── Rules Table ── */}
+      <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+        {/* Filtros da Tabela de Frete */}
+        <div className="border-b border-slate-100 bg-slate-50/50 p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative flex-1">
               <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -501,7 +502,7 @@ export function FreteClient({
                   setSearchQuery(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="h-10 pl-9 rounded-xl border-slate-200 bg-slate-50/50 text-sm focus:bg-white"
+                className="h-10 pl-9 rounded-xl border-slate-200 bg-white text-sm focus:bg-white"
               />
               {searchQuery && (
                 <button
@@ -570,26 +571,7 @@ export function FreteClient({
               )}
             </div>
           </div>
-
-          <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500">
-            <span>
-              Exibindo{" "}
-              <strong className="font-semibold text-slate-900">
-                {filteredRegras.length}
-              </strong>{" "}
-              de {totalCount} regra{totalCount !== 1 ? "s" : ""}
-            </span>
-            {isFiltering && (
-              <span className="text-[11px] font-medium text-amber-600">
-                Filtros ativos
-              </span>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ── Rules Table ── */}
-      <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+        </div>
         {filteredRegras.length === 0 ? (
           <div className="flex min-h-[260px] flex-col items-center justify-center p-8 text-center">
             <div className="rounded-full bg-slate-100 p-3.5 text-slate-400">
@@ -813,34 +795,51 @@ export function FreteClient({
           </div>
         )}
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-xs text-slate-600">
+        {/* Pagination & Counter Footer */}
+        <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between text-xs text-slate-600">
+          <div className="flex items-center gap-2">
             <span>
-              Página {currentPage} de {totalPages}
+              Exibindo{" "}
+              <strong className="font-semibold text-slate-900">
+                {filteredRegras.length}
+              </strong>{" "}
+              de {totalCount} regra{totalCount !== 1 ? "s" : ""}
             </span>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="icon"
-                disabled={currentPage <= 1}
-                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                className="h-8 w-8 rounded-lg"
-              >
-                <ChevronLeftIcon className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                disabled={currentPage >= totalPages}
-                onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                className="h-8 w-8 rounded-lg"
-              >
-                <ChevronRightIcon className="h-4 w-4" />
-              </Button>
-            </div>
+            {isFiltering && (
+              <span className="text-[11px] font-medium text-amber-600">
+                (Filtros ativos)
+              </span>
+            )}
           </div>
-        )}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between gap-2 sm:justify-end">
+              <span>
+                Página <strong className="font-semibold text-slate-900">{currentPage}</strong> de{" "}
+                <strong className="font-semibold text-slate-900">{totalPages}</strong>
+              </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  disabled={currentPage <= 1}
+                  onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                  className="h-8 w-8 rounded-lg"
+                >
+                  <ChevronLeftIcon className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                  className="h-8 w-8 rounded-lg"
+                >
+                  <ChevronRightIcon className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       </Card>
 
       {/* ── Simulator / How it Works Card ── */}

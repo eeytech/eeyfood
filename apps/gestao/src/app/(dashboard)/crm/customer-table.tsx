@@ -118,7 +118,7 @@ export function CustomerTable({
   };
 
   return (
-    <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+    <div className="w-full">
       {customers.length === 0 ? (
         <div className="flex min-h-[260px] flex-col items-center justify-center p-8 text-center">
           <div className="rounded-full bg-slate-100 p-3.5 text-slate-400">
@@ -430,6 +430,6 @@ export function CustomerTable({
           </div>
         </>
       )}
-    </Card>
+    </div>
   );
 }

@@ -456,9 +456,10 @@ export function LogisticaClient({
 
         {/* ── Aba Motoboys ── */}
         <TabsContent value="motoboys" className="mt-5 space-y-4">
-          {/* Painel de Filtros */}
-          <Card className="border-slate-200/80 bg-white shadow-sm">
-            <CardContent className="p-4">
+          {/* Container de Tabela e Cards */}
+          <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+            {/* Painel de Filtros */}
+            <div className="border-b border-slate-100 bg-slate-50/50 p-4">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 {/* Busca */}
                 <div className="relative flex-1">
@@ -471,7 +472,7 @@ export function LogisticaClient({
                     value={localSearch}
                     onChange={(e) => setLocalSearch(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-                    className="h-10 rounded-xl border-slate-200 bg-slate-50/70 pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white"
+                    className="h-10 rounded-xl border-slate-200 bg-white pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white"
                   />
                   {localSearch && (
                     <button
@@ -584,24 +585,7 @@ export function LogisticaClient({
                   )}
                 </div>
               </div>
-
-              {/* Contador de resultados */}
-              <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500">
-                <span>
-                  Exibindo <strong className="font-semibold text-slate-900">{couriers.length}</strong> de{" "}
-                  {courierTotal} motoboy{courierTotal !== 1 ? "s" : ""}
-                </span>
-                {isFiltering && (
-                  <span className="text-[11px] font-medium text-amber-600">
-                    Filtros aplicados
-                  </span>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Container de Tabela e Cards */}
-          <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+            </div>
             {couriers.length === 0 ? (
               <div className="flex min-h-[260px] flex-col items-center justify-center p-8 text-center">
                 <div className="rounded-full bg-slate-100 p-3.5 text-slate-400">
@@ -925,64 +909,78 @@ export function LogisticaClient({
                   })}
                 </div>
 
-                {/* Controles de Paginação */}
-                {courierTotalPages > 1 && (
-                  <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                    <span className="text-xs text-slate-500">
-                      Página <strong className="font-semibold text-slate-900">{courierCurrentPage}</strong> de{" "}
-                      <strong className="font-semibold text-slate-900">{courierTotalPages}</strong>
+                {/* Controles de Paginação & Contador */}
+                <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <span>
+                      Exibindo <strong className="font-semibold text-slate-900">{couriers.length}</strong> de{" "}
+                      {courierTotal} motoboy{courierTotal !== 1 ? "s" : ""}
                     </span>
-
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        disabled={courierCurrentPage <= 1}
-                        onClick={() => navigateCouriers({ page: "1" })}
-                        className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
-                        title="Primeira página"
-                      >
-                        <ChevronsLeftIcon size={14} />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        disabled={courierCurrentPage <= 1}
-                        onClick={() =>
-                          navigateCouriers({ page: String(Math.max(1, courierCurrentPage - 1)) })
-                        }
-                        className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
-                        title="Página anterior"
-                      >
-                        <ChevronLeftIcon size={14} />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        disabled={courierCurrentPage >= courierTotalPages}
-                        onClick={() =>
-                          navigateCouriers({
-                            page: String(Math.min(courierTotalPages, courierCurrentPage + 1)),
-                          })
-                        }
-                        className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
-                        title="Próxima página"
-                      >
-                        <ChevronRightIcon size={14} />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        disabled={courierCurrentPage >= courierTotalPages}
-                        onClick={() => navigateCouriers({ page: String(courierTotalPages) })}
-                        className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
-                        title="Última página"
-                      >
-                        <ChevronsRightIcon size={14} />
-                      </Button>
-                    </div>
+                    {isFiltering && (
+                      <span className="text-[11px] font-medium text-amber-600">
+                        (Filtros aplicados)
+                      </span>
+                    )}
                   </div>
-                )}
+
+                  {courierTotalPages > 1 && (
+                    <div className="flex items-center justify-between gap-2 sm:justify-end">
+                      <span className="text-xs text-slate-500">
+                        Página <strong className="font-semibold text-slate-900">{courierCurrentPage}</strong> de{" "}
+                        <strong className="font-semibold text-slate-900">{courierTotalPages}</strong>
+                      </span>
+
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          disabled={courierCurrentPage <= 1}
+                          onClick={() => navigateCouriers({ page: "1" })}
+                          className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                          title="Primeira página"
+                        >
+                          <ChevronsLeftIcon size={14} />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          disabled={courierCurrentPage <= 1}
+                          onClick={() =>
+                            navigateCouriers({ page: String(Math.max(1, courierCurrentPage - 1)) })
+                          }
+                          className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                          title="Página anterior"
+                        >
+                          <ChevronLeftIcon size={14} />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          disabled={courierCurrentPage >= courierTotalPages}
+                          onClick={() =>
+                            navigateCouriers({
+                              page: String(Math.min(courierTotalPages, courierCurrentPage + 1)),
+                            })
+                          }
+                          className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                          title="Próxima página"
+                        >
+                          <ChevronRightIcon size={14} />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          disabled={courierCurrentPage >= courierTotalPages}
+                          onClick={() => navigateCouriers({ page: String(courierTotalPages) })}
+                          className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                          title="Última página"
+                        >
+                          <ChevronsRightIcon size={14} />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </>
             )}
           </Card>

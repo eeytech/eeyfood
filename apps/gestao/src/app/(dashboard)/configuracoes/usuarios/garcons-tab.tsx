@@ -485,9 +485,10 @@ export function GarconsTab({
         </Button>
       </div>
 
-      {/* ── Filters Card (Garçons) ──────────────────────── */}
-      <Card className="border-slate-200/80 bg-white shadow-sm">
-        <CardContent className="p-4">
+      {/* ── Table & List Container (Garçons) ─────────────── */}
+      <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+        {/* Filtros de Garçons */}
+        <div className="border-b border-slate-100 bg-slate-50/50 p-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             {/* Search Input */}
             <div className="relative flex-1">
@@ -502,7 +503,7 @@ export function GarconsTab({
                   setSearchQuery(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="h-10 rounded-xl border-slate-200 bg-slate-50/70 pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white"
+                className="h-10 rounded-xl border-slate-200 bg-white pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white"
               />
               {searchQuery && (
                 <button
@@ -549,27 +550,7 @@ export function GarconsTab({
               )}
             </div>
           </div>
-
-          {/* Results counter indicator */}
-          <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500">
-            <span>
-              Exibindo{" "}
-              <strong className="font-semibold text-slate-900">
-                {filteredGarcons.length}
-              </strong>{" "}
-              de {totalGarcons} garçom{totalGarcons !== 1 ? "s" : ""}
-            </span>
-            {isFiltering && (
-              <span className="text-[11px] text-amber-600 font-medium">
-                Filtros aplicados
-              </span>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ── Table & List Container (Garçons) ─────────────── */}
-      <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+        </div>
         {filteredGarcons.length === 0 ? (
           <div className="flex min-h-[260px] flex-col items-center justify-center p-8 text-center">
             <div className="rounded-full bg-slate-100 p-3.5 text-slate-400">
@@ -851,27 +832,42 @@ export function GarconsTab({
 
             {/* Pagination Controls (Garçons) */}
             <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              {/* Items per page selector */}
-              <div className="flex items-center gap-2 text-xs text-slate-500">
-                <span>Exibir</span>
-                <Select
-                  value={String(pageSize)}
-                  onValueChange={(val) => {
-                    setPageSize(Number(val));
-                    setCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger className="h-8 w-16 rounded-lg border-slate-200 bg-white text-xs font-medium text-slate-700">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-lg border-slate-200 bg-white">
-                    <SelectItem value="5">5</SelectItem>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="20">20</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                  </SelectContent>
-                </Select>
-                <span>garçons por página</span>
+              {/* Items per page selector & Result counter */}
+              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                <span>
+                  Exibindo{" "}
+                  <strong className="font-semibold text-slate-900">
+                    {filteredGarcons.length}
+                  </strong>{" "}
+                  de {totalGarcons} garçom{totalGarcons !== 1 ? "s" : ""}
+                </span>
+                {isFiltering && (
+                  <span className="text-[11px] font-medium text-amber-600">
+                    (Filtros aplicados)
+                  </span>
+                )}
+                <span className="hidden sm:inline text-slate-300">|</span>
+                <div className="flex items-center gap-1.5">
+                  <span>Exibir</span>
+                  <Select
+                    value={String(pageSize)}
+                    onValueChange={(val) => {
+                      setPageSize(Number(val));
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="h-8 w-16 rounded-lg border-slate-200 bg-white text-xs font-medium text-slate-700">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-lg border-slate-200 bg-white">
+                      <SelectItem value="5">5</SelectItem>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="20">20</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span>por página</span>
+                </div>
               </div>
 
               {/* Page numbers & navigations */}
@@ -1016,22 +1012,6 @@ export function GarconsTab({
               )}
             </div>
           </div>
-
-          {/* Contador de resultados */}
-          <div className="mt-3 flex items-center justify-between border-t border-slate-200/60 pt-3 text-xs text-slate-500">
-            <span>
-              Exibindo{" "}
-              <strong className="font-semibold text-slate-900">
-                {filteredFechamentos.length}
-              </strong>{" "}
-              de {totalFechamentos} repasse{totalFechamentos !== 1 ? "s" : ""}
-            </span>
-            {isFilteringFechamentos && (
-              <span className="text-[11px] text-amber-600 font-medium">
-                Filtros aplicados
-              </span>
-            )}
-          </div>
         </div>
 
         <CardContent className="p-0">
@@ -1108,26 +1088,41 @@ export function GarconsTab({
 
               {/* Paginação de Fechamentos */}
               <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <span>Exibir</span>
-                  <Select
-                    value={String(fechamentosPageSize)}
-                    onValueChange={(val) => {
-                      setFechamentosPageSize(Number(val));
-                      setFechamentosCurrentPage(1);
-                    }}
-                  >
-                    <SelectTrigger className="h-8 w-16 rounded-lg border-slate-200 bg-white text-xs font-medium text-slate-700">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-lg border-slate-200 bg-white">
-                      <SelectItem value="5">5</SelectItem>
-                      <SelectItem value="10">10</SelectItem>
-                      <SelectItem value="20">20</SelectItem>
-                      <SelectItem value="50">50</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <span>repasses por página</span>
+                <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                  <span>
+                    Exibindo{" "}
+                    <strong className="font-semibold text-slate-900">
+                      {filteredFechamentos.length}
+                    </strong>{" "}
+                    de {totalFechamentos} repasse{totalFechamentos !== 1 ? "s" : ""}
+                  </span>
+                  {isFilteringFechamentos && (
+                    <span className="text-[11px] font-medium text-amber-600">
+                      (Filtros aplicados)
+                    </span>
+                  )}
+                  <span className="hidden sm:inline text-slate-300">|</span>
+                  <div className="flex items-center gap-1.5">
+                    <span>Exibir</span>
+                    <Select
+                      value={String(fechamentosPageSize)}
+                      onValueChange={(val) => {
+                        setFechamentosPageSize(Number(val));
+                        setFechamentosCurrentPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="h-8 w-16 rounded-lg border-slate-200 bg-white text-xs font-medium text-slate-700">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-lg border-slate-200 bg-white">
+                        <SelectItem value="5">5</SelectItem>
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="20">20</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <span>por página</span>
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between gap-2 sm:justify-end">

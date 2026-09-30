@@ -390,9 +390,10 @@ export function DeliveryFeeRulesTab({ slug, rules: initialRules }: DeliveryFeeRu
         </Card>
       </div>
 
-      {/* ── Filters Card (Padrão Usuários) ───────────────── */}
-      <Card className="border-slate-200/80 bg-white shadow-sm">
-        <CardContent className="p-4">
+      {/* ── Table Card ─────────────────────────────────── */}
+      <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+        {/* Filtros da Tabela de Zonas de Frete */}
+        <div className="border-b border-slate-100 bg-slate-50/50 p-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             {/* Search Input */}
             <div className="relative flex-1">
@@ -404,7 +405,7 @@ export function DeliveryFeeRulesTab({ slug, rules: initialRules }: DeliveryFeeRu
                 placeholder="Buscar por nome da zona, bairro ou CEP..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-10 rounded-xl border-slate-200 bg-slate-50/70 pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white"
+                className="h-10 rounded-xl border-slate-200 bg-white pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white"
               />
               {searchQuery && (
                 <button
@@ -445,31 +446,21 @@ export function DeliveryFeeRulesTab({ slug, rules: initialRules }: DeliveryFeeRu
                   </SelectContent>
                 </Select>
               </div>
+
+              {isFiltering && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearFilters}
+                  className="h-10 gap-1.5 rounded-xl px-3 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                >
+                  <FilterXIcon size={14} />
+                  Limpar
+                </Button>
+              )}
             </div>
           </div>
-
-          {/* Bottom summary / clear filters bar */}
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500">
-            <span>
-              Exibindo <strong>{filteredRules.length}</strong> de <strong>{totalCount}</strong>{" "}
-              zonas de frete
-            </span>
-            {isFiltering && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleClearFilters}
-                className="h-7 gap-1 px-2 text-xs text-slate-600 hover:text-slate-900"
-              >
-                <FilterXIcon size={13} /> Limpar filtros
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ── Table Card (Padrão Usuários) ─────────────────── */}
-      <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+        </div>
         {filteredRules.length === 0 ? (
           <div className="flex h-52 flex-col items-center justify-center gap-2 p-6 text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
@@ -634,6 +625,31 @@ export function DeliveryFeeRulesTab({ slug, rules: initialRules }: DeliveryFeeRu
             </Table>
           </div>
         )}
+
+        {/* Footer com Contador e Limpar */}
+        <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between text-xs text-slate-500">
+          <div className="flex items-center gap-2">
+            <span>
+              Exibindo <strong>{filteredRules.length}</strong> de <strong>{totalCount}</strong>{" "}
+              zona{totalCount !== 1 ? "s" : ""} de frete
+            </span>
+            {isFiltering && (
+              <span className="text-[11px] font-medium text-amber-600">
+                (Filtros aplicados)
+              </span>
+            )}
+          </div>
+          {isFiltering && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearFilters}
+              className="h-8 gap-1 px-2.5 text-xs text-slate-600 hover:text-slate-900"
+            >
+              <FilterXIcon size={13} /> Limpar filtros
+            </Button>
+          )}
+        </div>
       </Card>
 
       {/* ── Dialog Criar / Editar (Padrão Usuários) ───────── */}

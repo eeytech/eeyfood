@@ -504,9 +504,10 @@ export function FiadosClient({ slug, fiados, contas }: FiadosClientProps) {
         </Card>
       </div>
 
-      {/* ── Filtros ─────────────────────────────────────── */}
-      <Card className="border-slate-200/80 bg-white shadow-sm">
-        <CardContent className="p-4">
+      {/* ── Tabela e Cards ───────────────────────────────── */}
+      <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+        {/* Filtros da Tabela de Fiados */}
+        <div className="border-b border-slate-100 bg-slate-50/50 p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative flex-1">
               <SearchIcon
@@ -517,7 +518,7 @@ export function FiadosClient({ slug, fiados, contas }: FiadosClientProps) {
                 placeholder="Buscar cliente por nome ou telefone..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-10 rounded-xl border-slate-200 bg-slate-50/70 pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white"
+                className="h-10 rounded-xl border-slate-200 bg-white pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white"
               />
               {search && (
                 <button
@@ -529,17 +530,8 @@ export function FiadosClient({ slug, fiados, contas }: FiadosClientProps) {
                 </button>
               )}
             </div>
-
-            <span className="text-xs text-slate-500">
-              Exibindo <strong className="font-semibold text-slate-900">{filtered.length}</strong> de{" "}
-              {fiados.length} cliente{fiados.length !== 1 ? "s" : ""}
-            </span>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* ── Tabela e Cards ───────────────────────────────── */}
-      <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+        </div>
         {filtered.length === 0 ? (
           <div className="flex min-h-[240px] flex-col items-center justify-center p-8 text-center">
             <div className="rounded-full bg-slate-100 p-3.5 text-slate-400">
@@ -786,6 +778,19 @@ export function FiadosClient({ slug, fiados, contas }: FiadosClientProps) {
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Footer com Contador de Resultados */}
+            <div className="flex items-center justify-between border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 text-xs text-slate-500">
+              <span>
+                Exibindo <strong className="font-semibold text-slate-900">{filtered.length}</strong> de{" "}
+                {fiados.length} cliente{fiados.length !== 1 ? "s" : ""}
+              </span>
+              {search && (
+                <span className="text-[11px] font-medium text-amber-600">
+                  (Filtro de busca ativo)
+                </span>
+              )}
             </div>
           </>
         )}

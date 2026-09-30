@@ -84,8 +84,7 @@ export function CrmFilters({
   const isFiltering = Boolean(currentSegment || searchValue);
 
   return (
-    <Card className="border-slate-200/80 bg-white shadow-sm">
-      <CardContent className="p-4">
+    <div className="border-b border-slate-100 bg-slate-50/50 p-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           {/* Search Input */}
           <div className="relative flex-1">
@@ -177,23 +176,6 @@ export function CrmFilters({
             );
           })}
         </div>
-
-        {/* Results counter indicator */}
-        <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500">
-          <span>
-            Exibindo{" "}
-            <strong className="font-semibold text-slate-900">
-              {totalShowing}
-            </strong>{" "}
-            de {totalCount} cliente{totalCount !== 1 ? "s" : ""}
-          </span>
-          {isFiltering && (
-            <span className="text-[11px] font-medium text-amber-600">
-              Filtros aplicados
-            </span>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+    </div>
   );
 }
