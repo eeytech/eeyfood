@@ -360,7 +360,7 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
           </div>
           <div>
             <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
-              Roteirizador & Painel de Despacho
+              Roteirizador e Painel de Despacho
             </h1>
             <p className="text-sm text-slate-500">
               Agrupe pedidos prontos por proximidade geográfica, visualize mochilas de pizza e despache em lote.

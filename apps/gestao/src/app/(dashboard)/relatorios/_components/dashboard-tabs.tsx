@@ -31,7 +31,7 @@ export const TABS = [
   { value: "marketing", label: "Marketing", icon: TagIcon },
   { value: "pagamentos", label: "Pagamentos", icon: CreditCardIcon },
   { value: "dre", label: "DRE Financeiro", icon: ReceiptIcon },
-  { value: "kpis", label: "KPIs & BI", icon: TrendingUpIcon },
+  { value: "kpis", label: "KPIs e BI", icon: TrendingUpIcon },
   { value: "ia", label: "Assistente IA", icon: SparklesIcon },
 ] as const;
 

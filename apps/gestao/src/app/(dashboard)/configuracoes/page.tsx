@@ -197,14 +197,14 @@ const ConfiguracoesPage = async ({ params }: ConfiguracoesPageProps) => {
             className="rounded-xl px-4 py-1.5 font-medium text-slate-600 transition data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-xs"
           >
             <ToggleRightIcon size={15} className="mr-1.5" />
-            Módulos & Regras
+            Módulos e Regras
           </TabsTrigger>
           <TabsTrigger
             value="funcionamento"
             className="rounded-xl px-4 py-1.5 font-medium text-slate-600 transition data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-xs"
           >
             <Settings2Icon size={15} className="mr-1.5" />
-            Horários & Agendamento
+            Horários e Agendamento
           </TabsTrigger>
         </TabsList>
 

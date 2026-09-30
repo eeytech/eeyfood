@@ -177,7 +177,7 @@ export function MarketingSettingsForm({
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">
-                Meta Ads & Pixel
+                Meta Ads e Pixel
               </span>
               <div className="rounded-lg bg-blue-100 p-1.5 text-blue-700">
                 <Share2Icon size={16} />
@@ -187,7 +187,7 @@ export function MarketingSettingsForm({
               {isMetaActive ? "Configurado" : "Pendente"}
             </p>
             <p className="mt-0.5 text-xs text-slate-500 truncate">
-              {pixelId ? `ID: ${pixelId}` : tokenValue ? "CAPI Configurado" : "Facebook & Instagram"}
+              {pixelId ? `ID: ${pixelId}` : tokenValue ? "CAPI Configurado" : "Facebook e Instagram"}
             </p>
           </CardContent>
         </Card>
@@ -207,7 +207,7 @@ export function MarketingSettingsForm({
               {isGoogleActive ? "Configurado" : "Pendente"}
             </p>
             <p className="mt-0.5 text-xs text-slate-500 truncate">
-              {ga4Id ? `GA4: ${ga4Id}` : gtmId ? `GTM: ${gtmId}` : "GA4 & GTM Web"}
+              {ga4Id ? `GA4: ${ga4Id}` : gtmId ? `GTM: ${gtmId}` : "GA4 e GTM Web"}
             </p>
           </CardContent>
         </Card>
@@ -269,7 +269,7 @@ export function MarketingSettingsForm({
                   </div>
                   <div>
                     <CardTitle className="font-display text-base font-semibold text-slate-900">
-                      Meta Ads (Facebook & Instagram)
+                      Meta Ads (Facebook e Instagram)
                     </CardTitle>
                     <CardDescription className="text-xs text-slate-500">
                       Rastreie visualizações e vendas vindas de anúncios no Facebook e Instagram.
@@ -357,7 +357,7 @@ export function MarketingSettingsForm({
                   </div>
                   <div>
                     <CardTitle className="font-display text-base font-semibold text-slate-900">
-                      Google Analytics & Tag Manager
+                      Google Analytics e Tag Manager
                     </CardTitle>
                     <CardDescription className="text-xs text-slate-500">
                       Monitore o comportamento de navegação no Google Analytics 4 (GA4) e gerencie tags via GTM.

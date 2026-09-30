@@ -211,7 +211,7 @@ export function CompanySwitcher({
                   <Input
                     id="unitDesc"
                     name="description"
-                    placeholder="Ex: Hamburgueria & Delivery"
+                    placeholder="Ex: Hamburgueria e Delivery"
                     className="h-9 text-xs"
                   />
                 </div>

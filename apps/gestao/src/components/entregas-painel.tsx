@@ -520,7 +520,7 @@ export default function EntregasPainel({
               </div>
               <div>
                 <CardTitle className="font-display text-xl sm:text-2xl font-bold text-slate-900">
-                  Painel de Entregas & Expedição
+                  Painel de Entregas e Expedição
                 </CardTitle>
                 <p className="text-xs sm:text-sm text-slate-500">
                   Controle de expedição, rotas de motoboys e pedidos para entrega em tempo real.

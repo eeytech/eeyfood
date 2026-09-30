@@ -135,7 +135,7 @@ const AdminSidebar = ({
     if (isManagement) {
       groups.push(
         {
-          label: "Cardápio & Estoque",
+          label: "Cardápio e Estoque",
           items: [
             { href: "cardapio", label: "Cardápio", icon: UtensilsCrossedIcon },
             { href: "cardapio/impressao", label: "Impressão do Cardápio", icon: PrinterIcon },
@@ -144,14 +144,14 @@ const AdminSidebar = ({
           ],
         },
         {
-          label: "Financeiro & Métricas",
+          label: "Financeiro e Métricas",
           items: [
             { href: "financeiro", label: "Financeiro", icon: CircleDollarSignIcon },
             { href: "relatorios", label: "Relatórios", icon: BarChart3Icon },
           ],
         },
         {
-          label: "Marketing & Clientes",
+          label: "Marketing e Clientes",
           items: [
             { href: "crm", label: "Clientes (CRM)", icon: HeartHandshakeIcon },
             { href: "campanhas", label: "Campanhas", icon: MegaphoneIcon },
@@ -164,7 +164,7 @@ const AdminSidebar = ({
           label: "Configurações",
           items: [
             { href: "configuracoes", label: "Geral", icon: StoreIcon },
-            { href: "logistica", label: "Logística & Motoboys", icon: TruckIcon },
+            { href: "logistica", label: "Logística e Motoboys", icon: TruckIcon },
             { href: "configuracoes/usuarios", label: "Acessos", icon: Users2Icon },
             { href: "marketplaces", label: "Marketplaces", icon: ShoppingBagIcon },
             { href: "whatsapp", label: "WhatsApp", icon: MessageSquareIcon },

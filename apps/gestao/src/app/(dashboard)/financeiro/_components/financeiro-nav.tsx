@@ -13,7 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
-  { href: "", label: "Lançamentos & Fluxo", icon: ReceiptIcon },
+  { href: "", label: "Lançamentos e Fluxo", icon: ReceiptIcon },
   { href: "/contas-bancarias", label: "Contas Bancárias", icon: Building2Icon },
   { href: "/fechamentos", label: "Fechamento DRE", icon: CalendarCheck2Icon },
   { href: "/configuracoes-fiscais", label: "Fiscal (NFC-e)", icon: FileTextIcon },

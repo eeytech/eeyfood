@@ -8,7 +8,7 @@ import { RelatoriosClient } from "./_components/relatorios-client";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Relatórios & Analytics | Gestão",
+  title: "Relatórios e Analytics | Gestão",
 };
 
 interface RelatoriosPageProps {

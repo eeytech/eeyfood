@@ -685,7 +685,7 @@ export function EstoqueClient({
           </div>
           <div>
             <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
-              Controle de Estoque & Insumos
+              Controle de Estoque e Insumos
             </h1>
             <p className="text-sm text-slate-500">
               Monitore o saldo dos produtos do cardápio, gerencie insumos e controle validades e perdas.
@@ -887,7 +887,7 @@ export function EstoqueClient({
             className="gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
           >
             <AlertTriangleIcon size={14} />
-            <span>Perdas & Descartes</span>
+            <span>Perdas e Descartes</span>
             <span className="rounded-full bg-slate-200/80 px-2 py-0.5 text-[10px] font-bold text-slate-700">
               {perdas.length}
             </span>

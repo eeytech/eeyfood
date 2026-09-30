@@ -9,7 +9,7 @@ import { MarketplacesClient } from "./marketplaces-client";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Marketplaces & iFood | Gestão",
+  title: "Marketplaces e iFood | Gestão",
   description: "Conecte sua loja ao iFood, Rappi e 99Food para receber pedidos centralizados no seu PDV e KDS.",
 };
 

@@ -85,7 +85,7 @@ export default async function WhatsAppPage({ params }: PageProps) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs font-bold text-slate-900">
-                      Campanhas de Marketing & Mensagens
+                      Campanhas de Marketing e Mensagens
                     </p>
                     <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-[10px] font-semibold text-emerald-700">
                       Disparo em Massa

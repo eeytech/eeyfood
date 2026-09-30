@@ -78,7 +78,7 @@ const RestaurantPage = async ({ searchParams }: RestaurantPageProps) => {
                     <div className="flex items-center gap-1 text-xs text-slate-500">
                       <MapPinIcon size={12} className="shrink-0 text-slate-400" />
                       <span className="truncate">
-                        {branch.description || "Restaurante & Delivery"}
+                        {branch.description || "Restaurante e Delivery"}
                       </span>
                     </div>
                   </div>

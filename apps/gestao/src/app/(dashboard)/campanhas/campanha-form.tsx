@@ -659,7 +659,7 @@ export function CampanhaForm({
             <CardHeader className="p-4 border-b border-slate-100">
               <CardTitle className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-600">
                 <InfoIcon size={14} className="text-blue-500" />
-                Diretrizes de Envio & Segurança
+                Diretrizes de Envio e Segurança
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 space-y-2.5 text-xs text-slate-600">

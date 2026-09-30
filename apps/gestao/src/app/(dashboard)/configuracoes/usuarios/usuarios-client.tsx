@@ -141,18 +141,18 @@ const ROLE_CONFIG: Record<string, RoleConfig> = {
     description: "Supervisão da operação, pedidos, mesas, cancelamentos e equipe",
   },
   WAITER: {
-    label: "Operador de Comandas / Garçom (Mobile & Salão)",
+    label: "Operador de Comandas / Garçom (Mobile e Salão)",
     shortLabel: "Comandas / Garçom",
     badgeClass: "bg-indigo-50 text-indigo-800 border-indigo-200/80 hover:bg-indigo-100",
     icon: UtensilsCrossedIcon,
-    description: "Acesso exclusivo ao painel de Comandas & Mesas, otimizado para celular como um aplicativo dedicado",
+    description: "Acesso exclusivo ao painel de Comandas e Mesas, otimizado para celular como um aplicativo dedicado",
   },
   COURIER: {
     label: "Entregador / Motoboy",
     shortLabel: "Entregador",
     badgeClass: "bg-cyan-50 text-cyan-800 border-cyan-200/80 hover:bg-cyan-100",
     icon: BikeIcon,
-    description: "Acesso ao Painel de Entregas & Expedição para consulta de rotas e despacho de pedidos",
+    description: "Acesso ao Painel de Entregas e Expedição para consulta de rotas e despacho de pedidos",
   },
   ATTENDANT: {
     label: "Atendente (Operações)",
@@ -214,6 +214,7 @@ export function UsuariosClient({
   const [editError, setEditError] = useState<string | null>(null);
 
   const [deletingUser, setDeletingUser] = useState<UserItem | null>(null);
+  const [isNewGarcomOpen, setIsNewGarcomOpen] = useState(false);
 
   // Filters and search
   const [searchQuery, setSearchQuery] = useState("");
@@ -370,7 +371,7 @@ export function UsuariosClient({
           </div>
         </div>
 
-        {activeTab === "USUARIOS" && (
+        {activeTab === "USUARIOS" ? (
           <Button
             onClick={() => {
               setCreateError(null);
@@ -381,6 +382,14 @@ export function UsuariosClient({
           >
             <UserPlusIcon size={16} />
             <span>Novo Usuário</span>
+          </Button>
+        ) : (
+          <Button
+            onClick={() => setIsNewGarcomOpen(true)}
+            className="h-10 gap-2 rounded-full bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+          >
+            <UserPlusIcon size={16} />
+            <span>Novo Garçom</span>
           </Button>
         )}
       </div>
@@ -413,7 +422,7 @@ export function UsuariosClient({
           )}
         >
           <UtensilsCrossedIcon size={16} />
-          <span>Garçons & Salão</span>
+          <span>Garçons e Salão</span>
           <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs text-purple-700 font-medium">
             {garconsData?.garcons.length || 0}
           </span>
@@ -426,6 +435,8 @@ export function UsuariosClient({
           garcons={garconsData?.garcons || []}
           regraComissao={garconsData?.regraComissao || null}
           fechamentos={garconsData?.fechamentos || []}
+          isNewGarcomOpen={isNewGarcomOpen}
+          onNewGarcomOpenChange={setIsNewGarcomOpen}
         />
       ) : (
         <>
@@ -454,7 +465,7 @@ export function UsuariosClient({
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                Cozinha & KDS
+                Cozinha e KDS
               </span>
               <div className="rounded-lg bg-amber-100 p-1.5 text-amber-700">
                 <ChefHatIcon size={16} />
@@ -473,7 +484,7 @@ export function UsuariosClient({
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                Gestão & Admin
+                Gestão e Admin
               </span>
               <div className="rounded-lg bg-blue-100 p-1.5 text-blue-700">
                 <ShieldCheckIcon size={16} />

@@ -8,7 +8,7 @@ import { buscarRestauranteParaGestao } from "@/lib/admin-queries";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Painel de Entregas & Expedição | Gestão",
+  title: "Painel de Entregas e Expedição | Gestão",
   description:
     "Organização e despacho em tempo real de pedidos de delivery para entregadores e expedição.",
 };

@@ -174,31 +174,31 @@ interface CategoryConfig {
 
 const CATEGORY_CONFIG: Record<TicketCategory, CategoryConfig> = {
   PDV_CAIXA: {
-    label: "PDV & Caixa",
-    shortLabel: "PDV & Caixa",
+    label: "PDV e Caixa",
+    shortLabel: "PDV e Caixa",
     icon: MonitorSmartphoneIcon,
     description: "Abertura, fechamento, vendas e recebimentos no balcão",
   },
   KDS_COZINHA: {
-    label: "Cozinha & KDS",
+    label: "Cozinha e KDS",
     shortLabel: "Cozinha (KDS)",
     icon: ChefHatIcon,
     description: "Painel de produção, tempos de preparo e despacho de pratos",
   },
   CARDAPIO_ESTOQUE: {
-    label: "Cardápio & Estoque",
+    label: "Cardápio e Estoque",
     shortLabel: "Cardápio/Estoque",
     icon: BoxesIcon,
     description: "Categorias, itens, adicionais, fichas técnicas e insumos",
   },
   IMPRESSAO_HARDWARE: {
-    label: "Impressoras & Balança",
+    label: "Impressoras e Balança",
     shortLabel: "Impressão",
     icon: PrinterIcon,
     description: "Impressoras térmicas de cupom, Web Serial e periféricos",
   },
   FINANCEIRO_FISCAL: {
-    label: "Financeiro & Fiscal (NFC-e)",
+    label: "Financeiro e Fiscal (NFC-e)",
     shortLabel: "Fiscal (NFC-e)",
     icon: CircleDollarSignIcon,
     description: "Emissão de NFC-e/NF-e, contingência SEFAZ e contas bancárias",
@@ -556,7 +556,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
           </div>
           <div>
             <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
-              Central de Suporte & Ajuda
+              Central de Suporte e Ajuda
             </h1>
             <p className="text-sm text-slate-500">
               Acompanhe solicitações técnicas, tire dúvidas operacionais e abra chamados com atendimento ágil.
@@ -723,10 +723,10 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                   </SelectTrigger>
                   <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
                     <SelectItem value="ALL">Todas as categorias</SelectItem>
-                    <SelectItem value="PDV_CAIXA">PDV & Caixa</SelectItem>
-                    <SelectItem value="KDS_COZINHA">Cozinha & KDS</SelectItem>
-                    <SelectItem value="CARDAPIO_ESTOQUE">Cardápio & Estoque</SelectItem>
-                    <SelectItem value="IMPRESSAO_HARDWARE">Impressoras & Balança</SelectItem>
+                    <SelectItem value="PDV_CAIXA">PDV e Caixa</SelectItem>
+                    <SelectItem value="KDS_COZINHA">Cozinha e KDS</SelectItem>
+                    <SelectItem value="CARDAPIO_ESTOQUE">Cardápio e Estoque</SelectItem>
+                    <SelectItem value="IMPRESSAO_HARDWARE">Impressoras e Balança</SelectItem>
                     <SelectItem value="FINANCEIRO_FISCAL">Fiscal (NFC-e)</SelectItem>
                     <SelectItem value="INTEGRACOES">Integrações</SelectItem>
                     <SelectItem value="OUTRO">Dúvidas Gerais</SelectItem>
@@ -854,7 +854,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                 <TableHeader className="bg-slate-50/80">
                   <TableRow className="border-b border-slate-200">
                     <TableHead className="w-[320px] text-xs font-semibold text-slate-700">
-                      Protocolo & Assunto
+                      Protocolo e Assunto
                     </TableHead>
                     <TableHead className="w-[220px] text-xs font-semibold text-slate-700">
                       Solicitante
@@ -1009,7 +1009,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                                 className="gap-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
                               >
                                 <MessageSquareIcon size={14} className="text-blue-600" />
-                                Ver detalhes & respostas
+                                Ver detalhes e respostas
                               </DropdownMenuItem>
 
                               <DropdownMenuItem
@@ -1271,7 +1271,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
             </div>
             <div>
               <h3 className="font-display text-base font-semibold text-slate-900">
-                Perguntas Frequentes & Autoatendimento
+                Perguntas Frequentes e Autoatendimento
               </h3>
               <p className="text-xs text-slate-500">
                 Respostas rápidas e orientações passo a passo para as dúvidas mais comuns do restaurante.
@@ -1603,7 +1603,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
               <div className="space-y-3">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-2 text-xs text-slate-500">
                   <span className="font-semibold text-slate-700">
-                    Linha do Tempo & Respostas
+                    Linha do Tempo e Respostas
                   </span>
                   <span>{selectedTicket.messages.length} iten(s)</span>
                 </div>

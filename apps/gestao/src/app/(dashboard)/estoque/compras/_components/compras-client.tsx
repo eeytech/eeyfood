@@ -385,7 +385,7 @@ export function ComprasClient({
           </div>
           <div>
             <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
-              Compras & Entrada NF-e
+              Compras e Entrada NF-e
             </h1>
             <p className="text-sm text-slate-500">
               Importe notas fiscais eletrônicas (XML) para dar entrada automática no estoque e gerencie fornecedores.

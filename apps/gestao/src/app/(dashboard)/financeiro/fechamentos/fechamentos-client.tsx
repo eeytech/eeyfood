@@ -226,7 +226,7 @@ export function FechamentosClient({
             <div>
               <CardTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
                 <CalculatorIcon size={18} className="text-blue-600" />
-                <span>Auditoria & Fechamento de Competência</span>
+                <span>Auditoria e Fechamento de Competência</span>
               </CardTitle>
               <p className="text-xs text-slate-500 mt-0.5">
                 Selecione o mês fiscal para calcular a DRE e consolidar os números definitivos.
@@ -307,7 +307,7 @@ export function FechamentosClient({
                   {previa.isClosed ? (
                     <Badge className="gap-1.5 bg-emerald-600 text-white font-semibold">
                       <LockIcon size={12} />
-                      <span>Auditado & Bloqueado</span>
+                      <span>Auditado e Bloqueado</span>
                     </Badge>
                   ) : (
                     <Badge variant="outline" className="gap-1.5 border-amber-300 bg-amber-50 text-amber-800 font-semibold">
@@ -350,7 +350,7 @@ export function FechamentosClient({
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200/80">
                   <span className="text-slate-600 flex items-center gap-1.5">
                     <ArrowDownIcon size={14} className="text-rose-600" />
-                    Custos & Despesas Pagas
+                    Custos e Despesas Pagas
                   </span>
                   <span className="font-semibold text-rose-600">
                     -{formatCurrency(previa.custoTotal)}
@@ -395,7 +395,7 @@ export function FechamentosClient({
                     className="gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold text-white shadow-xs"
                   >
                     <CheckCircle2Icon size={14} />
-                    <span>Auditar & Fechar Competência {MESES.find((m) => m.value === previa.mes)?.label}/{previa.ano}</span>
+                    <span>Auditar e Fechar Competência {MESES.find((m) => m.value === previa.mes)?.label}/{previa.ano}</span>
                   </Button>
                 )}
               </div>

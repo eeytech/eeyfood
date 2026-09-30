@@ -339,7 +339,7 @@ export function VehiclesTab({
                 <TableHeader className="bg-slate-50/80">
                   <TableRow className="border-b border-slate-200">
                     <TableHead className="w-[260px] text-xs font-semibold text-slate-700">
-                      Veículo & Modelo
+                      Veículo e Modelo
                     </TableHead>
                     <TableHead className="text-xs font-semibold text-slate-700">
                       Marca

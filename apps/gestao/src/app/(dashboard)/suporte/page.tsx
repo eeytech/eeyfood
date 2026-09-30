@@ -7,7 +7,7 @@ import { SuporteClient } from "./suporte-client";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Central de Suporte & Ajuda | Gestão",
+  title: "Central de Suporte e Ajuda | Gestão",
   description: "Acompanhe e abra chamados de suporte técnico, consulte a base de conhecimento e tire dúvidas.",
 };
 

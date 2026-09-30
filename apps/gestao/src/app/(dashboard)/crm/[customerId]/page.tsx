@@ -240,7 +240,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base text-slate-900 font-semibold">
                   <WalletIcon className="h-4 w-4 text-emerald-600" />
-                  Cashback & Carteira
+                  Cashback e Carteira
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">

@@ -6,8 +6,8 @@ import { BoxesIcon, ReceiptIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
-  { href: "", label: "Controle de Estoque & Insumos", icon: BoxesIcon },
-  { href: "/compras", label: "Compras & Entrada NF-e", icon: ReceiptIcon },
+  { href: "", label: "Controle de Estoque e Insumos", icon: BoxesIcon },
+  { href: "/compras", label: "Compras e Entrada NF-e", icon: ReceiptIcon },
 ];
 
 export function EstoqueNav() {

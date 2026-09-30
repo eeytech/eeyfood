@@ -499,7 +499,7 @@ export function DeliveryFeeRulesTab({ slug, rules: initialRules }: DeliveryFeeRu
               <TableHeader className="bg-slate-50/80">
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="font-semibold text-slate-700">Zona / Regra</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Tipo & Critério</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Tipo e Critério</TableHead>
                   <TableHead className="font-semibold text-slate-700">Taxa de Frete</TableHead>
                   <TableHead className="font-semibold text-slate-700">Pedido Mínimo</TableHead>
                   <TableHead className="font-semibold text-slate-700">Frete Grátis Acima de</TableHead>

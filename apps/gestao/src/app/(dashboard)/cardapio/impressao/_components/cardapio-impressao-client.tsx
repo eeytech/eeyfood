@@ -505,16 +505,16 @@ export function CardapioImpressaoClient({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="BISTRO_ELEGANT">
-                          🍷 Bistrô Elegante (Fundo Marfim & Moldura)
+                          🍷 Bistrô Elegante (Fundo Marfim e Moldura)
                         </SelectItem>
                         <SelectItem value="MODERN_DARK">
-                          🌙 Dark & Gold (Fundo Escuro & Dourado)
+                          🌙 Dark e Gold (Fundo Escuro e Dourado)
                         </SelectItem>
                         <SelectItem value="MINIMAL_CLEAN">
-                          📄 Minimalista Clean (Branco Puro & Alto Contraste)
+                          📄 Minimalista Clean (Branco Puro e Alto Contraste)
                         </SelectItem>
                         <SelectItem value="FAST_CASUAL">
-                          🍔 Fast Casual (Acentos Laranja & Vibrante)
+                          🍔 Fast Casual (Acentos Laranja e Vibrante)
                         </SelectItem>
                       </SelectContent>
                     </Select>

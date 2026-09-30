@@ -379,7 +379,7 @@ export function LogisticaClient({
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                Zonas & Regras
+                Zonas e Regras
               </span>
               <div className="rounded-lg bg-teal-100 p-1.5 text-teal-700">
                 <CompassIcon size={16} />
@@ -653,7 +653,7 @@ export function LogisticaClient({
                           Placa
                         </TableHead>
                         <TableHead className="text-xs font-semibold text-slate-700">
-                          Escala & Turno
+                          Escala e Turno
                         </TableHead>
                         <TableHead className="text-center text-xs font-semibold text-slate-700">
                           Disponibilidade
