@@ -1419,16 +1419,32 @@ export function GarconsTab({
               </div>
 
               {selectedGarcomForClosing && (
-                <div className="rounded-lg bg-slate-50 p-3 border border-slate-200/80 text-xs space-y-1">
+                <div className="rounded-lg bg-slate-50 p-3 border border-slate-200/80 text-xs space-y-1.5">
                   <div className="flex justify-between text-slate-600">
-                    <span>Total de Taxas Geradas:</span>
-                    <span className="font-semibold">{formatCurrency(selectedGarcomForClosing.totalServiceFee)}</span>
+                    <span>
+                      {selectedGarcomForClosing.waiter.commissionPercent > 0
+                        ? `Comissão Apurada (${selectedGarcomForClosing.waiter.commissionPercent}% s/ itens):`
+                        : "Taxa de Serviço Devida:"}
+                    </span>
+                    <span className="font-semibold text-slate-800">
+                      {formatCurrency(
+                        selectedGarcomForClosing.commissionDue ??
+                          (selectedGarcomForClosing.waiter.commissionPercent > 0
+                            ? ((selectedGarcomForClosing.totalSubtotal ??
+                                selectedGarcomForClosing.totalSales) *
+                                selectedGarcomForClosing.waiter.commissionPercent) /
+                              100
+                            : selectedGarcomForClosing.totalServiceFee),
+                      )}
+                    </span>
                   </div>
                   <div className="flex justify-between text-slate-600">
                     <span>Já Repassado Anteriormente:</span>
-                    <span className="font-semibold">{formatCurrency(selectedGarcomForClosing.totalTipsPaid)}</span>
+                    <span className="font-semibold text-slate-700">
+                      {formatCurrency(selectedGarcomForClosing.totalTipsPaid)}
+                    </span>
                   </div>
-                  <div className="flex justify-between text-purple-700 font-bold border-t border-slate-200/60 pt-1 mt-1">
+                  <div className="flex justify-between text-purple-700 font-bold border-t border-slate-200/60 pt-1.5 mt-1">
                     <span>Saldo Pendente Atual:</span>
                     <span>{formatCurrency(selectedGarcomForClosing.pendingBalance)}</span>
                   </div>

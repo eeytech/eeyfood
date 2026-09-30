@@ -21,8 +21,10 @@ export interface GarcomMetricas {
   waiter: Waiter;
   totalOrders: number;
   totalSales: number;
+  totalSubtotal: number;
   totalServiceFee: number;
   totalTipsPaid: number;
+  commissionDue: number;
   pendingBalance: number;
 }
 
@@ -102,6 +104,7 @@ export async function listarGarconsComMetricasAction(
       waiterId: ordersTable.waiterId,
       totalOrders: sql<number>`count(*)::int`,
       totalSales: sql<number>`coalesce(sum(${ordersTable.total}), 0)::float`,
+      totalSubtotal: sql<number>`coalesce(sum(${ordersTable.subtotal}), 0)::float`,
       totalServiceFee: sql<number>`coalesce(sum(${ordersTable.serviceFeeAmount}), 0)::float`,
     })
     .from(ordersTable)
@@ -129,16 +132,26 @@ export async function listarGarconsComMetricasAction(
     const o = ordersMap.get(w.id);
     const totalOrders = o?.totalOrders || 0;
     const totalSales = Number(o?.totalSales?.toFixed(2) || 0);
+    const totalSubtotal = Number(o?.totalSubtotal?.toFixed(2) || 0);
     const totalServiceFee = Number(o?.totalServiceFee?.toFixed(2) || 0);
     const totalTipsPaid = Number(
       (closingsSumMap.get(w.id) || 0).toFixed(2),
     );
 
-    // Se o garçom tiver comissão customizada (ex: 5% ou 10%), usa dela, senão usa a taxa de serviço
-    const commissionDue =
-      w.commissionPercent > 0
-        ? (totalSales * w.commissionPercent) / 100
-        : totalServiceFee;
+    // Se o garçom tiver comissão customizada (ex: 5% ou 10%), ela incide sobre o subtotal de vendas dos produtos.
+    // Senão, utiliza a taxa de serviço apurada nos pedidos dele (aplicando a % de repasse da regra ativa da casa, se houver).
+    const waiterShareMultiplier =
+      activeRule && typeof activeRule.waiterSharePercent === "number"
+        ? activeRule.waiterSharePercent / 100
+        : 1;
+
+    const commissionDue = Number(
+      (
+        w.commissionPercent > 0
+          ? (totalSubtotal * w.commissionPercent) / 100
+          : totalServiceFee * waiterShareMultiplier
+      ).toFixed(2),
+    );
 
     const pendingBalance = Math.max(
       0,
@@ -149,8 +162,10 @@ export async function listarGarconsComMetricasAction(
       waiter: w,
       totalOrders,
       totalSales,
+      totalSubtotal,
       totalServiceFee,
       totalTipsPaid,
+      commissionDue,
       pendingBalance,
     };
   });

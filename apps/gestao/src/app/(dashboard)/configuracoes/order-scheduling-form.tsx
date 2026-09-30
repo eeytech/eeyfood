@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarClockIcon, CheckIcon, ClockIcon, InfoIcon, Loader2Icon } from "lucide-react";
+import { CalendarClockIcon, CheckIcon, ClockIcon, InfoIcon, Loader2Icon, SaveIcon } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -286,21 +286,24 @@ export const OrderSchedulingForm = ({
         </div>
       )}
 
-      <div className="pt-2">
+      <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs text-slate-500">
+          As regras de agendamento serão aplicadas no checkout dos clientes.
+        </p>
         <Button
           type="submit"
           disabled={isPending}
-          className="h-10 w-full rounded-full bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 transition"
+          className="h-10 gap-2 rounded-xl bg-slate-900 px-5 text-xs font-semibold text-white shadow-xs hover:bg-slate-800 disabled:opacity-50 transition w-full sm:w-auto"
         >
           {isPending ? (
             <>
-              <Loader2Icon size={16} className="animate-spin mr-2" />
-              Salvando alterações...
+              <Loader2Icon size={15} className="animate-spin" />
+              <span>Salvando alterações...</span>
             </>
           ) : (
             <>
-              <CheckIcon size={16} className="mr-2" />
-              Salvar Configurações de Agendamento
+              <SaveIcon size={15} />
+              <span>Salvar Configurações de Agendamento</span>
             </>
           )}
         </Button>

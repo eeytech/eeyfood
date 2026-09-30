@@ -3,6 +3,8 @@
 import {
   BotIcon,
   HelpCircleIcon,
+  Loader2Icon,
+  SaveIcon,
   ShoppingBagIcon,
   ToggleRightIcon,
   TruckIcon,
@@ -453,13 +455,26 @@ export const RestaurantFeaturesForm = ({
             </div>
           </div>
 
-          <div className="pt-2">
+          <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-slate-500">
+              Recursos e canais são ativados ou desativados em tempo real no app.
+            </p>
             <Button
               type="submit"
-              className="h-10 w-full rounded-full bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 transition"
+              className="h-10 gap-2 rounded-xl bg-slate-900 px-5 text-xs font-semibold text-white shadow-xs hover:bg-slate-800 disabled:opacity-50 transition w-full sm:w-auto"
               disabled={isPending}
             >
-              {isPending ? "Salvando alterações..." : "Salvar Configurações de Módulos"}
+              {isPending ? (
+                <>
+                  <Loader2Icon size={15} className="animate-spin" />
+                  <span>Salvando alterações...</span>
+                </>
+              ) : (
+                <>
+                  <SaveIcon size={15} />
+                  <span>Salvar Configurações de Módulos</span>
+                </>
+              )}
             </Button>
           </div>
         </form>

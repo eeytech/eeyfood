@@ -3,6 +3,7 @@ import {
   CheckCircle2Icon,
   ClockIcon,
   PizzaIcon,
+  SaveIcon,
   Settings2Icon,
   ShoppingBagIcon,
   StoreIcon,
@@ -184,24 +185,24 @@ const ConfiguracoesPage = async ({ params }: ConfiguracoesPageProps) => {
 
       {/* ── Tabs Navigation ──────────────────────────────── */}
       <Tabs defaultValue="estabelecimento">
-        <TabsList className="h-11 rounded-2xl border border-slate-200/80 bg-slate-100 p-1">
+        <TabsList className="h-auto flex-wrap gap-1.5 rounded-2xl border border-slate-200/80 bg-slate-100/90 p-1.5 shadow-xs">
           <TabsTrigger
             value="estabelecimento"
-            className="rounded-xl px-4 py-1.5 font-medium text-slate-600 transition data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-xs"
+            className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 transition data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-xs"
           >
             <StoreIcon size={15} className="mr-1.5" />
             Estabelecimento
           </TabsTrigger>
           <TabsTrigger
             value="modulos"
-            className="rounded-xl px-4 py-1.5 font-medium text-slate-600 transition data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-xs"
+            className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 transition data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-xs"
           >
             <ToggleRightIcon size={15} className="mr-1.5" />
             Módulos e Regras
           </TabsTrigger>
           <TabsTrigger
             value="funcionamento"
-            className="rounded-xl px-4 py-1.5 font-medium text-slate-600 transition data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-xs"
+            className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 transition data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-xs"
           >
             <Settings2Icon size={15} className="mr-1.5" />
             Horários e Agendamento
@@ -305,9 +306,13 @@ const ConfiguracoesPage = async ({ params }: ConfiguracoesPageProps) => {
                   ))}
                 </div>
 
-                <div className="pt-2">
-                  <SubmitButton className="h-10 w-full rounded-full bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 transition">
-                    Salvar Status Operacional
+                <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-xs text-slate-500">
+                    O status define se o cardápio aceita novos pedidos imediatamente.
+                  </p>
+                  <SubmitButton className="h-10 gap-2 rounded-xl bg-slate-900 px-5 text-xs font-semibold text-white shadow-xs hover:bg-slate-800 transition w-full sm:w-auto">
+                    <SaveIcon size={15} />
+                    <span>Salvar Status Operacional</span>
                   </SubmitButton>
                 </div>
               </form>
@@ -376,9 +381,13 @@ const ConfiguracoesPage = async ({ params }: ConfiguracoesPageProps) => {
                   })}
                 </div>
 
-                <div className="pt-2">
-                  <SubmitButton className="h-10 w-full rounded-full bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 transition">
-                    Salvar Horários de Atendimento
+                <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-xs text-slate-500">
+                    Dias desmarcados serão considerados fechados no cardápio online.
+                  </p>
+                  <SubmitButton className="h-10 gap-2 rounded-xl bg-slate-900 px-5 text-xs font-semibold text-white shadow-xs hover:bg-slate-800 transition w-full sm:w-auto">
+                    <SaveIcon size={15} />
+                    <span>Salvar Horários de Atendimento</span>
                   </SubmitButton>
                 </div>
               </form>
