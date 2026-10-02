@@ -1,14 +1,9 @@
 "use client";
 
 import {
-  BotIcon,
-  HelpCircleIcon,
   Loader2Icon,
   SaveIcon,
-  ShoppingBagIcon,
   ToggleRightIcon,
-  TruckIcon,
-  UtensilsCrossedIcon,
 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -184,7 +179,6 @@ export const RestaurantFeaturesForm = ({
       label: "Delivery (Entrega em Domicílio)",
       description:
         "Permite que clientes façam pedidos com rota e entrega de motoboy.",
-      icon: TruckIcon,
       checked: isDeliveryEnabled,
       onChange: (v: boolean) => handleConsumptionToggle("delivery", v),
     },
@@ -193,7 +187,6 @@ export const RestaurantFeaturesForm = ({
       label: "Retirada no Balcão (Takeaway)",
       description:
         "Permite que clientes retirem seus pedidos diretamente no balcão da loja.",
-      icon: ShoppingBagIcon,
       checked: isTakeawayEnabled,
       onChange: (v: boolean) => handleConsumptionToggle("takeaway", v),
     },
@@ -202,7 +195,6 @@ export const RestaurantFeaturesForm = ({
       label: "Consumo no Local (Mesa / Salão)",
       description:
         "Permite que clientes façam pedidos para consumir nas mesas do restaurante.",
-      icon: UtensilsCrossedIcon,
       checked: isDineInEnabled,
       onChange: (v: boolean) => handleConsumptionToggle("dineIn", v),
     },
@@ -212,7 +204,7 @@ export const RestaurantFeaturesForm = ({
     <Card className="border-slate-200/80 bg-white shadow-sm">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 font-display text-lg text-slate-900">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
             <ToggleRightIcon size={18} />
           </div>
           Módulos e Recursos do Estabelecimento
@@ -226,7 +218,7 @@ export const RestaurantFeaturesForm = ({
           {/* Métodos de Consumo */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-slate-900" />
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
               <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Canais de Atendimento e Consumo
               </p>
@@ -237,14 +229,17 @@ export const RestaurantFeaturesForm = ({
                   key={method.id}
                   className={`flex flex-col justify-between gap-3 rounded-2xl border p-4 transition-all ${
                     method.checked
-                      ? "border-slate-300 bg-slate-50/70 shadow-xs"
+                      ? "border-primary/40 bg-primary/[0.03] shadow-xs"
                       : "border-slate-200/80 bg-white opacity-70"
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-slate-700 shadow-2xs border border-slate-200/60">
-                      <method.icon size={18} />
-                    </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <Label
+                      htmlFor={method.id}
+                      className="cursor-pointer font-semibold text-slate-950 block text-sm"
+                    >
+                      {method.label}
+                    </Label>
                     <Switch
                       id={method.id}
                       checked={method.checked}
@@ -252,17 +247,9 @@ export const RestaurantFeaturesForm = ({
                       disabled={isPending}
                     />
                   </div>
-                  <div>
-                    <Label
-                      htmlFor={method.id}
-                      className="cursor-pointer font-semibold text-slate-950 block text-sm"
-                    >
-                      {method.label}
-                    </Label>
-                    <p className="mt-1 text-xs text-slate-500 line-clamp-2">
-                      {method.description}
-                    </p>
-                  </div>
+                  <p className="text-xs text-slate-500">
+                    {method.description}
+                  </p>
                 </div>
               ))}
             </div>
@@ -271,7 +258,7 @@ export const RestaurantFeaturesForm = ({
           {/* Regra de Cobrança de Pizzas Meio a Meio */}
           <div className="space-y-3 pt-2">
             <div className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-slate-900" />
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
               <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Regra de Cobrança para Pizzas de 2 Sabores
               </p>
@@ -285,7 +272,7 @@ export const RestaurantFeaturesForm = ({
               <label
                 className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-all ${
                   pizzaPricingRule === "MAX"
-                    ? "border-slate-900 bg-slate-50/80 ring-1 ring-slate-900 shadow-xs"
+                    ? "border-primary bg-primary/[0.04] ring-1 ring-primary shadow-xs"
                     : "border-slate-200/80 bg-white hover:border-slate-300"
                 }`}
               >
@@ -295,14 +282,14 @@ export const RestaurantFeaturesForm = ({
                   value="MAX"
                   checked={pizzaPricingRule === "MAX"}
                   onChange={() => setPizzaPricingRule("MAX")}
-                  className="mt-1 h-4 w-4 accent-slate-950"
+                  className="mt-1 h-4 w-4 accent-primary"
                 />
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-slate-950 text-sm">
                       Maior Valor
                     </span>
-                    <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
                       Padrão de Mercado
                     </span>
                   </div>
@@ -319,7 +306,7 @@ export const RestaurantFeaturesForm = ({
               <label
                 className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-all ${
                   pizzaPricingRule === "AVERAGE"
-                    ? "border-slate-900 bg-slate-50/80 ring-1 ring-slate-900 shadow-xs"
+                    ? "border-primary bg-primary/[0.04] ring-1 ring-primary shadow-xs"
                     : "border-slate-200/80 bg-white hover:border-slate-300"
                 }`}
               >
@@ -329,7 +316,7 @@ export const RestaurantFeaturesForm = ({
                   value="AVERAGE"
                   checked={pizzaPricingRule === "AVERAGE"}
                   onChange={() => setPizzaPricingRule("AVERAGE")}
-                  className="mt-1 h-4 w-4 accent-slate-950"
+                  className="mt-1 h-4 w-4 accent-primary"
                 />
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
@@ -385,65 +372,56 @@ export const RestaurantFeaturesForm = ({
 
               {/* Bot WhatsApp */}
               <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-200/80 bg-white p-3.5 shadow-2xs transition hover:border-slate-300">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200/60 mt-0.5">
-                    <BotIcon size={18} />
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <Label
+                      htmlFor="isBotActive"
+                      className="cursor-pointer font-semibold text-slate-950 text-sm"
+                    >
+                      Atendente de IA (WhatsApp)
+                    </Label>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <button
+                          type="button"
+                          className="rounded-md px-1.5 py-0.5 text-[11px] font-medium text-slate-500 transition hover:text-slate-800 hover:bg-slate-100"
+                        >
+                          Como ativar?
+                        </button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-md border-slate-200 bg-white text-slate-900 shadow-2xl">
+                        <DialogHeader>
+                          <DialogTitle className="font-display text-lg">
+                            Atendente de IA no WhatsApp
+                          </DialogTitle>
+                          <DialogDescription className="text-left text-xs text-slate-500">
+                            Um assistente inteligente que atende seus clientes de forma autônoma pelo WhatsApp, respondendo dúvidas do cardápio e auxiliando na montagem dos pedidos.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-3 pt-2">
+                          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                            Etapas de Ativação
+                          </p>
+                          <ol className="space-y-2">
+                            {AI_SETUP_STEPS.map((step, i) => (
+                              <li
+                                key={i}
+                                className="flex items-start gap-2.5 text-xs text-slate-600 rounded-lg border border-slate-100 bg-slate-50/60 p-2"
+                              >
+                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                                  {i + 1}
+                                </span>
+                                {step}
+                              </li>
+                            ))}
+                          </ol>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </div>
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <Label
-                        htmlFor="isBotActive"
-                        className="cursor-pointer font-semibold text-slate-950 text-sm"
-                      >
-                        Atendente de IA (WhatsApp)
-                      </Label>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <button
-                            type="button"
-                            className="rounded-full p-0.5 text-slate-400 transition hover:text-slate-600"
-                            aria-label="Saiba mais sobre o Atendente de IA"
-                          >
-                            <HelpCircleIcon size={14} />
-                          </button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-md border-slate-200 bg-white text-slate-900 shadow-2xl">
-                          <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2 font-display text-lg">
-                              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-                                <BotIcon size={18} />
-                              </div>
-                              Atendente de IA no WhatsApp
-                            </DialogTitle>
-                            <DialogDescription className="text-left text-xs text-slate-500">
-                              Um assistente inteligente que atende seus clientes de forma autônoma pelo WhatsApp, respondendo dúvidas do cardápio e auxiliando na montagem dos pedidos.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="space-y-3 pt-2">
-                            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                              Etapas de Ativação
-                            </p>
-                            <ol className="space-y-2">
-                              {AI_SETUP_STEPS.map((step, i) => (
-                                <li
-                                  key={i}
-                                  className="flex items-start gap-2.5 text-xs text-slate-600 rounded-lg border border-slate-100 bg-slate-50/60 p-2"
-                                >
-                                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">
-                                    {i + 1}
-                                  </span>
-                                  {step}
-                                </li>
-                              ))}
-                            </ol>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
-                    <p className="text-xs text-slate-500">
-                      Permite que a inteligência artificial responda e tire pedidos via WhatsApp.
-                    </p>
-                  </div>
+                  <p className="text-xs text-slate-500">
+                    Permite que a inteligência artificial responda e tire pedidos via WhatsApp.
+                  </p>
                 </div>
                 <Switch
                   id="isBotActive"
@@ -461,7 +439,7 @@ export const RestaurantFeaturesForm = ({
             </p>
             <Button
               type="submit"
-              className="h-10 gap-2 rounded-xl bg-slate-900 px-5 text-xs font-semibold text-white shadow-xs hover:bg-slate-800 disabled:opacity-50 transition w-full sm:w-auto"
+              className="h-10 gap-2 rounded-xl bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 disabled:opacity-50 transition w-full sm:w-auto"
               disabled={isPending}
             >
               {isPending ? (

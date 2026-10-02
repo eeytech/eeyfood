@@ -231,7 +231,7 @@ export function CompanySwitcher({
               <Button
                 type="submit"
                 disabled={isPending}
-                className="h-9 gap-1.5 bg-slate-950 text-xs font-semibold text-white shadow-xs hover:bg-slate-800"
+                className="h-9 gap-1.5 bg-primary text-xs font-semibold text-primary-foreground shadow-xs hover:bg-primary/90"
               >
                 {isPending && <LoaderCircleIcon size={14} className="animate-spin" />}
                 Criar Unidade

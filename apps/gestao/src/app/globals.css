@@ -219,3 +219,62 @@
   }
 }
 
+/* ==========================================================================
+   Global Theme Sync: Reflects active color theme across all components,
+   buttons, badges, icons, cards and interactive states
+   ========================================================================== */
+
+/* Buttons with legacy dark background automatically use theme primary */
+button.bg-slate-900:not([data-no-theme]),
+button.bg-slate-950:not([data-no-theme]),
+a.bg-slate-900:not([data-no-theme]),
+a.bg-slate-950:not([data-no-theme]),
+.btn-primary-theme {
+  background-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+  box-shadow: 0 2px 10px 0 hsl(var(--primary) / 0.22) !important;
+}
+
+button.bg-slate-900:hover:not([data-no-theme]),
+button.bg-slate-950:hover:not([data-no-theme]),
+a.bg-slate-900:hover:not([data-no-theme]),
+a.bg-slate-950:hover:not([data-no-theme]) {
+  background-color: hsl(var(--primary) / 0.88) !important;
+  color: hsl(var(--primary-foreground)) !important;
+}
+
+/* Page header icon boxes across all dashboard modules */
+div.h-11.w-11.rounded-2xl.bg-slate-900.text-white,
+div.h-16.w-16.rounded-2xl.bg-slate-900.text-white {
+  background-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+  box-shadow: 0 4px 16px 0 hsl(var(--primary) / 0.28) !important;
+}
+
+/* Card title icon badges across dashboard */
+div.h-8.w-8.rounded-xl.bg-slate-100.text-slate-700,
+div.h-9.w-9.rounded-xl.bg-slate-100.text-slate-700,
+div.h-10.w-10.rounded-xl.bg-slate-100.text-slate-700 {
+  background-color: hsl(var(--primary) / 0.12) !important;
+  color: hsl(var(--primary)) !important;
+  border: 1px solid hsl(var(--primary) / 0.22) !important;
+}
+
+/* Active card selections with border/ring */
+.border-slate-900:not(aside):not(header),
+.border-slate-950:not(aside):not(header) {
+  border-color: hsl(var(--primary)) !important;
+}
+
+.ring-slate-900,
+.ring-slate-950 {
+  --tw-ring-color: hsl(var(--primary)) !important;
+}
+
+/* Native form inputs (radio buttons and checkboxes) */
+input[type="radio"],
+input[type="checkbox"] {
+  accent-color: hsl(var(--primary)) !important;
+}
+
+

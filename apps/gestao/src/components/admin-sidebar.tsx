@@ -281,13 +281,21 @@ const AdminSidebar = ({
                     key={item.href}
                     href={href}
                     className={cn(
-                      "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-all duration-150",
+                      "group flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-all duration-150",
                       isActive
                         ? "bg-primary font-semibold text-primary-foreground shadow-sm shadow-primary/25"
                         : "text-slate-400 hover:bg-white/5 hover:text-slate-100",
                     )}
                   >
-                    <Icon size={15} className="shrink-0" />
+                    <Icon
+                      size={15}
+                      className={cn(
+                        "shrink-0 transition-colors duration-150",
+                        isActive
+                          ? "text-primary-foreground"
+                          : "text-slate-400 group-hover:text-primary",
+                      )}
+                    />
                     <span>{item.label}</span>
                   </Link>
                 );
@@ -322,13 +330,21 @@ const AdminSidebar = ({
               <Link
                 href="/suporte"
                 className={cn(
-                  "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-all duration-150",
+                  "group flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-all duration-150",
                   pathname === "/suporte" || pathname.startsWith("/suporte/")
                     ? "bg-primary font-semibold text-primary-foreground shadow-sm shadow-primary/25"
                     : "text-slate-400 hover:bg-white/5 hover:text-slate-100",
                 )}
               >
-                <HeadphonesIcon size={15} className="shrink-0" />
+                <HeadphonesIcon
+                  size={15}
+                  className={cn(
+                    "shrink-0 transition-colors duration-150",
+                    pathname === "/suporte" || pathname.startsWith("/suporte/")
+                      ? "text-primary-foreground"
+                      : "text-slate-400 group-hover:text-primary",
+                  )}
+                />
                 <span>Suporte</span>
               </Link>
             )}

@@ -192,7 +192,7 @@ export const RestaurantDetailsForm = ({
     <Card className="border-slate-200/80 bg-white shadow-sm">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 font-display text-lg text-slate-900">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
             <StoreIcon size={18} />
           </div>
           Dados do Estabelecimento
@@ -252,10 +252,10 @@ export const RestaurantDetailsForm = ({
           </div>
 
           {/* ── Endereço Desmembrado ───────────────────────── */}
-          <div className="rounded-2xl border border-slate-200/80 bg-slate-50/50 p-4 space-y-4">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200/60 pb-3">
+          <div className="rounded-2xl border border-primary/20 bg-primary/[0.02] p-4 space-y-4">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between border-b border-primary/10 pb-3">
               <div className="flex items-center gap-2">
-                <MapPinIcon size={16} className="text-slate-600 shrink-0" />
+                <MapPinIcon size={16} className="text-primary shrink-0" />
                 <h3 className="text-sm font-semibold text-slate-800">Endereço do Estabelecimento</h3>
               </div>
               <span className="text-[11px] text-slate-500">
@@ -283,7 +283,7 @@ export const RestaurantDetailsForm = ({
                   />
                   <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
                     {isSearchingCep ? (
-                      <Loader2Icon size={15} className="animate-spin text-blue-600" />
+                      <Loader2Icon size={15} className="animate-spin text-primary" />
                     ) : (
                       <SearchIcon size={15} />
                     )}
@@ -499,7 +499,7 @@ export const RestaurantDetailsForm = ({
             </p>
             <Button
               type="submit"
-              className="h-10 gap-2 rounded-xl bg-slate-900 px-5 text-xs font-semibold text-white shadow-xs hover:bg-slate-800 disabled:opacity-50 transition w-full sm:w-auto"
+              className="h-10 gap-2 rounded-xl bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 disabled:opacity-50 transition w-full sm:w-auto"
               disabled={isPending}
             >
               {isPending ? (

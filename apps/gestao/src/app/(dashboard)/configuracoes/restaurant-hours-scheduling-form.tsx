@@ -178,7 +178,7 @@ export const RestaurantHoursSchedulingForm = ({
       <Card className="border-slate-200/80 bg-white shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 font-display text-lg text-slate-900">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
               <Settings2Icon size={18} />
             </div>
             Status Operacional da Loja
@@ -213,7 +213,7 @@ export const RestaurantHoursSchedulingForm = ({
                 key={item.value}
                 className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-all ${
                   status === item.value
-                    ? "border-slate-950 bg-slate-50/80 ring-1 ring-slate-950 shadow-2xs"
+                    ? "border-primary bg-primary/[0.04] ring-1 ring-primary shadow-2xs"
                     : "border-slate-200/80 bg-white hover:border-slate-300"
                 }`}
               >
@@ -223,7 +223,7 @@ export const RestaurantHoursSchedulingForm = ({
                   value={item.value}
                   checked={status === item.value}
                   onChange={() => setStatus(item.value as RestaurantStatus)}
-                  className="mt-0.5 h-4 w-4 accent-slate-950 cursor-pointer"
+                  className="mt-0.5 h-4 w-4 accent-primary cursor-pointer"
                 />
                 <div>
                   <p className="text-sm font-semibold text-slate-950">
@@ -243,7 +243,7 @@ export const RestaurantHoursSchedulingForm = ({
       <Card className="border-slate-200/80 bg-white shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 font-display text-lg text-slate-900">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
               <ClockIcon size={18} />
             </div>
             Horário de Atendimento Semanal
@@ -269,7 +269,7 @@ export const RestaurantHoursSchedulingForm = ({
                       id={`day-checkbox-${index}`}
                       checked={isOpen}
                       onChange={(e) => handleToggleDay(index, e.target.checked)}
-                      className="h-4 w-4 accent-slate-950 rounded cursor-pointer"
+                      className="h-4 w-4 accent-primary rounded cursor-pointer"
                     />
                     <label
                       htmlFor={`day-checkbox-${index}`}
@@ -313,7 +313,7 @@ export const RestaurantHoursSchedulingForm = ({
       <Card className="border-slate-200/80 bg-white shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 font-display text-lg text-slate-900">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
               <CalendarClockIcon size={18} />
             </div>
             Agendamento de Pedidos
@@ -324,9 +324,13 @@ export const RestaurantHoursSchedulingForm = ({
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Switch Principal */}
-          <div className="flex items-center justify-between rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4 transition hover:bg-slate-50 shadow-2xs">
+          <div className={`flex items-center justify-between rounded-2xl border p-4 transition shadow-2xs ${
+            isOrderSchedulingEnabled
+              ? "border-primary/40 bg-primary/[0.03]"
+              : "border-slate-200/80 bg-slate-50/70 hover:bg-slate-50"
+          }`}>
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white shadow-xs">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm shadow-primary/25">
                 <CalendarClockIcon size={20} />
               </div>
               <div>
@@ -448,7 +452,7 @@ export const RestaurantHoursSchedulingForm = ({
                   <label
                     className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition ${
                       hoursMode === "OPERATING_HOURS"
-                        ? "border-slate-950 bg-white ring-1 ring-slate-950 shadow-2xs"
+                        ? "border-primary bg-primary/[0.04] ring-1 ring-primary shadow-2xs"
                         : "border-slate-200 bg-white/70 hover:bg-white"
                     }`}
                   >
@@ -458,7 +462,7 @@ export const RestaurantHoursSchedulingForm = ({
                       value="OPERATING_HOURS"
                       checked={hoursMode === "OPERATING_HOURS"}
                       onChange={() => setHoursMode("OPERATING_HOURS")}
-                      className="mt-0.5 h-4 w-4 accent-slate-950 cursor-pointer"
+                      className="mt-0.5 h-4 w-4 accent-primary cursor-pointer"
                     />
                     <div>
                       <p className="text-sm font-semibold text-slate-900">
@@ -473,7 +477,7 @@ export const RestaurantHoursSchedulingForm = ({
                   <label
                     className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition ${
                       hoursMode === "CUSTOM"
-                        ? "border-slate-950 bg-white ring-1 ring-slate-950 shadow-2xs"
+                        ? "border-primary bg-primary/[0.04] ring-1 ring-primary shadow-2xs"
                         : "border-slate-200 bg-white/70 hover:bg-white"
                     }`}
                   >
@@ -483,7 +487,7 @@ export const RestaurantHoursSchedulingForm = ({
                       value="CUSTOM"
                       checked={hoursMode === "CUSTOM"}
                       onChange={() => setHoursMode("CUSTOM")}
-                      className="mt-0.5 h-4 w-4 accent-slate-950 cursor-pointer"
+                      className="mt-0.5 h-4 w-4 accent-primary cursor-pointer"
                     />
                     <div>
                       <p className="text-sm font-semibold text-slate-900">
@@ -498,7 +502,7 @@ export const RestaurantHoursSchedulingForm = ({
 
                 {hoursMode === "CUSTOM" && (
                   <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3.5 animate-in fade-in slide-in-from-top-1 duration-150">
-                    <ClockIcon size={16} className="text-slate-400 shrink-0" />
+                    <ClockIcon size={16} className="text-primary shrink-0" />
                     <span className="text-xs font-medium text-slate-700">
                       Permitir agendamentos das:
                     </span>
@@ -531,7 +535,7 @@ export const RestaurantHoursSchedulingForm = ({
         <Button
           type="submit"
           disabled={isPending}
-          className="h-10 gap-2 rounded-xl bg-slate-900 px-5 text-xs font-semibold text-white shadow-xs hover:bg-slate-800 disabled:opacity-50 transition w-full sm:w-auto"
+          className="h-10 gap-2 rounded-xl bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 disabled:opacity-50 transition w-full sm:w-auto"
         >
           {isPending ? (
             <>

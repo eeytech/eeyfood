@@ -135,7 +135,7 @@ export function MarketingSettingsForm({
       {/* ── Page Header com Botão Salvar Configurações no lugar da tag ── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm shadow-primary/25">
             <BarChart2Icon size={22} />
           </div>
           <div>
@@ -153,7 +153,7 @@ export function MarketingSettingsForm({
           <Button
             type="submit"
             disabled={isPending}
-            className="h-10 gap-2 rounded-full bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50 transition-all"
+            className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 disabled:opacity-50 transition-all"
           >
             {isPending ? (
               <>

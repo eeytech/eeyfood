@@ -1,17 +1,8 @@
-import { unstable_cache } from "next/cache";
-
 import { buscarRestauranteComCardapioPorSlug } from "@/lib/db";
 
 import RestaurantMenuPageContent from "./components/menu-page-content";
 
 export const dynamic = "force-dynamic";
-
-const buscarMenuCached = (slug?: string) =>
-  unstable_cache(
-    () => buscarRestauranteComCardapioPorSlug(slug),
-    ["restaurant-menu", slug || "default"],
-    { revalidate: 300, tags: [`restaurant-menu:${slug || "default"}`] },
-  )();
 
 interface RestaurantMenuPageProps {
   params?: Promise<{ slug?: string }>;
@@ -49,7 +40,7 @@ const RestaurantMenuPage = async ({
     ? (consumptionMethod!.toUpperCase() as "DINE_IN" | "TAKEAWAY" | "DELIVERY")
     : "DELIVERY";
 
-  const restaurant = await buscarMenuCached(slug);
+  const restaurant = await buscarRestauranteComCardapioPorSlug(slug);
 
   if (!restaurant) {
     return (
