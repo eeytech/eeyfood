@@ -18,6 +18,7 @@ import {
   getOptionalStringValue,
   getStringValue,
 } from "@/lib/admin-form-utils";
+import { buildFullAddress } from "@/lib/address-utils";
 
 const categorySchema = z.object({
   name: z.string().trim().min(2, "Informe um nome de categoria válido."),
@@ -729,16 +730,15 @@ export const updateRestaurantDetailsAction = async (
     const cep = getOptionalStringValue(formData.get("cep"));
 
     if (logradouro || cidade) {
-      const parts: string[] = [];
-      let street = logradouro || "";
-      if (numero) street = street ? `${street}, ${numero}` : numero;
-      if (complemento) street = street ? `${street} - ${complemento}` : complemento;
-      if (street) parts.push(street);
-      if (bairro) parts.push(bairro);
-      if (cidade && estado) parts.push(`${cidade} - ${estado}`);
-      else if (cidade) parts.push(cidade);
-      if (cep) parts.push(`CEP: ${cep}`);
-      address = parts.join(" - ");
+      address = buildFullAddress({
+        cep,
+        logradouro,
+        numero,
+        complemento,
+        bairro,
+        cidade,
+        estado,
+      });
     }
   }
 
@@ -759,7 +759,16 @@ export const updateRestaurantDetailsAction = async (
 
   await db
     .update(restaurantsTable)
-    .set({ name, description, avatarImageUrl, coverImageUrl, cnpj, phone, address, updatedAt: new Date() })
+    .set({
+      name,
+      description,
+      avatarImageUrl,
+      coverImageUrl,
+      cnpj,
+      phone,
+      address: address || null,
+      updatedAt: new Date(),
+    })
     .where(eq(restaurantsTable.id, restaurant.id));
 
   revalidateRestaurantPaths(slug);
