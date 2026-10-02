@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { BRAZIL_UFS, buildFullAddress, formatCep, parseAddress, type ParsedAddress } from "@/lib/address-utils";
+import { BRAZIL_UFS, buildFullAddress, formatCep, parseAddress } from "@/lib/address-utils";
 
 interface RestaurantDetailsFormProps {
   slug: string;
@@ -263,9 +263,9 @@ export const RestaurantDetailsForm = ({
               </span>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-6">
+            <div className="grid gap-3 sm:grid-cols-12">
               {/* CEP */}
-              <div className="space-y-1.5 sm:col-span-2">
+              <div className="space-y-1.5 sm:col-span-4">
                 <Label htmlFor="cep" className="text-xs font-semibold text-slate-700">
                   CEP
                 </Label>
@@ -292,7 +292,7 @@ export const RestaurantDetailsForm = ({
               </div>
 
               {/* Logradouro */}
-              <div className="space-y-1.5 sm:col-span-4">
+              <div className="space-y-1.5 sm:col-span-8">
                 <Label htmlFor="logradouro" className="text-xs font-semibold text-slate-700">
                   Logradouro / Rua
                 </Label>
@@ -323,8 +323,36 @@ export const RestaurantDetailsForm = ({
                 />
               </div>
 
+              {/* Estado / UF */}
+              <div className="space-y-1.5 sm:col-span-3">
+                <Label htmlFor="estado" className="text-xs font-semibold text-slate-700">
+                  UF
+                </Label>
+                <Select
+                  value={estado || undefined}
+                  onValueChange={(val) => setEstado(val)}
+                  disabled={isPending}
+                >
+                  <SelectTrigger
+                    id="estado"
+                    className="h-10 rounded-xl border-slate-200 bg-white px-3 font-semibold text-sm text-slate-900 focus:border-slate-400"
+                  >
+                    <SelectValue placeholder="UF" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60 rounded-xl border-slate-200 bg-white shadow-xl">
+                    {BRAZIL_UFS.map((uf) => (
+                      <SelectItem key={uf.value} value={uf.value} className="text-xs font-medium">
+                        <span className="font-semibold text-slate-900">{uf.value}</span>
+                        <span className="ml-1.5 text-slate-500">- {uf.name}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <input type="hidden" name="estado" value={estado} />
+              </div>
+
               {/* Complemento */}
-              <div className="space-y-1.5 sm:col-span-4">
+              <div className="space-y-1.5 sm:col-span-7">
                 <Label htmlFor="complemento" className="text-xs font-semibold text-slate-700">
                   Complemento
                 </Label>
@@ -340,7 +368,7 @@ export const RestaurantDetailsForm = ({
               </div>
 
               {/* Bairro */}
-              <div className="space-y-1.5 sm:col-span-2">
+              <div className="space-y-1.5 sm:col-span-4">
                 <Label htmlFor="bairro" className="text-xs font-semibold text-slate-700">
                   Bairro
                 </Label>
@@ -356,7 +384,7 @@ export const RestaurantDetailsForm = ({
               </div>
 
               {/* Cidade */}
-              <div className="space-y-1.5 sm:col-span-3">
+              <div className="space-y-1.5 sm:col-span-8">
                 <Label htmlFor="cidade" className="text-xs font-semibold text-slate-700">
                   Cidade
                 </Label>
@@ -369,34 +397,6 @@ export const RestaurantDetailsForm = ({
                   className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-slate-400"
                   disabled={isPending}
                 />
-              </div>
-
-              {/* Estado / UF */}
-              <div className="space-y-1.5 sm:col-span-1">
-                <Label htmlFor="estado" className="text-xs font-semibold text-slate-700">
-                  UF
-                </Label>
-                <Select
-                  value={estado || undefined}
-                  onValueChange={(val) => setEstado(val)}
-                  disabled={isPending}
-                >
-                  <SelectTrigger
-                    id="estado"
-                    className="h-10 rounded-xl border-slate-200 bg-white px-3 text-center font-semibold text-sm uppercase text-slate-900 focus:border-slate-400"
-                  >
-                    <SelectValue placeholder="UF" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60 rounded-xl border-slate-200 bg-white shadow-xl">
-                    {BRAZIL_UFS.map((uf) => (
-                      <SelectItem key={uf.value} value={uf.value} className="text-xs font-medium">
-                        <span className="font-semibold text-slate-900">{uf.value}</span>
-                        <span className="ml-1.5 text-slate-500">- {uf.name}</span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <input type="hidden" name="estado" value={estado} />
               </div>
             </div>
           </div>
