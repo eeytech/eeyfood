@@ -54,6 +54,7 @@ interface FinishOrderSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   restaurant: RestaurantComCategoriasEProdutos;
+  consumptionMethod?: ConsumptionMethod;
 }
 
 interface PedidoOfflineConcluido {
@@ -87,6 +88,7 @@ export const FinishOrderSheet = ({
   open,
   onOpenChange,
   restaurant,
+  consumptionMethod: consumptionMethodProp,
 }: FinishOrderSheetProps) => {
   const router = useRouter();
   const slug = restaurant.slug;
@@ -106,11 +108,12 @@ export const FinishOrderSheet = ({
   const [tables, setTables] = useState<DiningTable[]>([]);
   const [isLoadingTables, setIsLoadingTables] = useState(false);
   const consumptionMethod: ConsumptionMethod =
-    searchParams.get("consumptionMethod") === "DINE_IN"
+    consumptionMethodProp ??
+    (searchParams.get("consumptionMethod") === "DINE_IN"
       ? "DINE_IN"
       : searchParams.get("consumptionMethod") === "DELIVERY"
         ? "DELIVERY"
-        : "TAKEAWAY";
+        : "TAKEAWAY");
 
   const allowsMercadoPago =
     restaurant.acceptMercadoPago && consumptionMethod !== "DINE_IN";
@@ -719,6 +722,7 @@ export const FinishOrderSheet = ({
                       <OrderSummarySection
                         checkoutSummary={checkoutSummary}
                         isCashbackEnabled={restaurant.isCashbackEnabled}
+                        consumptionMethod={consumptionMethod}
                       />
                     </div>
                   </div>

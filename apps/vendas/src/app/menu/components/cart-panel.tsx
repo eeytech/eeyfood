@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircle2Icon, ShoppingBagIcon } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useContext, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -17,15 +18,33 @@ import FinishOrderSheet from "./finish-order-sheet";
 interface CartPanelProps {
   variant?: "sidebar" | "sheet";
   restaurant: RestaurantComCategoriasEProdutos;
+  consumptionMethod?: "DINE_IN" | "TAKEAWAY" | "DELIVERY";
 }
 
-const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
+const CartPanel = ({
+  variant = "sidebar",
+  restaurant,
+  consumptionMethod: consumptionMethodProp,
+}: CartPanelProps) => {
+  const searchParams = useSearchParams();
+  const consumptionMethod =
+    consumptionMethodProp ??
+    (searchParams.get("consumptionMethod")?.toUpperCase() as
+      | "DINE_IN"
+      | "TAKEAWAY"
+      | "DELIVERY"
+      | undefined);
   const [finishOrderSheetIsOpen, setFinishOrderSheetIsOpen] = useState(false);
   const { products, total, totalQuantity } = useContext(CartContext);
   const hasProducts = products.length > 0;
 
+  const isDineIn = consumptionMethod === "DINE_IN";
   const threshold = restaurant.freeDeliveryThreshold;
-  const showFreeDelivery = threshold != null && threshold > 0;
+  const showFreeDelivery =
+    !isDineIn &&
+    consumptionMethod !== "TAKEAWAY" &&
+    threshold != null &&
+    threshold > 0;
   const freeDeliveryRemaining = showFreeDelivery ? Math.max(threshold - total, 0) : 0;
   const freeDeliveryProgress = showFreeDelivery ? Math.min((total / threshold) * 100, 100) : 0;
   const freeDeliveryAchieved = showFreeDelivery && freeDeliveryRemaining === 0;
@@ -148,6 +167,7 @@ const CartPanel = ({ variant = "sidebar", restaurant }: CartPanelProps) => {
         open={finishOrderSheetIsOpen}
         onOpenChange={setFinishOrderSheetIsOpen}
         restaurant={restaurant}
+        consumptionMethod={consumptionMethod}
       />
     </>
   );

@@ -1,6 +1,7 @@
 import { CoinsIcon, ShoppingBagIcon, TrendingUpIcon } from "lucide-react";
 
 import { formatCurrency } from "@/helpers/format-currency";
+import type { ConsumptionMethod } from "@/lib/db";
 
 import { SectionHeader } from "./section-header";
 
@@ -30,9 +31,15 @@ export interface CheckoutSummary {
 interface OrderSummarySectionProps {
   checkoutSummary: CheckoutSummary;
   isCashbackEnabled: boolean;
+  consumptionMethod?: ConsumptionMethod;
 }
 
-export const OrderSummarySection = ({ checkoutSummary, isCashbackEnabled }: OrderSummarySectionProps) => {
+export const OrderSummarySection = ({
+  checkoutSummary,
+  isCashbackEnabled,
+  consumptionMethod,
+}: OrderSummarySectionProps) => {
+  const isDelivery = consumptionMethod ? consumptionMethod === "DELIVERY" : true;
   const nextRule = checkoutSummary.nextLoyaltyRule;
 
   // Progress toward the next cashback tier (capped at 99 so bar never looks "done")
@@ -56,7 +63,7 @@ export const OrderSummarySection = ({ checkoutSummary, isCashbackEnabled }: Orde
           <span className="font-semibold">{formatCurrency(checkoutSummary.subtotal)}</span>
         </div>
 
-        {checkoutSummary.deliveryFee !== undefined && checkoutSummary.deliveryFee > 0 && (
+        {isDelivery && checkoutSummary.deliveryFee !== undefined && checkoutSummary.deliveryFee > 0 && (
           <div className="flex items-center justify-between text-sm">
             <span className="text-slate-500">
               Taxa de Entrega
@@ -70,7 +77,7 @@ export const OrderSummarySection = ({ checkoutSummary, isCashbackEnabled }: Orde
           </div>
         )}
 
-        {checkoutSummary.deliveryFee === 0 && (
+        {isDelivery && checkoutSummary.deliveryFee === 0 && (
           <div className="flex items-center justify-between text-sm">
             <span className="text-slate-500">Taxa de Entrega</span>
             <span className="font-semibold text-emerald-600">Grátis</span>

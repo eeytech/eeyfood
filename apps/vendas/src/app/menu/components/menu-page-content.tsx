@@ -73,7 +73,10 @@ const RestaurantMenuPageContent = ({
         tableId={tableId}
         isKioskMode={isKioskMode}
       />
-      <RestaurantCategories restaurant={restaurant} />
+      <RestaurantCategories
+        restaurant={restaurant}
+        consumptionMethod={consumptionMethod}
+      />
       <OrdersSheet
         open={ordersSheetIsOpen}
         onOpenChange={setOrdersSheetIsOpen}

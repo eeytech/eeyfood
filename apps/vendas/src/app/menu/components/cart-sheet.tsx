@@ -14,9 +14,10 @@ import CartPanel from "./cart-panel";
 
 interface CartSheetProps {
   restaurant: RestaurantComCategoriasEProdutos;
+  consumptionMethod?: "DINE_IN" | "TAKEAWAY" | "DELIVERY";
 }
 
-const CartSheet = ({ restaurant }: CartSheetProps) => {
+const CartSheet = ({ restaurant, consumptionMethod }: CartSheetProps) => {
   const { isOpen, toggleCart } = useContext(CartContext);
 
   return (
@@ -28,7 +29,11 @@ const CartSheet = ({ restaurant }: CartSheetProps) => {
             Confira os itens que voce adicionou ao seu pedido antes de finalizar.
           </SheetDescription>
         </SheetHeader>
-        <CartPanel variant="sheet" restaurant={restaurant} />
+        <CartPanel
+          variant="sheet"
+          restaurant={restaurant}
+          consumptionMethod={consumptionMethod}
+        />
       </SheetContent>
     </Sheet>
   );

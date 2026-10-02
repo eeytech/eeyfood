@@ -35,6 +35,7 @@ interface RestaurantCategoriesProps {
     rating: number;
     ratingCount: number;
   };
+  consumptionMethod?: "DINE_IN" | "TAKEAWAY" | "DELIVERY";
 }
 
 type FullProduct = ProductComRestaurante & {
@@ -144,7 +145,10 @@ function SearchProductCard({
   );
 }
 
-const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
+const RestaurantCategories = ({
+  restaurant,
+  consumptionMethod,
+}: RestaurantCategoriesProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSearchProduct, setSelectedSearchProduct] =
     useState<ProductComRestaurante | null>(null);
@@ -534,7 +538,11 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
           {/* Desktop cart panel */}
           <aside className="hidden lg:block min-w-0">
             <div className="sticky top-4 flex h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)] flex-col min-w-0">
-              <CartPanel restaurant={restaurant} variant="sidebar" />
+              <CartPanel
+                restaurant={restaurant}
+                variant="sidebar"
+                consumptionMethod={consumptionMethod}
+              />
             </div>
           </aside>
         </div>
@@ -560,7 +568,10 @@ const RestaurantCategories = ({ restaurant }: RestaurantCategoriesProps) => {
         </div>
       )}
 
-      <CartSheet restaurant={restaurant} />
+      <CartSheet
+        restaurant={restaurant}
+        consumptionMethod={consumptionMethod}
+      />
     </div>
   );
 };
