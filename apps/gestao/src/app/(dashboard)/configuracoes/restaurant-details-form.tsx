@@ -10,8 +10,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { buildFullAddress, formatCep, parseAddress, type ParsedAddress } from "@/lib/address-utils";
+import { BRAZIL_UFS, buildFullAddress, formatCep, parseAddress, type ParsedAddress } from "@/lib/address-utils";
 
 interface RestaurantDetailsFormProps {
   slug: string;
@@ -369,16 +376,27 @@ export const RestaurantDetailsForm = ({
                 <Label htmlFor="estado" className="text-xs font-semibold text-slate-700">
                   UF
                 </Label>
-                <Input
-                  id="estado"
-                  name="estado"
-                  value={estado}
-                  onChange={(e) => setEstado(e.target.value.toUpperCase().slice(0, 2))}
-                  placeholder="SP"
-                  maxLength={2}
-                  className="h-10 rounded-xl border-slate-200 bg-white text-center font-semibold text-sm uppercase text-slate-900 focus:border-slate-400"
+                <Select
+                  value={estado || undefined}
+                  onValueChange={(val) => setEstado(val)}
                   disabled={isPending}
-                />
+                >
+                  <SelectTrigger
+                    id="estado"
+                    className="h-10 rounded-xl border-slate-200 bg-white px-3 text-center font-semibold text-sm uppercase text-slate-900 focus:border-slate-400"
+                  >
+                    <SelectValue placeholder="UF" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60 rounded-xl border-slate-200 bg-white shadow-xl">
+                    {BRAZIL_UFS.map((uf) => (
+                      <SelectItem key={uf.value} value={uf.value} className="text-xs font-medium">
+                        <span className="font-semibold text-slate-900">{uf.value}</span>
+                        <span className="ml-1.5 text-slate-500">- {uf.name}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <input type="hidden" name="estado" value={estado} />
               </div>
             </div>
           </div>

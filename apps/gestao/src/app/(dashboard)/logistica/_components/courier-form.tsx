@@ -10,6 +10,14 @@ import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { BRAZIL_UFS } from "@/lib/address-utils";
 import { cn } from "@/lib/utils";
 import type { Courier } from "@fsw/db";
 
@@ -230,14 +238,26 @@ export function CourierForm({ slug, defaultValues, onSuccess }: CourierFormProps
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="courier-estado">Estado</Label>
-              <Input
-                id="courier-estado"
-                name="estado"
-                placeholder="UF"
-                maxLength={2}
-                value={estado}
-                onChange={(e) => setEstado(e.target.value.toUpperCase())}
-              />
+              <Select
+                value={estado || undefined}
+                onValueChange={(val) => setEstado(val)}
+              >
+                <SelectTrigger
+                  id="courier-estado"
+                  className="h-10 rounded-full border-slate-200 bg-white px-3 font-semibold text-sm uppercase text-slate-900"
+                >
+                  <SelectValue placeholder="UF" />
+                </SelectTrigger>
+                <SelectContent className="max-h-60 rounded-xl border-slate-200 bg-white shadow-xl">
+                  {BRAZIL_UFS.map((uf) => (
+                    <SelectItem key={uf.value} value={uf.value} className="text-xs font-medium">
+                      <span className="font-semibold text-slate-900">{uf.value}</span>
+                      <span className="ml-1.5 text-slate-500">- {uf.name}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <input type="hidden" name="estado" value={estado} />
             </div>
           </div>
         </div>
