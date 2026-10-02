@@ -17,7 +17,6 @@ import {
   MenuIcon,
   MessageSquareIcon,
   MonitorSmartphoneIcon,
-  PaletteIcon,
   PanelLeftCloseIcon,
   PrinterIcon,
   QrCodeIcon,
@@ -180,7 +179,7 @@ const AdminSidebar = ({
   }, [userRole]);
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-slate-50">
+    <div className="flex h-screen w-full overflow-hidden bg-slate-50/70">
       {/* Backdrop para fechar ao tocar fora no celular quando aberto */}
       {!isCollapsed && (
         <div
@@ -211,7 +210,7 @@ const AdminSidebar = ({
             title="Painel de Gestão"
           >
             {/* Ícone com Logo */}
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 border border-blue-500/25 p-1 shadow-xs transition-transform duration-200 group-hover:scale-105">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/15 border border-primary/30 p-1 shadow-xs transition-transform duration-200 group-hover:scale-105">
               <Image
                 src="/logo-icon.png"
                 alt="Logo"
@@ -224,7 +223,7 @@ const AdminSidebar = ({
 
             {/* Nome do Sistema */}
             <div className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate text-xs font-bold tracking-tight text-white transition-colors group-hover:text-blue-200">
+              <span className="truncate text-xs font-bold tracking-tight text-white transition-colors group-hover:text-primary">
                 EeyFood
               </span>
               <span className="flex items-center gap-1.5 text-[10px] font-medium text-slate-400">
@@ -282,9 +281,9 @@ const AdminSidebar = ({
                     key={item.href}
                     href={href}
                     className={cn(
-                      "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors duration-150",
+                      "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-all duration-150",
                       isActive
-                        ? "bg-white font-medium text-slate-950"
+                        ? "bg-primary font-semibold text-primary-foreground shadow-sm shadow-primary/25"
                         : "text-slate-400 hover:bg-white/5 hover:text-slate-100",
                     )}
                   >
@@ -302,7 +301,7 @@ const AdminSidebar = ({
           {userName && (
             <div className="mb-2 rounded-md bg-white/5 p-2 text-xs">
               <p className="truncate font-medium text-white">{userName}</p>
-              <span className="text-[10px] font-semibold text-amber-400">
+              <span className="inline-block mt-0.5 rounded-md bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary border border-primary/20">
                 {userRole === "KITCHEN"
                   ? "Cozinha / KDS"
                   : userRole === "WAITER"
@@ -319,26 +318,13 @@ const AdminSidebar = ({
           )}
 
           <div className="flex flex-col gap-1">
-            {["SUPER_ADMIN", "ADMIN", "MANAGER"].includes(userRole || "") && (
-              <Link
-                href="/configuracoes?tab=tema"
-                className={cn(
-                  "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors duration-150 text-slate-400 hover:bg-white/5 hover:text-slate-100",
-                )}
-                title="Configurar tema e cores do sistema"
-              >
-                <PaletteIcon size={15} className="shrink-0 text-primary" />
-                <span>Tema & Aparência</span>
-              </Link>
-            )}
-
             {["SUPER_ADMIN", "ADMIN", "MANAGER", "ATTENDANT"].includes(userRole || "") && (
               <Link
                 href="/suporte"
                 className={cn(
-                  "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors duration-150",
+                  "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-all duration-150",
                   pathname === "/suporte" || pathname.startsWith("/suporte/")
-                    ? "bg-white font-medium text-slate-950"
+                    ? "bg-primary font-semibold text-primary-foreground shadow-sm shadow-primary/25"
                     : "text-slate-400 hover:bg-white/5 hover:text-slate-100",
                 )}
               >
@@ -370,7 +356,7 @@ const AdminSidebar = ({
                 variant="outline"
                 size="sm"
                 onClick={() => setCollapsed(false)}
-                className="flex h-8 items-center gap-2 rounded-lg border-slate-200 bg-slate-50 px-2.5 text-xs font-semibold text-slate-800 shadow-xs hover:bg-slate-100 hover:text-slate-950 active:scale-95 transition-all"
+                className="flex h-8 items-center gap-2 rounded-lg border-slate-200 bg-slate-50 px-2.5 text-xs font-semibold text-slate-800 shadow-xs hover:border-primary/40 hover:text-primary active:scale-95 transition-all"
                 title="Abrir menu lateral"
               >
                 <MenuIcon size={15} className="text-slate-700" />
@@ -380,7 +366,7 @@ const AdminSidebar = ({
               <div className="h-4 w-px bg-slate-200" />
 
               <div className="flex items-center gap-2 min-w-0">
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-blue-500/10 border border-blue-500/20 p-0.5">
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/15 border border-primary/25 p-0.5">
                   <Image
                     src="/logo-icon.png"
                     alt="Logo"
@@ -400,7 +386,7 @@ const AdminSidebar = ({
                 <span className="hidden sm:inline-block font-medium text-slate-700 truncate max-w-[150px]">
                   {userName}
                 </span>
-                <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 border border-amber-200/60">
+                <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary border border-primary/20">
                   {userRole === "KITCHEN"
                     ? "Cozinha"
                     : userRole === "WAITER"

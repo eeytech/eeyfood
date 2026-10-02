@@ -76,7 +76,7 @@ const ConfiguracoesPage = async ({
       {/* ── Page Header ─────────────────────────────────── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
             <StoreIcon size={22} />
           </div>
           <div>
@@ -84,7 +84,7 @@ const ConfiguracoesPage = async ({
               Configurações da Loja
             </h1>
             <p className="text-sm text-slate-500">
-              Gerencie perfil, canais de atendimento, regras de pedidos, horários e inteligência artificial.
+              Gerencie perfil, canais de atendimento, regras de pedidos, horários, aparência e inteligência artificial.
             </p>
           </div>
         </div>
@@ -125,11 +125,11 @@ const ConfiguracoesPage = async ({
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Horários
               </span>
-              <div className="rounded-lg bg-blue-100 p-1.5 text-blue-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <ClockIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-blue-700">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {activeDaysCount} <span className="text-base font-normal">dias</span>
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -144,11 +144,11 @@ const ConfiguracoesPage = async ({
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Canais Ativos
               </span>
-              <div className="rounded-lg bg-indigo-100 p-1.5 text-indigo-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <ShoppingBagIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-lg font-bold text-indigo-700 truncate">
+            <p className="mt-2 font-display text-lg font-bold text-primary truncate">
               {activeChannels || "Nenhum"}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -182,28 +182,28 @@ const ConfiguracoesPage = async ({
         <TabsList className="h-auto flex-wrap gap-1.5 rounded-2xl border border-slate-200/80 bg-slate-100/90 p-1.5 shadow-xs">
           <TabsTrigger
             value="estabelecimento"
-            className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 transition data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-xs"
+            className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 transition data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs"
           >
             <StoreIcon size={15} className="mr-1.5" />
             Estabelecimento
           </TabsTrigger>
           <TabsTrigger
             value="modulos"
-            className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 transition data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-xs"
+            className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 transition data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs"
           >
             <ToggleRightIcon size={15} className="mr-1.5" />
             Módulos e Regras
           </TabsTrigger>
           <TabsTrigger
             value="funcionamento"
-            className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 transition data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-xs"
+            className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 transition data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs"
           >
             <Settings2Icon size={15} className="mr-1.5" />
             Horários e Agendamento
           </TabsTrigger>
           <TabsTrigger
             value="tema"
-            className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 transition data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-xs"
+            className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 transition data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs"
           >
             <PaletteIcon size={15} className="mr-1.5" />
             Aparência e Tema

@@ -99,7 +99,7 @@ export function CompanySwitcher({
               isCollapsed ? "justify-center px-0" : ""
             }`}
           >
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/20 border border-blue-500/30 text-blue-400 shadow-xs">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/15 border border-primary/30 text-primary shadow-xs">
               {isSwitching ? (
                 <LoaderCircleIcon size={14} className="animate-spin" />
               ) : (
@@ -112,7 +112,7 @@ export function CompanySwitcher({
                   <p className="truncate text-[9px] font-bold uppercase tracking-wider text-slate-400">
                     Unidade Atual
                   </p>
-                  <h2 className="truncate text-xs font-semibold leading-tight text-white group-hover:text-blue-200">
+                  <h2 className="truncate text-xs font-semibold leading-tight text-white group-hover:text-primary">
                     {currentCompany?.name ?? "—"}
                   </h2>
                 </div>

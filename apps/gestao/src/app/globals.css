@@ -40,8 +40,8 @@
     @apply min-h-full bg-background text-foreground antialiased;
     font-family: var(--font-manrope), sans-serif;
     background-image:
-      radial-gradient(circle at top left, hsl(var(--primary) / 0.08), transparent 32%),
-      radial-gradient(circle at bottom right, rgba(255, 107, 0, 0.04), transparent 28%),
+      radial-gradient(circle at top left, hsl(var(--primary) / 0.09), transparent 35%),
+      radial-gradient(circle at bottom right, hsl(var(--primary) / 0.05), transparent 30%),
       linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.98));
   }
 }
@@ -52,6 +52,8 @@
   --primary-foreground: 0 85.7% 97.3%;
   --primary-hover: 0 72.2% 43%;
   --ring: 0 72.2% 50.6%;
+  --accent: 0 72.2% 96%;
+  --accent-foreground: 0 72.2% 45%;
 }
 
 .theme-rose, [data-theme="rose"] {
@@ -59,6 +61,8 @@
   --primary-foreground: 355.7 100% 97.3%;
   --primary-hover: 346.8 77.2% 42%;
   --ring: 346.8 77.2% 49.8%;
+  --accent: 346.8 77.2% 96%;
+  --accent-foreground: 346.8 77.2% 45%;
 }
 
 .theme-orange, [data-theme="orange"] {
@@ -66,6 +70,8 @@
   --primary-foreground: 60 9.1% 97.8%;
   --primary-hover: 24.6 95% 45%;
   --ring: 24.6 95% 53.1%;
+  --accent: 24.6 95% 96%;
+  --accent-foreground: 24.6 95% 40%;
 }
 
 .theme-green, [data-theme="green"] {
@@ -73,6 +79,8 @@
   --primary-foreground: 355.7 100% 97.3%;
   --primary-hover: 142.1 76.2% 30%;
   --ring: 142.1 76.2% 36.3%;
+  --accent: 142.1 76.2% 96%;
+  --accent-foreground: 142.1 76.2% 30%;
 }
 
 .theme-blue, [data-theme="blue"] {
@@ -80,6 +88,8 @@
   --primary-foreground: 210 40% 98%;
   --primary-hover: 221.2 83.2% 45%;
   --ring: 221.2 83.2% 53.3%;
+  --accent: 221.2 83.2% 96%;
+  --accent-foreground: 221.2 83.2% 45%;
 }
 
 .theme-yellow, [data-theme="yellow"] {
@@ -87,6 +97,8 @@
   --primary-foreground: 26 83.3% 14.1%;
   --primary-hover: 47.9 95.8% 45%;
   --ring: 47.9 95.8% 53.1%;
+  --accent: 47.9 95.8% 95%;
+  --accent-foreground: 47.9 95.8% 30%;
 }
 
 .theme-violet, [data-theme="violet"] {
@@ -94,6 +106,8 @@
   --primary-foreground: 210 40% 98%;
   --primary-hover: 262.1 83.3% 50%;
   --ring: 262.1 83.3% 57.8%;
+  --accent: 262.1 83.3% 96%;
+  --accent-foreground: 262.1 83.3% 45%;
 }
 
 .theme-zinc, [data-theme="zinc"] {
@@ -101,6 +115,8 @@
   --primary-foreground: 0 0% 98%;
   --primary-hover: 240 5.9% 20%;
   --ring: 240 5.9% 10%;
+  --accent: 240 5.9% 95%;
+  --accent-foreground: 240 5.9% 10%;
 }
 
 .theme-slate, [data-theme="slate"] {
@@ -108,6 +124,8 @@
   --primary-foreground: 210 40% 98%;
   --primary-hover: 222.2 47.4% 20%;
   --ring: 222.2 84% 4.9%;
+  --accent: 222.2 47.4% 95%;
+  --accent-foreground: 222.2 47.4% 11.2%;
 }
 
 .theme-stone, [data-theme="stone"] {
@@ -115,6 +133,8 @@
   --primary-foreground: 60 9.1% 97.8%;
   --primary-hover: 24 9.8% 20%;
   --ring: 24 5.7% 82.9%;
+  --accent: 24 9.8% 95%;
+  --accent-foreground: 24 9.8% 10%;
 }
 
 .theme-gray, [data-theme="gray"] {
@@ -122,6 +142,8 @@
   --primary-foreground: 210 20% 98%;
   --primary-hover: 220.9 39.3% 20%;
   --ring: 220.9 39.3% 11%;
+  --accent: 220.9 39.3% 95%;
+  --accent-foreground: 220.9 39.3% 11%;
 }
 
 .theme-neutral, [data-theme="neutral"] {
@@ -129,6 +151,8 @@
   --primary-foreground: 0 0% 98%;
   --primary-hover: 0 0% 20%;
   --ring: 0 0% 9%;
+  --accent: 0 0% 95%;
+  --accent-foreground: 0 0% 9%;
 }
 
 @media print {

@@ -995,37 +995,37 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
               <TabsList className="h-10 p-1 bg-slate-100/90 rounded-xl">
                 <TabsTrigger
                   value="PRODUCAO"
-                  className="text-xs sm:text-sm gap-1.5 rounded-lg px-2.5 sm:px-3"
+                  className="group text-xs sm:text-sm gap-1.5 rounded-lg px-2.5 sm:px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs transition-all"
                 >
                   <span>Operação ativa</span>
-                  <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">
+                  <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-700 group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground">
                     {countProducao}
                   </span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="LOGISTICA"
-                  className="text-xs sm:text-sm gap-1.5 rounded-lg px-2.5 sm:px-3"
+                  className="group text-xs sm:text-sm gap-1.5 rounded-lg px-2.5 sm:px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs transition-all"
                 >
                   <span>Logística</span>
-                  <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">
+                  <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-700 group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground">
                     {countLogistica}
                   </span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="HISTORICO"
-                  className="text-xs sm:text-sm gap-1.5 rounded-lg px-2.5 sm:px-3"
+                  className="group text-xs sm:text-sm gap-1.5 rounded-lg px-2.5 sm:px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs transition-all"
                 >
                   <span>Histórico</span>
-                  <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">
+                  <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-700 group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground">
                     {countHistorico}
                   </span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="GERAL"
-                  className="text-xs sm:text-sm gap-1.5 rounded-lg px-2.5 sm:px-3"
+                  className="group text-xs sm:text-sm gap-1.5 rounded-lg px-2.5 sm:px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs transition-all"
                 >
                   <span>Visão geral</span>
-                  <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">
+                  <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-700 group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground">
                     {countGeral}
                   </span>
                 </TabsTrigger>
