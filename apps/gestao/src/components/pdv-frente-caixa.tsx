@@ -1207,7 +1207,7 @@ const PdvFrenteCaixa = ({
       {/* ── Page Header (matching usuarios-client standard) ── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm shadow-primary/25">
             <MonitorSmartphoneIcon size={22} />
           </div>
           <div>
@@ -1265,7 +1265,7 @@ const PdvFrenteCaixa = ({
             <Button
               size="sm"
               onClick={() => setIsShiftModalOpen(true)}
-              className="h-10 gap-1.5 rounded-full bg-slate-900 px-5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800"
+              className="h-10 gap-1.5 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
             >
               <ClockIcon size={14} />
               <span>Abrir Turno de Caixa</span>
@@ -1282,11 +1282,11 @@ const PdvFrenteCaixa = ({
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">
                 Carrinho Atual
               </span>
-              <div className="rounded-lg bg-blue-100 p-1.5 text-blue-700 shrink-0">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary shrink-0">
                 <ShoppingCartIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-blue-700">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {formatCurrency(finalTotal)}
             </p>
             <p className="mt-0.5 text-xs text-slate-500 truncate">
@@ -1411,7 +1411,7 @@ const PdvFrenteCaixa = ({
                       className={cn(
                         "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all",
                         isSelected
-                          ? "bg-slate-900 text-white shadow-sm"
+                          ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
                           : "bg-slate-100 text-slate-600 hover:bg-slate-200/80",
                       )}
                     >
@@ -1433,8 +1433,8 @@ const PdvFrenteCaixa = ({
                   key={product.id}
                   onClick={() => handleProductCardClick(product)}
                   className={cn(
-                    "group relative flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-sm transition-all cursor-pointer hover:border-slate-400 hover:shadow-md",
-                    inCart && "border-slate-900/60 ring-1 ring-slate-900/30",
+                    "group relative flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-sm transition-all cursor-pointer hover:border-primary/50 hover:shadow-md",
+                    inCart && "border-primary ring-1 ring-primary/40",
                   )}
                 >
                   <div className="space-y-1">
@@ -1449,7 +1449,7 @@ const PdvFrenteCaixa = ({
                       )}
                     </div>
 
-                    <h3 className="font-semibold text-sm text-slate-900 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                    <h3 className="font-semibold text-sm text-slate-900 line-clamp-1 group-hover:text-primary transition-colors">
                       {product.name}
                     </h3>
 
@@ -1470,12 +1470,12 @@ const PdvFrenteCaixa = ({
 
                     <div className="flex items-center gap-1.5">
                       {product.isPizzaCategory ? (
-                        <span className="flex items-center gap-1 rounded-full bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm group-hover:bg-slate-800">
+                        <span className="flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground shadow-sm group-hover:bg-primary/90 transition-all">
                           <ChefHatIcon size={12} />
                           <span>Montar</span>
                         </span>
                       ) : (
-                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition-colors group-hover:bg-slate-900 group-hover:text-white">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
                           <PlusIcon size={14} />
                         </span>
                       )}

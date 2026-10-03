@@ -18,6 +18,7 @@ export interface CartProduct
   quantity: number;
   notes?: string;
   selectedOptions?: CartProductOption[];
+  menuCategoryId?: string | null;
 }
 
 export interface ICartContext {

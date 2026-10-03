@@ -345,11 +345,11 @@ export function GarconsTab({
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Total de Garçons
               </span>
-              <div className="rounded-lg bg-slate-100 p-1.5 text-slate-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <UtensilsIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-slate-900">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {totalGarcons}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">

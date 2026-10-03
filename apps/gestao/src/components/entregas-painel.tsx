@@ -664,17 +664,17 @@ export default function EntregasPainel({
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/80 bg-white shadow-sm transition hover:border-indigo-300">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition hover:border-slate-300">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Motoboys Cadastrados
               </span>
-              <div className="rounded-lg bg-indigo-100 p-1.5 text-indigo-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <UsersIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl sm:text-3xl font-bold text-indigo-700">
+            <p className="mt-2 font-display text-2xl sm:text-3xl font-bold text-primary">
               {motoboysAtivos.length}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">

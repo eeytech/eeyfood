@@ -31,6 +31,7 @@ import {
   deleteCouponAction,
   updateCouponAction,
 } from "@/app/(dashboard)/coupons-actions";
+import { toggleCouponsEnabledAction } from "@/app/(dashboard)/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
@@ -74,6 +75,7 @@ import { cn } from "@/lib/utils";
 interface CuponsClientProps {
   slug: string;
   cupons: Coupon[];
+  isCouponsEnabled?: boolean;
 }
 
 function formatCurrency(value: number) {
@@ -121,8 +123,37 @@ const EMPTY_FORM = {
 
 type FormState = typeof EMPTY_FORM;
 
-export function CuponsClient({ slug, cupons }: CuponsClientProps) {
+export function CuponsClient({
+  slug,
+  cupons,
+  isCouponsEnabled: initialIsCouponsEnabled = true,
+}: CuponsClientProps) {
   const [isPending, startTransition] = useTransition();
+  const [isCouponsEnabled, setIsCouponsEnabled] = useState(
+    initialIsCouponsEnabled,
+  );
+  const [isTogglingModule, startToggleModule] = useTransition();
+
+  const handleToggleModule = (checked: boolean) => {
+    setIsCouponsEnabled(checked);
+    startToggleModule(async () => {
+      try {
+        await toggleCouponsEnabledAction(slug, checked);
+        toast.success(
+          checked
+            ? "Módulo de Cupons ativado com sucesso!"
+            : "Módulo de Cupons desativado.",
+        );
+      } catch (error) {
+        setIsCouponsEnabled(!checked);
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Erro ao atualizar status do módulo de cupons.",
+        );
+      }
+    });
+  };
 
   // Dialog states
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -324,7 +355,7 @@ export function CuponsClient({ slug, cupons }: CuponsClientProps) {
       {/* ── Page Header ─────────────────────────────────── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm shadow-primary/25">
             <TicketPercentIcon size={22} />
           </div>
           <div>
@@ -339,11 +370,64 @@ export function CuponsClient({ slug, cupons }: CuponsClientProps) {
 
         <Button
           onClick={handleOpenCreate}
-          className="h-10 gap-2 rounded-full bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+          className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
         >
           <PlusIcon size={16} />
           <span>Novo Cupom</span>
         </Button>
+      </div>
+
+      {/* ── Ativação do Módulo de Cupons ─────────────────── */}
+      <div
+        className={cn(
+          "flex items-center justify-between rounded-2xl border p-4 transition shadow-xs",
+          isCouponsEnabled
+            ? "border-primary/30 bg-primary/[0.03]"
+            : "border-slate-200/80 bg-slate-50/70",
+        )}
+      >
+        <div className="flex items-center gap-3.5">
+          <div
+            className={cn(
+              "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition",
+              isCouponsEnabled
+                ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
+                : "bg-slate-200 text-slate-500",
+            )}
+          >
+            <TicketPercentIcon size={20} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <Label
+                htmlFor="toggle-coupons-module"
+                className="text-sm font-semibold text-slate-900 cursor-pointer"
+              >
+                Habilitar Cupons de Desconto
+              </Label>
+              <span
+                className={cn(
+                  "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                  isCouponsEnabled
+                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200/80"
+                    : "bg-slate-100 text-slate-600 border border-slate-200",
+                )}
+              >
+                {isCouponsEnabled ? "Ativo no Cardápio" : "Desativado"}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500">
+              Quando ativado, os clientes visualizam a opção de aplicar cupons de desconto no checkout do app de Vendas.
+            </p>
+          </div>
+        </div>
+
+        <Switch
+          id="toggle-coupons-module"
+          checked={isCouponsEnabled}
+          disabled={isTogglingModule}
+          onCheckedChange={handleToggleModule}
+        />
       </div>
 
       {/* ── Metric Cards ────────────────────────────────── */}
@@ -355,11 +439,11 @@ export function CuponsClient({ slug, cupons }: CuponsClientProps) {
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Total de Cupons
               </span>
-              <div className="rounded-lg bg-slate-100 p-1.5 text-slate-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <TagIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-slate-900">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {totalCount}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -395,11 +479,11 @@ export function CuponsClient({ slug, cupons }: CuponsClientProps) {
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Total de Usos
               </span>
-              <div className="rounded-lg bg-indigo-100 p-1.5 text-indigo-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <FlameIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-indigo-700">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {totalUsages}{" "}
               <span className="text-xs font-medium text-slate-500">resgates</span>
             </p>

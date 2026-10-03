@@ -39,8 +39,8 @@ const SEGMENT_CARDS = [
     label: "Total de Clientes",
     description: "Base total de clientes",
     icon: UsersIcon,
-    badgeClass: "bg-slate-100 text-slate-700",
-    textClass: "text-slate-900",
+    badgeClass: "bg-primary/10 text-primary",
+    textClass: "text-primary",
   },
   {
     key: "NEW",
@@ -130,7 +130,7 @@ export default async function CrmPage({ params, searchParams }: PageProps) {
       {/* ── Page Header ─────────────────────────────────── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm shadow-primary/25">
             <Users2Icon size={22} />
           </div>
           <div>
@@ -169,7 +169,7 @@ export default async function CrmPage({ params, searchParams }: PageProps) {
                 <p
                   className={cn(
                     "mt-2 font-display text-2xl font-bold",
-                    card.key === "ALL" ? "text-slate-900" : card.textClass,
+                    card.textClass,
                   )}
                 >
                   {count}

@@ -1197,11 +1197,11 @@ const main = async () => {
             { restaurantId: restaurant.id, customerPhone: "11933334444", balance: 32.0, points: 280, totalEarned: 55.0, totalRedeemed: 23.0, lastCreditAt: daysAgo(2) },
         ]);
         await tx.insert(loyaltyRulesTable).values([
-            { restaurantId: restaurant.id, name: "Cashback Padrão 2%", minOrderValue: 0, cashbackPercent: 2, isActive: true },
+            { restaurantId: restaurant.id, name: "Cashback Padrão 2%", minOrderValue: 10, cashbackPercent: 2, isActive: true },
             {
                 restaurantId: restaurant.id,
                 name: "Cashback Premium Combos",
-                minOrderValue: 50,
+                minOrderValue: 0,
                 cashbackPercent: 5,
                 isActive: true,
                 menuCategoryId: catCombos.id,

@@ -11,6 +11,7 @@ export interface LoyaltyUpsell {
 export const getLoyaltyUpsell = async (
   slug: string,
   subtotal: number,
+  cartItems?: Array<{ productId: string; menuCategoryId?: string | null }>,
 ): Promise<LoyaltyUpsell | null> => {
-  return buscarProximaRegraFidelidade(slug, subtotal);
+  return buscarProximaRegraFidelidade(slug, subtotal, cartItems);
 };

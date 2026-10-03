@@ -1019,16 +1019,53 @@ const carregarContextoPedidoCalculado = async (
   const discountAmount = arredondarMoeda(Number(couponDiscountAmount) + Number(cashbackRedeemedAmount));
   const total = arredondarMoeda(Math.max(Number(subtotal) + Number(deliveryFee) - Number(discountAmount), 0));
 
-  const applicableRule = loyaltyRules.find((rule) => subtotal >= Number(rule.minOrderValue));
-  const cashbackPercent = applicableRule ? Number(applicableRule.cashbackPercent) : Number(restaurant.cashbackPercent || 0);
+  const now = new Date();
+  const validLoyaltyRules = loyaltyRules.filter((rule) => {
+    if (rule.startsAt && new Date(rule.startsAt) > now) return false;
+    if (rule.endsAt && new Date(rule.endsAt) < now) return false;
+    return true;
+  });
+
+  const matchingLoyaltyRules = validLoyaltyRules.filter((rule) => {
+    const isCategoryOrProductRule = Boolean(rule.menuCategoryId || rule.productId);
+    const minVal = isCategoryOrProductRule ? 0 : Number(rule.minOrderValue || 0);
+    if (subtotal < minVal) return false;
+
+    if (rule.productId) {
+      return itens.some((item) => item.productId === rule.productId);
+    }
+    if (rule.menuCategoryId) {
+      return itens.some(
+        (item) => item.currentProduct.menuCategoryId === rule.menuCategoryId,
+      );
+    }
+    return true;
+  });
+
+  const applicableRule = matchingLoyaltyRules.sort(
+    (a, b) => Number(b.cashbackPercent) - Number(a.cashbackPercent),
+  )[0] ?? null;
+
+  const cashbackPercent = applicableRule
+    ? Number(applicableRule.cashbackPercent)
+    : Number(restaurant.cashbackPercent || 0);
+
   const cashbackEarnedAmount = arredondarMoeda(total * (cashbackPercent / 100));
 
-  const nextLoyaltyRule = [...loyaltyRules].reverse().find((rule) => rule.minOrderValue > subtotal);
+  const nextLoyaltyRule = [...validLoyaltyRules]
+    .filter((rule) => !rule.menuCategoryId && !rule.productId)
+    .reverse()
+    .find(
+      (rule) =>
+        Number(rule.minOrderValue) > subtotal &&
+        Number(rule.cashbackPercent) > cashbackPercent,
+    );
+
   const nextLoyaltyRuleFormatted = nextLoyaltyRule
     ? {
-        minOrderValue: nextLoyaltyRule.minOrderValue,
-        cashbackPercent: nextLoyaltyRule.cashbackPercent,
-        remainingAmount: arredondarMoeda(nextLoyaltyRule.minOrderValue - subtotal),
+        minOrderValue: Number(nextLoyaltyRule.minOrderValue),
+        cashbackPercent: Number(nextLoyaltyRule.cashbackPercent),
+        remainingAmount: arredondarMoeda(Number(nextLoyaltyRule.minOrderValue) - subtotal),
       }
     : null;
 
@@ -1406,6 +1443,7 @@ export const validarBeneficiosPedido = async (
 export const buscarProximaRegraFidelidade = async (
   slug: string,
   subtotal: number,
+  cartItems?: Array<{ productId: string; menuCategoryId?: string | null }>,
 ): Promise<{
   minOrderValue: number;
   cashbackPercent: number;
@@ -1425,16 +1463,53 @@ export const buscarProximaRegraFidelidade = async (
     )
     .orderBy(desc(loyaltyRulesTable.minOrderValue));
 
-  const nextRule = [...loyaltyRules]
+  const now = new Date();
+  const validRules = loyaltyRules.filter((rule) => {
+    if (rule.startsAt && new Date(rule.startsAt) > now) return false;
+    if (rule.endsAt && new Date(rule.endsAt) < now) return false;
+    return true;
+  });
+
+  const matchingRules = validRules.filter((rule) => {
+    const isCategoryOrProductRule = Boolean(rule.menuCategoryId || rule.productId);
+    const minVal = isCategoryOrProductRule ? 0 : Number(rule.minOrderValue || 0);
+    if (subtotal < minVal) return false;
+
+    if (rule.productId) {
+      return cartItems?.some((item) => item.productId === rule.productId) ?? false;
+    }
+    if (rule.menuCategoryId) {
+      return (
+        cartItems?.some((item) => item.menuCategoryId === rule.menuCategoryId) ??
+        false
+      );
+    }
+    return true;
+  });
+
+  const bestCurrentRule = matchingRules.sort(
+    (a, b) => Number(b.cashbackPercent) - Number(a.cashbackPercent),
+  )[0] ?? null;
+
+  const currentCashbackPercent = bestCurrentRule
+    ? Number(bestCurrentRule.cashbackPercent)
+    : Number(restaurant.cashbackPercent || 0);
+
+  const nextRule = [...validRules]
+    .filter((rule) => !rule.menuCategoryId && !rule.productId)
     .reverse()
-    .find((rule) => rule.minOrderValue > subtotal);
+    .find(
+      (rule) =>
+        Number(rule.minOrderValue) > subtotal &&
+        Number(rule.cashbackPercent) > currentCashbackPercent,
+    );
 
   if (!nextRule) return null;
 
   return {
-    minOrderValue: nextRule.minOrderValue,
-    cashbackPercent: nextRule.cashbackPercent,
-    remainingAmount: arredondarMoeda(nextRule.minOrderValue - subtotal),
+    minOrderValue: Number(nextRule.minOrderValue),
+    cashbackPercent: Number(nextRule.cashbackPercent),
+    remainingAmount: arredondarMoeda(Number(nextRule.minOrderValue) - subtotal),
   };
 };
 

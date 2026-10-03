@@ -1020,7 +1020,7 @@ const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
                               </p>
                             </div>
                             <p className="text-xs text-blue-600 leading-tight">
-                              Ganhe <strong>{checkoutSummary.nextLoyaltyRule.cashbackPercent}%</strong> de cashback em vez de {((checkoutSummary.cashbackEarnedAmount / checkoutSummary.total) * 100).toFixed(0)}%!
+                              Ganhe <strong>{checkoutSummary.nextLoyaltyRule.cashbackPercent}%</strong> de cashback em vez de {checkoutSummary.total > 0 ? ((checkoutSummary.cashbackEarnedAmount / checkoutSummary.total) * 100).toFixed(0) : "0"}%!
                             </p>
                           </div>
                         )}

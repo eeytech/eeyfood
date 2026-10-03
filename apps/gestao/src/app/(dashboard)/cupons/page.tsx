@@ -28,5 +28,11 @@ export default async function CuponsPage({ params }: CuponsPageProps) {
 
   const cupons = await listarCuponsGestao(slug);
 
-  return <CuponsClient slug={slug} cupons={cupons} />;
+  return (
+    <CuponsClient
+      slug={slug}
+      cupons={cupons}
+      isCouponsEnabled={restaurant.isCouponsEnabled ?? true}
+    />
+  );
 }

@@ -43,13 +43,9 @@ export const OrderSummarySection = ({
   const nextRule = checkoutSummary.nextLoyaltyRule;
 
   // Progress toward the next cashback tier (capped at 99 so bar never looks "done")
-  const progressPercent = nextRule
+  const progressPercent = nextRule && nextRule.minOrderValue > 0
     ? Math.min(
-        Math.round(
-          (checkoutSummary.total /
-            (checkoutSummary.total + nextRule.remainingAmount)) *
-            100,
-        ),
+        Math.round((checkoutSummary.subtotal / nextRule.minOrderValue) * 100),
         99,
       )
     : 0;
@@ -152,10 +148,8 @@ export const OrderSummarySection = ({
                 />
               </div>
               <div className="flex justify-between text-xs text-amber-500 font-medium">
-                <span>Atual: {formatCurrency(checkoutSummary.total)}</span>
-                <span>
-                  Meta: {formatCurrency(checkoutSummary.total + nextRule.remainingAmount)}
-                </span>
+                <span>Atual: {formatCurrency(checkoutSummary.subtotal)}</span>
+                <span>Meta: {formatCurrency(nextRule.minOrderValue)}</span>
               </div>
             </div>
 

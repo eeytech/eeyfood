@@ -229,7 +229,11 @@ export const FinishOrderSheet = ({
   // Fetch the proactive upsell rule whenever the sheet opens or cart total changes
   useEffect(() => {
     if (!open) return;
-    void getLoyaltyUpsell(slug, total).then(setLoyaltyUpsell).catch(() => null);
+    const cartItems = products.map((p) => ({
+      productId: p.id,
+      menuCategoryId: p.menuCategoryId,
+    }));
+    void getLoyaltyUpsell(slug, total, cartItems).then(setLoyaltyUpsell).catch(() => null);
     trackInitiateCheckout({ value: total, numItems: products.reduce((s, p) => s + p.quantity, 0) });
   }, [open, slug, total, products]);
 
@@ -698,18 +702,20 @@ export const FinishOrderSheet = ({
                         />
                       )}
 
-                      <BenefitsSection
-                        form={form}
-                        benefits={benefits}
-                        watchedPhone={watchedPhone}
-                        useWalletBalance={useWalletBalance}
-                        isValidatingBenefits={isValidatingBenefits}
-                        isActionDisabled={isActionDisabled}
-                        isCouponsEnabled={restaurant.isCouponsEnabled}
-                        isCashbackEnabled={restaurant.isCashbackEnabled}
-                        onValidateBenefits={() => void handleValidateBenefits()}
-                        onToggleWalletBalance={() => void handleToggleWalletBalance()}
-                      />
+                      {restaurant.isCouponsEnabled && (
+                        <BenefitsSection
+                          form={form}
+                          benefits={benefits}
+                          watchedPhone={watchedPhone}
+                          useWalletBalance={useWalletBalance}
+                          isValidatingBenefits={isValidatingBenefits}
+                          isActionDisabled={isActionDisabled}
+                          isCouponsEnabled={restaurant.isCouponsEnabled}
+                          isCashbackEnabled={restaurant.isCashbackEnabled}
+                          onValidateBenefits={() => void handleValidateBenefits()}
+                          onToggleWalletBalance={() => void handleToggleWalletBalance()}
+                        />
+                      )}
 
                       <PaymentSection
                         form={form}

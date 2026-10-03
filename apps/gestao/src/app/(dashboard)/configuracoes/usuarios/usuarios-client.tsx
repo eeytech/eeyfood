@@ -417,7 +417,7 @@ export function UsuariosClient({
       {/* ── Page Header ─────────────────────────────────── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm shadow-primary/25">
             <UsersIcon size={22} />
           </div>
           <div>
@@ -437,7 +437,7 @@ export function UsuariosClient({
               setSelectedRole("KITCHEN");
               setIsCreateOpen(true);
             }}
-            className="h-10 gap-2 rounded-full bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+            className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
           >
             <UserPlusIcon size={16} />
             <span>Novo Usuário</span>
@@ -445,7 +445,7 @@ export function UsuariosClient({
         ) : (
           <Button
             onClick={() => setIsNewGarcomOpen(true)}
-            className="h-10 gap-2 rounded-full bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+            className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
           >
             <UserPlusIcon size={16} />
             <span>Novo Garçom</span>
@@ -507,11 +507,11 @@ export function UsuariosClient({
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Total de Usuários
               </span>
-              <div className="rounded-lg bg-slate-100 p-1.5 text-slate-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <UsersIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-slate-900">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {totalCount}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">

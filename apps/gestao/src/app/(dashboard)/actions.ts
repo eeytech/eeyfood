@@ -797,12 +797,20 @@ export const updateRestaurantFeaturesAction = async (
   const pizzaPricingRule =
     pizzaPricingRuleRaw === "AVERAGE" ? "AVERAGE" : "MAX";
 
+  const isCouponsEnabled = formData.has("isCouponsEnabled")
+    ? getBooleanValue(formData.get("isCouponsEnabled"))
+    : restaurant.isCouponsEnabled;
+
+  const isCashbackEnabled = formData.has("isCashbackEnabled")
+    ? getBooleanValue(formData.get("isCashbackEnabled"))
+    : restaurant.isCashbackEnabled;
+
   await db
     .update(restaurantsTable)
     .set({
       acceptMercadoPago: getBooleanValue(formData.get("acceptMercadoPago")),
-      isCouponsEnabled: getBooleanValue(formData.get("isCouponsEnabled")),
-      isCashbackEnabled: getBooleanValue(formData.get("isCashbackEnabled")),
+      isCouponsEnabled,
+      isCashbackEnabled,
       showOptionImages: getBooleanValue(formData.get("showOptionImages")),
       isDeliveryEnabled,
       isTakeawayEnabled,
@@ -822,6 +830,42 @@ export const updateRestaurantFeaturesAction = async (
     });
 
   revalidateRestaurantPaths(slug);
+};
+
+export const toggleCouponsEnabledAction = async (
+  slug: string,
+  enabled: boolean,
+) => {
+  const restaurant = await getRestaurantOrThrow(slug);
+
+  await db
+    .update(restaurantsTable)
+    .set({
+      isCouponsEnabled: enabled,
+      updatedAt: new Date(),
+    })
+    .where(eq(restaurantsTable.id, restaurant.id));
+
+  revalidateRestaurantPaths(slug);
+  revalidatePath(`/${slug}/cupons`);
+};
+
+export const toggleCashbackEnabledAction = async (
+  slug: string,
+  enabled: boolean,
+) => {
+  const restaurant = await getRestaurantOrThrow(slug);
+
+  await db
+    .update(restaurantsTable)
+    .set({
+      isCashbackEnabled: enabled,
+      updatedAt: new Date(),
+    })
+    .where(eq(restaurantsTable.id, restaurant.id));
+
+  revalidateRestaurantPaths(slug);
+  revalidatePath(`/${slug}/cashback`);
 };
 
 export const updateOrderSchedulingAction = async (

@@ -38,6 +38,7 @@ export default async function CashbackPage({ params }: CashbackPageProps) {
       regras={regras}
       categorias={cardapio?.categories ?? []}
       produtos={cardapio?.products ?? []}
+      isCashbackEnabled={restaurant.isCashbackEnabled ?? true}
     />
   );
 }

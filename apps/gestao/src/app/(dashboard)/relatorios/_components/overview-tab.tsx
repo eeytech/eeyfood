@@ -101,8 +101,8 @@ const OverviewTab = ({ data }: OverviewTabProps) => {
           value={fmt(summary.grossRevenue)}
           subtext="Receita de todos os pedidos"
           icon={ReceiptIcon}
-          badgeClass="bg-slate-100 text-slate-700"
-          valueClass="text-slate-900"
+          badgeClass="bg-primary/10 text-primary"
+          valueClass="text-primary"
         />
         <KPICard
           label="Custo estimado"

@@ -33,6 +33,7 @@ import {
   deleteLoyaltyRuleAction,
   updateLoyaltyRuleAction,
 } from "@/app/(dashboard)/cashback-actions";
+import { toggleCashbackEnabledAction } from "@/app/(dashboard)/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
@@ -81,6 +82,7 @@ interface CashbackClientProps {
   regras: RegraLoyaltyComDetalhes[];
   categorias: MenuCategory[];
   produtos: Array<Product & { categoryName: string; categoryId: string }>;
+  isCashbackEnabled?: boolean;
 }
 
 function formatCurrency(value: number) {
@@ -137,8 +139,34 @@ export function CashbackClient({
   regras,
   categorias,
   produtos,
+  isCashbackEnabled: initialIsCashbackEnabled = true,
 }: CashbackClientProps) {
   const [isPending, startTransition] = useTransition();
+  const [isCashbackEnabled, setIsCashbackEnabled] = useState(
+    initialIsCashbackEnabled,
+  );
+  const [isTogglingModule, startToggleModule] = useTransition();
+
+  const handleToggleModule = (checked: boolean) => {
+    setIsCashbackEnabled(checked);
+    startToggleModule(async () => {
+      try {
+        await toggleCashbackEnabledAction(slug, checked);
+        toast.success(
+          checked
+            ? "Módulo de Cashback ativado com sucesso!"
+            : "Módulo de Cashback desativado.",
+        );
+      } catch (error) {
+        setIsCashbackEnabled(!checked);
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Erro ao atualizar status do módulo de cashback.",
+        );
+      }
+    });
+  };
 
   // Dialog states
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -350,7 +378,7 @@ export function CashbackClient({
       {/* ── Page Header ─────────────────────────────────── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm shadow-primary/25">
             <CoinsIcon size={22} />
           </div>
           <div>
@@ -365,11 +393,64 @@ export function CashbackClient({
 
         <Button
           onClick={handleOpenCreate}
-          className="h-10 gap-2 rounded-full bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+          className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
         >
           <PlusIcon size={16} />
           <span>Nova Regra</span>
         </Button>
+      </div>
+
+      {/* ── Ativação do Módulo de Cashback ────────────────── */}
+      <div
+        className={cn(
+          "flex items-center justify-between rounded-2xl border p-4 transition shadow-xs",
+          isCashbackEnabled
+            ? "border-primary/30 bg-primary/[0.03]"
+            : "border-slate-200/80 bg-slate-50/70",
+        )}
+      >
+        <div className="flex items-center gap-3.5">
+          <div
+            className={cn(
+              "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition",
+              isCashbackEnabled
+                ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
+                : "bg-slate-200 text-slate-500",
+            )}
+          >
+            <CoinsIcon size={20} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <Label
+                htmlFor="toggle-cashback-module"
+                className="text-sm font-semibold text-slate-900 cursor-pointer"
+              >
+                Habilitar Cashback Fidelidade
+              </Label>
+              <span
+                className={cn(
+                  "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                  isCashbackEnabled
+                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200/80"
+                    : "bg-slate-100 text-slate-600 border border-slate-200",
+                )}
+              >
+                {isCashbackEnabled ? "Ativo no Cardápio" : "Desativado"}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500">
+              Quando ativado, os clientes visualizam os benefícios de cashback nos produtos e podem resgatar saldo na finalização do pedido.
+            </p>
+          </div>
+        </div>
+
+        <Switch
+          id="toggle-cashback-module"
+          checked={isCashbackEnabled}
+          disabled={isTogglingModule}
+          onCheckedChange={handleToggleModule}
+        />
       </div>
 
       {/* ── Metric Cards ────────────────────────────────── */}
@@ -381,11 +462,11 @@ export function CashbackClient({
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Total de Regras
               </span>
-              <div className="rounded-lg bg-slate-100 p-1.5 text-slate-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <CoinsIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-slate-900">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {totalCount}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -421,11 +502,11 @@ export function CashbackClient({
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Cashback Médio
               </span>
-              <div className="rounded-lg bg-indigo-100 p-1.5 text-indigo-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <PercentIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-indigo-700">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {avgPercent}%
             </p>
             <p className="mt-0.5 text-xs text-slate-500">

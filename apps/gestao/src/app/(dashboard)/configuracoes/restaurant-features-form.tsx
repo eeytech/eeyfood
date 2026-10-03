@@ -59,12 +59,6 @@ export const RestaurantFeaturesForm = ({
   const [acceptMercadoPago, setAcceptMercadoPago] = useState(
     initialValues.acceptMercadoPago,
   );
-  const [isCouponsEnabled, setIsCouponsEnabled] = useState(
-    initialValues.isCouponsEnabled,
-  );
-  const [isCashbackEnabled, setIsCashbackEnabled] = useState(
-    initialValues.isCashbackEnabled,
-  );
   const [showOptionImages, setShowOptionImages] = useState(
     initialValues.showOptionImages,
   );
@@ -110,8 +104,6 @@ export const RestaurantFeaturesForm = ({
     e.preventDefault();
     const formData = new FormData();
     if (acceptMercadoPago) formData.append("acceptMercadoPago", "on");
-    if (isCouponsEnabled) formData.append("isCouponsEnabled", "on");
-    if (isCashbackEnabled) formData.append("isCashbackEnabled", "on");
     if (showOptionImages) formData.append("showOptionImages", "on");
     if (isDeliveryEnabled) formData.append("isDeliveryEnabled", "on");
     if (isTakeawayEnabled) formData.append("isTakeawayEnabled", "on");
@@ -139,21 +131,6 @@ export const RestaurantFeaturesForm = ({
         "Permite que clientes paguem online via Mercado Pago no checkout.",
       checked: acceptMercadoPago,
       onChange: setAcceptMercadoPago,
-    },
-    {
-      id: "isCouponsEnabled",
-      label: "Cupons de Desconto",
-      description: "Exibe o campo de cupom no checkout e permite sua aplicação.",
-      checked: isCouponsEnabled,
-      onChange: setIsCouponsEnabled,
-    },
-    {
-      id: "isCashbackEnabled",
-      label: "Cashback Fidelidade",
-      description:
-        "Exibe benefícios de cashback nos produtos e permite uso do saldo.",
-      checked: isCashbackEnabled,
-      onChange: setIsCashbackEnabled,
     },
     {
       id: "showOptionImages",

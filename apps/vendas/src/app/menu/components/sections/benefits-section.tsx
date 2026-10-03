@@ -55,7 +55,7 @@ export const BenefitsSection = ({
   onValidateBenefits,
   onToggleWalletBalance,
 }: BenefitsSectionProps) => {
-  if (!isCouponsEnabled && !isCashbackEnabled) return null;
+  if (!isCouponsEnabled) return null;
 
   return (
     <section aria-label="Benefícios">
