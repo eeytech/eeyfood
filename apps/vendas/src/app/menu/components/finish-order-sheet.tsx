@@ -120,7 +120,7 @@ export const FinishOrderSheet = ({
         : "TAKEAWAY");
 
   const onlinePaymentGateway =
-    (restaurant as any).onlinePaymentGateway ?? "MERCADO_PAGO";
+    restaurant.onlinePaymentGateway ?? "MERCADO_PAGO";
   const allowsOnlinePayment =
     restaurant.acceptMercadoPago &&
     onlinePaymentGateway !== "DISABLED" &&
@@ -627,7 +627,7 @@ export const FinishOrderSheet = ({
           slug,
           consumptionMethod,
           phone: data.phone,
-          infinitePayHandle: (restaurant as any).infinitePayHandle,
+          infinitePayHandle: restaurant.infinitePayHandle,
         });
 
         if (result.isFree || !result.initPoint) {
@@ -687,7 +687,7 @@ export const FinishOrderSheet = ({
           <OrderSuccessView
             pedidoOfflineConcluido={pedidoOfflineConcluido}
             pixKey={restaurant.pixKey}
-            pixMode={(restaurant as any).pixMode ?? "QRCODE"}
+            pixMode={restaurant.pixMode ?? "QRCODE"}
             restaurantName={restaurant.name}
             onViewOrders={handleViewOrders}
             onClose={() => handleSheetOpenChange(false)}
@@ -762,8 +762,7 @@ export const FinishOrderSheet = ({
                         onlinePaymentGateway={onlinePaymentGateway}
                         acceptPix={restaurant.acceptPix ?? true}
                         pixKey={restaurant.pixKey}
-                        pixMode={(restaurant as any).pixMode ?? "QRCODE"}
-                        totalAmount={checkoutSummary.total}
+                        pixMode={restaurant.pixMode ?? "QRCODE"}
                         isOrderFree={checkoutSummary.total <= 0}
                       />
 

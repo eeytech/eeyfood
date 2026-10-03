@@ -23,6 +23,7 @@ export const consumptionMethodEnum = pgEnum("ConsumptionMethod", [
 ]);
 export const paymentMethodEnum = pgEnum("PaymentMethod", [
     "MERCADO_PAGO",
+    "INFINITEPAY",
     "DINHEIRO",
     "CARTAO_PRESENCIAL",
     "PIX",
@@ -123,6 +124,7 @@ export const deliveryFeeRuleTypeEnum = pgEnum("DeliveryFeeRuleType", [
 export const marketplaceTypeEnum = pgEnum("MarketplaceType", [
     "IFOOD",
     "RAPPI",
+    "KEETA",
     "NINETY_NINE_FOOD",
 ]);
 export const courierTripStatusEnum = pgEnum("CourierTripStatus", [
@@ -219,6 +221,11 @@ export const restaurantsTable = pgTable("Restaurant", {
     status: restaurantStatusEnum("status").default("AUTO").notNull(),
     cashbackPercent: doublePrecision("cashbackPercent").default(0).notNull(),
     acceptMercadoPago: boolean("acceptMercadoPago").default(true).notNull(),
+    onlinePaymentGateway: text("onlinePaymentGateway").default("MERCADO_PAGO").notNull(), // "MERCADO_PAGO" | "INFINITEPAY" | "DISABLED"
+    infinitePayHandle: text("infinitePayHandle"), // InfiniteTag ($handle)
+    acceptPix: boolean("acceptPix").default(true).notNull(),
+    pixKey: text("pixKey"),
+    pixMode: text("pixMode").default("QRCODE").notNull(),
     isCouponsEnabled: boolean("isCouponsEnabled").default(true).notNull(),
     isCashbackEnabled: boolean("isCashbackEnabled").default(true).notNull(),
     showOptionImages: boolean("showOptionImages").default(true).notNull(),

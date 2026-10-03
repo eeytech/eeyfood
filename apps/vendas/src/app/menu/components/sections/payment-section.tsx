@@ -60,7 +60,6 @@ interface PaymentSectionProps {
   pixKey?: string | null;
   pixMode?: "QRCODE" | "MANUAL" | string;
   isOrderFree?: boolean;
-  totalAmount?: number;
 }
 
 export const PaymentSection = ({
@@ -73,7 +72,6 @@ export const PaymentSection = ({
   pixKey,
   pixMode = "QRCODE",
   isOrderFree,
-  totalAmount,
 }: PaymentSectionProps) => {
   const [copiedKey, setCopiedKey] = useState(false);
 
