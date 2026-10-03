@@ -220,7 +220,7 @@ export const RestaurantHoursSchedulingForm = ({
                   value: "ALWAYS_CLOSED",
                   label: "Forçar Fechado",
                   badge: "Manual",
-                  badgeColor: "bg-rose-100 text-rose-700",
+                  badgeColor: "bg-primary/10 text-primary",
                   description:
                     "Fecha imediatamente a loja, impedindo novos pedidos online.",
                 },

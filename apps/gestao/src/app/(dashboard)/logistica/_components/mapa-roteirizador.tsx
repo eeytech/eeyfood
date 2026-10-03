@@ -355,7 +355,7 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
       {/* ── Page Header (Padrão Usuários) ───────────────── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm shadow-primary/25">
             <RouteIcon size={22} />
           </div>
           <div>
@@ -402,11 +402,11 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Pedidos Prontos
               </span>
-              <div className="rounded-lg bg-indigo-100 p-1.5 text-indigo-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <NavigationIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-slate-900">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {totalOrders}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -543,7 +543,7 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
                   onClick={() => setActiveFilter("ALL")}
                   className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
                     activeFilter === "ALL"
-                      ? "bg-slate-900 text-white"
+                      ? "bg-primary text-primary-foreground shadow-xs"
                       : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
                   }`}
                 >
@@ -583,12 +583,12 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
                         selectedIds.size === filteredOrders.length && filteredOrders.length > 0
                       }
                       onChange={toggleAll}
-                      className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-slate-900"
+                      className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-primary"
                     />
                     <span>Selecionar todos</span>
                   </label>
                   {selectedIds.size > 0 && (
-                    <Badge className="bg-slate-900 text-white text-[10px]">
+                    <Badge className="bg-primary text-primary-foreground text-[10px]">
                       {selectedIds.size} selecionado(s)
                     </Badge>
                   )}
@@ -730,7 +730,7 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
               <Button
                 onClick={handleDispatch}
                 disabled={selectedIds.size === 0 || !selectedCourierId || isPending}
-                className="h-10 w-full gap-2 rounded-full bg-slate-900 font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
+                className="h-10 w-full gap-2 rounded-full bg-primary font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 disabled:opacity-50 transition-all"
               >
                 {isPending ? (
                   <Loader2Icon size={15} className="animate-spin" />
@@ -885,7 +885,7 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
       <Dialog open={isLocationDialogOpen} onOpenChange={setIsLocationDialogOpen}>
         <DialogContent className="max-w-md rounded-2xl p-6 sm:max-w-lg">
           <DialogHeader>
-            <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
+            <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <StoreIcon size={20} />
             </div>
             <DialogTitle className="font-display text-lg font-bold text-slate-900">
@@ -914,7 +914,7 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
                   type="button"
                   onClick={handleAutoGeocodeStore}
                   disabled={isGeocodingStore}
-                  className="h-10 shrink-0 gap-1.5 rounded-xl bg-slate-900 px-3 text-xs font-semibold text-white hover:bg-slate-800"
+                  className="h-10 shrink-0 gap-1.5 rounded-xl bg-primary px-3 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
                 >
                   {isGeocodingStore ? (
                     <Loader2Icon size={14} className="animate-spin" />
@@ -969,7 +969,7 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
               <Button
                 type="submit"
                 disabled={isPending}
-                className="rounded-full bg-slate-900 px-6 font-semibold text-white hover:bg-slate-800"
+                className="rounded-full bg-primary px-6 font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
               >
                 {isPending && <Loader2Icon size={14} className="mr-2 animate-spin" />}
                 Salvar Localização

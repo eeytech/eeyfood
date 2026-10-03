@@ -222,7 +222,7 @@ export function MarketplacesClient({
       {/* ── Page Header ─────────────────────────────────── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-red-600 text-white shadow-md shadow-red-600/20">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm shadow-primary/25">
             <ShoppingBagIcon size={22} />
           </div>
           <div>
@@ -241,7 +241,7 @@ export function MarketplacesClient({
             variant="outline"
             className="border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-xs"
           >
-            <ZapIcon size={13} className="mr-1.5 text-amber-500 fill-amber-500" />
+            <ZapIcon size={13} className="mr-1.5 text-primary fill-primary" />
             {recentMarketplaceOrdersCount} pedidos integrados
           </Badge>
 
@@ -280,7 +280,7 @@ export function MarketplacesClient({
                     variant="outline"
                     className={
                       ifoodActive
-                        ? "border-emerald-200 bg-emerald-50 text-[10px] font-bold text-emerald-700"
+                        ? "border-primary/20 bg-primary/10 text-[10px] font-bold text-primary"
                         : "border-slate-200 bg-slate-100 text-[10px] font-medium text-slate-500"
                     }
                   >
@@ -339,7 +339,7 @@ export function MarketplacesClient({
               <div className="space-y-1.5 rounded-xl bg-slate-50 p-3.5 border border-slate-200/80">
                 <Label className="text-xs font-semibold text-slate-800 flex items-center justify-between">
                   <span>URL do Webhook do seu Restaurante</span>
-                  <span className="text-[10px] text-emerald-600 font-bold uppercase">Endpoint Pronto</span>
+                  <span className="text-[10px] text-primary font-bold uppercase">Endpoint Pronto</span>
                 </Label>
                 <div className="mt-1 flex items-center gap-2">
                   <Input
@@ -387,12 +387,12 @@ export function MarketplacesClient({
                     size="sm"
                     onClick={handleSimulateIfood}
                     disabled={isSimulatingIfood}
-                    className="h-9 gap-1.5 text-xs bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 font-semibold"
+                    className="h-9 gap-1.5 text-xs bg-primary/10 text-primary hover:bg-primary/15 border border-primary/20 font-semibold"
                   >
                     {isSimulatingIfood ? (
                       <Loader2Icon size={13} className="animate-spin" />
                     ) : (
-                      <ZapIcon size={13} className="text-red-600 fill-red-600" />
+                      <ZapIcon size={13} className="text-primary fill-primary" />
                     )}
                     Simular Pedido iFood
                   </Button>
@@ -411,7 +411,7 @@ export function MarketplacesClient({
                     variant="outline"
                     className={
                       rappiActive
-                        ? "border-emerald-200 bg-emerald-50 text-[10px] font-bold text-emerald-700"
+                        ? "border-primary/20 bg-primary/10 text-[10px] font-bold text-primary"
                         : "border-slate-200 bg-slate-100 text-[10px] font-medium text-slate-500"
                     }
                   >
@@ -470,7 +470,7 @@ export function MarketplacesClient({
               <div className="space-y-1.5 rounded-xl bg-slate-50 p-3.5 border border-slate-200/80">
                 <Label className="text-xs font-semibold text-slate-800 flex items-center justify-between">
                   <span>URL do Webhook da Rappi</span>
-                  <span className="text-[10px] text-orange-600 font-bold uppercase">Endpoint Pronto</span>
+                  <span className="text-[10px] text-primary font-bold uppercase">Endpoint Pronto</span>
                 </Label>
                 <div className="mt-1 flex items-center gap-2">
                   <Input
@@ -518,12 +518,12 @@ export function MarketplacesClient({
                     size="sm"
                     onClick={handleSimulateRappi}
                     disabled={isSimulatingRappi}
-                    className="h-9 gap-1.5 text-xs bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200 font-semibold"
+                    className="h-9 gap-1.5 text-xs bg-primary/10 text-primary hover:bg-primary/15 border border-primary/20 font-semibold"
                   >
                     {isSimulatingRappi ? (
                       <Loader2Icon size={13} className="animate-spin" />
                     ) : (
-                      <ZapIcon size={13} className="text-orange-600 fill-orange-600" />
+                      <ZapIcon size={13} className="text-primary fill-primary" />
                     )}
                     Simular Pedido Rappi
                   </Button>
@@ -548,7 +548,7 @@ export function MarketplacesClient({
                     variant="outline"
                     className={
                       keetaActive
-                        ? "border-emerald-200 bg-emerald-50 text-[10px] font-bold text-emerald-700"
+                        ? "border-primary/20 bg-primary/10 text-[10px] font-bold text-primary"
                         : "border-slate-200 bg-slate-100 text-[10px] font-medium text-slate-500"
                     }
                   >
@@ -607,7 +607,7 @@ export function MarketplacesClient({
               <div className="space-y-1.5 rounded-xl bg-slate-50 p-3.5 border border-slate-200/80">
                 <Label className="text-xs font-semibold text-slate-800 flex items-center justify-between">
                   <span>URL do Webhook Keeta Brasil</span>
-                  <span className="text-[10px] text-amber-700 bg-amber-100 px-2 py-0.5 rounded font-bold uppercase">Endpoint Pronto</span>
+                  <span className="text-[10px] text-primary bg-primary/10 px-2 py-0.5 rounded font-bold uppercase">Endpoint Pronto</span>
                 </Label>
                 <div className="mt-1 flex items-center gap-2">
                   <Input
@@ -655,12 +655,12 @@ export function MarketplacesClient({
                     size="sm"
                     onClick={handleSimulateKeeta}
                     disabled={isSimulatingKeeta}
-                    className="h-9 gap-1.5 text-xs bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-300 font-semibold"
+                    className="h-9 gap-1.5 text-xs bg-primary/10 text-primary hover:bg-primary/15 border border-primary/20 font-semibold"
                   >
                     {isSimulatingKeeta ? (
                       <Loader2Icon size={13} className="animate-spin" />
                     ) : (
-                      <ZapIcon size={13} className="text-amber-600 fill-amber-600" />
+                      <ZapIcon size={13} className="text-primary fill-primary" />
                     )}
                     Simular Pedido Keeta
                   </Button>
@@ -676,26 +676,26 @@ export function MarketplacesClient({
           <Card className="border-slate-200/80 bg-white shadow-xs">
             <CardHeader className="p-4 sm:p-5 border-b border-slate-100">
               <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-700">
-                <HelpCircleIcon size={15} className="text-red-600" />
+                <HelpCircleIcon size={15} className="text-primary" />
                 Como Conectar seu iFood
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 sm:p-5 space-y-3.5 text-xs text-slate-600">
               <div className="space-y-2 rounded-xl bg-slate-50 p-3 border border-slate-200/70">
                 <div className="flex items-start gap-2.5 font-medium text-slate-800">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white mt-0.5">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground mt-0.5">
                     1
                   </span>
                   <span>Acesse o Portal do Parceiro iFood e copie seu <strong>Merchant ID</strong>.</span>
                 </div>
                 <div className="flex items-start gap-2.5 font-medium text-slate-800">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white mt-0.5">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground mt-0.5">
                     2
                   </span>
                   <span>Cole o Merchant ID no formulário e ative o botão da integração.</span>
                 </div>
                 <div className="flex items-start gap-2.5 font-medium text-slate-800">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white mt-0.5">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground mt-0.5">
                     3
                   </span>
                   <span>Copie a <strong>URL do Webhook</strong> gerada ao lado e cadastre na sua aplicação iFood Developer.</span>
@@ -707,7 +707,7 @@ export function MarketplacesClient({
                   href="https://developer.ifood.com.br"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-between text-xs font-semibold text-red-600 hover:text-red-700"
+                  className="flex items-center justify-between text-xs font-semibold text-primary hover:text-primary/80"
                 >
                   <span>Portal iFood Developer</span>
                   <ExternalLinkIcon size={13} />
@@ -720,26 +720,26 @@ export function MarketplacesClient({
           <Card className="border-slate-200/80 bg-white shadow-xs">
             <CardHeader className="p-4 sm:p-5 border-b border-slate-100">
               <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-700">
-                <HelpCircleIcon size={15} className="text-orange-500" />
+                <HelpCircleIcon size={15} className="text-primary" />
                 Como Conectar seu Rappi
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 sm:p-5 space-y-3.5 text-xs text-slate-600">
               <div className="space-y-2 rounded-xl bg-slate-50 p-3 border border-slate-200/70">
                 <div className="flex items-start gap-2.5 font-medium text-slate-800">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white mt-0.5">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground mt-0.5">
                     1
                   </span>
                   <span>Acesse o <strong>Portal Rappi Partners</strong> (Aliados) e copie o <strong>Store ID</strong> da sua loja.</span>
                 </div>
                 <div className="flex items-start gap-2.5 font-medium text-slate-800">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white mt-0.5">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground mt-0.5">
                     2
                   </span>
                   <span>Insira o Store ID no formulário ao lado e ative o botão da integração.</span>
                 </div>
                 <div className="flex items-start gap-2.5 font-medium text-slate-800">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white mt-0.5">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground mt-0.5">
                     3
                   </span>
                   <span>Cadastre a <strong>URL do Webhook Rappi</strong> no portal ou simule pedidos pelo botão <strong>Simular Pedido Rappi</strong>.</span>
@@ -751,7 +751,7 @@ export function MarketplacesClient({
                   href="https://partners.rappi.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-between text-xs font-semibold text-orange-600 hover:text-orange-700"
+                  className="flex items-center justify-between text-xs font-semibold text-primary hover:text-primary/80"
                 >
                   <span>Portal Rappi Partners</span>
                   <ExternalLinkIcon size={13} />
@@ -764,30 +764,42 @@ export function MarketplacesClient({
           <Card className="border-slate-200/80 bg-white shadow-xs">
             <CardHeader className="p-4 sm:p-5 border-b border-slate-100">
               <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-700">
-                <HelpCircleIcon size={15} className="text-amber-500" />
+                <HelpCircleIcon size={15} className="text-primary" />
                 Como Conectar o Keeta Brasil
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 sm:p-5 space-y-3.5 text-xs text-slate-600">
               <div className="space-y-2 rounded-xl bg-slate-50 p-3 border border-slate-200/70">
                 <div className="flex items-start gap-2.5 font-medium text-slate-800">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white mt-0.5">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground mt-0.5">
                     1
                   </span>
                   <span>Acesse o <strong>Keeta Merchant Center / Partner</strong> e obtenha seu <strong>Store ID</strong>.</span>
                 </div>
                 <div className="flex items-start gap-2.5 font-medium text-slate-800">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white mt-0.5">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground mt-0.5">
                     2
                   </span>
                   <span>Cole o Store ID no formulário, insira a chave da API (se houver) e ative a integração.</span>
                 </div>
                 <div className="flex items-start gap-2.5 font-medium text-slate-800">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white mt-0.5">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground mt-0.5">
                     3
                   </span>
                   <span>Copie a <strong>URL do Webhook Keeta</strong> para registrar na central de integrações ou realize um pedido de teste no botão abaixo.</span>
                 </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-100">
+                <a
+                  href="https://merchant.keeta.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between text-xs font-semibold text-primary hover:text-primary/80"
+                >
+                  <span>Portal Keeta Partner</span>
+                  <ExternalLinkIcon size={13} />
+                </a>
               </div>
             </CardContent>
           </Card>
@@ -796,7 +808,7 @@ export function MarketplacesClient({
           <Card className="border-slate-200/80 bg-white shadow-xs">
             <CardHeader className="p-4 sm:p-5 border-b border-slate-100">
               <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-700">
-                <ShieldCheckIcon size={15} className="text-emerald-600" />
+                <ShieldCheckIcon size={15} className="text-primary" />
                 Benefícios da Centralização
               </CardTitle>
             </CardHeader>

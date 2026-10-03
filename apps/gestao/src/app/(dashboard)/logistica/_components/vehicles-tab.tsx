@@ -212,7 +212,7 @@ export function VehiclesTab({
         <Button
           size="sm"
           onClick={() => setCreateOpen(true)}
-          className="h-9 gap-1.5 rounded-full bg-slate-900 px-4 text-xs font-semibold text-white shadow-sm hover:bg-slate-800"
+          className="h-9 gap-1.5 rounded-full bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
         >
           <PlusIcon size={14} />
           <span>Adicionar Veículo</span>
@@ -312,7 +312,7 @@ export function VehiclesTab({
               <Button
                 size="sm"
                 onClick={() => setCreateOpen(true)}
-                className="mt-4 gap-1.5 rounded-full bg-slate-900 text-xs font-semibold text-white hover:bg-slate-800"
+                className="mt-4 gap-1.5 rounded-full bg-primary text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
               >
                 <PlusIcon size={14} />
                 Adicionar veículo

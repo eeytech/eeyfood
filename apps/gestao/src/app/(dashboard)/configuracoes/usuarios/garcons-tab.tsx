@@ -596,7 +596,7 @@ export function GarconsTab({
                           {formatCurrency(g.totalSales)}
                         </TableCell>
 
-                        <TableCell className="text-right text-xs font-medium text-amber-700">
+                        <TableCell className="text-right text-xs font-semibold text-primary">
                           {formatCurrency(g.totalServiceFee)}
                         </TableCell>
 
@@ -740,7 +740,7 @@ export function GarconsTab({
                       </div>
                       <div>
                         <span className="text-[10px] text-slate-400 block uppercase">Taxa Gerada</span>
-                        <span className="font-semibold text-amber-700">{formatCurrency(g.totalServiceFee)}</span>
+                        <span className="font-semibold text-primary">{formatCurrency(g.totalServiceFee)}</span>
                       </div>
                       <div>
                         <span className="text-[10px] text-slate-400 block uppercase">Saldo</span>
