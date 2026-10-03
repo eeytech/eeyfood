@@ -58,12 +58,13 @@ export default async function RootLayout({
         />
       </head>
       <body
-        className={`${manrope.variable} ${spaceGrotesk.variable} font-sans`}
+        className={`theme-${initialTheme} ${manrope.variable} ${spaceGrotesk.variable} font-sans`}
+        data-theme={initialTheme}
         suppressHydrationWarning
       >
         <ThemeProvider initialTheme={initialTheme}>
           {children}
-          <Toaster richColors position="top-right" />
+          <Toaster richColors position="top-right" className="toaster-theme-sync" />
         </ThemeProvider>
       </body>
     </html>

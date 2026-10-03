@@ -94,10 +94,10 @@ export function FiscalSettingsClient({
       </div>
 
       {ambiente === "producao" && (
-        <Alert className="border-rose-200 bg-rose-50/60 text-rose-900">
-          <AlertTriangleIcon className="h-4 w-4 text-rose-600" />
-          <AlertTitle className="font-semibold text-rose-900">Atenção: Ambiente de Produção Ativo</AlertTitle>
-          <AlertDescription className="text-xs text-rose-700">
+        <Alert className="border-primary/25 bg-primary/5 text-slate-900">
+          <AlertTriangleIcon className="h-4 w-4 text-primary" />
+          <AlertTitle className="font-semibold text-slate-900">Atenção: Ambiente de Produção Ativo</AlertTitle>
+          <AlertDescription className="text-xs text-slate-600">
             Notas emitidas neste modo possuem valor fiscal legal perante a SEFAZ. Certifique-se de que os produtos possuem NCM e tributação corretos.
           </AlertDescription>
         </Alert>

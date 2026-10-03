@@ -75,7 +75,13 @@ export function AiProviderSelector({
           >
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Badge className="bg-primary/10 text-primary hover:bg-primary/15 border-0 text-[10px] font-bold px-2 py-0.5">
+                <Badge
+                  className={
+                    provider === "GOOGLE_GEMINI"
+                      ? "bg-primary/10 text-primary hover:bg-primary/15 border-0 text-[10px] font-bold px-2 py-0.5"
+                      : "bg-slate-100 text-slate-700 hover:bg-slate-200/80 border-0 text-[10px] font-bold px-2 py-0.5"
+                  }
+                >
                   100% Gratuito
                 </Badge>
                 {provider === "GOOGLE_GEMINI" && (
@@ -91,7 +97,11 @@ export function AiProviderSelector({
                 Gemini 2.0 Flash. Até 1.500 msgs/dia sem cartão.
               </p>
             </div>
-            <div className="mt-3 flex items-center gap-1 text-[10px] font-medium text-primary">
+            <div
+              className={`mt-3 flex items-center gap-1 text-[10px] font-medium ${
+                provider === "GOOGLE_GEMINI" ? "text-primary" : "text-slate-500"
+              }`}
+            >
               <SparklesIcon size={12} />
               Recomendado
             </div>
@@ -103,17 +113,23 @@ export function AiProviderSelector({
             onClick={() => setProvider("GROQ")}
             className={`relative flex flex-col justify-between rounded-xl border p-3.5 text-left transition-all ${
               provider === "GROQ"
-                ? "border-blue-600 bg-blue-50/50 shadow-sm ring-1 ring-blue-600"
+                ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/40"
                 : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
             }`}
           >
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 border-0 text-[10px] font-bold px-2 py-0.5">
+                <Badge
+                  className={
+                    provider === "GROQ"
+                      ? "bg-primary/10 text-primary hover:bg-primary/15 border-0 text-[10px] font-bold px-2 py-0.5"
+                      : "bg-slate-100 text-slate-700 hover:bg-slate-200/80 border-0 text-[10px] font-bold px-2 py-0.5"
+                  }
+                >
                   100% Gratuito
                 </Badge>
                 {provider === "GROQ" && (
-                  <div className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-white">
+                  <div className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground">
                     <CheckIcon size={11} strokeWidth={3} />
                   </div>
                 )}
@@ -125,7 +141,11 @@ export function AiProviderSelector({
                 Respostas ultrarrápidas em menos de 1 segundo.
               </p>
             </div>
-            <div className="mt-3 flex items-center gap-1 text-[10px] font-medium text-blue-700">
+            <div
+              className={`mt-3 flex items-center gap-1 text-[10px] font-medium ${
+                provider === "GROQ" ? "text-primary" : "text-slate-500"
+              }`}
+            >
               <ZapIcon size={12} />
               Super Rápido
             </div>
@@ -137,17 +157,24 @@ export function AiProviderSelector({
             onClick={() => setProvider("OPENAI")}
             className={`relative flex flex-col justify-between rounded-xl border p-3.5 text-left transition-all ${
               provider === "OPENAI"
-                ? "border-slate-800 bg-slate-100/70 shadow-sm ring-1 ring-slate-800"
+                ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/40"
                 : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
             }`}
           >
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Badge variant="outline" className="border-slate-300 text-slate-700 text-[10px] font-medium px-2 py-0.5">
+                <Badge
+                  variant="outline"
+                  className={
+                    provider === "OPENAI"
+                      ? "border-primary/30 bg-primary/10 text-primary text-[10px] font-semibold px-2 py-0.5"
+                      : "border-slate-300 text-slate-700 text-[10px] font-medium px-2 py-0.5"
+                  }
+                >
                   Pago por uso
                 </Badge>
                 {provider === "OPENAI" && (
-                  <div className="flex h-4 w-4 items-center justify-center rounded-full bg-slate-900 text-white">
+                  <div className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground">
                     <CheckIcon size={11} strokeWidth={3} />
                   </div>
                 )}
@@ -159,7 +186,11 @@ export function AiProviderSelector({
                 Padrão de referência. Requer recarga mínima de US$ 5.
               </p>
             </div>
-            <div className="mt-3 flex items-center gap-1 text-[10px] font-medium text-slate-600">
+            <div
+              className={`mt-3 flex items-center gap-1 text-[10px] font-medium ${
+                provider === "OPENAI" ? "text-primary" : "text-slate-500"
+              }`}
+            >
               <KeyIcon size={12} />
               API Paga
             </div>
@@ -193,7 +224,7 @@ export function AiProviderSelector({
                   value={geminiKey}
                   onChange={(e) => setGeminiKey(e.target.value)}
                   placeholder="AIzaSy..."
-                  className="h-10 rounded-xl border-slate-200 bg-white font-mono text-xs pr-10 focus:border-primary"
+                  className="h-10 rounded-xl border-slate-200 bg-white font-mono text-xs pr-10 focus:border-primary focus-visible:ring-primary"
                 />
                 <button
                   type="button"
@@ -215,14 +246,14 @@ export function AiProviderSelector({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
-                  <KeyIcon size={13} className="text-blue-600" />
+                  <KeyIcon size={13} className="text-primary" />
                   Chave de API da Groq Cloud
                 </label>
                 <a
                   href="https://console.groq.com/keys"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-[11px] font-semibold text-blue-700 hover:text-blue-800 hover:underline"
+                  className="flex items-center gap-1 text-[11px] font-semibold text-primary hover:text-primary/80 hover:underline"
                 >
                   Obter chave grátis na Groq
                   <ExternalLinkIcon size={11} />
@@ -236,7 +267,7 @@ export function AiProviderSelector({
                   value={groqKey}
                   onChange={(e) => setGroqKey(e.target.value)}
                   placeholder="gsk_..."
-                  className="h-10 rounded-xl border-slate-200 bg-white font-mono text-xs pr-10 focus:border-blue-500"
+                  className="h-10 rounded-xl border-slate-200 bg-white font-mono text-xs pr-10 focus:border-primary focus-visible:ring-primary"
                 />
                 <button
                   type="button"
@@ -258,14 +289,14 @@ export function AiProviderSelector({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
-                  <KeyIcon size={13} className="text-slate-700" />
+                  <KeyIcon size={13} className="text-primary" />
                   OpenAI API Key (Chave Secreta)
                 </label>
                 <a
                   href="https://platform.openai.com/api-keys"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-[11px] font-semibold text-slate-700 hover:text-slate-900 hover:underline"
+                  className="flex items-center gap-1 text-[11px] font-semibold text-primary hover:text-primary/80 hover:underline"
                 >
                   Gerar chave na OpenAI Platform
                   <ExternalLinkIcon size={11} />
@@ -279,7 +310,7 @@ export function AiProviderSelector({
                   value={openAiKey}
                   onChange={(e) => setOpenAiKey(e.target.value)}
                   placeholder="sk-..."
-                  className="h-10 rounded-xl border-slate-200 bg-white font-mono text-xs pr-10 focus:border-slate-800"
+                  className="h-10 rounded-xl border-slate-200 bg-white font-mono text-xs pr-10 focus:border-primary focus-visible:ring-primary"
                 />
                 <button
                   type="button"

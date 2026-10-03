@@ -4,13 +4,22 @@ import type { VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const alertVariants = cva(
-  "relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground",
+  "relative w-full rounded-2xl border p-4 shadow-xs [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4",
   {
     variants: {
       variant: {
-        default: "bg-background text-foreground",
+        default:
+          "border-primary/25 bg-primary/5 text-slate-900 [&>svg]:text-primary dark:text-slate-100",
+        primary:
+          "border-primary/30 bg-primary/10 text-slate-900 [&>svg]:text-primary dark:text-slate-100",
+        info:
+          "border-primary/25 bg-primary/5 text-slate-900 [&>svg]:text-primary",
+        warning:
+          "border-amber-300 bg-amber-50 text-amber-900 [&>svg]:text-amber-600",
+        success:
+          "border-emerald-300 bg-emerald-50 text-emerald-900 [&>svg]:text-emerald-600",
         destructive:
-          "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive",
+          "border-destructive/50 bg-destructive/5 text-destructive dark:border-destructive [&>svg]:text-destructive",
       },
     },
     defaultVariants: {
@@ -46,4 +55,4 @@ const AlertDescription = React.forwardRef<
 ));
 AlertDescription.displayName = "AlertDescription";
 
-export { Alert, AlertTitle, AlertDescription };
+export { Alert, AlertTitle, AlertDescription, alertVariants };

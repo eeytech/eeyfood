@@ -221,14 +221,16 @@
 
 /* ==========================================================================
    Global Theme Sync: Reflects active color theme across all components,
-   buttons, badges, icons, cards and interactive states
+   buttons, badges, icons, cards, popups/dialogs, alerts and interactive states
    ========================================================================== */
 
 /* Buttons with legacy dark background automatically use theme primary */
 button.bg-slate-900:not([data-no-theme]),
 button.bg-slate-950:not([data-no-theme]),
+button.bg-slate-800:not([data-no-theme]),
 a.bg-slate-900:not([data-no-theme]),
 a.bg-slate-950:not([data-no-theme]),
+a.bg-slate-800:not([data-no-theme]),
 .btn-primary-theme {
   background-color: hsl(var(--primary)) !important;
   color: hsl(var(--primary-foreground)) !important;
@@ -237,27 +239,64 @@ a.bg-slate-950:not([data-no-theme]),
 
 button.bg-slate-900:hover:not([data-no-theme]),
 button.bg-slate-950:hover:not([data-no-theme]),
+button.bg-slate-800:hover:not([data-no-theme]),
 a.bg-slate-900:hover:not([data-no-theme]),
-a.bg-slate-950:hover:not([data-no-theme]) {
+a.bg-slate-950:hover:not([data-no-theme]),
+a.bg-slate-800:hover:not([data-no-theme]) {
   background-color: hsl(var(--primary) / 0.88) !important;
   color: hsl(var(--primary-foreground)) !important;
 }
 
 /* Page header icon boxes across all dashboard modules */
 div.h-11.w-11.rounded-2xl.bg-slate-900.text-white,
-div.h-16.w-16.rounded-2xl.bg-slate-900.text-white {
+div.h-16.w-16.rounded-2xl.bg-slate-900.text-white,
+div.h-12.w-12.rounded-2xl.bg-slate-900.text-white {
   background-color: hsl(var(--primary)) !important;
   color: hsl(var(--primary-foreground)) !important;
   box-shadow: 0 4px 16px 0 hsl(var(--primary) / 0.28) !important;
 }
 
-/* Card title icon badges across dashboard */
-div.h-8.w-8.rounded-xl.bg-slate-100.text-slate-700,
-div.h-9.w-9.rounded-xl.bg-slate-100.text-slate-700,
-div.h-10.w-10.rounded-xl.bg-slate-100.text-slate-700 {
+/* Card title icon badges and dialog header badges across dashboard and popups */
+div.h-8.w-8.rounded-xl.bg-slate-100,
+div.h-9.w-9.rounded-xl.bg-slate-100,
+div.h-10.w-10.rounded-xl.bg-slate-100,
+div.h-11.w-11.rounded-xl.bg-slate-100,
+div.h-12.w-12.rounded-xl.bg-slate-100,
+div.h-8.w-8.rounded-2xl.bg-slate-100,
+div.h-9.w-9.rounded-2xl.bg-slate-100,
+div.h-10.w-10.rounded-2xl.bg-slate-100,
+div.h-11.w-11.rounded-2xl.bg-slate-100,
+div.h-12.w-12.rounded-2xl.bg-slate-100,
+.rounded-xl.bg-slate-100.p-2,
+.rounded-xl.bg-slate-100.p-2\.5,
+.rounded-2xl.bg-slate-100.p-2,
+.rounded-2xl.bg-slate-100.p-2\.5,
+div[data-dialog-icon],
+[role="dialog"] div.bg-slate-100,
+[role="dialog"] span.bg-slate-100,
+[role="dialog"] .rounded-xl.bg-slate-100,
+[role="dialog"] .rounded-2xl.bg-slate-100 {
   background-color: hsl(var(--primary) / 0.12) !important;
   color: hsl(var(--primary)) !important;
   border: 1px solid hsl(var(--primary) / 0.22) !important;
+}
+
+div.h-8.w-8.rounded-xl.bg-slate-100 svg,
+div.h-9.w-9.rounded-xl.bg-slate-100 svg,
+div.h-10.w-10.rounded-xl.bg-slate-100 svg,
+div.h-11.w-11.rounded-xl.bg-slate-100 svg,
+div.h-12.w-12.rounded-xl.bg-slate-100 svg,
+div.h-10.w-10.rounded-2xl.bg-slate-100 svg,
+div.h-11.w-11.rounded-2xl.bg-slate-100 svg,
+div.h-12.w-12.rounded-2xl.bg-slate-100 svg,
+.rounded-xl.bg-slate-100.p-2 svg,
+.rounded-xl.bg-slate-100.p-2\.5 svg,
+.rounded-2xl.bg-slate-100.p-2 svg,
+.rounded-2xl.bg-slate-100.p-2\.5 svg,
+div[data-dialog-icon] svg,
+[role="dialog"] div.bg-slate-100 svg,
+[role="dialog"] span.bg-slate-100 svg {
+  color: hsl(var(--primary)) !important;
 }
 
 /* Active card selections with border/ring */
@@ -275,6 +314,128 @@ div.h-10.w-10.rounded-xl.bg-slate-100.text-slate-700 {
 input[type="radio"],
 input[type="checkbox"] {
   accent-color: hsl(var(--primary)) !important;
+}
+
+/* ==========================================================================
+   Dialogs / Popups / Modals Theme Integration
+   ========================================================================== */
+
+[role="dialog"] {
+  border-top: 4px solid hsl(var(--primary)) !important;
+}
+
+/* Close button in dialogs */
+[role="dialog"] button.absolute.right-4:hover {
+  background-color: hsl(var(--primary) / 0.1) !important;
+  color: hsl(var(--primary)) !important;
+}
+
+/* Submit and primary action buttons inside popups / dialogs */
+[role="dialog"] button[type="submit"]:not(.bg-destructive):not(.bg-red-600):not([variant="outline"]):not([variant="ghost"]):not([data-no-theme]),
+[role="dialog"] button.bg-slate-900:not([data-no-theme]),
+[role="dialog"] button.bg-slate-800:not([data-no-theme]),
+[role="dialog"] button.bg-slate-950:not([data-no-theme]) {
+  background-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+  box-shadow: 0 2px 10px 0 hsl(var(--primary) / 0.22) !important;
+}
+
+[role="dialog"] button[type="submit"]:hover:not(.bg-destructive):not(.bg-red-600):not([variant="outline"]):not([variant="ghost"]):not([data-no-theme]),
+[role="dialog"] button.bg-slate-900:hover:not([data-no-theme]),
+[role="dialog"] button.bg-slate-800:hover:not([data-no-theme]),
+[role="dialog"] button.bg-slate-950:hover:not([data-no-theme]) {
+  background-color: hsl(var(--primary) / 0.88) !important;
+  color: hsl(var(--primary-foreground)) !important;
+}
+
+/* Active option toggles and selection borders in popups */
+[role="dialog"] .border-slate-900,
+[role="dialog"] .border-slate-800 {
+  border-color: hsl(var(--primary)) !important;
+}
+
+[role="dialog"] .ring-slate-900,
+[role="dialog"] .ring-slate-800 {
+  --tw-ring-color: hsl(var(--primary)) !important;
+}
+
+/* Input focus in popups */
+[role="dialog"] input:focus-visible,
+[role="dialog"] textarea:focus-visible,
+[role="dialog"] select:focus-visible {
+  border-color: hsl(var(--primary)) !important;
+  outline-color: hsl(var(--primary)) !important;
+  --tw-ring-color: hsl(var(--primary) / 0.25) !important;
+}
+
+/* ==========================================================================
+   Alerts & Sonner Toast Notifications Theme Integration
+   ========================================================================== */
+
+/* System alert banners */
+[role="alert"]:not([class*="destructive"]):not([data-type="error"]):not([class*="bg-red-"]):not([class*="border-red-"]):not([class*="bg-amber-"]):not([class*="border-amber-"]) {
+  border-color: hsl(var(--primary) / 0.28) !important;
+  background-color: hsl(var(--primary) / 0.06) !important;
+}
+
+[role="alert"]:not([class*="destructive"]):not([data-type="error"]):not([class*="bg-red-"]):not([class*="border-red-"]):not([class*="bg-amber-"]):not([class*="border-amber-"]) svg {
+  color: hsl(var(--primary)) !important;
+}
+
+/* Sonner Toasts */
+[data-sonner-toaster] {
+  font-family: var(--font-manrope), sans-serif !important;
+}
+
+[data-sonner-toast] {
+  border-radius: 16px !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.05) !important;
+  border-left: 5px solid hsl(var(--primary)) !important;
+}
+
+/* Info toasts adopt theme primary accent */
+[data-sonner-toast][data-type="info"] {
+  background-color: hsl(var(--primary) / 0.08) !important;
+  border-color: hsl(var(--primary) / 0.28) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+[data-sonner-toast][data-type="info"] [data-icon] {
+  color: hsl(var(--primary)) !important;
+}
+
+/* Default / notification toasts */
+[data-sonner-toast][data-type="default"],
+[data-sonner-toast]:not([data-type]) {
+  background-color: #ffffff !important;
+  border-color: hsl(var(--primary) / 0.25) !important;
+}
+
+/* Toast action button uses theme primary */
+[data-sonner-toast] [data-button],
+[data-sonner-toast] button[data-button] {
+  background-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+  border-radius: 9999px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+}
+
+[data-sonner-toast] [data-button]:hover,
+[data-sonner-toast] button[data-button]:hover {
+  background-color: hsl(var(--primary) / 0.88) !important;
+  box-shadow: 0 2px 8px hsl(var(--primary) / 0.3) !important;
+}
+
+/* Toast close button */
+[data-sonner-toast] [data-close-button]:hover {
+  color: hsl(var(--primary)) !important;
+  background-color: hsl(var(--primary) / 0.1) !important;
+}
+
+/* Toast progress timer */
+[data-sonner-toast] [data-progress-bar] {
+  background-color: hsl(var(--primary)) !important;
 }
 
 

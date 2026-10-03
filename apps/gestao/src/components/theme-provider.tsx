@@ -34,14 +34,20 @@ export function ThemeProvider({
     if (typeof document === "undefined") return;
 
     const root = document.documentElement;
+    const body = document.body;
 
     // Remover classes de tema anteriores
     SYSTEM_THEMES.forEach((t) => {
       root.classList.remove(`theme-${t.id}`);
+      body?.classList.remove(`theme-${t.id}`);
     });
 
     root.classList.add(`theme-${newTheme}`);
     root.setAttribute("data-theme", newTheme);
+    if (body) {
+      body.classList.add(`theme-${newTheme}`);
+      body.setAttribute("data-theme", newTheme);
+    }
   };
 
   useEffect(() => {
