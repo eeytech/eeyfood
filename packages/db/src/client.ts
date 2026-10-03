@@ -33,7 +33,7 @@ function getOrCreateDb(): { db: Database; pool: Pool } {
 
   pool
     .query(
-      'ALTER TABLE "Restaurant" ADD COLUMN IF NOT EXISTS "acceptPix" boolean DEFAULT true NOT NULL; ALTER TABLE "Restaurant" ADD COLUMN IF NOT EXISTS "pixKey" text; ALTER TYPE "MarketplaceType" ADD VALUE IF NOT EXISTS \'KEETA\';'
+      'ALTER TABLE "Restaurant" ADD COLUMN IF NOT EXISTS "acceptPix" boolean DEFAULT true NOT NULL; ALTER TABLE "Restaurant" ADD COLUMN IF NOT EXISTS "pixKey" text; ALTER TABLE "Restaurant" ADD COLUMN IF NOT EXISTS "pixMode" text DEFAULT \'QRCODE\' NOT NULL; ALTER TABLE "Restaurant" ADD COLUMN IF NOT EXISTS "onlinePaymentGateway" text DEFAULT \'MERCADO_PAGO\' NOT NULL; ALTER TABLE "Restaurant" ADD COLUMN IF NOT EXISTS "infinitePayHandle" text; ALTER TYPE "PaymentMethod" ADD VALUE IF NOT EXISTS \'INFINITEPAY\'; ALTER TYPE "MarketplaceType" ADD VALUE IF NOT EXISTS \'KEETA\';'
     )
     .catch(() => {});
 

@@ -157,6 +157,7 @@ interface PdvFrenteCaixaProps {
   scaleProtocol: ScaleProtocol | null;
   scaleBaudRate: number;
   drawerPulseHex: string | null;
+  initialPixKey?: string | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -252,6 +253,7 @@ const PdvFrenteCaixa = ({
   scaleProtocol,
   scaleBaudRate,
   drawerPulseHex,
+  initialPixKey,
 }: PdvFrenteCaixaProps) => {
   // ── Shift state ────────────────────────────────────────────────────────────
   const [activeShift, setActiveShift] = useState<CashRegisterShift | null>(initialShift);
@@ -299,10 +301,19 @@ const PdvFrenteCaixa = ({
 
   // ── Pix Modal ──────────────────────────────────────────────────────────────
   const [isPixModalOpen, setIsPixModalOpen] = useState(false);
-  const [pixKey, setPixKey] = useState("");
+  const [pixKey, setPixKey] = useState(initialPixKey || "");
   const [isEditingPixKey, setIsEditingPixKey] = useState(false);
   const [pixTempKey, setPixTempKey] = useState("");
   const [pixCopied, setPixCopied] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("eeyfood_pdv_chave_pix");
+    if (saved) {
+      setPixKey(saved);
+    } else if (initialPixKey) {
+      setPixKey(initialPixKey);
+    }
+  }, [initialPixKey]);
 
   // ── Split payment ──────────────────────────────────────────────────────────
   const [paymentSplits, setPaymentSplits] = useState<PaymentSplitItem[]>([]);

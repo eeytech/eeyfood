@@ -814,13 +814,31 @@ export const updateRestaurantFeaturesAction = async (
 
   const acceptPix = getBooleanValue(formData.get("acceptPix"));
   const pixKey = getStringValue(formData.get("pixKey")) || null;
+  const pixModeRaw = getStringValue(formData.get("pixMode"));
+  const pixMode = pixModeRaw === "MANUAL" ? "MANUAL" : "QRCODE";
+
+  const onlinePaymentGatewayRaw = getStringValue(formData.get("onlinePaymentGateway"));
+  const onlinePaymentGateway =
+    onlinePaymentGatewayRaw === "INFINITEPAY"
+      ? "INFINITEPAY"
+      : onlinePaymentGatewayRaw === "DISABLED"
+        ? "DISABLED"
+        : "MERCADO_PAGO";
+
+  const infinitePayHandleRaw = getStringValue(formData.get("infinitePayHandle"));
+  const infinitePayHandle = infinitePayHandleRaw
+    ? infinitePayHandleRaw.replace(/^[$@]/, "").trim()
+    : null;
 
   await db
     .update(restaurantsTable)
     .set({
-      acceptMercadoPago: getBooleanValue(formData.get("acceptMercadoPago")),
+      acceptMercadoPago: onlinePaymentGateway !== "DISABLED",
+      onlinePaymentGateway,
+      infinitePayHandle,
       acceptPix,
       pixKey,
+      pixMode,
       isCouponsEnabled,
       isCashbackEnabled,
       showOptionImages: getBooleanValue(formData.get("showOptionImages")),

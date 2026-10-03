@@ -30,6 +30,7 @@ const PdvPage = async ({ params }: PdvPageProps) => {
     <PdvFrenteCaixaClient
       slug={slug}
       restaurantName={cardapio.restaurant.name}
+      initialPixKey={cardapio.restaurant.pixKey ?? ""}
       isCashbackEnabled={cardapio.restaurant.isCashbackEnabled}
       isCouponsEnabled={cardapio.restaurant.isCouponsEnabled}
       pizzaPricingRule={pizzaPricingRule}

@@ -116,6 +116,7 @@ const main = async () => {
         acceptMercadoPago: true,
         acceptPix: true,
         pixKey: "contato@eeyfood.com",
+        pixMode: "QRCODE",
         isCouponsEnabled: true,
         isCashbackEnabled: true,
         isDeliveryEnabled: true,

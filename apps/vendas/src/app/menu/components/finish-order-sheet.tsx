@@ -1,11 +1,14 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckCircle2Icon, CopyIcon, Loader2Icon, QrCodeIcon } from "lucide-react";
+import { CheckCircle2Icon, CheckIcon, CopyIcon, Loader2Icon, QrCodeIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useContext, useEffect, useRef, useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+
+import { gerarPayloadPix } from "@/lib/pix";
 
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
@@ -30,7 +33,7 @@ import type {
 
 import { trackInitiateCheckout, trackPurchase } from "@/hooks/use-pixel-events";
 import { createOrder } from "../actions/create-order";
-import { criarPreferenciaMercadoPago } from "../actions/criar-preferencia-mercado-pago";
+import { criarCheckoutOnline } from "../actions/criar-checkout-online";
 import { getAvailableSchedulingSlots } from "../actions/get-scheduling-slots";
 import { getLoyaltyUpsell } from "../actions/get-loyalty-upsell";
 import type { LoyaltyUpsell } from "../actions/get-loyalty-upsell";
@@ -58,6 +61,7 @@ interface FinishOrderSheetProps {
 }
 
 interface PedidoOfflineConcluido {
+  orderId?: number;
   phone: string;
   total: number;
   scheduledFor?: string;
@@ -115,8 +119,12 @@ export const FinishOrderSheet = ({
         ? "DELIVERY"
         : "TAKEAWAY");
 
-  const allowsMercadoPago =
-    restaurant.acceptMercadoPago && consumptionMethod !== "DINE_IN";
+  const onlinePaymentGateway =
+    (restaurant as any).onlinePaymentGateway ?? "MERCADO_PAGO";
+  const allowsOnlinePayment =
+    restaurant.acceptMercadoPago &&
+    onlinePaymentGateway !== "DISABLED" &&
+    consumptionMethod !== "DINE_IN";
 
   const queryTableId = searchParams.get("tableId") || undefined;
   const abandonedCartSessionIdRef = useRef(createAbandonedCartSessionId());
@@ -130,8 +138,10 @@ export const FinishOrderSheet = ({
       couponCode: "",
       fulfillmentTiming: "ASAP",
       scheduledFor: "",
-      paymentMethod: allowsMercadoPago
-        ? "MERCADO_PAGO"
+      paymentMethod: allowsOnlinePayment
+        ? onlinePaymentGateway === "INFINITEPAY"
+          ? "INFINITEPAY"
+          : "MERCADO_PAGO"
         : (restaurant.acceptPix ?? true)
           ? "PIX"
           : "DINHEIRO",
@@ -304,12 +314,19 @@ export const FinishOrderSheet = ({
     }
   }, [watchedCouponCode]);
 
-  // Se Mercado Pago não for permitido (ou for consumo no local), garante método alternativo
+  // Se pagamento online não for permitido (ou for consumo no local), garante método alternativo
   useEffect(() => {
-    if (!allowsMercadoPago && form.getValues("paymentMethod") === "MERCADO_PAGO") {
-      form.setValue("paymentMethod", (restaurant.acceptPix ?? true) ? "PIX" : "DINHEIRO");
+    const currentMethod = form.getValues("paymentMethod");
+    if (
+      !allowsOnlinePayment &&
+      (currentMethod === "MERCADO_PAGO" || currentMethod === "INFINITEPAY")
+    ) {
+      form.setValue(
+        "paymentMethod",
+        (restaurant.acceptPix ?? true) ? "PIX" : "DINHEIRO",
+      );
     }
-  }, [allowsMercadoPago, form]);
+  }, [allowsOnlinePayment, form, restaurant.acceptPix]);
 
   // Keep ref to latest validate fn so the debounce always calls fresh closure
   // silent=true: auto-trigger failures don't show invasive toasts
@@ -405,8 +422,10 @@ export const FinishOrderSheet = ({
         couponCode: "",
         fulfillmentTiming: "ASAP",
         scheduledFor: "",
-        paymentMethod: restaurant.acceptMercadoPago
-          ? "MERCADO_PAGO"
+        paymentMethod: allowsOnlinePayment
+          ? onlinePaymentGateway === "INFINITEPAY"
+            ? "INFINITEPAY"
+            : "MERCADO_PAGO"
           : (restaurant.acceptPix ?? true)
             ? "PIX"
             : "DINHEIRO",
@@ -591,25 +610,31 @@ export const FinishOrderSheet = ({
         return;
       }
 
-      if (data.paymentMethod === "MERCADO_PAGO") {
+      if (
+        data.paymentMethod === "MERCADO_PAGO" ||
+        data.paymentMethod === "INFINITEPAY"
+      ) {
         const orderSummary = products
           .map((product) => `${String(product.quantity)}x ${product.name}`)
           .join(", ")
           .slice(0, 240);
 
-        const result = await criarPreferenciaMercadoPago({
+        const result = await criarCheckoutOnline({
+          gateway: data.paymentMethod,
           orderId: Number(order.id),
           orderTotal: Number(order.total),
           orderSummary,
           slug,
           consumptionMethod,
           phone: data.phone,
+          infinitePayHandle: (restaurant as any).infinitePayHandle,
         });
 
         if (result.isFree || !result.initPoint) {
           abandonedCartSessionIdRef.current = createAbandonedCartSessionId();
           clearCart();
           setPedidoOfflineConcluido({
+            orderId: Number(order.id),
             phone: data.phone,
             total: 0,
             scheduledFor: order.scheduledFor
@@ -630,6 +655,7 @@ export const FinishOrderSheet = ({
       abandonedCartSessionIdRef.current = createAbandonedCartSessionId();
       clearCart();
       setPedidoOfflineConcluido({
+        orderId: Number(order.id),
         phone: data.phone,
         total: Number(order.total),
         scheduledFor: order.scheduledFor
@@ -661,6 +687,8 @@ export const FinishOrderSheet = ({
           <OrderSuccessView
             pedidoOfflineConcluido={pedidoOfflineConcluido}
             pixKey={restaurant.pixKey}
+            pixMode={(restaurant as any).pixMode ?? "QRCODE"}
+            restaurantName={restaurant.name}
             onViewOrders={handleViewOrders}
             onClose={() => handleSheetOpenChange(false)}
           />
@@ -730,9 +758,12 @@ export const FinishOrderSheet = ({
                         form={form}
                         needsChangeField={needsChangeField}
                         isActionDisabled={isActionDisabled}
-                        acceptMercadoPago={allowsMercadoPago}
+                        acceptMercadoPago={allowsOnlinePayment}
+                        onlinePaymentGateway={onlinePaymentGateway}
                         acceptPix={restaurant.acceptPix ?? true}
                         pixKey={restaurant.pixKey}
+                        pixMode={(restaurant as any).pixMode ?? "QRCODE"}
+                        totalAmount={checkoutSummary.total}
                         isOrderFree={checkoutSummary.total <= 0}
                       />
 
@@ -765,8 +796,10 @@ export const FinishOrderSheet = ({
                   {isLoading ? (
                     <Loader2Icon className="animate-spin mr-2 h-4 w-4" />
                   ) : null}
-                  {paymentMethod === "MERCADO_PAGO" && checkoutSummary.total > 0
-                    ? "Ir para Pagamento"
+                  {(paymentMethod === "MERCADO_PAGO" ||
+                    paymentMethod === "INFINITEPAY") &&
+                  checkoutSummary.total > 0
+                    ? "Ir para Pagamento Online"
                     : "Confirmar Pedido"}
                 </Button>
                 <Button
@@ -789,6 +822,8 @@ export const FinishOrderSheet = ({
 interface OrderSuccessViewProps {
   pedidoOfflineConcluido: PedidoOfflineConcluido;
   pixKey?: string | null;
+  pixMode?: "QRCODE" | "MANUAL" | string;
+  restaurantName?: string;
   onViewOrders: () => void;
   onClose: () => void;
 }
@@ -796,10 +831,27 @@ interface OrderSuccessViewProps {
 const OrderSuccessView = ({
   pedidoOfflineConcluido,
   pixKey,
+  pixMode = "QRCODE",
+  restaurantName,
   onViewOrders,
   onClose,
 }: OrderSuccessViewProps) => {
   const [copiedKey, setCopiedKey] = useState(false);
+  const [copiedPayload, setCopiedPayload] = useState(false);
+
+  const pixPayload = useMemo(() => {
+    if (!pixKey || pedidoOfflineConcluido.total <= 0) return "";
+    return gerarPayloadPix({
+      chavePix: pixKey,
+      nomeRecebedor: restaurantName || "EEYFOOD",
+      cidadeRecebedor: "BRASIL",
+      valor: pedidoOfflineConcluido.total,
+      identificador: pedidoOfflineConcluido.orderId
+        ? String(pedidoOfflineConcluido.orderId)
+        : "***",
+      descricao: `Pedido #${pedidoOfflineConcluido.orderId ?? ""} ${restaurantName ?? ""}`.trim(),
+    });
+  }, [pixKey, pedidoOfflineConcluido.total, pedidoOfflineConcluido.orderId, restaurantName]);
 
   const handleCopyPixKey = () => {
     if (!pixKey) return;
@@ -807,6 +859,14 @@ const OrderSuccessView = ({
     setCopiedKey(true);
     toast.success("Chave Pix copiada!");
     setTimeout(() => setCopiedKey(false), 3000);
+  };
+
+  const handleCopyPixPayload = () => {
+    if (!pixPayload) return;
+    navigator.clipboard.writeText(pixPayload);
+    setCopiedPayload(true);
+    toast.success("Código Pix Copia e Cola copiado! Cole no app do seu banco.");
+    setTimeout(() => setCopiedPayload(false), 3000);
   };
 
   return (
@@ -835,15 +895,96 @@ const OrderSuccessView = ({
             </div>
 
             {pedidoOfflineConcluido.paymentMethod === "PIX" && (
-              <div className="rounded-2xl border border-teal-200 bg-teal-50/80 p-3.5 space-y-2.5">
-                <div className="flex items-center gap-2 text-teal-900 font-bold text-xs">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-teal-600 text-white">
-                    <QrCodeIcon size={14} />
+              <div className="rounded-2xl border border-teal-200 bg-teal-50/80 p-3.5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-teal-900 font-bold text-xs">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-teal-600 text-white">
+                      <QrCodeIcon size={14} />
+                    </div>
+                    <span>
+                      {pixMode === "MANUAL" ? "Chave Pix para Pagamento" : "Pagamento via Pix (QR Code)"}
+                    </span>
                   </div>
-                  <span>Chave Pix para Pagamento</span>
+                  {pixMode === "QRCODE" && (
+                    <span className="rounded-full bg-teal-600/10 px-2 py-0.5 text-[10px] font-bold text-teal-800">
+                      Valor Exato
+                    </span>
+                  )}
                 </div>
 
-                {pixKey ? (
+                {pixMode === "QRCODE" ? (
+                  pixKey ? (
+                    <div className="space-y-3">
+                      {/* Valor do Pix */}
+                      <div className="rounded-xl bg-white border border-teal-100 p-2.5 text-center shadow-2xs">
+                        <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">
+                          Total a Pagar
+                        </span>
+                        <span className="text-xl font-black text-teal-700 font-display">
+                          {formatCurrency(pedidoOfflineConcluido.total)}
+                        </span>
+                      </div>
+
+                      {/* Imagem do QR Code */}
+                      {pixPayload && (
+                        <div className="flex flex-col items-center justify-center p-3.5 bg-white rounded-2xl border border-teal-200/80 shadow-2xs">
+                          <QRCodeSVG
+                            value={pixPayload}
+                            size={180}
+                            level="M"
+                            includeMargin={true}
+                            className="rounded-xl"
+                          />
+                          <span className="text-[11px] font-medium text-slate-500 mt-2 text-center">
+                            Aponte a câmera do aplicativo do seu banco para o QR Code acima
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Pix Copia e Cola */}
+                      {pixPayload && (
+                        <div className="space-y-1.5">
+                          <span className="text-[11px] font-bold text-teal-950 block">
+                            Ou use o Pix Copia e Cola:
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              readOnly
+                              value={pixPayload}
+                              className="flex-1 h-9 px-2.5 text-[11px] font-mono bg-white border border-teal-200 rounded-xl text-slate-700 truncate select-all focus:outline-hidden"
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="h-9 gap-1.5 text-xs bg-teal-600 hover:bg-teal-700 text-white shrink-0 shadow-xs px-3"
+                              onClick={handleCopyPixPayload}
+                            >
+                              {copiedPayload ? (
+                                <>
+                                  <CheckIcon size={14} />
+                                  <span>Copiado!</span>
+                                </>
+                              ) : (
+                                <>
+                                  <CopyIcon size={14} />
+                                  <span>Copiar</span>
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      <p className="text-[11px] text-teal-800 leading-relaxed text-center pt-0.5">
+                        O valor já está fixado no código para evitar divergências. Após transferir, o restaurante confirmará seu pedido!
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-teal-800">
+                      O pagamento será realizado via Pix diretamente ao entregador na entrega ou no balcão da loja.
+                    </p>
+                  )
+                ) : pixKey ? (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2 rounded-xl bg-white border border-teal-200/80 p-2.5 shadow-2xs">
                       <div className="min-w-0 flex-1">
@@ -858,8 +999,17 @@ const OrderSuccessView = ({
                         className="h-8 gap-1.5 text-xs bg-teal-600 hover:bg-teal-700 text-white shadow-xs shrink-0"
                         onClick={handleCopyPixKey}
                       >
-                        <CopyIcon size={13} />
-                        {copiedKey ? "Copiado!" : "Copiar Chave"}
+                        {copiedKey ? (
+                          <>
+                            <CheckIcon size={13} />
+                            <span>Copiado!</span>
+                          </>
+                        ) : (
+                          <>
+                            <CopyIcon size={13} />
+                            <span>Copiar Chave</span>
+                          </>
+                        )}
                       </Button>
                     </div>
                     <p className="text-[11px] text-teal-800 leading-tight">

@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckIcon, CopyIcon, CreditCardIcon, HandCoinsIcon, QrCodeIcon } from "lucide-react";
+import { CheckIcon, CopyIcon, CreditCardIcon, HandCoinsIcon, QrCodeIcon, ZapIcon } from "lucide-react";
 import { useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { toast } from "sonner";
@@ -55,9 +55,12 @@ interface PaymentSectionProps {
   needsChangeField: boolean;
   isActionDisabled: boolean;
   acceptMercadoPago: boolean;
+  onlinePaymentGateway?: "MERCADO_PAGO" | "INFINITEPAY" | "DISABLED" | string;
   acceptPix?: boolean;
   pixKey?: string | null;
+  pixMode?: "QRCODE" | "MANUAL" | string;
   isOrderFree?: boolean;
+  totalAmount?: number;
 }
 
 export const PaymentSection = ({
@@ -65,17 +68,52 @@ export const PaymentSection = ({
   needsChangeField,
   isActionDisabled,
   acceptMercadoPago,
+  onlinePaymentGateway = "MERCADO_PAGO",
   acceptPix = true,
   pixKey,
+  pixMode = "QRCODE",
   isOrderFree,
+  totalAmount,
 }: PaymentSectionProps) => {
   const [copiedKey, setCopiedKey] = useState(false);
 
-  const visibleOptions = paymentOptions.filter((option) => {
-    if (option.value === "MERCADO_PAGO" && !acceptMercadoPago) return false;
-    if (option.value === "PIX" && !acceptPix) return false;
-    return true;
-  });
+  const isOnlinePaymentAllowed =
+    acceptMercadoPago && onlinePaymentGateway !== "DISABLED";
+
+  const visibleOptions = paymentOptions
+    .filter((option) => {
+      if (option.value === "MERCADO_PAGO" && !isOnlinePaymentAllowed) return false;
+      if (option.value === "PIX" && !acceptPix) return false;
+      return true;
+    })
+    .map((option) => {
+      if (option.value === "MERCADO_PAGO") {
+        if (onlinePaymentGateway === "INFINITEPAY") {
+          return {
+            value: "INFINITEPAY" as PaymentMethod,
+            titulo: "InfinitePay (Online)",
+            descricao: "Cartão de crédito ou Pix com menores taxas.",
+            icon: <ZapIcon size={20} className="text-emerald-600 fill-emerald-600" />,
+          };
+        }
+        return {
+          ...option,
+          titulo: "Mercado Pago (Online)",
+          descricao: "Pagamento online seguro via Mercado Pago.",
+        };
+      }
+      if (option.value === "PIX") {
+        return {
+          ...option,
+          titulo: pixMode === "MANUAL" ? "Pix (Chave)" : "Pix (QR Code)",
+          descricao:
+            pixMode === "MANUAL"
+              ? "Transferência direta via chave Pix."
+              : "QR Code e Copia e Cola com valor exato.",
+        };
+      }
+      return option;
+    });
 
   const handleCopyPixKey = () => {
     if (!pixKey) return;
@@ -184,10 +222,45 @@ export const PaymentSection = ({
         <div className="rounded-2xl border border-teal-200 bg-teal-50/70 p-3.5 space-y-2.5 animate-in fade-in slide-in-from-top-2">
           <div className="flex items-center gap-2 text-teal-900 font-bold text-xs">
             <QrCodeIcon size={16} className="text-teal-700" />
-            <span>Pagamento via Chave Pix</span>
+            <span>
+              {pixMode === "MANUAL" ? "Pagamento via Chave Pix (Manual)" : "Pagamento via Pix (QR Code Dinâmico)"}
+            </span>
           </div>
 
-          {pixKey ? (
+          {pixMode === "QRCODE" ? (
+            <div className="space-y-2">
+              <p className="text-xs text-teal-800 leading-relaxed">
+                Ao clicar em confirmar o pedido, o <strong>QR Code</strong> e o código <strong>Pix Copia e Cola</strong> serão gerados na tela com o valor exato para você escanear ou pagar direto no app do seu banco.
+              </p>
+              {pixKey && (
+                <div className="flex items-center justify-between gap-2 rounded-xl bg-white border border-teal-200/80 p-2.5 shadow-2xs">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] uppercase font-semibold text-slate-400">Chave Pix do Restaurante</p>
+                    <p className="text-xs font-mono font-bold text-slate-900 truncate select-all">
+                      {pixKey}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCopyPixKey}
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-teal-700 active:scale-95 transition"
+                  >
+                    {copiedKey ? (
+                      <>
+                        <CheckIcon size={13} />
+                        <span>Copiado!</span>
+                      </>
+                    ) : (
+                      <>
+                        <CopyIcon size={13} />
+                        <span>Copiar Chave</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : pixKey ? (
             <div className="space-y-2">
               <p className="text-xs text-teal-800 leading-relaxed">
                 Você pode copiar a chave Pix do restaurante agora ou após a confirmação do pedido:

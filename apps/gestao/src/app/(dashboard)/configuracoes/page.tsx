@@ -228,8 +228,11 @@ const ConfiguracoesPage = async ({
             slug={slug}
             initialValues={{
               acceptMercadoPago: restaurant.acceptMercadoPago,
+              onlinePaymentGateway: ((restaurant as any).onlinePaymentGateway as "MERCADO_PAGO" | "INFINITEPAY" | "DISABLED") ?? (restaurant.acceptMercadoPago ? "MERCADO_PAGO" : "DISABLED"),
+              infinitePayHandle: (restaurant as any).infinitePayHandle ?? "",
               acceptPix: restaurant.acceptPix ?? true,
               pixKey: restaurant.pixKey ?? "",
+              pixMode: (restaurant as any).pixMode ?? "QRCODE",
               isCouponsEnabled: restaurant.isCouponsEnabled,
               isCashbackEnabled: restaurant.isCashbackEnabled,
               showOptionImages: restaurant.showOptionImages,

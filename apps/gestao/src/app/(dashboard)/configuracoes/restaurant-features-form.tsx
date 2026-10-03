@@ -1,10 +1,13 @@
 "use client";
 
 import {
+  CreditCardIcon,
+  KeyRoundIcon,
   Loader2Icon,
   QrCodeIcon,
   SaveIcon,
   ToggleRightIcon,
+  ZapIcon,
 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -26,8 +29,11 @@ interface RestaurantFeaturesFormProps {
   slug: string;
   initialValues: {
     acceptMercadoPago: boolean;
+    onlinePaymentGateway?: "MERCADO_PAGO" | "INFINITEPAY" | "DISABLED";
+    infinitePayHandle?: string | null;
     acceptPix?: boolean;
     pixKey?: string | null;
+    pixMode?: "QRCODE" | "MANUAL";
     isCouponsEnabled: boolean;
     isCashbackEnabled: boolean;
     showOptionImages: boolean;
@@ -42,13 +48,22 @@ export const RestaurantFeaturesForm = ({
   slug,
   initialValues,
 }: RestaurantFeaturesFormProps) => {
-  const [acceptMercadoPago, setAcceptMercadoPago] = useState(
-    initialValues.acceptMercadoPago,
+  const [onlinePaymentGateway, setOnlinePaymentGateway] = useState<
+    "MERCADO_PAGO" | "INFINITEPAY" | "DISABLED"
+  >(
+    initialValues.onlinePaymentGateway ??
+      (initialValues.acceptMercadoPago ? "MERCADO_PAGO" : "DISABLED"),
+  );
+  const [infinitePayHandle, setInfinitePayHandle] = useState(
+    initialValues.infinitePayHandle ?? "",
   );
   const [acceptPix, setAcceptPix] = useState(
     initialValues.acceptPix ?? true,
   );
   const [pixKey, setPixKey] = useState(initialValues.pixKey ?? "");
+  const [pixMode, setPixMode] = useState<"QRCODE" | "MANUAL">(
+    initialValues.pixMode ?? "QRCODE",
+  );
   const [showOptionImages, setShowOptionImages] = useState(
     initialValues.showOptionImages,
   );
@@ -89,8 +104,17 @@ export const RestaurantFeaturesForm = ({
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData();
-    if (acceptMercadoPago) formData.append("acceptMercadoPago", "on");
-    if (acceptPix) formData.append("acceptPix", "on");
+    formData.append("onlinePaymentGateway", onlinePaymentGateway);
+    if (onlinePaymentGateway !== "DISABLED") {
+      formData.append("acceptMercadoPago", "on");
+    }
+    if (onlinePaymentGateway === "INFINITEPAY" && infinitePayHandle.trim()) {
+      formData.append("infinitePayHandle", infinitePayHandle.trim());
+    }
+    if (acceptPix) {
+      formData.append("acceptPix", "on");
+      formData.append("pixMode", pixMode);
+    }
     if (pixKey.trim()) formData.append("pixKey", pixKey.trim());
     if (showOptionImages) formData.append("showOptionImages", "on");
     if (isDeliveryEnabled) formData.append("isDeliveryEnabled", "on");
@@ -282,25 +306,137 @@ export const RestaurantFeaturesForm = ({
               </p>
             </div>
             <div className="space-y-2.5">
-              {/* Mercado Pago */}
-              <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-200/80 bg-white p-3.5 shadow-2xs transition hover:border-slate-300">
-                <div className="space-y-0.5">
-                  <Label
-                    htmlFor="acceptMercadoPago"
-                    className="cursor-pointer font-semibold text-slate-950 text-sm"
-                  >
-                    Mercado Pago (Online)
-                  </Label>
-                  <p className="text-xs text-slate-500">
-                    Permite que clientes paguem online via Mercado Pago no checkout.
-                  </p>
+              {/* Pagamento Online (Multi-Gateway) */}
+              <div
+                className={`rounded-xl border transition-all p-3.5 shadow-2xs space-y-3 ${
+                  onlinePaymentGateway !== "DISABLED"
+                    ? "border-blue-200/80 bg-blue-50/[0.25]"
+                    : "border-slate-200/80 bg-white hover:border-slate-300"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <Label className="font-semibold text-slate-950 text-sm flex items-center gap-1.5">
+                        <CreditCardIcon size={16} className="text-blue-600" />
+                        Pagamento Online no Cardápio
+                      </Label>
+                      {onlinePaymentGateway !== "DISABLED" && (
+                        <span className="rounded-full border border-blue-200 bg-blue-100/80 px-2 py-0.5 text-[10px] font-semibold text-blue-800">
+                          {onlinePaymentGateway === "INFINITEPAY" ? "InfinitePay Ativa" : "Mercado Pago Ativo"}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      Permite que seus clientes paguem antecipadamente via cartão de crédito ou Pix diretamente pelo cardápio.
+                    </p>
+                  </div>
                 </div>
-                <Switch
-                  id="acceptMercadoPago"
-                  checked={acceptMercadoPago}
-                  onCheckedChange={setAcceptMercadoPago}
-                  disabled={isPending}
-                />
+
+                <div className="pt-2 border-t border-slate-200/60 space-y-2.5">
+                  <Label className="text-xs font-semibold text-slate-700">
+                    Selecione o Gateway de Pagamento Online:
+                  </Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setOnlinePaymentGateway("MERCADO_PAGO")}
+                      disabled={isPending}
+                      className={`flex flex-col gap-1 rounded-xl border p-3 text-left transition ${
+                        onlinePaymentGateway === "MERCADO_PAGO"
+                          ? "border-blue-500 bg-blue-50/80 ring-1 ring-blue-500/20"
+                          : "border-slate-200 bg-white hover:bg-slate-50"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-900">Mercado Pago</span>
+                        <span className="rounded-full bg-blue-100 px-1.5 py-0.2 text-[9px] font-semibold text-blue-700">
+                          Padrão
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 leading-tight">
+                        Checkout Pro com cartão e Pix via conta central.
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setOnlinePaymentGateway("INFINITEPAY")}
+                      disabled={isPending}
+                      className={`flex flex-col gap-1 rounded-xl border p-3 text-left transition ${
+                        onlinePaymentGateway === "INFINITEPAY"
+                          ? "border-emerald-500 bg-emerald-50/80 ring-1 ring-emerald-500/20"
+                          : "border-slate-200 bg-white hover:bg-slate-50"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-900 flex items-center gap-1">
+                          <ZapIcon size={13} className="text-emerald-600 fill-emerald-600" />
+                          InfinitePay
+                        </span>
+                        <span className="rounded-full bg-emerald-100 px-1.5 py-0.2 text-[9px] font-semibold text-emerald-800">
+                          Menores Taxas
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 leading-tight">
+                        Receba direto na sua conta InfinitePay com as menores taxas.
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setOnlinePaymentGateway("DISABLED")}
+                      disabled={isPending}
+                      className={`flex flex-col gap-1 rounded-xl border p-3 text-left transition ${
+                        onlinePaymentGateway === "DISABLED"
+                          ? "border-slate-400 bg-slate-100/80 ring-1 ring-slate-400/20"
+                          : "border-slate-200 bg-white hover:bg-slate-50"
+                      }`}
+                    >
+                      <span className="text-xs font-bold text-slate-800">Desativado</span>
+                      <p className="text-[11px] text-slate-500 leading-tight">
+                        Apenas pagamentos presenciais ou Pix direto.
+                      </p>
+                    </button>
+                  </div>
+
+                  {onlinePaymentGateway === "INFINITEPAY" && (
+                    <div className="pt-2 border-t border-emerald-200/60 space-y-1.5 animate-in fade-in slide-in-from-top-1">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <div className="sm:w-1/3">
+                          <Label
+                            htmlFor="infinitePayHandle"
+                            className="text-xs font-semibold text-slate-700"
+                          >
+                            Sua InfiniteTag ($):
+                          </Label>
+                          <p className="text-[11px] text-slate-400 leading-tight">
+                            Nome de usuário no app InfinitePay (sem o $)
+                          </p>
+                        </div>
+                        <div className="sm:w-2/3">
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-700">
+                              $
+                            </span>
+                            <Input
+                              id="infinitePayHandle"
+                              name="infinitePayHandle"
+                              value={infinitePayHandle}
+                              onChange={(e) => setInfinitePayHandle(e.target.value.replace(/^[$@]/, ""))}
+                              placeholder="ex: suapizzaria"
+                              className="h-9 text-xs bg-white pl-7 font-mono"
+                              disabled={isPending}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-emerald-700">
+                        As vendas pagas online serão creditadas instantaneamente na conta <strong>${infinitePayHandle.trim() || "suatag"}</strong>.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Pagamento via Pix */}
@@ -318,7 +454,6 @@ export const RestaurantFeaturesForm = ({
                         htmlFor="acceptPix"
                         className="cursor-pointer font-semibold text-slate-950 text-sm flex items-center gap-1.5"
                       >
-                        <QrCodeIcon size={16} className="text-primary" />
                         Pagamento via Pix
                       </Label>
                       <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
@@ -338,7 +473,7 @@ export const RestaurantFeaturesForm = ({
                 </div>
 
                 {acceptPix && (
-                  <div className="pt-2.5 border-t border-primary/10 space-y-1.5 animate-in fade-in slide-in-from-top-1">
+                  <div className="pt-3 border-t border-primary/10 space-y-3.5 animate-in fade-in slide-in-from-top-1">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                       <div className="sm:w-1/3">
                         <Label
@@ -348,7 +483,7 @@ export const RestaurantFeaturesForm = ({
                           Chave Pix do Restaurante:
                         </Label>
                         <p className="text-[11px] text-slate-400 leading-tight">
-                          Exibida no checkout para o cliente transferir
+                          Chave cadastrada no seu banco (CNPJ, celular, e-mail ou aleatória)
                         </p>
                       </div>
                       <div className="sm:w-2/3">
@@ -361,6 +496,76 @@ export const RestaurantFeaturesForm = ({
                           className="h-9 text-xs bg-white"
                           disabled={isPending}
                         />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 pt-1">
+                      <Label className="text-xs font-semibold text-slate-700">
+                        Como o Pix será exibido para o cliente no Cardápio:
+                      </Label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => setPixMode("QRCODE")}
+                          disabled={isPending}
+                          className={`flex items-start gap-2.5 rounded-xl border p-3 text-left transition ${
+                            pixMode === "QRCODE"
+                              ? "border-teal-500 bg-teal-50/70 ring-1 ring-teal-500/20"
+                              : "border-slate-200 bg-white hover:bg-slate-50"
+                          }`}
+                        >
+                          <div
+                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                              pixMode === "QRCODE"
+                                ? "bg-teal-600 text-white shadow-xs"
+                                : "bg-slate-100 text-slate-500"
+                            }`}
+                          >
+                            <QrCodeIcon size={18} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-bold text-slate-900">
+                                QR Code + Copia e Cola
+                              </span>
+                              <span className="rounded-full bg-teal-100 px-1.5 py-0.2 text-[9px] font-semibold text-teal-800">
+                                Recomendado
+                              </span>
+                            </div>
+                            <p className="mt-0.5 text-[11px] text-slate-500 leading-tight">
+                              Gera o QR Code com o valor exato do pedido. O cliente escaneia ou copia sem precisar digitar valor.
+                            </p>
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setPixMode("MANUAL")}
+                          disabled={isPending}
+                          className={`flex items-start gap-2.5 rounded-xl border p-3 text-left transition ${
+                            pixMode === "MANUAL"
+                              ? "border-teal-500 bg-teal-50/70 ring-1 ring-teal-500/20"
+                              : "border-slate-200 bg-white hover:bg-slate-50"
+                          }`}
+                        >
+                          <div
+                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                              pixMode === "MANUAL"
+                                ? "bg-teal-600 text-white shadow-xs"
+                                : "bg-slate-100 text-slate-500"
+                            }`}
+                          >
+                            <KeyRoundIcon size={18} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="text-xs font-bold text-slate-900 block">
+                              Apenas Chave Pix (Manual)
+                            </span>
+                            <p className="mt-0.5 text-[11px] text-slate-500 leading-tight">
+                              Mostra somente o texto da chave para o cliente copiar e digitar o valor manualmente no app do banco.
+                            </p>
+                          </div>
+                        </button>
                       </div>
                     </div>
                   </div>

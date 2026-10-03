@@ -27,6 +27,7 @@ export const formSchema = z
     scheduledFor: z.string().trim().optional(),
     paymentMethod: z.enum([
       "MERCADO_PAGO",
+      "INFINITEPAY",
       "DINHEIRO",
       "CARTAO_PRESENCIAL",
       "PIX",
@@ -52,11 +53,11 @@ export const formSchema = z
         });
       }
 
-      if (values.paymentMethod === "MERCADO_PAGO") {
+      if (values.paymentMethod === "MERCADO_PAGO" || values.paymentMethod === "INFINITEPAY") {
         context.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["paymentMethod"],
-          message: "Mercado Pago não está disponível para consumo no local.",
+          message: "Pagamento online não está disponível para consumo no local.",
         });
       }
     }
