@@ -284,7 +284,7 @@ export function MarketplacesClient({
                         : "border-slate-200 bg-slate-100 text-[10px] font-medium text-slate-500"
                     }
                   >
-                    {ifoodActive ? "Conectado / Ativo" : "Desconectado"}
+                    {ifoodActive ? "Ativo" : "Desconectado"}
                   </Badge>
                 </div>
                 <p className="text-xs text-slate-500 mt-0.5">
@@ -307,7 +307,7 @@ export function MarketplacesClient({
             <CardContent className="p-4 sm:p-6 space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="ifoodMerchantId" className="text-xs font-semibold text-slate-700">
-                  Merchant ID (ID do Restaurante no iFood) *
+                  Merchant ID (ID do Restaurante no iFood)
                 </Label>
                 <Input
                   id="ifoodMerchantId"
@@ -438,7 +438,7 @@ export function MarketplacesClient({
             <CardContent className="p-4 sm:p-6 space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="rappiMerchantId" className="text-xs font-semibold text-slate-700">
-                  Store ID / Identificador da Loja na Rappi *
+                  Store ID / Identificador da Loja na Rappi
                 </Label>
                 <Input
                   id="rappiMerchantId"
@@ -537,13 +537,7 @@ export function MarketplacesClient({
             <div className="border-b border-slate-100 bg-slate-50/50 p-4 sm:p-5 flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-400 text-slate-950 font-black text-xs shadow-xs">
-                    K
-                  </div>
                   <h2 className="text-base font-bold text-slate-900">Keeta Brasil</h2>
-                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
-                    Meituan Delivery
-                  </span>
                   <Badge
                     variant="outline"
                     className={
@@ -575,7 +569,7 @@ export function MarketplacesClient({
             <CardContent className="p-4 sm:p-6 space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="keetaMerchantId" className="text-xs font-semibold text-slate-700">
-                  Store ID / Identificador da Loja no Keeta Brasil *
+                  Store ID / Identificador da Loja no Keeta Brasil
                 </Label>
                 <Input
                   id="keetaMerchantId"
