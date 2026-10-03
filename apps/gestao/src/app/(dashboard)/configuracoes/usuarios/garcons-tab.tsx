@@ -364,11 +364,11 @@ export function GarconsTab({
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Vendas no Salão
               </span>
-              <div className="rounded-lg bg-emerald-100 p-1.5 text-emerald-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <DollarSignIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-emerald-700">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {formatCurrency(totalVendidoSalao)}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -383,11 +383,11 @@ export function GarconsTab({
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Taxa de Serviço
               </span>
-              <div className="rounded-lg bg-amber-100 p-1.5 text-amber-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <BadgePercentIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-amber-700">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {formatCurrency(totalTaxaServico)}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -402,11 +402,11 @@ export function GarconsTab({
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Saldo a Pagar
               </span>
-              <div className="rounded-lg bg-purple-100 p-1.5 text-purple-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <HandCoinsIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-purple-700">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {formatCurrency(totalPendente)}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -420,7 +420,7 @@ export function GarconsTab({
       <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline" className="border-slate-200 bg-white py-1 px-2.5 text-xs font-medium text-slate-700 shadow-2xs">
-            <BadgePercentIcon size={13} className="mr-1.5 text-amber-600" />
+            <BadgePercentIcon size={13} className="mr-1.5 text-primary" />
             {regraComissao
               ? `${regraComissao.name} (${regraComissao.serviceFeePercent}% com repasse de ${regraComissao.waiterSharePercent}%)`
               : "Taxa de Serviço: 10% (Padrão)"}
@@ -580,7 +580,7 @@ export function GarconsTab({
 
                         <TableCell className="text-center text-xs font-semibold text-slate-700">
                           {g.waiter.commissionPercent > 0 ? (
-                            <span className="rounded-md bg-purple-50 px-2 py-0.5 text-purple-700 font-bold">
+                            <span className="rounded-md border border-primary/20 bg-primary/10 px-2 py-0.5 text-primary font-bold">
                               {g.waiter.commissionPercent}%
                             </span>
                           ) : (
@@ -604,7 +604,7 @@ export function GarconsTab({
                           {formatCurrency(g.totalTipsPaid)}
                         </TableCell>
 
-                        <TableCell className="text-right text-xs font-bold text-purple-700">
+                        <TableCell className="text-right text-xs font-bold text-primary">
                           {formatCurrency(g.pendingBalance)}
                         </TableCell>
 
@@ -613,7 +613,7 @@ export function GarconsTab({
                             <span
                               className={cn(
                                 "text-xs font-medium",
-                                isAvailable ? "text-emerald-700" : "text-slate-400",
+                                isAvailable ? "text-primary font-semibold" : "text-slate-400",
                               )}
                             >
                               {isAvailable ? "Ativo" : "Inativo"}
@@ -627,7 +627,7 @@ export function GarconsTab({
                                   g.waiter.status as "ACTIVE" | "INACTIVE",
                                 )
                               }
-                              className="data-[state=checked]:bg-emerald-600 data-[state=unchecked]:bg-slate-200"
+                              className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
                             />
                           </div>
                         </TableCell>
@@ -648,7 +648,7 @@ export function GarconsTab({
                                 onClick={() => handleOpenEditGarcom(g)}
                                 className="gap-2 text-xs"
                               >
-                                <Edit2Icon size={13} />
+                                <Edit2Icon size={13} className="text-primary" />
                                 Editar dados
                               </DropdownMenuItem>
 
@@ -664,12 +664,12 @@ export function GarconsTab({
                               >
                                 {isAvailable ? (
                                   <>
-                                    <UserXIcon size={13} className="text-amber-600" />
+                                    <UserXIcon size={13} className="text-primary" />
                                     Desativar garçom
                                   </>
                                 ) : (
                                   <>
-                                    <UserCheckIcon size={13} className="text-emerald-600" />
+                                    <UserCheckIcon size={13} className="text-primary" />
                                     Ativar garçom
                                   </>
                                 )}
@@ -721,7 +721,7 @@ export function GarconsTab({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
                           <DropdownMenuItem onClick={() => handleOpenEditGarcom(g)} className="gap-2 text-xs">
-                            <Edit2Icon size={13} />
+                            <Edit2Icon size={13} className="text-primary" />
                             Editar dados
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
@@ -744,7 +744,7 @@ export function GarconsTab({
                       </div>
                       <div>
                         <span className="text-[10px] text-slate-400 block uppercase">Saldo</span>
-                        <span className="font-bold text-purple-700">{formatCurrency(g.pendingBalance)}</span>
+                        <span className="font-bold text-primary">{formatCurrency(g.pendingBalance)}</span>
                       </div>
                     </div>
 
@@ -753,7 +753,7 @@ export function GarconsTab({
                         Comissão: <strong className="text-slate-700">{g.waiter.commissionPercent > 0 ? `${g.waiter.commissionPercent}%` : "Padrão"}</strong>
                       </span>
                       <div className="flex items-center gap-2">
-                        <span className={cn("text-xs font-medium", isAvailable ? "text-emerald-700" : "text-slate-400")}>
+                        <span className={cn("text-xs font-medium", isAvailable ? "text-primary font-semibold" : "text-slate-400")}>
                           {isAvailable ? "Ativo" : "Inativo"}
                         </span>
                         <Switch
@@ -762,7 +762,7 @@ export function GarconsTab({
                           onCheckedChange={() =>
                             handleToggleStatus(g.waiter.id, g.waiter.status as "ACTIVE" | "INACTIVE")
                           }
-                          className="data-[state=checked]:bg-emerald-600 data-[state=unchecked]:bg-slate-200"
+                          className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
                         />
                       </div>
                     </div>
@@ -871,7 +871,7 @@ export function GarconsTab({
         <CardHeader className="p-4 sm:p-5 border-b border-slate-100 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-900">
-              <ReceiptIcon size={18} className="text-purple-600" />
+              <ReceiptIcon size={18} className="text-primary" />
               Histórico de Repasses de Gorjetas e Comissões
             </CardTitle>
             <CardDescription className="text-xs text-slate-500">
@@ -1009,15 +1009,15 @@ export function GarconsTab({
                         <TableCell className="text-xs text-slate-500">
                           {f.referenceDate}
                         </TableCell>
-                        <TableCell className="text-right text-xs font-bold text-emerald-700">
+                        <TableCell className="text-right text-xs font-bold text-primary">
                           {formatCurrency(f.amount)}
                         </TableCell>
                         <TableCell className="text-xs text-slate-500 truncate max-w-[250px]">
                           {f.notes || "—"}
                         </TableCell>
                         <TableCell className="text-center">
-                          <Badge className="bg-emerald-100 text-[10px] font-semibold text-emerald-800 hover:bg-emerald-100 border-none">
-                            <CheckCircle2Icon size={11} className="mr-1 text-emerald-600" />
+                          <Badge className="border border-primary/20 bg-primary/10 text-[10px] font-semibold text-primary hover:bg-primary/15">
+                            <CheckCircle2Icon size={11} className="mr-1 text-primary" />
                             Pago
                           </Badge>
                         </TableCell>
@@ -1227,7 +1227,7 @@ export function GarconsTab({
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isPending} className="h-9 gap-1.5 bg-slate-950 text-xs font-semibold text-white hover:bg-slate-800">
+              <Button type="submit" disabled={isPending} className="h-9 gap-1.5 bg-primary text-xs font-semibold text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/25">
                 {isPending && <Loader2Icon size={14} className="animate-spin" />}
                 {editingGarcom ? "Salvar Alterações" : "Cadastrar Garçom"}
               </Button>
@@ -1309,7 +1309,7 @@ export function GarconsTab({
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isPending} className="h-9 gap-1.5 bg-slate-950 text-xs font-semibold text-white hover:bg-slate-800">
+              <Button type="submit" disabled={isPending} className="h-9 gap-1.5 bg-primary text-xs font-semibold text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/25">
                 {isPending && <Loader2Icon size={14} className="animate-spin" />}
                 Salvar Regra
               </Button>

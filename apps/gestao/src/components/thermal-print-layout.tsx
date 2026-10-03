@@ -158,13 +158,24 @@ export const ThermalPrintLayout = React.forwardRef<
 
           {/* Pagamento */}
           <div className="mb-4">
+            {order.marketplaceType && (
+              <p>
+                <span className="font-bold">CANAL:</span>{" "}
+                {order.marketplaceType === "KEETA"
+                  ? "KEETA BRASIL"
+                  : order.marketplaceType}
+                {order.marketplaceOrderId ? ` (#${order.marketplaceOrderId})` : ""}
+              </p>
+            )}
             <p>
               <span className="font-bold">PAGAMENTO:</span>{" "}
               {order.paymentMethod === "DINHEIRO"
                 ? "DINHEIRO"
                 : order.paymentMethod === "CARTAO_PRESENCIAL"
                   ? "CARTÃO (PRESENCIAL)"
-                  : "ONLINE (MERCADO PAGO)"}
+                  : order.paymentMethod === "PIX"
+                    ? "PIX"
+                    : "ONLINE (MERCADO PAGO)"}
             </p>
             <p>
               <span className="font-bold">STATUS:</span>{" "}

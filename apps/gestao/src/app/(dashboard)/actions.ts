@@ -73,7 +73,7 @@ const optionGroupSchema = z.object({
 const optionSchema = z.object({
   name: z.string().trim().min(1, "Informe um nome para o adicional."),
   description: z.string().trim().optional(),
-  imageUrl: z.string().trim().optional(),
+  imageUrl: z.string().trim().nullable().optional(),
   price: z.number().min(0),
   displayOrder: z.number().int().min(0),
 });
@@ -96,6 +96,16 @@ const resolveCategoryImageUrl = async (formData: FormData) => {
 };
 
 const resolveProductImageUrl = async (formData: FormData) => {
+  const uploadedFile = getFileValue(formData.get("imageFile"));
+
+  if (uploadedFile) {
+    return convertImageFileToDataUrl(uploadedFile);
+  }
+
+  return getOptionalStringValue(formData.get("imageUrl"));
+};
+
+const resolveOptionImageUrl = async (formData: FormData) => {
   const uploadedFile = getFileValue(formData.get("imageFile"));
 
   if (uploadedFile) {
@@ -580,11 +590,12 @@ export const deleteProductOptionGroupAction = async (slug: string, formData: For
 export const createProductOptionAction = async (slug: string, formData: FormData) => {
   await getRestaurantOrThrow(slug);
   const groupId = getStringValue(formData.get("groupId"));
+  const imageUrl = await resolveOptionImageUrl(formData);
 
   const parsedData = optionSchema.safeParse({
     name: getStringValue(formData.get("name")),
     description: getOptionalStringValue(formData.get("description")),
-    imageUrl: getOptionalStringValue(formData.get("imageUrl")),
+    imageUrl: imageUrl !== undefined ? imageUrl : undefined,
     price: getNumberValue(formData.get("price")),
     displayOrder: getNumberValue(formData.get("displayOrder")),
   });
@@ -609,11 +620,12 @@ export const createProductOptionAction = async (slug: string, formData: FormData
 export const updateProductOptionAction = async (slug: string, formData: FormData) => {
   await getRestaurantOrThrow(slug);
   const optionId = getStringValue(formData.get("optionId"));
+  const imageUrl = await resolveOptionImageUrl(formData);
 
   const parsedData = optionSchema.safeParse({
     name: getStringValue(formData.get("name")),
     description: getOptionalStringValue(formData.get("description")),
-    imageUrl: getOptionalStringValue(formData.get("imageUrl")),
+    imageUrl: imageUrl !== undefined ? imageUrl : undefined,
     price: getNumberValue(formData.get("price")),
     displayOrder: getNumberValue(formData.get("displayOrder")),
   });
@@ -783,15 +795,10 @@ export const updateRestaurantFeaturesAction = async (
   const isDeliveryEnabled = getBooleanValue(formData.get("isDeliveryEnabled"));
   const isTakeawayEnabled = getBooleanValue(formData.get("isTakeawayEnabled"));
   const isDineInEnabled = getBooleanValue(formData.get("isDineInEnabled"));
-  const isBotActive = getBooleanValue(formData.get("isBotActive"));
 
   if (!isDeliveryEnabled && !isTakeawayEnabled && !isDineInEnabled) {
     throw new Error("O estabelecimento deve manter pelo menos um método de consumo ativo.");
   }
-
-  const isOrderSchedulingEnabled = formData.has("isOrderSchedulingEnabled")
-    ? getBooleanValue(formData.get("isOrderSchedulingEnabled"))
-    : restaurant.isOrderSchedulingEnabled;
 
   const pizzaPricingRuleRaw = getStringValue(formData.get("pizzaPricingRule"));
   const pizzaPricingRule =
@@ -805,29 +812,25 @@ export const updateRestaurantFeaturesAction = async (
     ? getBooleanValue(formData.get("isCashbackEnabled"))
     : restaurant.isCashbackEnabled;
 
+  const acceptPix = getBooleanValue(formData.get("acceptPix"));
+  const pixKey = getStringValue(formData.get("pixKey")) || null;
+
   await db
     .update(restaurantsTable)
     .set({
       acceptMercadoPago: getBooleanValue(formData.get("acceptMercadoPago")),
+      acceptPix,
+      pixKey,
       isCouponsEnabled,
       isCashbackEnabled,
       showOptionImages: getBooleanValue(formData.get("showOptionImages")),
       isDeliveryEnabled,
       isTakeawayEnabled,
       isDineInEnabled,
-      isOrderSchedulingEnabled,
       pizzaPricingRule,
       updatedAt: new Date(),
     })
     .where(eq(restaurantsTable.id, restaurant.id));
-
-  await db
-    .insert(aiSettingsTable)
-    .values({ restaurantId: restaurant.id, isBotActive })
-    .onConflictDoUpdate({
-      target: aiSettingsTable.restaurantId,
-      set: { isBotActive, updatedAt: new Date() },
-    });
 
   revalidateRestaurantPaths(slug);
 };

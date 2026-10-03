@@ -68,6 +68,19 @@ export function MarketplacesClient({
   const [isTestingRappi, setIsTestingRappi] = useState(false);
   const [isSimulatingRappi, setIsSimulatingRappi] = useState(false);
 
+  // Keeta State (Meituan)
+  const keetaConfig = integracoes.find((i) => i.type === "KEETA") || {
+    type: "KEETA" as const,
+    isActive: false,
+    merchantId: "",
+    apiToken: "",
+  };
+  const [keetaActive, setKeetaActive] = useState(keetaConfig.isActive);
+  const [keetaMerchantId, setKeetaMerchantId] = useState(keetaConfig.merchantId || "");
+  const [keetaToken, setKeetaToken] = useState(keetaConfig.apiToken || "");
+  const [isTestingKeeta, setIsTestingKeeta] = useState(false);
+  const [isSimulatingKeeta, setIsSimulatingKeeta] = useState(false);
+
   // URLs dos webhooks
   const currentOrigin =
     typeof window !== "undefined"
@@ -75,6 +88,7 @@ export function MarketplacesClient({
       : process.env.NEXT_PUBLIC_APP_URL || "https://gestao.fswdonalds.eeytech.com";
   const ifoodWebhookUrl = `${currentOrigin}/api/webhooks/ifood`;
   const rappiWebhookUrl = `${currentOrigin}/api/webhooks/rappi`;
+  const keetaWebhookUrl = `${currentOrigin}/api/webhooks/keeta`;
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -96,6 +110,12 @@ export function MarketplacesClient({
           merchantId: rappiMerchantId,
           apiToken: rappiToken,
           isActive: rappiActive,
+        },
+        {
+          type: "KEETA",
+          merchantId: keetaMerchantId,
+          apiToken: keetaToken,
+          isActive: keetaActive,
         },
       ]);
 
@@ -164,6 +184,36 @@ export function MarketplacesClient({
       }
     } finally {
       setIsSimulatingRappi(false);
+    }
+  };
+
+  // Testar conexão Keeta
+  const handleTestKeeta = async () => {
+    setIsTestingKeeta(true);
+    try {
+      const res = await testarConexaoMarketplaceAction(keetaMerchantId, "KEETA");
+      if (res.success) {
+        toast.success(res.message);
+      } else {
+        toast.error(res.message);
+      }
+    } finally {
+      setIsTestingKeeta(false);
+    }
+  };
+
+  // Simular Pedido Keeta
+  const handleSimulateKeeta = async () => {
+    setIsSimulatingKeeta(true);
+    try {
+      const res = await simularPedidoMarketplaceAction(slug, "KEETA");
+      if (res.success) {
+        toast.success(res.message);
+      } else {
+        toast.error(res.message);
+      }
+    } finally {
+      setIsSimulatingKeeta(false);
     }
   };
 
@@ -481,6 +531,143 @@ export function MarketplacesClient({
               </div>
             </CardContent>
           </Card>
+
+          {/* Card: Keeta Brasil (Meituan) ─────────────────── */}
+          <Card className="border-slate-200/80 bg-white shadow-xs overflow-hidden">
+            <div className="border-b border-slate-100 bg-slate-50/50 p-4 sm:p-5 flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-400 text-slate-950 font-black text-xs shadow-xs">
+                    K
+                  </div>
+                  <h2 className="text-base font-bold text-slate-900">Keeta Brasil</h2>
+                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                    Meituan Delivery
+                  </span>
+                  <Badge
+                    variant="outline"
+                    className={
+                      keetaActive
+                        ? "border-emerald-200 bg-emerald-50 text-[10px] font-bold text-emerald-700"
+                        : "border-slate-200 bg-slate-100 text-[10px] font-medium text-slate-500"
+                    }
+                  >
+                    {keetaActive ? "Ativo" : "Desconectado"}
+                  </Badge>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Recebimento integrado de pedidos da rede Keeta Brasil diretamente no PDV e KDS da cozinha.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Label htmlFor="keeta-toggle" className="text-xs font-medium text-slate-600 hidden sm:inline">
+                  {keetaActive ? "Ativo" : "Pausado"}
+                </Label>
+                <Switch
+                  id="keeta-toggle"
+                  checked={keetaActive}
+                  onCheckedChange={setKeetaActive}
+                />
+              </div>
+            </div>
+
+            <CardContent className="p-4 sm:p-6 space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="keetaMerchantId" className="text-xs font-semibold text-slate-700">
+                  Store ID / Identificador da Loja no Keeta Brasil *
+                </Label>
+                <Input
+                  id="keetaMerchantId"
+                  value={keetaMerchantId}
+                  onChange={(e) => setKeetaMerchantId(e.target.value)}
+                  placeholder="Ex: KT-BR-102938 ou ID numérico da loja no Keeta"
+                  className="h-9 text-xs font-mono"
+                  required={keetaActive}
+                />
+                <p className="text-[11px] text-slate-400">
+                  Encontrado no Portal do Parceiro Keeta (Keeta Partner Center) nas configurações da loja.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="keetaToken" className="text-xs font-semibold text-slate-700">
+                  Chave de Acesso / API Secret Token do Keeta (Opcional)
+                </Label>
+                <Input
+                  id="keetaToken"
+                  type="password"
+                  value={keetaToken}
+                  onChange={(e) => setKeetaToken(e.target.value)}
+                  placeholder="Insira o token de integração da API caso fornecido pela equipe técnica do Keeta"
+                  className="h-9 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5 rounded-xl bg-slate-50 p-3.5 border border-slate-200/80">
+                <Label className="text-xs font-semibold text-slate-800 flex items-center justify-between">
+                  <span>URL do Webhook Keeta Brasil</span>
+                  <span className="text-[10px] text-amber-700 bg-amber-100 px-2 py-0.5 rounded font-bold uppercase">Endpoint Pronto</span>
+                </Label>
+                <div className="mt-1 flex items-center gap-2">
+                  <Input
+                    readOnly
+                    value={keetaWebhookUrl}
+                    className="h-8 bg-white text-xs font-mono text-slate-600"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => copyToClipboard(keetaWebhookUrl, "URL do Webhook Keeta")}
+                    className="h-8 gap-1.5 shrink-0 text-xs border-slate-200"
+                  >
+                    <CopyIcon size={12} />
+                    Copiar
+                  </Button>
+                </div>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Cadastre esta URL no Portal de Desenvolvedores ou Painel de Integrações do Keeta Brasil para sincronização em tempo real.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleTestKeeta}
+                  disabled={!keetaMerchantId || isTestingKeeta}
+                  className="h-9 gap-1.5 text-xs border-slate-200 font-medium"
+                >
+                  {isTestingKeeta ? (
+                    <Loader2Icon size={13} className="animate-spin" />
+                  ) : (
+                    <RefreshCwIcon size={13} />
+                  )}
+                  Testar Conexão
+                </Button>
+
+                {isSuperAdmin && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleSimulateKeeta}
+                    disabled={isSimulatingKeeta}
+                    className="h-9 gap-1.5 text-xs bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-300 font-semibold"
+                  >
+                    {isSimulatingKeeta ? (
+                      <Loader2Icon size={13} className="animate-spin" />
+                    ) : (
+                      <ZapIcon size={13} className="text-amber-600 fill-amber-600" />
+                    )}
+                    Simular Pedido Keeta
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Right Column: Guias de Integração & Benefícios (4 cols) */}
@@ -569,6 +756,38 @@ export function MarketplacesClient({
                   <span>Portal Rappi Partners</span>
                   <ExternalLinkIcon size={13} />
                 </a>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Card: Como Conectar Keeta Brasil */}
+          <Card className="border-slate-200/80 bg-white shadow-xs">
+            <CardHeader className="p-4 sm:p-5 border-b border-slate-100">
+              <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-700">
+                <HelpCircleIcon size={15} className="text-amber-500" />
+                Como Conectar o Keeta Brasil
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 sm:p-5 space-y-3.5 text-xs text-slate-600">
+              <div className="space-y-2 rounded-xl bg-slate-50 p-3 border border-slate-200/70">
+                <div className="flex items-start gap-2.5 font-medium text-slate-800">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white mt-0.5">
+                    1
+                  </span>
+                  <span>Acesse o <strong>Keeta Merchant Center / Partner</strong> e obtenha seu <strong>Store ID</strong>.</span>
+                </div>
+                <div className="flex items-start gap-2.5 font-medium text-slate-800">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white mt-0.5">
+                    2
+                  </span>
+                  <span>Cole o Store ID no formulário, insira a chave da API (se houver) e ative a integração.</span>
+                </div>
+                <div className="flex items-start gap-2.5 font-medium text-slate-800">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white mt-0.5">
+                    3
+                  </span>
+                  <span>Copie a <strong>URL do Webhook Keeta</strong> para registrar na central de integrações ou realize um pedido de teste no botão abaixo.</span>
+                </div>
               </div>
             </CardContent>
           </Card>

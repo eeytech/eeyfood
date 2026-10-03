@@ -118,56 +118,56 @@ const ROLE_CONFIG: Record<string, RoleConfig> = {
   KITCHEN: {
     label: "Operador de Cozinha / KDS",
     shortLabel: "Cozinha (KDS)",
-    badgeClass: "bg-amber-50 text-amber-800 border-amber-200/80 hover:bg-amber-100",
+    badgeClass: "bg-primary/10 text-primary border-primary/20 hover:bg-primary/15",
     icon: ChefHatIcon,
     description: "Visualiza pedidos no KDS, marca itens preparados e despacha pratos",
   },
   PANEL: {
     label: "Painel de Senhas / TV Salão",
     shortLabel: "TV de Senhas",
-    badgeClass: "bg-teal-50 text-teal-800 border-teal-200/80 hover:bg-teal-100",
+    badgeClass: "bg-primary/10 text-primary border-primary/20 hover:bg-primary/15",
     icon: TvIcon,
     description: "Exibe exclusivamente a tela de senhas na TV para chamada de clientes no salão",
   },
   ADMIN: {
     label: "Administrador de Restaurante",
     shortLabel: "Administrador",
-    badgeClass: "bg-blue-50 text-blue-800 border-blue-200/80 hover:bg-blue-100",
+    badgeClass: "bg-primary/10 text-primary border-primary/20 hover:bg-primary/15",
     icon: ShieldCheckIcon,
     description: "Acesso total a cardápio, estoque, relatórios, configurações e equipe",
   },
   MANAGER: {
     label: "Gerente Operacional",
     shortLabel: "Gerente",
-    badgeClass: "bg-emerald-50 text-emerald-800 border-emerald-200/80 hover:bg-emerald-100",
+    badgeClass: "bg-primary/10 text-primary border-primary/20 hover:bg-primary/15",
     icon: UsersIcon,
     description: "Supervisão da operação, pedidos, mesas, cancelamentos e equipe",
   },
   WAITER: {
     label: "Operador de Comandas / Garçom (Mobile e Salão)",
     shortLabel: "Comandas / Garçom",
-    badgeClass: "bg-indigo-50 text-indigo-800 border-indigo-200/80 hover:bg-indigo-100",
+    badgeClass: "bg-primary/10 text-primary border-primary/20 hover:bg-primary/15",
     icon: UtensilsCrossedIcon,
     description: "Acesso exclusivo ao painel de Comandas e Mesas, otimizado para celular como um aplicativo dedicado",
   },
   COURIER: {
     label: "Entregador / Motoboy",
     shortLabel: "Entregador",
-    badgeClass: "bg-cyan-50 text-cyan-800 border-cyan-200/80 hover:bg-cyan-100",
+    badgeClass: "bg-primary/10 text-primary border-primary/20 hover:bg-primary/15",
     icon: BikeIcon,
     description: "Acesso ao Painel de Entregas e Expedição para consulta de rotas e despacho de pedidos",
   },
   ATTENDANT: {
     label: "Atendente (Operações)",
     shortLabel: "Atendente",
-    badgeClass: "bg-violet-50 text-violet-800 border-violet-200/80 hover:bg-violet-100",
+    badgeClass: "bg-primary/10 text-primary border-primary/20 hover:bg-primary/15",
     icon: MonitorSmartphoneIcon,
     description: "Acesso completo às operações de atendimento, balcão, PDV e pedidos",
   },
   SUPER_ADMIN: {
     label: "Super Administrador (Global)",
     shortLabel: "Super Admin",
-    badgeClass: "bg-purple-50 text-purple-800 border-purple-200/80 hover:bg-purple-100",
+    badgeClass: "bg-primary/10 text-primary border-primary/20 hover:bg-primary/15",
     icon: SparklesIcon,
     description: "Acesso mestre e irrestrito a todos os restaurantes da rede",
   },
@@ -460,7 +460,7 @@ export function UsuariosClient({
           className={cn(
             "flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-semibold transition-all",
             activeTab === "USUARIOS"
-              ? "border-slate-950 text-slate-950"
+              ? "border-primary text-primary"
               : "border-transparent text-slate-500 hover:text-slate-800",
           )}
         >
@@ -476,13 +476,13 @@ export function UsuariosClient({
           className={cn(
             "flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-semibold transition-all",
             activeTab === "GARCONS"
-              ? "border-slate-950 text-slate-950"
+              ? "border-primary text-primary"
               : "border-transparent text-slate-500 hover:text-slate-800",
           )}
         >
           <UtensilsCrossedIcon size={16} />
           <span>Garçons e Salão</span>
-          <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs text-purple-700 font-medium">
+          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary font-medium">
             {garconsData?.garcons.length || 0}
           </span>
         </button>
@@ -526,11 +526,11 @@ export function UsuariosClient({
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Cozinha e KDS
               </span>
-              <div className="rounded-lg bg-amber-100 p-1.5 text-amber-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <ChefHatIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-amber-700">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {kitchenCount}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -545,11 +545,11 @@ export function UsuariosClient({
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Gestão e Admin
               </span>
-              <div className="rounded-lg bg-blue-100 p-1.5 text-blue-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <ShieldCheckIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-blue-700">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {adminCount}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -564,11 +564,11 @@ export function UsuariosClient({
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Status Ativo
               </span>
-              <div className="rounded-lg bg-emerald-100 p-1.5 text-emerald-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <CheckCircle2Icon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-emerald-700">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {activeCount}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -748,7 +748,7 @@ export function UsuariosClient({
                         {/* Colaborador */}
                         <TableCell className="py-3.5">
                           <div className="flex items-center gap-3">
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 font-display text-xs font-bold text-slate-700">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10 font-display text-xs font-bold text-primary">
                               {getInitials(u.name)}
                             </div>
                             <div className="min-w-0">
@@ -756,7 +756,7 @@ export function UsuariosClient({
                                 {u.name}
                               </p>
                               <p className="flex items-center gap-1 truncate text-xs text-slate-500">
-                                <MailIcon size={12} className="shrink-0 text-slate-400" />
+                                <MailIcon size={12} className="shrink-0 text-primary" />
                                 {u.email}
                               </p>
                             </div>
@@ -771,7 +771,7 @@ export function UsuariosClient({
                               roleInfo.badgeClass,
                             )}
                           >
-                            <RoleIcon size={12} className="shrink-0" />
+                            <RoleIcon size={12} className="shrink-0 text-primary" />
                             {roleInfo.shortLabel}
                           </span>
                         </TableCell>
@@ -794,12 +794,12 @@ export function UsuariosClient({
                                   onCheckedChange={() =>
                                     handleToggleStatus(u.id, u.isActive, u.name, u.role)
                                   }
-                                  className="data-[state=checked]:bg-emerald-600 data-[state=unchecked]:bg-slate-200"
+                                  className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
                                 />
                                 <span
                                   className={cn(
                                     "text-xs font-medium",
-                                    u.isActive ? "text-emerald-700" : "text-slate-400",
+                                    u.isActive ? "text-primary font-semibold" : "text-slate-400",
                                   )}
                                 >
                                   {u.isActive ? "Ativo" : "Inativo"}
@@ -819,7 +819,7 @@ export function UsuariosClient({
                               return (
                                 <div className="flex items-center justify-end pr-2" title="Administradores estão acima do perfil de Gerente">
                                   <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-500">
-                                    <LockIcon size={11} className="text-slate-400" />
+                                    <LockIcon size={11} className="text-primary" />
                                     Protegido
                                   </span>
                                 </div>
@@ -849,7 +849,7 @@ export function UsuariosClient({
                                     onClick={() => handleOpenEdit(u)}
                                     className="gap-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
                                   >
-                                    <PencilIcon size={14} className="text-slate-500" />
+                                    <PencilIcon size={14} className="text-primary" />
                                     Editar dados
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
@@ -860,12 +860,12 @@ export function UsuariosClient({
                                   >
                                     {u.isActive ? (
                                       <>
-                                        <UserXIcon size={14} className="text-amber-500" />
+                                        <UserXIcon size={14} className="text-primary" />
                                         Desativar acesso
                                       </>
                                     ) : (
                                       <>
-                                        <UserCheckIcon size={14} className="text-emerald-600" />
+                                        <UserCheckIcon size={14} className="text-primary" />
                                         Ativar acesso
                                       </>
                                     )}
@@ -896,7 +896,7 @@ export function UsuariosClient({
                 const roleInfo = ROLE_CONFIG[u.role] ?? {
                   label: u.role,
                   shortLabel: u.role,
-                  badgeClass: "bg-slate-100 text-slate-700 border-slate-200",
+                  badgeClass: "bg-primary/10 text-primary border-primary/20",
                   icon: UserIcon,
                   description: "",
                 };
@@ -908,7 +908,7 @@ export function UsuariosClient({
                   <div key={u.id} className="space-y-3 p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-2.5">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 font-display text-xs font-bold text-slate-700">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10 font-display text-xs font-bold text-primary">
                           {getInitials(u.name)}
                         </div>
                         <div>
@@ -922,7 +922,7 @@ export function UsuariosClient({
                           title="Administradores estão acima do perfil de Gerente"
                           className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-500"
                         >
-                          <LockIcon size={11} className="text-slate-400" />
+                          <LockIcon size={11} className="text-primary" />
                           Protegido
                         </span>
                       ) : (
@@ -944,7 +944,7 @@ export function UsuariosClient({
                               onClick={() => handleOpenEdit(u)}
                               className="gap-2 rounded-lg text-xs font-medium text-slate-700"
                             >
-                              <PencilIcon size={14} />
+                              <PencilIcon size={14} className="text-primary" />
                               Editar dados
                             </DropdownMenuItem>
                             {u.role !== "SUPER_ADMIN" && (
@@ -957,12 +957,12 @@ export function UsuariosClient({
                                 >
                                   {u.isActive ? (
                                     <>
-                                      <UserXIcon size={14} className="text-amber-500" />
+                                      <UserXIcon size={14} className="text-primary" />
                                       Desativar acesso
                                     </>
                                   ) : (
                                     <>
-                                      <UserCheckIcon size={14} className="text-emerald-600" />
+                                      <UserCheckIcon size={14} className="text-primary" />
                                       Ativar acesso
                                     </>
                                   )}
@@ -989,7 +989,7 @@ export function UsuariosClient({
                           roleInfo.badgeClass,
                         )}
                       >
-                        <RoleIcon size={11} />
+                        <RoleIcon size={11} className="text-primary" />
                         {roleInfo.shortLabel}
                       </span>
 
@@ -997,7 +997,7 @@ export function UsuariosClient({
                         <span
                           className={cn(
                             "text-xs font-medium",
-                            u.isActive ? "text-emerald-700" : "text-slate-400",
+                            u.isActive ? "text-primary font-semibold" : "text-slate-400",
                           )}
                         >
                           {u.isActive ? "Ativo" : "Inativo"}
@@ -1008,7 +1008,7 @@ export function UsuariosClient({
                           onCheckedChange={() =>
                             handleToggleStatus(u.id, u.isActive, u.name, u.role)
                           }
-                          className="data-[state=checked]:bg-emerald-600 data-[state=unchecked]:bg-slate-200"
+                          className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
                         />
                       </div>
                     </div>
@@ -1117,7 +1117,7 @@ export function UsuariosClient({
         <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-lg">
           <DialogHeader>
             <div className="flex items-center gap-2">
-              <div className="rounded-xl bg-slate-100 p-2 text-slate-900">
+              <div className="rounded-xl bg-primary/10 p-2 text-primary">
                 <UserPlusIcon size={20} />
               </div>
               <div>
@@ -1148,7 +1148,7 @@ export function UsuariosClient({
                 name="name"
                 required
                 placeholder="Ex.: Carlos Cozinheiro"
-                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400"
+                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
               />
             </div>
 
@@ -1162,7 +1162,7 @@ export function UsuariosClient({
                 type="email"
                 required
                 placeholder="Ex.: cozinha@restaurante.com"
-                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400"
+                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
               />
             </div>
 
@@ -1177,7 +1177,7 @@ export function UsuariosClient({
                 required
                 minLength={8}
                 placeholder="Mínimo de 8 caracteres (letras e números)"
-                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400"
+                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
               />
               <p className="text-[11px] text-slate-500">
                 A senha deve ter no mínimo 8 caracteres e conter pelo menos uma letra e um número.
@@ -1195,7 +1195,7 @@ export function UsuariosClient({
               >
                 <SelectTrigger
                   id="create-role"
-                  className="h-11 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-slate-400"
+                  className="h-11 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-primary"
                 >
                   <SelectValue />
                 </SelectTrigger>
@@ -1215,7 +1215,7 @@ export function UsuariosClient({
                         className="py-2.5 cursor-pointer focus:bg-slate-50"
                       >
                         <div className="flex items-start gap-2.5">
-                          <RoleIcon size={16} className="mt-0.5 text-slate-600" />
+                          <RoleIcon size={16} className="mt-0.5 text-primary" />
                           <div>
                             <p className="font-semibold text-slate-900 leading-tight">
                               {config.label}
@@ -1244,7 +1244,7 @@ export function UsuariosClient({
               <Button
                 type="submit"
                 disabled={isPending}
-                className="rounded-full bg-slate-900 px-5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
+                className="rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 disabled:opacity-50"
               >
                 {isPending && (
                   <LoaderCircleIcon size={14} className="mr-1.5 animate-spin" />
@@ -1266,7 +1266,7 @@ export function UsuariosClient({
         <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-lg">
           <DialogHeader>
             <div className="flex items-center gap-2">
-              <div className="rounded-xl bg-slate-100 p-2 text-slate-900">
+              <div className="rounded-xl bg-primary/10 p-2 text-primary">
                 <PencilIcon size={20} />
               </div>
               <div>
@@ -1309,7 +1309,7 @@ export function UsuariosClient({
                 required
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-slate-400"
+                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-primary"
               />
             </div>
 
@@ -1324,7 +1324,7 @@ export function UsuariosClient({
               >
                 <SelectTrigger
                   id="edit-role"
-                  className="h-11 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-slate-400"
+                  className="h-11 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-primary"
                 >
                   <SelectValue />
                 </SelectTrigger>
@@ -1344,7 +1344,7 @@ export function UsuariosClient({
                         className="py-2.5 cursor-pointer focus:bg-slate-50"
                       >
                         <div className="flex items-start gap-2.5">
-                          <RoleIcon size={16} className="mt-0.5 text-slate-600" />
+                          <RoleIcon size={16} className="mt-0.5 text-primary" />
                           <div>
                             <p className="font-semibold text-slate-900 leading-tight">
                               {config.label}
@@ -1372,7 +1372,7 @@ export function UsuariosClient({
                 value={editPassword}
                 onChange={(e) => setEditPassword(e.target.value)}
                 placeholder="Deixe em branco para manter a senha atual"
-                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400"
+                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
               />
               <p className="text-[11px] text-slate-500">
                 Se informada, a nova senha deve ter no mínimo 8 caracteres com letra e número.
@@ -1391,7 +1391,7 @@ export function UsuariosClient({
               <Button
                 type="submit"
                 disabled={isPending}
-                className="rounded-full bg-slate-900 px-5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
+                className="rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 disabled:opacity-50"
               >
                 {isPending && (
                   <LoaderCircleIcon size={14} className="mr-1.5 animate-spin" />

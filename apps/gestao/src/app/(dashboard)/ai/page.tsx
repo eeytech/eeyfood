@@ -76,13 +76,13 @@ export default async function AiSettingsPage({ params }: AiSettingsPageProps) {
             variant={aiSettings?.isBotActive ? "default" : "secondary"}
             className={
               aiSettings?.isBotActive
-                ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100 text-xs px-3 py-1 font-semibold"
+                ? "bg-primary/10 text-primary border border-primary/20 hover:bg-primary/15 text-xs px-3 py-1 font-semibold"
                 : "text-xs px-3 py-1"
             }
           >
             <span
               className={`mr-1.5 h-2 w-2 rounded-full ${
-                aiSettings?.isBotActive ? "bg-emerald-500 animate-pulse" : "bg-slate-400"
+                aiSettings?.isBotActive ? "bg-primary animate-pulse" : "bg-slate-400"
               }`}
             />
             {aiSettings?.isBotActive ? "Robô Ativo" : "Robô Inativo"}
@@ -91,7 +91,7 @@ export default async function AiSettingsPage({ params }: AiSettingsPageProps) {
           {/* Botão Salvar Configurações no cabeçalho substituindo Conexão WhatsApp */}
           <SubmitButton
             form="ai-settings-form"
-            className="gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-slate-800"
+            className="gap-2 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90"
           >
             <SaveIcon size={14} />
             Salvar Configurações
@@ -108,7 +108,7 @@ export default async function AiSettingsPage({ params }: AiSettingsPageProps) {
         <Card className="border-slate-200/80 bg-white shadow-sm">
           <CardHeader className="p-4 sm:p-5 border-b border-slate-100">
             <div className="flex items-center gap-2">
-              <div className="rounded-lg bg-slate-100 p-2 text-slate-800">
+              <div className="rounded-lg bg-primary/10 p-2 text-primary">
                 <BotIcon size={18} />
               </div>
               <div>
@@ -164,14 +164,14 @@ export default async function AiSettingsPage({ params }: AiSettingsPageProps) {
 
           <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm space-y-2">
             <p className="font-semibold text-xs text-slate-800 flex items-center gap-1.5">
-              <MessageSquareIcon size={14} className="text-emerald-600" />
+              <MessageSquareIcon size={14} className="text-primary" />
               Conexão do WhatsApp
             </p>
             <p className="text-[11px] leading-relaxed text-slate-500">
               Para que o robô envie mensagens automaticamente, seu número de WhatsApp deve estar conectado no menu{" "}
               <Link
                 href="/whatsapp"
-                className="font-semibold text-emerald-700 underline hover:text-emerald-800"
+                className="font-semibold text-primary underline hover:text-primary/80"
               >
                 Configurações &gt; WhatsApp
               </Link>.

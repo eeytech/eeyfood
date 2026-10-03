@@ -43,7 +43,7 @@ export function AiProviderSelector({
     <Card className="border-slate-200/80 bg-white shadow-sm">
       <CardHeader className="p-4 sm:p-5 border-b border-slate-100">
         <div className="flex items-center gap-2">
-          <div className="rounded-lg bg-indigo-50 p-2 text-indigo-700">
+          <div className="rounded-lg bg-primary/10 p-2 text-primary">
             <SparklesIcon size={18} />
           </div>
           <div>
@@ -69,17 +69,17 @@ export function AiProviderSelector({
             onClick={() => setProvider("GOOGLE_GEMINI")}
             className={`relative flex flex-col justify-between rounded-xl border p-3.5 text-left transition-all ${
               provider === "GOOGLE_GEMINI"
-                ? "border-emerald-600 bg-emerald-50/50 shadow-sm ring-1 ring-emerald-600"
+                ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/40"
                 : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
             }`}
           >
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-0 text-[10px] font-bold px-2 py-0.5">
+                <Badge className="bg-primary/10 text-primary hover:bg-primary/15 border-0 text-[10px] font-bold px-2 py-0.5">
                   100% Gratuito
                 </Badge>
                 {provider === "GOOGLE_GEMINI" && (
-                  <div className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-600 text-white">
+                  <div className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground">
                     <CheckIcon size={11} strokeWidth={3} />
                   </div>
                 )}
@@ -91,7 +91,7 @@ export function AiProviderSelector({
                 Gemini 2.0 Flash. Até 1.500 msgs/dia sem cartão.
               </p>
             </div>
-            <div className="mt-3 flex items-center gap-1 text-[10px] font-medium text-emerald-700">
+            <div className="mt-3 flex items-center gap-1 text-[10px] font-medium text-primary">
               <SparklesIcon size={12} />
               Recomendado
             </div>
@@ -172,14 +172,14 @@ export function AiProviderSelector({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
-                  <KeyIcon size={13} className="text-emerald-600" />
+                  <KeyIcon size={13} className="text-primary" />
                   Chave de API do Google Gemini
                 </label>
                 <a
                   href="https://aistudio.google.com/app/apikey"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 hover:underline"
+                  className="flex items-center gap-1 text-[11px] font-semibold text-primary hover:text-primary/80 hover:underline"
                 >
                   Criar chave grátis no Google AI Studio
                   <ExternalLinkIcon size={11} />
@@ -193,7 +193,7 @@ export function AiProviderSelector({
                   value={geminiKey}
                   onChange={(e) => setGeminiKey(e.target.value)}
                   placeholder="AIzaSy..."
-                  className="h-10 rounded-xl border-slate-200 bg-white font-mono text-xs pr-10 focus:border-emerald-500"
+                  className="h-10 rounded-xl border-slate-200 bg-white font-mono text-xs pr-10 focus:border-primary"
                 />
                 <button
                   type="button"

@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  buscarAiSettingsPorSlug,
   buscarConfiguracoesRestaurante,
 } from "@/lib/admin-queries";
 
@@ -44,10 +43,7 @@ const ConfiguracoesPage = async ({
       ? resolvedSearchParams.tab
       : "estabelecimento";
 
-  const [config, aiSettings] = await Promise.all([
-    buscarConfiguracoesRestaurante(slug),
-    buscarAiSettingsPorSlug(slug),
-  ]);
+  const config = await buscarConfiguracoesRestaurante(slug);
 
   if (!config) {
     return notFound();
@@ -102,13 +98,15 @@ const ConfiguracoesPage = async ({
                 className={`rounded-lg p-1.5 ${
                   restaurant.status === "ALWAYS_CLOSED"
                     ? "bg-rose-100 text-rose-700"
-                    : "bg-emerald-100 text-emerald-700"
+                    : "bg-primary/10 text-primary"
                 }`}
               >
                 <CheckCircle2Icon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-xl font-bold text-slate-900">
+            <p className={`mt-2 font-display text-xl font-bold ${
+              restaurant.status === "ALWAYS_CLOSED" ? "text-rose-700" : "text-primary"
+            }`}>
               {statusLabel}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -163,11 +161,11 @@ const ConfiguracoesPage = async ({
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Regra de Pizza
               </span>
-              <div className="rounded-lg bg-amber-100 p-1.5 text-amber-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <PizzaIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-xl font-bold text-amber-700">
+            <p className="mt-2 font-display text-xl font-bold text-primary">
               {restaurant.pizzaPricingRule === "AVERAGE" ? "Média" : "Maior Valor"}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -230,14 +228,14 @@ const ConfiguracoesPage = async ({
             slug={slug}
             initialValues={{
               acceptMercadoPago: restaurant.acceptMercadoPago,
+              acceptPix: restaurant.acceptPix ?? true,
+              pixKey: restaurant.pixKey ?? "",
               isCouponsEnabled: restaurant.isCouponsEnabled,
               isCashbackEnabled: restaurant.isCashbackEnabled,
               showOptionImages: restaurant.showOptionImages,
               isDeliveryEnabled: restaurant.isDeliveryEnabled,
               isTakeawayEnabled: restaurant.isTakeawayEnabled,
               isDineInEnabled: restaurant.isDineInEnabled,
-              isBotActive: aiSettings?.isBotActive ?? false,
-              isOrderSchedulingEnabled: restaurant.isOrderSchedulingEnabled,
               pizzaPricingRule: restaurant.pizzaPricingRule as "MAX" | "AVERAGE",
             }}
           />

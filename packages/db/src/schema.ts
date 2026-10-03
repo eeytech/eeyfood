@@ -162,6 +162,7 @@ export const deliveryFeeRuleTypeEnum = pgEnum("DeliveryFeeRuleType", [
 export const marketplaceTypeEnum = pgEnum("MarketplaceType", [
   "IFOOD",
   "RAPPI",
+  "KEETA",
   "NINETY_NINE_FOOD",
 ]);
 
@@ -273,6 +274,8 @@ export const restaurantsTable = pgTable("Restaurant", {
   status: restaurantStatusEnum("status").default("AUTO").notNull(),
   cashbackPercent: doublePrecision("cashbackPercent").default(0).notNull(),
   acceptMercadoPago: boolean("acceptMercadoPago").default(true).notNull(),
+  acceptPix: boolean("acceptPix").default(true).notNull(),
+  pixKey: text("pixKey"),
   isCouponsEnabled: boolean("isCouponsEnabled").default(true).notNull(),
   isCashbackEnabled: boolean("isCashbackEnabled").default(true).notNull(),
   showOptionImages: boolean("showOptionImages").default(true).notNull(),

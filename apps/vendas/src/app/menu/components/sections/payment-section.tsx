@@ -1,7 +1,9 @@
 "use client";
 
-import { CreditCardIcon, HandCoinsIcon } from "lucide-react";
+import { CheckIcon, CopyIcon, CreditCardIcon, HandCoinsIcon, QrCodeIcon } from "lucide-react";
+import { useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
+import { toast } from "sonner";
 
 import {
   FormControl,
@@ -29,6 +31,12 @@ const paymentOptions: Array<{
     icon: <CreditCardIcon size={20} className="text-blue-600" />,
   },
   {
+    value: "PIX",
+    titulo: "Pix",
+    descricao: "Transferência instantânea via chave Pix.",
+    icon: <QrCodeIcon size={20} className="text-teal-600" />,
+  },
+  {
     value: "DINHEIRO",
     titulo: "Dinheiro",
     descricao: "Pagamento presencial com troco opcional.",
@@ -47,6 +55,8 @@ interface PaymentSectionProps {
   needsChangeField: boolean;
   isActionDisabled: boolean;
   acceptMercadoPago: boolean;
+  acceptPix?: boolean;
+  pixKey?: string | null;
   isOrderFree?: boolean;
 }
 
@@ -55,11 +65,25 @@ export const PaymentSection = ({
   needsChangeField,
   isActionDisabled,
   acceptMercadoPago,
+  acceptPix = true,
+  pixKey,
   isOrderFree,
 }: PaymentSectionProps) => {
-  const visibleOptions = acceptMercadoPago
-    ? paymentOptions
-    : paymentOptions.filter((o) => o.value !== "MERCADO_PAGO");
+  const [copiedKey, setCopiedKey] = useState(false);
+
+  const visibleOptions = paymentOptions.filter((option) => {
+    if (option.value === "MERCADO_PAGO" && !acceptMercadoPago) return false;
+    if (option.value === "PIX" && !acceptPix) return false;
+    return true;
+  });
+
+  const handleCopyPixKey = () => {
+    if (!pixKey) return;
+    navigator.clipboard.writeText(pixKey);
+    setCopiedKey(true);
+    toast.success("Chave Pix copiada para a área de transferência!");
+    setTimeout(() => setCopiedKey(false), 3000);
+  };
 
   return (
   <section aria-label="Pagamento">
@@ -154,6 +178,55 @@ export const PaymentSection = ({
             </FormItem>
           )}
         />
+      )}
+
+      {form.watch("paymentMethod") === "PIX" && (
+        <div className="rounded-2xl border border-teal-200 bg-teal-50/70 p-3.5 space-y-2.5 animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-2 text-teal-900 font-bold text-xs">
+            <QrCodeIcon size={16} className="text-teal-700" />
+            <span>Pagamento via Chave Pix</span>
+          </div>
+
+          {pixKey ? (
+            <div className="space-y-2">
+              <p className="text-xs text-teal-800 leading-relaxed">
+                Você pode copiar a chave Pix do restaurante agora ou após a confirmação do pedido:
+              </p>
+              <div className="flex items-center justify-between gap-2 rounded-xl bg-white border border-teal-200/80 p-2.5 shadow-2xs">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] uppercase font-semibold text-slate-400">Chave Pix</p>
+                  <p className="text-xs font-mono font-bold text-slate-900 truncate select-all">
+                    {pixKey}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCopyPixKey}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-teal-700 active:scale-95 transition"
+                >
+                  {copiedKey ? (
+                    <>
+                      <CheckIcon size={13} />
+                      <span>Copiado!</span>
+                    </>
+                  ) : (
+                    <>
+                      <CopyIcon size={13} />
+                      <span>Copiar</span>
+                    </>
+                  )}
+                </button>
+              </div>
+              <p className="text-[11px] text-teal-700">
+                Após transferir, guarde o comprovante. O restaurante confirmará o recebimento ao preparar seu pedido.
+              </p>
+            </div>
+          ) : (
+            <p className="text-xs text-teal-800 leading-relaxed">
+              O pagamento via Pix será realizado na entrega ou no balcão diretamente ao atendente/entregador.
+            </p>
+          )}
+        </div>
       )}
     </div>
   </section>

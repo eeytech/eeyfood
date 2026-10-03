@@ -44,7 +44,7 @@ export default async function WhatsAppPage({ params }: PageProps) {
     <div className="space-y-6">
       {/* ── Page Header ─────────────────────────────────── */}
       <div className="flex items-start gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md shadow-emerald-600/20">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-md shadow-primary/25">
           <MessageSquareIcon size={22} />
         </div>
         <div>
@@ -70,7 +70,7 @@ export default async function WhatsAppPage({ params }: PageProps) {
           <Card className="border-slate-200/80 bg-white shadow-sm">
             <CardHeader className="p-4 sm:p-5 border-b border-slate-100">
               <CardTitle className="flex items-center gap-2 font-display text-base font-semibold text-slate-900">
-                <ShieldCheckIcon size={18} className="text-emerald-600" />
+                <ShieldCheckIcon size={18} className="text-primary" />
                 Recursos Conectados ao WhatsApp
               </CardTitle>
               <CardDescription className="text-xs text-slate-500">
@@ -79,7 +79,7 @@ export default async function WhatsAppPage({ params }: PageProps) {
             </CardHeader>
             <CardContent className="p-4 sm:p-5 space-y-3">
               <div className="flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-3.5 transition-colors hover:bg-slate-50">
-                <div className="rounded-lg bg-emerald-100 p-2 text-emerald-700 shrink-0">
+                <div className="rounded-lg bg-primary/10 p-2 text-primary shrink-0">
                   <MegaphoneIcon size={16} />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -87,7 +87,7 @@ export default async function WhatsAppPage({ params }: PageProps) {
                     <p className="text-xs font-bold text-slate-900">
                       Campanhas de Marketing e Mensagens
                     </p>
-                    <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-[10px] font-semibold text-emerald-700">
+                    <Badge variant="outline" className="border-primary/20 bg-primary/10 text-[10px] font-semibold text-primary">
                       Disparo em Massa
                     </Badge>
                   </div>
@@ -98,7 +98,7 @@ export default async function WhatsAppPage({ params }: PageProps) {
               </div>
 
               <div className="flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-3.5 transition-colors hover:bg-slate-50">
-                <div className="rounded-lg bg-amber-100 p-2 text-amber-700 shrink-0">
+                <div className="rounded-lg bg-primary/10 p-2 text-primary shrink-0">
                   <ShoppingCartIcon size={16} />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -106,7 +106,7 @@ export default async function WhatsAppPage({ params }: PageProps) {
                     <p className="text-xs font-bold text-slate-900">
                       Recuperação de Carrinho Abandonado
                     </p>
-                    <Badge variant="outline" className="border-amber-200 bg-amber-50 text-[10px] font-semibold text-amber-700">
+                    <Badge variant="outline" className="border-primary/20 bg-primary/10 text-[10px] font-semibold text-primary">
                       Automático
                     </Badge>
                   </div>
@@ -117,7 +117,7 @@ export default async function WhatsAppPage({ params }: PageProps) {
               </div>
 
               <div className="flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-3.5 transition-colors hover:bg-slate-50">
-                <div className="rounded-lg bg-purple-100 p-2 text-purple-700 shrink-0">
+                <div className="rounded-lg bg-primary/10 p-2 text-primary shrink-0">
                   <BotIcon size={16} />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -125,7 +125,7 @@ export default async function WhatsAppPage({ params }: PageProps) {
                     <p className="text-xs font-bold text-slate-900">
                       Atendente Virtual com IA
                     </p>
-                    <Badge variant="outline" className="border-purple-200 bg-purple-50 text-[10px] font-semibold text-purple-700">
+                    <Badge variant="outline" className="border-primary/20 bg-primary/10 text-[10px] font-semibold text-primary">
                       Chatbot Inteligente
                     </Badge>
                   </div>
@@ -143,26 +143,26 @@ export default async function WhatsAppPage({ params }: PageProps) {
           <Card className="border-slate-200/80 bg-white shadow-sm">
             <CardHeader className="p-4 border-b border-slate-100">
               <CardTitle className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-600">
-                <QrCodeIcon size={14} className="text-emerald-600" />
+                <QrCodeIcon size={14} className="text-primary" />
                 Como Conectar seu Aparelho
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 space-y-3 text-xs text-slate-600">
               <div className="space-y-2 rounded-xl bg-slate-50 p-3 border border-slate-200/70">
                 <div className="flex items-center gap-2 font-medium text-slate-800">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
                     1
                   </span>
                   <span>Clique em &ldquo;Conectar WhatsApp&rdquo; acima</span>
                 </div>
                 <div className="flex items-center gap-2 font-medium text-slate-800">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
                     2
                   </span>
                   <span>No celular, acesse Aparelhos Conectados</span>
                 </div>
                 <div className="flex items-center gap-2 font-medium text-slate-800">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
                     3
                   </span>
                   <span>Aponte a câmera para o QR Code gerado</span>
@@ -170,7 +170,7 @@ export default async function WhatsAppPage({ params }: PageProps) {
               </div>
 
               <div className="flex items-start gap-2 pt-1 text-slate-500">
-                <AlertCircleIcon size={14} className="text-amber-500 shrink-0 mt-0.5" />
+                <AlertCircleIcon size={14} className="text-primary shrink-0 mt-0.5" />
                 <p className="text-[11px] leading-relaxed">
                   Para garantir a estabilidade do envio de mensagens, certifique-se de que o aparelho celular permaneça ligado e com acesso regular à internet.
                 </p>

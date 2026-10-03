@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckCircle2Icon, Loader2Icon } from "lucide-react";
+import { CheckCircle2Icon, CopyIcon, Loader2Icon, QrCodeIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useContext, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -130,7 +130,11 @@ export const FinishOrderSheet = ({
       couponCode: "",
       fulfillmentTiming: "ASAP",
       scheduledFor: "",
-      paymentMethod: allowsMercadoPago ? "MERCADO_PAGO" : "DINHEIRO",
+      paymentMethod: allowsMercadoPago
+        ? "MERCADO_PAGO"
+        : (restaurant.acceptPix ?? true)
+          ? "PIX"
+          : "DINHEIRO",
       changeFor: "",
       consumptionMethod,
       diningTableId: consumptionMethod === "DINE_IN" ? queryTableId : undefined,
@@ -303,7 +307,7 @@ export const FinishOrderSheet = ({
   // Se Mercado Pago não for permitido (ou for consumo no local), garante método alternativo
   useEffect(() => {
     if (!allowsMercadoPago && form.getValues("paymentMethod") === "MERCADO_PAGO") {
-      form.setValue("paymentMethod", "DINHEIRO");
+      form.setValue("paymentMethod", (restaurant.acceptPix ?? true) ? "PIX" : "DINHEIRO");
     }
   }, [allowsMercadoPago, form]);
 
@@ -401,7 +405,11 @@ export const FinishOrderSheet = ({
         couponCode: "",
         fulfillmentTiming: "ASAP",
         scheduledFor: "",
-        paymentMethod: restaurant.acceptMercadoPago ? "MERCADO_PAGO" : "DINHEIRO",
+        paymentMethod: restaurant.acceptMercadoPago
+          ? "MERCADO_PAGO"
+          : (restaurant.acceptPix ?? true)
+            ? "PIX"
+            : "DINHEIRO",
         changeFor: "",
         consumptionMethod,
         diningTableId: consumptionMethod === "DINE_IN" ? queryTableId : undefined,
@@ -652,6 +660,7 @@ export const FinishOrderSheet = ({
         {pedidoOfflineConcluido ? (
           <OrderSuccessView
             pedidoOfflineConcluido={pedidoOfflineConcluido}
+            pixKey={restaurant.pixKey}
             onViewOrders={handleViewOrders}
             onClose={() => handleSheetOpenChange(false)}
           />
@@ -722,6 +731,8 @@ export const FinishOrderSheet = ({
                         needsChangeField={needsChangeField}
                         isActionDisabled={isActionDisabled}
                         acceptMercadoPago={allowsMercadoPago}
+                        acceptPix={restaurant.acceptPix ?? true}
+                        pixKey={restaurant.pixKey}
                         isOrderFree={checkoutSummary.total <= 0}
                       />
 
@@ -777,15 +788,28 @@ export const FinishOrderSheet = ({
 
 interface OrderSuccessViewProps {
   pedidoOfflineConcluido: PedidoOfflineConcluido;
+  pixKey?: string | null;
   onViewOrders: () => void;
   onClose: () => void;
 }
 
 const OrderSuccessView = ({
   pedidoOfflineConcluido,
+  pixKey,
   onViewOrders,
   onClose,
-}: OrderSuccessViewProps) => (
+}: OrderSuccessViewProps) => {
+  const [copiedKey, setCopiedKey] = useState(false);
+
+  const handleCopyPixKey = () => {
+    if (!pixKey) return;
+    navigator.clipboard.writeText(pixKey);
+    setCopiedKey(true);
+    toast.success("Chave Pix copiada!");
+    setTimeout(() => setCopiedKey(false), 3000);
+  };
+
+  return (
   <div className="flex flex-1 flex-col overflow-hidden">
     <div className="flex-1 overflow-hidden">
       <ScrollArea className="h-full">
@@ -805,8 +829,50 @@ const OrderSuccessView = ({
                 ? "Pedido 100% coberto por benefícios/desconto. Nenhum pagamento adicional é necessário."
                 : pedidoOfflineConcluido.paymentMethod === "DINHEIRO"
                   ? "O pagamento será feito em dinheiro no balcão ou na entrega."
-                  : "O pagamento será concluído na maquininha no balcão ou na entrega."}
+                  : pedidoOfflineConcluido.paymentMethod === "PIX"
+                    ? "Pedido registrado com sucesso! Realize a transferência via Pix para prosseguir."
+                    : "O pagamento será concluído na maquininha no balcão ou na entrega."}
             </div>
+
+            {pedidoOfflineConcluido.paymentMethod === "PIX" && (
+              <div className="rounded-2xl border border-teal-200 bg-teal-50/80 p-3.5 space-y-2.5">
+                <div className="flex items-center gap-2 text-teal-900 font-bold text-xs">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-teal-600 text-white">
+                    <QrCodeIcon size={14} />
+                  </div>
+                  <span>Chave Pix para Pagamento</span>
+                </div>
+
+                {pixKey ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2 rounded-xl bg-white border border-teal-200/80 p-2.5 shadow-2xs">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] uppercase font-semibold text-slate-400">Chave Pix</p>
+                        <p className="text-xs font-mono font-bold text-slate-900 truncate select-all">
+                          {pixKey}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="h-8 gap-1.5 text-xs bg-teal-600 hover:bg-teal-700 text-white shadow-xs shrink-0"
+                        onClick={handleCopyPixKey}
+                      >
+                        <CopyIcon size={13} />
+                        {copiedKey ? "Copiado!" : "Copiar Chave"}
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-teal-800 leading-tight">
+                      Transfira o valor de <strong>{formatCurrency(pedidoOfflineConcluido.total)}</strong> para a chave acima e envie o comprovante ao restaurante.
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-teal-800">
+                    O pagamento será realizado via Pix diretamente ao entregador na entrega ou no balcão da loja.
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="rounded-2xl border bg-muted p-3 text-sm">
               Total registrado:{" "}
@@ -848,6 +914,7 @@ const OrderSuccessView = ({
       </Button>
     </div>
   </div>
-);
+  );
+};
 
 export default FinishOrderSheet;

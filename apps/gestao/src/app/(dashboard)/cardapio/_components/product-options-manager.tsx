@@ -8,9 +8,10 @@ import {
   PlusIcon,
   Trash2Icon,
   UnlinkIcon,
+  UploadIcon,
   XIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import {
@@ -52,6 +53,7 @@ interface OptionFormState {
   imageUrl: string;
   price: string;
   displayOrder: string;
+  imageFile?: File | null;
 }
 
 const defaultGroupForm = (): GroupFormState => ({
@@ -67,6 +69,7 @@ const defaultOptionForm = (): OptionFormState => ({
   imageUrl: "",
   price: "0",
   displayOrder: "0",
+  imageFile: null,
 });
 
 function GroupForm({
@@ -168,9 +171,26 @@ function OptionForm({
   submitLabel: string;
 }) {
   const [form, setForm] = useState<OptionFormState>(initial);
+  const [preview, setPreview] = useState<string>(initial.imageUrl || "");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const set =
     (field: keyof OptionFormState) => (e: React.ChangeEvent<HTMLInputElement>) =>
       setForm((prev) => ({ ...prev, [field]: e.target.value }));
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const objectUrl = URL.createObjectURL(file);
+    setPreview(objectUrl);
+    setForm((prev) => ({ ...prev, imageFile: file, imageUrl: objectUrl }));
+  };
+
+  const handleRemoveImage = () => {
+    setPreview("");
+    setForm((prev) => ({ ...prev, imageUrl: "", imageFile: null }));
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   return (
     <div className="space-y-3 rounded-xl border bg-white p-3 shadow-sm">
@@ -193,15 +213,69 @@ function OptionForm({
             className="h-8 text-sm"
           />
         </div>
+
+        {/* Upload de Imagem do Adicional (Salva direto no servidor) */}
         <div className="space-y-1 sm:col-span-2">
-          <Label className="text-xs">URL da imagem (opcional)</Label>
-          <Input
-            value={form.imageUrl}
-            onChange={set("imageUrl")}
-            placeholder="https://..."
-            className="h-8 text-sm"
-          />
+          <Label className="text-xs">Foto do adicional (opcional)</Label>
+          <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-slate-50/60 p-2.5">
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="relative flex h-14 w-14 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-slate-200 bg-white transition hover:border-slate-300 hover:bg-slate-100"
+            >
+              {preview ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={preview}
+                  alt="Preview"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <UploadIcon size={18} className="text-slate-400" />
+              )}
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition hover:opacity-100">
+                <UploadIcon size={16} className="text-white" />
+              </div>
+            </div>
+
+            <div className="flex-1 space-y-1">
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <UploadIcon size={12} className="mr-1" />
+                  Carregar do dispositivo
+                </Button>
+                {preview && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                    onClick={handleRemoveImage}
+                  >
+                    Remover
+                  </Button>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Upload direto salvo no servidor (máx. 2MB).
+              </p>
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+          </div>
         </div>
+
         <div className="space-y-1">
           <Label className="text-xs">Preço adicional (R$)</Label>
           <Input
@@ -266,6 +340,9 @@ function OptionRow({
     fd.set("name", data.name);
     fd.set("description", data.description);
     fd.set("imageUrl", data.imageUrl);
+    if (data.imageFile) {
+      fd.set("imageFile", data.imageFile);
+    }
     fd.set("price", data.price);
     fd.set("displayOrder", data.displayOrder);
     startTransition(async () => {
@@ -413,6 +490,9 @@ function GroupCard({
     fd.set("name", data.name);
     fd.set("description", data.description);
     fd.set("imageUrl", data.imageUrl);
+    if (data.imageFile) {
+      fd.set("imageFile", data.imageFile);
+    }
     fd.set("price", data.price);
     fd.set("displayOrder", String(group.options.length));
     startOptionTransition(async () => {

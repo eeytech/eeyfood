@@ -114,6 +114,8 @@ const main = async () => {
         status: "AUTO",
         cashbackPercent: 2,
         acceptMercadoPago: true,
+        acceptPix: true,
+        pixKey: "contato@eeyfood.com",
         isCouponsEnabled: true,
         isCashbackEnabled: true,
         isDeliveryEnabled: true,
@@ -403,25 +405,91 @@ const main = async () => {
       .returning();
 
     await tx.insert(productOptionsTable).values([
-      { productOptionGroupId: grpAdicionais.id, name: "Bacon Extra", price: 4.5, displayOrder: 1 },
-      { productOptionGroupId: grpAdicionais.id, name: "Queijo Extra", price: 3.0, displayOrder: 2 },
-      { productOptionGroupId: grpAdicionais.id, name: "Ovo Frito", price: 3.5, displayOrder: 3 },
-      { productOptionGroupId: grpAdicionais.id, name: "Molho BBQ", price: 2.0, displayOrder: 4 },
-      { productOptionGroupId: grpAdicionais.id, name: "Jalapeño", price: 2.0, displayOrder: 5 },
+      {
+        productOptionGroupId: grpAdicionais.id,
+        name: "Bacon Extra",
+        price: 4.5,
+        displayOrder: 1,
+        imageUrl: "https://images.unsplash.com/photo-1528607929212-2636ec44253e?w=200&auto=format&fit=crop&q=80",
+      },
+      {
+        productOptionGroupId: grpAdicionais.id,
+        name: "Queijo Extra",
+        price: 3.0,
+        displayOrder: 2,
+        imageUrl: "https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=200&auto=format&fit=crop&q=80",
+      },
+      {
+        productOptionGroupId: grpAdicionais.id,
+        name: "Ovo Frito",
+        price: 3.5,
+        displayOrder: 3,
+        imageUrl: "https://images.unsplash.com/photo-1582169296194-e4d644c48063?w=200&auto=format&fit=crop&q=80",
+      },
+      {
+        productOptionGroupId: grpAdicionais.id,
+        name: "Molho BBQ",
+        price: 2.0,
+        displayOrder: 4,
+        imageUrl: "https://images.unsplash.com/photo-1472476443507-c7a5948772fc?w=200&auto=format&fit=crop&q=80",
+      },
+      {
+        productOptionGroupId: grpAdicionais.id,
+        name: "Jalapeño",
+        price: 2.0,
+        displayOrder: 5,
+        imageUrl: "https://images.unsplash.com/photo-1568584711271-6c929fb49b60?w=200&auto=format&fit=crop&q=80",
+      },
     ]);
 
     await tx.insert(productOptionsTable).values([
-      { productOptionGroupId: grpBorda.id, name: "Catupiry Original", price: 8.0, displayOrder: 1 },
-      { productOptionGroupId: grpBorda.id, name: "Cheddar Cremoso", price: 8.0, displayOrder: 2 },
-      { productOptionGroupId: grpBorda.id, name: "Chocolate ao Leite", price: 10.0, displayOrder: 3 },
+      {
+        productOptionGroupId: grpBorda.id,
+        name: "Catupiry Original",
+        price: 8.0,
+        displayOrder: 1,
+        imageUrl: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=200&auto=format&fit=crop&q=80",
+      },
+      {
+        productOptionGroupId: grpBorda.id,
+        name: "Cheddar Cremoso",
+        price: 8.0,
+        displayOrder: 2,
+        imageUrl: "https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=200&auto=format&fit=crop&q=80",
+      },
+      {
+        productOptionGroupId: grpBorda.id,
+        name: "Chocolate ao Leite",
+        price: 10.0,
+        displayOrder: 3,
+        imageUrl: "https://images.unsplash.com/photo-1549007994-cb92caebd54b?w=200&auto=format&fit=crop&q=80",
+      },
     ]);
 
     const [optCocaBebida] = await tx
       .insert(productOptionsTable)
       .values([
-        { productOptionGroupId: grpBebida.id, name: "Coca-Cola Lata", price: 0, displayOrder: 1 },
-        { productOptionGroupId: grpBebida.id, name: "Suco de Laranja", price: 0, displayOrder: 2 },
-        { productOptionGroupId: grpBebida.id, name: "Água Mineral", price: 0, displayOrder: 3 },
+        {
+          productOptionGroupId: grpBebida.id,
+          name: "Coca-Cola Lata",
+          price: 0,
+          displayOrder: 1,
+          imageUrl: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=200&auto=format&fit=crop&q=80",
+        },
+        {
+          productOptionGroupId: grpBebida.id,
+          name: "Suco de Laranja",
+          price: 0,
+          displayOrder: 2,
+          imageUrl: "https://images.unsplash.com/photo-1613478223719-2ab802602423?w=200&auto=format&fit=crop&q=80",
+        },
+        {
+          productOptionGroupId: grpBebida.id,
+          name: "Água Mineral",
+          price: 0,
+          displayOrder: 3,
+          imageUrl: "https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=200&auto=format&fit=crop&q=80",
+        },
       ])
       .returning();
 
@@ -443,9 +511,27 @@ const main = async () => {
     ]);
 
     await tx.insert(productOptionsTable).values([
-      { productOptionGroupId: grpSorveteCalda.id, name: "Calda de Chocolate", price: 3.5, displayOrder: 1 },
-      { productOptionGroupId: grpSorveteCalda.id, name: "Calda de Caramelo Salgado", price: 3.5, displayOrder: 2 },
-      { productOptionGroupId: grpSorveteCalda.id, name: "Calda de Frutas Vermelhas", price: 3.5, displayOrder: 3 },
+      {
+        productOptionGroupId: grpSorveteCalda.id,
+        name: "Calda de Chocolate",
+        price: 3.5,
+        displayOrder: 1,
+        imageUrl: "https://images.unsplash.com/photo-1549007994-cb92caebd54b?w=200&auto=format&fit=crop&q=80",
+      },
+      {
+        productOptionGroupId: grpSorveteCalda.id,
+        name: "Calda de Caramelo Salgado",
+        price: 3.5,
+        displayOrder: 2,
+        imageUrl: "https://images.unsplash.com/photo-1587314168485-3236d6710814?w=200&auto=format&fit=crop&q=80",
+      },
+      {
+        productOptionGroupId: grpSorveteCalda.id,
+        name: "Calda de Frutas Vermelhas",
+        price: 3.5,
+        displayOrder: 3,
+        imageUrl: "https://images.unsplash.com/photo-1464965911861-746a04b4bca6?w=200&auto=format&fit=crop&q=80",
+      },
     ]);
 
     // Opcionais para Açaí (Tamanho, Tipo e Adicionais)
@@ -463,15 +549,78 @@ const main = async () => {
     ]);
 
     await tx.insert(productOptionsTable).values([
-      { productOptionGroupId: grpAcaiAdicionais.id, name: "Leite em Pó (Ninho)", price: 3.0, displayOrder: 1, description: "Porção generosa de Leite Ninho" },
-      { productOptionGroupId: grpAcaiAdicionais.id, name: "Granola Tradicional Crocante", price: 2.5, displayOrder: 2, description: "Granola crocante com castanhas e uva passa" },
-      { productOptionGroupId: grpAcaiAdicionais.id, name: "Banana Fatiada", price: 2.5, displayOrder: 3, description: "Fatias frescas de banana nanica" },
-      { productOptionGroupId: grpAcaiAdicionais.id, name: "Morango Fresco", price: 4.0, displayOrder: 4, description: "Morangos frescos fatiados na hora" },
-      { productOptionGroupId: grpAcaiAdicionais.id, name: "Nutella Original", price: 6.0, displayOrder: 5, description: "Porção generosa de Nutella pura" },
-      { productOptionGroupId: grpAcaiAdicionais.id, name: "Leite Condensado", price: 2.5, displayOrder: 6, description: "Cobertura cremosa de leite condensado" },
-      { productOptionGroupId: grpAcaiAdicionais.id, name: "Paçoca de Amendoim", price: 2.0, displayOrder: 7, description: "Paçoca rolha esfarelada" },
-      { productOptionGroupId: grpAcaiAdicionais.id, name: "Gotas de Chocolate Nobre", price: 3.0, displayOrder: 8, description: "Gotas crocantes de chocolate ao leite" },
-      { productOptionGroupId: grpAcaiAdicionais.id, name: "Calda de Maracujá com Sementes", price: 2.5, displayOrder: 9, description: "Calda artesanal agridoce de maracujá" },
+      {
+        productOptionGroupId: grpAcaiAdicionais.id,
+        name: "Leite em Pó (Ninho)",
+        price: 3.0,
+        displayOrder: 1,
+        description: "Porção generosa de Leite Ninho",
+        imageUrl: "https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=200&auto=format&fit=crop&q=80",
+      },
+      {
+        productOptionGroupId: grpAcaiAdicionais.id,
+        name: "Granola Tradicional Crocante",
+        price: 2.5,
+        displayOrder: 2,
+        description: "Granola crocante com castanhas e uva passa",
+        imageUrl: "https://images.unsplash.com/photo-1517093708365-680e129e1eb6?w=200&auto=format&fit=crop&q=80",
+      },
+      {
+        productOptionGroupId: grpAcaiAdicionais.id,
+        name: "Banana Fatiada",
+        price: 2.5,
+        displayOrder: 3,
+        description: "Fatias frescas de banana nanica",
+        imageUrl: "https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=200&auto=format&fit=crop&q=80",
+      },
+      {
+        productOptionGroupId: grpAcaiAdicionais.id,
+        name: "Morango Fresco",
+        price: 4.0,
+        displayOrder: 4,
+        description: "Morangos frescos fatiados na hora",
+        imageUrl: "https://images.unsplash.com/photo-1464965911861-746a04b4bca6?w=200&auto=format&fit=crop&q=80",
+      },
+      {
+        productOptionGroupId: grpAcaiAdicionais.id,
+        name: "Nutella Original",
+        price: 6.0,
+        displayOrder: 5,
+        description: "Porção generosa de Nutella pura",
+        imageUrl: "https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?w=200&auto=format&fit=crop&q=80",
+      },
+      {
+        productOptionGroupId: grpAcaiAdicionais.id,
+        name: "Leite Condensado",
+        price: 2.5,
+        displayOrder: 6,
+        description: "Cobertura cremosa de leite condensado",
+        imageUrl: "https://images.unsplash.com/photo-1556911073-38141963c9e0?w=200&auto=format&fit=crop&q=80",
+      },
+      {
+        productOptionGroupId: grpAcaiAdicionais.id,
+        name: "Paçoca de Amendoim",
+        price: 2.0,
+        displayOrder: 7,
+        description: "Paçoca rolha esfarelada",
+        imageUrl: "https://images.unsplash.com/photo-1569420066804-949281a6fa0f?w=200&auto=format&fit=crop&q=80",
+      },
+      {
+        productOptionGroupId: grpAcaiAdicionais.id,
+        name: "Gotas de Chocolate Nobre",
+        price: 3.0,
+        displayOrder: 8,
+        description: "Gotas crocantes de chocolate ao leite",
+        imageUrl: "https://images.unsplash.com/photo-1548907040-4baa42d10919?w=200&auto=format&fit=crop&q=80",
+      },
+      {
+        productOptionGroupId: grpAcaiAdicionais.id,
+        name: "Calda de Maracujá com Sementes",
+        price: 2.5,
+        displayOrder: 9,
+        description: "Calda artesanal agridoce de maracujá",
+        imageUrl: "https://images.unsplash.com/photo-1546548970-71785318a17b?w=200&auto=format&fit=crop&q=80",
+      },
     ]);
 
     const [

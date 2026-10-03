@@ -45,28 +45,28 @@ const EVENTS = [
     label: "Visualização do Item",
     desc: "Disparado quando o cliente abre os detalhes de um produto ou prato.",
     icon: EyeIcon,
-    colorClass: "bg-blue-50 text-blue-600 border-blue-200/80",
+    colorClass: "bg-primary/10 text-primary border-primary/20",
   },
   {
     name: "AddToCart",
     label: "Adicionado ao Carrinho",
     desc: "Disparado quando o item é colocado na sacola de compras.",
     icon: ShoppingCartIcon,
-    colorClass: "bg-amber-50 text-amber-600 border-amber-200/80",
+    colorClass: "bg-primary/10 text-primary border-primary/20",
   },
   {
     name: "InitiateCheckout",
     label: "Início de Finalização",
     desc: "Disparado na abertura da tela de entrega e pagamento.",
     icon: CreditCardIcon,
-    colorClass: "bg-purple-50 text-purple-600 border-purple-200/80",
+    colorClass: "bg-primary/10 text-primary border-primary/20",
   },
   {
     name: "Purchase",
     label: "Pedido Confirmado",
     desc: "Disparado no sucesso da compra, enviando o valor total do pedido.",
     icon: CheckCircle2Icon,
-    colorClass: "bg-emerald-50 text-emerald-600 border-emerald-200/80",
+    colorClass: "bg-primary/10 text-primary border-primary/20",
   },
 ];
 
@@ -179,11 +179,11 @@ export function MarketingSettingsForm({
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">
                 Meta Ads e Pixel
               </span>
-              <div className="rounded-lg bg-blue-100 p-1.5 text-blue-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <Share2Icon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-xl sm:text-2xl font-bold text-blue-700">
+            <p className="mt-2 font-display text-xl sm:text-2xl font-bold text-primary">
               {isMetaActive ? "Configurado" : "Pendente"}
             </p>
             <p className="mt-0.5 text-xs text-slate-500 truncate">
@@ -199,11 +199,11 @@ export function MarketingSettingsForm({
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">
                 Google Analytics
               </span>
-              <div className="rounded-lg bg-emerald-100 p-1.5 text-emerald-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <TrendingUpIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-xl sm:text-2xl font-bold text-emerald-700">
+            <p className="mt-2 font-display text-xl sm:text-2xl font-bold text-primary">
               {isGoogleActive ? "Configurado" : "Pendente"}
             </p>
             <p className="mt-0.5 text-xs text-slate-500 truncate">
@@ -219,11 +219,11 @@ export function MarketingSettingsForm({
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">
                 Carrinho Abandonado
               </span>
-              <div className="rounded-lg bg-amber-100 p-1.5 text-amber-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <ShoppingCartIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-xl sm:text-2xl font-bold text-amber-700">
+            <p className="mt-2 font-display text-xl sm:text-2xl font-bold text-primary">
               {cartEnabled ? "Ativo" : "Inativo"}
             </p>
             <p className="mt-0.5 text-xs text-slate-500 truncate">
@@ -241,11 +241,11 @@ export function MarketingSettingsForm({
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">
                 Eventos Padrão
               </span>
-              <div className="rounded-lg bg-purple-100 p-1.5 text-purple-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <ActivityIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-xl sm:text-2xl font-bold text-purple-700">
+            <p className="mt-2 font-display text-xl sm:text-2xl font-bold text-primary">
               4 Eventos
             </p>
             <p className="mt-0.5 text-xs text-slate-500 truncate">
@@ -264,7 +264,7 @@ export function MarketingSettingsForm({
             <CardHeader className="p-4 sm:p-5 border-b border-slate-100">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="rounded-lg bg-blue-100 p-2 text-blue-700">
+                  <div className="rounded-lg bg-primary/10 p-2 text-primary">
                     <Share2Icon size={18} />
                   </div>
                   <div>
@@ -277,7 +277,7 @@ export function MarketingSettingsForm({
                   </div>
                 </div>
                 {isMetaActive ? (
-                  <Badge className="border-blue-200 bg-blue-50 text-[11px] font-medium text-blue-700">
+                  <Badge className="border-primary/20 bg-primary/10 text-[11px] font-medium text-primary">
                     Ativo
                   </Badge>
                 ) : (
@@ -301,7 +301,7 @@ export function MarketingSettingsForm({
                   placeholder="Digite o ID do Pixel do Facebook"
                   value={pixelId}
                   onChange={(e) => setPixelId(e.target.value)}
-                  className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white"
+                  className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-primary"
                 />
                 <p className="text-[11px] text-slate-500">
                   Encontre no Gerenciador de Eventos da Meta em Fontes de Dados &gt; Configurações.
@@ -316,7 +316,7 @@ export function MarketingSettingsForm({
                   <button
                     type="button"
                     onClick={() => setShowToken(!showToken)}
-                    className="text-[11px] text-slate-500 hover:text-slate-800 flex items-center gap-1"
+                    className="text-[11px] text-slate-500 hover:text-primary flex items-center gap-1 transition-colors"
                   >
                     {showToken ? (
                       <>
@@ -338,7 +338,7 @@ export function MarketingSettingsForm({
                   onChange={(e) => setTokenValue(e.target.value)}
                   autoComplete="new-password"
                   data-lpignore="true"
-                  className="h-10 rounded-xl border-slate-200 bg-slate-50/70 font-mono text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white"
+                  className="h-10 rounded-xl border-slate-200 bg-slate-50/70 font-mono text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-primary"
                 />
                 <p className="text-[11px] text-slate-500">
                   Permite o envio seguro de compras diretamente do servidor, contornando bloqueadores de anúncios (iOS 14+).
@@ -352,7 +352,7 @@ export function MarketingSettingsForm({
             <CardHeader className="p-4 sm:p-5 border-b border-slate-100">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="rounded-lg bg-emerald-100 p-2 text-emerald-700">
+                  <div className="rounded-lg bg-primary/10 p-2 text-primary">
                     <TrendingUpIcon size={18} />
                   </div>
                   <div>
@@ -365,7 +365,7 @@ export function MarketingSettingsForm({
                   </div>
                 </div>
                 {isGoogleActive ? (
-                  <Badge className="border-emerald-200 bg-emerald-50 text-[11px] font-medium text-emerald-700">
+                  <Badge className="border-primary/20 bg-primary/10 text-[11px] font-medium text-primary">
                     Ativo
                   </Badge>
                 ) : (
@@ -389,7 +389,7 @@ export function MarketingSettingsForm({
                     placeholder="Ex: G-XXXXXXXXXX"
                     value={ga4Id}
                     onChange={(e) => setGa4Id(e.target.value)}
-                    className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white"
+                    className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-primary"
                   />
                   <p className="text-[11px] text-slate-500">ID de métrica do fluxo da web GA4.</p>
                 </div>
@@ -406,7 +406,7 @@ export function MarketingSettingsForm({
                     placeholder="Ex: GTM-XXXXXXX"
                     value={gtmId}
                     onChange={(e) => setGtmId(e.target.value)}
-                    className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white"
+                    className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-primary"
                   />
                   <p className="text-[11px] text-slate-500">Código do contêiner Web no GTM.</p>
                 </div>
@@ -419,7 +419,7 @@ export function MarketingSettingsForm({
             <CardHeader className="p-4 sm:p-5 border-b border-slate-100">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="rounded-lg bg-amber-100 p-2 text-amber-700">
+                  <div className="rounded-lg bg-primary/10 p-2 text-primary">
                     <ShoppingCartIcon size={18} />
                   </div>
                   <div>
@@ -435,7 +435,7 @@ export function MarketingSettingsForm({
                   id="abandonedCartSwitch"
                   checked={cartEnabled}
                   onCheckedChange={setCartEnabled}
-                  className="data-[state=checked]:bg-emerald-600 data-[state=unchecked]:bg-slate-200"
+                  className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
                 />
                 <input
                   type="hidden"
@@ -459,7 +459,7 @@ export function MarketingSettingsForm({
                     value={cartDelay}
                     onChange={(e) => setCartDelay(Number(e.target.value))}
                     disabled={!cartEnabled}
-                    className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white disabled:opacity-50"
+                    className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-primary disabled:opacity-50"
                   />
                   <p className="text-[11px] text-slate-500">
                     Tempo que o sistema aguarda após o abandono para enviar o lembrete (mínimo 30m).
@@ -480,7 +480,7 @@ export function MarketingSettingsForm({
                     value={couponPercent}
                     onChange={(e) => setCouponPercent(Number(e.target.value))}
                     disabled={!cartEnabled}
-                    className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white disabled:opacity-50"
+                    className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-primary disabled:opacity-50"
                   />
                   <p className="text-[11px] text-slate-500">
                     Porcentagem de desconto concedida no cupom gerado na mensagem (0 a 50%).
@@ -497,7 +497,7 @@ export function MarketingSettingsForm({
           <Card className="border-slate-200/80 bg-white shadow-sm">
             <CardHeader className="p-4 sm:p-5 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <div className="rounded-lg bg-slate-900 p-1.5 text-white">
+                <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                   <ZapIcon size={16} />
                 </div>
                 <div>
@@ -545,7 +545,7 @@ export function MarketingSettingsForm({
           <Card className="border-slate-200/80 bg-white shadow-sm">
             <CardHeader className="p-4 border-b border-slate-100">
               <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-600">
-                <HelpCircleIcon size={14} className="text-amber-500" />
+                <HelpCircleIcon size={14} className="text-primary" />
                 Como Funciona a Recuperação
               </CardTitle>
             </CardHeader>
@@ -555,19 +555,19 @@ export function MarketingSettingsForm({
               </p>
               <div className="space-y-2 rounded-xl bg-slate-50 p-3 border border-slate-200/70">
                 <div className="flex items-center gap-2 font-medium text-slate-800">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
                     1
                   </span>
                   <span>Cliente abandona o pedido no checkout</span>
                 </div>
                 <div className="flex items-center gap-2 font-medium text-slate-800">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
                     2
                   </span>
                   <span>Sistema aguarda o tempo de espera configurado</span>
                 </div>
                 <div className="flex items-center gap-2 font-medium text-slate-800">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
                     3
                   </span>
                   <span>WhatsApp IA envia mensagem amigável com cupom</span>

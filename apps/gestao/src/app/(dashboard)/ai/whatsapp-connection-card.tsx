@@ -168,13 +168,13 @@ export function WhatsAppConnectionCard({
 
   return (
     <>
-      <Card className="border-emerald-500/20 bg-gradient-to-br from-emerald-50/40 via-white to-slate-50 shadow-sm">
+      <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-white to-slate-50 shadow-sm">
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-3">
           <div>
             <CardTitle className="text-xl font-bold flex items-center gap-2">
               Conexão do WhatsApp
               {isConnected === true && (
-                <Badge variant="success" className="gap-1 px-2.5 py-0.5 text-xs">
+                <Badge variant="success" className="gap-1 px-2.5 py-0.5 text-xs bg-primary/10 text-primary border-primary/20 hover:bg-primary/15">
                   <WifiIcon className="h-3 w-3 animate-pulse" /> Conectado
                 </Badge>
               )}
@@ -210,32 +210,32 @@ export function WhatsAppConnectionCard({
 
         <CardContent className="pt-2">
           {isConnected === true ? (
-            <div className="flex flex-col gap-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-4 rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
                 {profilePicUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={profilePicUrl}
                     alt={profileName || "WhatsApp"}
-                    className="h-12 w-12 rounded-full border-2 border-emerald-400 object-cover"
+                    className="h-12 w-12 rounded-full border-2 border-primary/40 object-cover"
                   />
                 ) : (
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-200 text-emerald-800">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
                     <SmartphoneIcon className="h-6 w-6" />
                   </div>
                 )}
                 <div>
                   <div className="flex items-center gap-2">
-                    <p className="font-semibold text-emerald-950">
+                    <p className="font-semibold text-slate-900">
                       {profileName || "WhatsApp do Restaurante"}
                     </p>
-                    <CheckCircle2Icon className="h-4 w-4 text-emerald-600" />
+                    <CheckCircle2Icon className="h-4 w-4 text-primary" />
                   </div>
-                  <p className="text-sm font-medium text-emerald-700">
+                  <p className="text-sm font-medium text-primary">
                     {phone ? formatPhone(phone) : "Número conectado"}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Instância: <code className="rounded bg-emerald-100/80 px-1 py-0.5">{instanceName}</code>
+                    Instância: <code className="rounded bg-primary/10 text-primary px-1 py-0.5">{instanceName}</code>
                   </p>
                 </div>
               </div>
@@ -268,7 +268,7 @@ export function WhatsAppConnectionCard({
               <Button
                 onClick={handleGerarQrCode}
                 disabled={isGeneratingQr}
-                className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 shrink-0 h-11 px-5"
+                className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/25 shrink-0 h-11 px-5"
               >
                 {isGeneratingQr ? (
                   <>
@@ -292,7 +292,7 @@ export function WhatsAppConnectionCard({
         <DialogContent className="max-w-md p-6 text-center">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold flex items-center justify-center gap-2">
-              <QrCodeIcon className="h-6 w-6 text-emerald-600" />
+              <QrCodeIcon className="h-6 w-6 text-primary" />
               Conectar WhatsApp
             </DialogTitle>
             <DialogDescription className="text-sm">
@@ -303,12 +303,12 @@ export function WhatsAppConnectionCard({
           <div className="my-4 flex flex-col items-center justify-center">
             {isGeneratingQr ? (
               <div className="flex h-64 w-64 flex-col items-center justify-center gap-3 rounded-2xl border bg-slate-50 p-6 text-muted-foreground">
-                <Loader2Icon className="h-10 w-10 animate-spin text-emerald-600" />
+                <Loader2Icon className="h-10 w-10 animate-spin text-primary" />
                 <p className="text-sm font-medium">Preparando QR Code...</p>
               </div>
             ) : qrCodeBase64 ? (
               <div className="relative flex flex-col items-center gap-3">
-                <div className="rounded-2xl border-4 border-emerald-500/20 bg-white p-3 shadow-xl">
+                <div className="rounded-2xl border-4 border-primary/25 bg-white p-3 shadow-xl">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={qrCodeBase64}
@@ -316,8 +316,8 @@ export function WhatsAppConnectionCard({
                     className="h-60 w-60 object-contain rounded-lg"
                   />
                 </div>
-                <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700 animate-pulse bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+                <div className="flex items-center gap-2 text-xs font-semibold text-primary animate-pulse bg-primary/10 border border-primary/20 rounded-full px-3 py-1">
+                  <span className="h-2 w-2 rounded-full bg-primary"></span>
                   Aguardando leitura pelo celular...
                 </div>
               </div>

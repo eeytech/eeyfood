@@ -45,7 +45,7 @@ export async function buscarIntegracoesMarketplaceAction(
 
   const integracoesMap = new Map(rows.map((r) => [r.type, r]));
 
-  const types: MarketplaceType[] = ["IFOOD", "RAPPI", "NINETY_NINE_FOOD"];
+  const types: MarketplaceType[] = ["IFOOD", "RAPPI", "KEETA", "NINETY_NINE_FOOD"];
 
   const integracoes: MarketplaceConfigItem[] = types.map((type) => {
     const found = integracoesMap.get(type);
@@ -68,7 +68,7 @@ export async function buscarIntegracoesMarketplaceAction(
     .where(
       and(
         eq(ordersTable.restaurantId, restaurant.id),
-        sql`(${ordersTable.notes} ilike '%ifood%' or ${ordersTable.notes} ilike '%rappi%' or ${ordersTable.notes} ilike '%marketplace%')`,
+        sql`(${ordersTable.notes} ilike '%ifood%' or ${ordersTable.notes} ilike '%rappi%' or ${ordersTable.notes} ilike '%keeta%' or ${ordersTable.notes} ilike '%marketplace%' or ${ordersTable.marketplaceType} is not null)`,
       ),
     );
 
@@ -97,7 +97,9 @@ export async function salvarTodasIntegracoesMarketplaceAction(
             ? "iFood (Merchant ID)"
             : item.type === "RAPPI"
               ? "Rappi (Store ID)"
-              : item.type;
+              : item.type === "KEETA"
+                ? "Keeta Brasil (Store ID / Merchant ID)"
+                : item.type;
         return {
           success: false,
           error: `O identificador do ${canal} é obrigatório quando a integração estiver ativada.`,
@@ -235,17 +237,24 @@ export async function testarConexaoMarketplaceAction(
   merchantId: string,
   type: MarketplaceType,
 ): Promise<{ success: boolean; message: string }> {
-  const idLabel = type === "RAPPI" ? "Store ID" : "Merchant ID";
-  const canalNome = type === "IFOOD" ? "iFood" : type === "RAPPI" ? "Rappi" : type;
+  const idLabel = type === "RAPPI" || type === "KEETA" ? "Store ID" : "Merchant ID";
+  const canalNome =
+    type === "IFOOD"
+      ? "iFood"
+      : type === "RAPPI"
+        ? "Rappi"
+        : type === "KEETA"
+          ? "Keeta Brasil"
+          : type;
 
   if (!merchantId || !merchantId.trim()) {
     return { success: false, message: `Informe o ${idLabel} antes de testar.` };
   }
 
-  // Simulação de handshake de ping com o portal do iFood/Rappi
+  // Simulação de handshake de ping com o portal do marketplace parceiro
   await new Promise((res) => setTimeout(res, 800));
 
-  const minLength = type === "RAPPI" ? 5 : 8;
+  const minLength = type === "RAPPI" || type === "KEETA" ? 4 : 8;
   if (merchantId.trim().length < minLength) {
     return {
       success: false,
@@ -307,7 +316,14 @@ export async function simularPedidoMarketplaceAction(
       };
     }
 
-    const canalNome = type === "IFOOD" ? "iFood" : type === "RAPPI" ? "Rappi" : type;
+    const canalNome =
+      type === "IFOOD"
+        ? "iFood"
+        : type === "RAPPI"
+          ? "Rappi"
+          : type === "KEETA"
+            ? "Keeta Brasil"
+            : type;
     const randomCode = Math.floor(1000 + Math.random() * 9000);
     const orderId = `${type}-${randomCode}`;
 

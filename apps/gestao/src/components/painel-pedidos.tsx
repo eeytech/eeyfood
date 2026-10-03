@@ -260,6 +260,10 @@ const VIEW_STATUSES: Record<ActiveView, OrderStatus[]> = {
 const getPaymentLabel = (paymentMethod: PedidoRecebimento["paymentMethod"]) => {
   if (paymentMethod === "DINHEIRO") return "Dinheiro";
   if (paymentMethod === "CARTAO_PRESENCIAL") return "Cartão presencial";
+  if (paymentMethod === "PIX") return "Pix";
+  if (paymentMethod === "VALE_ALIMENTACAO") return "Vale Alimentação";
+  if (paymentMethod === "VALE_REFEICAO") return "Vale Refeição";
+  if (paymentMethod === "FIADO") return "Fiado";
   return "Mercado Pago";
 };
 
@@ -269,6 +273,7 @@ const getPaymentMethodVariant = (
 ) => {
   if (paymentMethod === "DINHEIRO") return "warning" as const;
   if (paymentMethod === "CARTAO_PRESENCIAL") return "danger" as const;
+  if (paymentMethod === "PIX") return paymentStatus === "PAID" ? ("success" as const) : ("secondary" as const);
   return paymentStatus === "PAID" ? ("success" as const) : ("secondary" as const);
 };
 
@@ -752,12 +757,19 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
             <div class="border-t my-2"></div>
 
             <div class="mb-4">
+              ${
+                order.marketplaceType
+                  ? `<p><span class="font-bold">CANAL:</span> ${order.marketplaceType === "KEETA" ? "KEETA BRASIL" : order.marketplaceType} ${order.marketplaceOrderId ? `(#${order.marketplaceOrderId})` : ""}</p>`
+                  : ""
+              }
               <p><span class="font-bold">PAGAMENTO:</span> ${
                 order.paymentMethod === "DINHEIRO"
                   ? "DINHEIRO"
                   : order.paymentMethod === "CARTAO_PRESENCIAL"
                     ? "CARTÃO (PRESENCIAL)"
-                    : "ONLINE"
+                    : order.paymentMethod === "PIX"
+                      ? "PIX"
+                      : "ONLINE"
               }</p>
               <p><span class="font-bold">STATUS:</span> ${order.paymentStatus === "PAID" ? "PAGO" : "PENDENTE"}</p>
               ${
@@ -1149,7 +1161,8 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                       const previousStatus = getPreviousStatus(order);
                       const isOfflinePayment =
                         order.paymentMethod === "DINHEIRO" ||
-                        order.paymentMethod === "CARTAO_PRESENCIAL";
+                        order.paymentMethod === "CARTAO_PRESENCIAL" ||
+                        order.paymentMethod === "PIX";
                       const isLoading = loadingOrderIds.includes(order.id);
                       const isExpanded = expandedOrders.has(order.id);
 
@@ -1174,6 +1187,19 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                                 >
                                   #{String(order.id)}
                                 </span>
+                                {order.marketplaceType && (
+                                  <span
+                                    className={cn(
+                                      "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold shadow-2xs",
+                                      order.marketplaceType === "IFOOD" && "bg-red-100 text-red-700 border border-red-200",
+                                      order.marketplaceType === "RAPPI" && "bg-orange-100 text-orange-700 border border-orange-200",
+                                      order.marketplaceType === "KEETA" && "bg-amber-400 text-slate-950 border border-amber-500 font-extrabold",
+                                      order.marketplaceType === "NINETY_NINE_FOOD" && "bg-yellow-100 text-yellow-800 border border-yellow-300",
+                                    )}
+                                  >
+                                    {order.marketplaceType === "KEETA" ? "Keeta" : order.marketplaceType === "IFOOD" ? "iFood" : order.marketplaceType === "RAPPI" ? "Rappi" : "99Food"}
+                                  </span>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="icon"

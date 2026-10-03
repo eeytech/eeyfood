@@ -204,7 +204,7 @@ export const RestaurantHoursSchedulingForm = ({
                   value: "AUTO",
                   label: "Automático (Horários)",
                   badge: "Recomendado",
-                  badgeColor: "bg-emerald-100 text-emerald-700",
+                  badgeColor: "bg-primary/10 text-primary border border-primary/20",
                   description:
                     "Abre e fecha automaticamente conforme os horários abaixo.",
                 },
@@ -339,7 +339,7 @@ export const RestaurantHoursSchedulingForm = ({
           {/* ── 3. Agendamento de Pedidos ─────────────────────────────── */}
           <div className="space-y-4 pt-2">
             <div className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-slate-900" />
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
               <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Agendamento de Pedidos
               </p>
@@ -526,7 +526,7 @@ export const RestaurantHoursSchedulingForm = ({
                           <span className="font-semibold text-slate-950 text-sm">
                             Horário Fixo Específico
                           </span>
-                          <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
+                          <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
                             Personalizado
                           </span>
                         </div>

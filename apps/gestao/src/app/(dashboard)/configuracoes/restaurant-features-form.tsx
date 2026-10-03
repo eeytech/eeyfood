@@ -2,6 +2,7 @@
 
 import {
   Loader2Icon,
+  QrCodeIcon,
   SaveIcon,
   ToggleRightIcon,
 } from "lucide-react";
@@ -17,14 +18,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 
@@ -32,25 +26,17 @@ interface RestaurantFeaturesFormProps {
   slug: string;
   initialValues: {
     acceptMercadoPago: boolean;
+    acceptPix?: boolean;
+    pixKey?: string | null;
     isCouponsEnabled: boolean;
     isCashbackEnabled: boolean;
     showOptionImages: boolean;
     isDeliveryEnabled: boolean;
     isTakeawayEnabled: boolean;
     isDineInEnabled: boolean;
-    isBotActive: boolean;
-    isOrderSchedulingEnabled: boolean;
     pizzaPricingRule?: "MAX" | "AVERAGE";
   };
 }
-
-const AI_SETUP_STEPS = [
-  "Acesse o menu lateral em Configurar e clique em \"IA\".",
-  "Insira a sua chave de API da OpenAI (OpenAI API Key).",
-  "Defina as instruções de comportamento do bot (Prompt de Sistema).",
-  "Acesse a opção \"WhatsApp\" em Configurar e conecte lendo o QR Code.",
-  "Ative o atendimento automático com IA para iniciar.",
-];
 
 export const RestaurantFeaturesForm = ({
   slug,
@@ -59,6 +45,10 @@ export const RestaurantFeaturesForm = ({
   const [acceptMercadoPago, setAcceptMercadoPago] = useState(
     initialValues.acceptMercadoPago,
   );
+  const [acceptPix, setAcceptPix] = useState(
+    initialValues.acceptPix ?? true,
+  );
+  const [pixKey, setPixKey] = useState(initialValues.pixKey ?? "");
   const [showOptionImages, setShowOptionImages] = useState(
     initialValues.showOptionImages,
   );
@@ -70,10 +60,6 @@ export const RestaurantFeaturesForm = ({
   );
   const [isDineInEnabled, setIsDineInEnabled] = useState(
     initialValues.isDineInEnabled,
-  );
-  const [isBotActive, setIsBotActive] = useState(initialValues.isBotActive);
-  const [isOrderSchedulingEnabled, setIsOrderSchedulingEnabled] = useState(
-    initialValues.isOrderSchedulingEnabled,
   );
   const [pizzaPricingRule, setPizzaPricingRule] = useState<"MAX" | "AVERAGE">(
     initialValues.pizzaPricingRule ?? "MAX",
@@ -104,13 +90,12 @@ export const RestaurantFeaturesForm = ({
     e.preventDefault();
     const formData = new FormData();
     if (acceptMercadoPago) formData.append("acceptMercadoPago", "on");
+    if (acceptPix) formData.append("acceptPix", "on");
+    if (pixKey.trim()) formData.append("pixKey", pixKey.trim());
     if (showOptionImages) formData.append("showOptionImages", "on");
     if (isDeliveryEnabled) formData.append("isDeliveryEnabled", "on");
     if (isTakeawayEnabled) formData.append("isTakeawayEnabled", "on");
     if (isDineInEnabled) formData.append("isDineInEnabled", "on");
-    if (isBotActive) formData.append("isBotActive", "on");
-    if (isOrderSchedulingEnabled)
-      formData.append("isOrderSchedulingEnabled", "on");
     formData.append("pizzaPricingRule", pizzaPricingRule);
 
   startTransition(async () => {
@@ -122,33 +107,6 @@ export const RestaurantFeaturesForm = ({
     }
   });
 };
-
-  const paymentFeatures = [
-    {
-      id: "acceptMercadoPago",
-      label: "Mercado Pago (Online)",
-      description:
-        "Permite que clientes paguem online via Mercado Pago no checkout.",
-      checked: acceptMercadoPago,
-      onChange: setAcceptMercadoPago,
-    },
-    {
-      id: "showOptionImages",
-      label: "Imagens nos adicionais",
-      description:
-        "Exibe miniaturas de fotos ao lado de cada adicional no app do cliente.",
-      checked: showOptionImages,
-      onChange: setShowOptionImages,
-    },
-    {
-      id: "isOrderSchedulingEnabled",
-      label: "Agendamento de Pedidos",
-      description:
-        "Permite que clientes agendem data e hora para entrega ou retirada.",
-      checked: isOrderSchedulingEnabled,
-      onChange: setIsOrderSchedulingEnabled,
-    },
-  ];
 
   const consumptionMethods = [
     {
@@ -300,7 +258,7 @@ export const RestaurantFeaturesForm = ({
                     <span className="font-semibold text-slate-950 text-sm">
                       Média Aritmética
                     </span>
-                    <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
+                    <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
                       Proporcional
                     </span>
                   </div>
@@ -318,92 +276,114 @@ export const RestaurantFeaturesForm = ({
           {/* Funcionalidades Gerais */}
           <div className="space-y-3 pt-2">
             <div className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-slate-900" />
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
               <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Experiência de Compra e Pagamentos
               </p>
             </div>
             <div className="space-y-2.5">
-              {paymentFeatures.map((feature) => (
-                <div
-                  key={feature.id}
-                  className="flex items-center justify-between gap-4 rounded-xl border border-slate-200/80 bg-white p-3.5 shadow-2xs transition hover:border-slate-300"
-                >
-                  <div className="space-y-0.5">
-                    <Label
-                      htmlFor={feature.id}
-                      className="cursor-pointer font-semibold text-slate-950 text-sm"
-                    >
-                      {feature.label}
-                    </Label>
-                    <p className="text-xs text-slate-500">{feature.description}</p>
-                  </div>
-                  <Switch
-                    id={feature.id}
-                    checked={feature.checked}
-                    onCheckedChange={feature.onChange}
-                    disabled={isPending}
-                  />
-                </div>
-              ))}
-
-              {/* Bot WhatsApp */}
+              {/* Mercado Pago */}
               <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-200/80 bg-white p-3.5 shadow-2xs transition hover:border-slate-300">
                 <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <Label
-                      htmlFor="isBotActive"
-                      className="cursor-pointer font-semibold text-slate-950 text-sm"
-                    >
-                      Atendente de IA (WhatsApp)
-                    </Label>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <button
-                          type="button"
-                          className="rounded-md px-1.5 py-0.5 text-[11px] font-medium text-slate-500 transition hover:text-slate-800 hover:bg-slate-100"
-                        >
-                          Como ativar?
-                        </button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-md border-slate-200 bg-white text-slate-900 shadow-2xl">
-                        <DialogHeader>
-                          <DialogTitle className="font-display text-lg">
-                            Atendente de IA no WhatsApp
-                          </DialogTitle>
-                          <DialogDescription className="text-left text-xs text-slate-500">
-                            Um assistente inteligente que atende seus clientes de forma autônoma pelo WhatsApp, respondendo dúvidas do cardápio e auxiliando na montagem dos pedidos.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-3 pt-2">
-                          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                            Etapas de Ativação
-                          </p>
-                          <ol className="space-y-2">
-                            {AI_SETUP_STEPS.map((step, i) => (
-                              <li
-                                key={i}
-                                className="flex items-start gap-2.5 text-xs text-slate-600 rounded-lg border border-slate-100 bg-slate-50/60 p-2"
-                              >
-                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                                  {i + 1}
-                                </span>
-                                {step}
-                              </li>
-                            ))}
-                          </ol>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
+                  <Label
+                    htmlFor="acceptMercadoPago"
+                    className="cursor-pointer font-semibold text-slate-950 text-sm"
+                  >
+                    Mercado Pago (Online)
+                  </Label>
                   <p className="text-xs text-slate-500">
-                    Permite que a inteligência artificial responda e tire pedidos via WhatsApp.
+                    Permite que clientes paguem online via Mercado Pago no checkout.
                   </p>
                 </div>
                 <Switch
-                  id="isBotActive"
-                  checked={isBotActive}
-                  onCheckedChange={setIsBotActive}
+                  id="acceptMercadoPago"
+                  checked={acceptMercadoPago}
+                  onCheckedChange={setAcceptMercadoPago}
+                  disabled={isPending}
+                />
+              </div>
+
+              {/* Pagamento via Pix */}
+              <div
+                className={`rounded-xl border transition-all p-3.5 shadow-2xs space-y-3 ${
+                  acceptPix
+                    ? "border-primary/40 bg-primary/[0.03]"
+                    : "border-slate-200/80 bg-white hover:border-slate-300"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <Label
+                        htmlFor="acceptPix"
+                        className="cursor-pointer font-semibold text-slate-950 text-sm flex items-center gap-1.5"
+                      >
+                        <QrCodeIcon size={16} className="text-primary" />
+                        Pagamento via Pix
+                      </Label>
+                      <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                        Transferência Direta
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      Permite que clientes selecionem Pix no checkout do cardápio de vendas e no balcão.
+                    </p>
+                  </div>
+                  <Switch
+                    id="acceptPix"
+                    checked={acceptPix}
+                    onCheckedChange={setAcceptPix}
+                    disabled={isPending}
+                  />
+                </div>
+
+                {acceptPix && (
+                  <div className="pt-2.5 border-t border-primary/10 space-y-1.5 animate-in fade-in slide-in-from-top-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                      <div className="sm:w-1/3">
+                        <Label
+                          htmlFor="pixKey"
+                          className="text-xs font-semibold text-slate-700"
+                        >
+                          Chave Pix do Restaurante:
+                        </Label>
+                        <p className="text-[11px] text-slate-400 leading-tight">
+                          Exibida no checkout para o cliente transferir
+                        </p>
+                      </div>
+                      <div className="sm:w-2/3">
+                        <Input
+                          id="pixKey"
+                          name="pixKey"
+                          value={pixKey}
+                          onChange={(e) => setPixKey(e.target.value)}
+                          placeholder="CNPJ, Celular, E-mail ou Chave Aleatória"
+                          className="h-9 text-xs bg-white"
+                          disabled={isPending}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Imagens nos adicionais */}
+              <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-200/80 bg-white p-3.5 shadow-2xs transition hover:border-slate-300">
+                <div className="space-y-0.5">
+                  <Label
+                    htmlFor="showOptionImages"
+                    className="cursor-pointer font-semibold text-slate-950 text-sm"
+                  >
+                    Imagens nos adicionais
+                  </Label>
+                  <p className="text-xs text-slate-500">
+                    Exibe miniaturas de fotos ao lado de cada adicional no app do cliente.
+                  </p>
+                </div>
+                <Switch
+                  id="showOptionImages"
+                  checked={showOptionImages}
+                  onCheckedChange={setShowOptionImages}
                   disabled={isPending}
                 />
               </div>

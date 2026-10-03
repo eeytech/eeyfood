@@ -89,7 +89,7 @@ export function AiHandoffCard({ slug, clientesPausados }: AiHandoffCardProps) {
             className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
               hasPausados
                 ? "bg-amber-100 text-amber-800"
-                : "bg-slate-100 text-slate-700"
+                : "bg-primary/10 text-primary"
             }`}
           >
             {hasPausados ? (
@@ -111,12 +111,12 @@ export function AiHandoffCard({ slug, clientesPausados }: AiHandoffCardProps) {
                 className={
                   hasPausados
                     ? "bg-amber-200/90 text-amber-900 hover:bg-amber-200 border-0 text-xs font-semibold px-2 py-0.5"
-                    : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-50 text-xs font-medium px-2 py-0.5"
+                    : "bg-primary/10 text-primary border-primary/20 hover:bg-primary/15 text-xs font-medium px-2 py-0.5"
                 }
               >
                 <span
                   className={`mr-1.5 h-1.5 w-1.5 rounded-full ${
-                    hasPausados ? "bg-amber-600 animate-ping" : "bg-emerald-500"
+                    hasPausados ? "bg-amber-600 animate-ping" : "bg-primary"
                   }`}
                 />
                 {hasPausados
@@ -193,7 +193,7 @@ export function AiHandoffCard({ slug, clientesPausados }: AiHandoffCardProps) {
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-7 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 mb-3 shadow-inner">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary mb-3 shadow-inner">
               <UserCheckIcon size={24} />
             </div>
             <h3 className="text-sm font-semibold text-slate-800">
@@ -203,7 +203,7 @@ export function AiHandoffCard({ slug, clientesPausados }: AiHandoffCardProps) {
               O robô com Inteligência Artificial está atendendo 100% das conversas automaticamente no WhatsApp. Quando um cliente pedir para falar com uma pessoa (&ldquo;atendente&rdquo;, &ldquo;falar com humano&rdquo;) ou expressar insatisfação, ele entrará nesta fila imediatamente.
             </p>
             <div className="mt-3.5 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50/80 px-3 py-1 text-[11px] font-medium text-slate-600">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
               Pausa inteligente individual: um cliente em atendimento humano não bloqueia o atendimento dos outros.
             </div>
           </div>
@@ -274,10 +274,10 @@ function ClientePausadoItem({
           href={whatsappUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 hover:text-emerald-700 transition-colors"
+          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 hover:text-primary transition-colors"
           title="Abrir conversa no WhatsApp Web"
         >
-          <MessageSquareIcon size={13} className="text-emerald-600" />
+          <MessageSquareIcon size={13} className="text-primary" />
           Conversar
         </a>
 
@@ -286,10 +286,10 @@ function ClientePausadoItem({
           size="sm"
           onClick={handleReativarIndividual}
           disabled={isPending}
-          className="h-8 gap-1.5 rounded-lg bg-emerald-600 px-3 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700"
+          className="h-8 gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90"
         >
           <PlayIcon size={12} />
-          {isPending ? "Reativando..." : "Reativar Robô"}
+          {isPending ? "Reativando..." : "Reativar IA"}
         </Button>
       </div>
     </div>

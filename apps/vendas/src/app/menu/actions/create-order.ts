@@ -76,6 +76,12 @@ export const createOrder = async (input: CreateOrderInput) => {
     }
   }
 
+  if (input.paymentMethod === "PIX") {
+    if (!restaurant.acceptPix) {
+      throw new Error("Este restaurante não aceita pagamento via Pix no momento.");
+    }
+  }
+
   const consumptionMethodAllowed =
     (input.consumptionMethod === "DELIVERY" && restaurant.isDeliveryEnabled) ||
     (input.consumptionMethod === "TAKEAWAY" && restaurant.isTakeawayEnabled) ||

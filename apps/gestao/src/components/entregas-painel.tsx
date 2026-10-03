@@ -965,7 +965,9 @@ export default function EntregasPainel({
                             ? "Dinheiro"
                             : order.paymentMethod === "CARTAO_PRESENCIAL"
                               ? "Cartão Presencial"
-                              : "Online (PIX/Cartão)"}
+                              : order.paymentMethod === "PIX"
+                                ? "Pix"
+                                : "Mercado Pago"}
                         </span>
                       </div>
                       <span className="font-bold text-slate-900">

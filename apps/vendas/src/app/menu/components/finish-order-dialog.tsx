@@ -84,6 +84,7 @@ const formSchema = z
       "MERCADO_PAGO",
       "DINHEIRO",
       "CARTAO_PRESENCIAL",
+      "PIX",
     ]),
     changeFor: z.string().trim().optional(),
   })

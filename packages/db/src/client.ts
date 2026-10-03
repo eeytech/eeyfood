@@ -31,6 +31,12 @@ function getOrCreateDb(): { db: Database; pool: Pool } {
 
   const db = drizzle(pool, { schema });
 
+  pool
+    .query(
+      'ALTER TABLE "Restaurant" ADD COLUMN IF NOT EXISTS "acceptPix" boolean DEFAULT true NOT NULL; ALTER TABLE "Restaurant" ADD COLUMN IF NOT EXISTS "pixKey" text; ALTER TYPE "MarketplaceType" ADD VALUE IF NOT EXISTS \'KEETA\';'
+    )
+    .catch(() => {});
+
   globalForDb.fswPool = pool;
   globalForDb.fswDb = db;
 
