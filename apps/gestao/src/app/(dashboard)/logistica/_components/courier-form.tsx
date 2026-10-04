@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Loader2Icon } from "lucide-react";
 
 import {
   createCourierAction,
@@ -8,6 +9,7 @@ import {
 } from "@/app/(dashboard)/logistica-actions";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
+import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -17,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { BRAZIL_UFS } from "@/lib/address-utils";
 import { cn } from "@/lib/utils";
 import type { Courier } from "@fsw/db";
@@ -25,6 +28,7 @@ interface CourierFormProps {
   slug: string;
   defaultValues?: Courier;
   onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
 const WORK_DAYS = [
@@ -57,7 +61,7 @@ const formatCep = (v: string) => {
   return d.replace(/(\d{5})(\d{1,3})$/, "$1-$2");
 };
 
-export function CourierForm({ slug, defaultValues, onSuccess }: CourierFormProps) {
+export function CourierForm({ slug, defaultValues, onSuccess, onCancel }: CourierFormProps) {
   const [isPending, startTransition] = useTransition();
 
   const [phone, setPhone] = useState(defaultValues?.phone ?? "");
@@ -67,6 +71,11 @@ export function CourierForm({ slug, defaultValues, onSuccess }: CourierFormProps
   const [bairro, setBairro] = useState(defaultValues?.bairro ?? "");
   const [cidade, setCidade] = useState(defaultValues?.cidade ?? "");
   const [estado, setEstado] = useState(defaultValues?.estado ?? "");
+  const [vehicleType, setVehicleType] = useState(defaultValues?.vehicleType ?? "MOTO");
+  const [cnhCategoria, setCnhCategoria] = useState(defaultValues?.cnhCategoria ?? "");
+  const [usesOwnVehicle, setUsesOwnVehicle] = useState(defaultValues?.usesOwnVehicle !== false);
+  const [isActive, setIsActive] = useState(defaultValues?.isActive ?? true);
+  const [isAvailable, setIsAvailable] = useState(defaultValues?.isAvailable ?? false);
   const [selectedDays, setSelectedDays] = useState<string[]>(
     defaultValues?.workDays ?? [],
   );
@@ -97,6 +106,19 @@ export function CourierForm({ slug, defaultValues, onSuccess }: CourierFormProps
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
+    if (isActive) formData.set("isActive", "on");
+    else formData.delete("isActive");
+
+    if (isAvailable) formData.set("isAvailable", "on");
+    else formData.delete("isAvailable");
+
+    if (usesOwnVehicle) formData.set("usesOwnVehicle", "on");
+    else formData.delete("usesOwnVehicle");
+
+    formData.set("vehicleType", vehicleType);
+    if (cnhCategoria) formData.set("cnhCategoria", cnhCategoria);
+    if (estado) formData.set("estado", estado);
+
     startTransition(async () => {
       if (defaultValues) {
         formData.set("courierId", defaultValues.id);
@@ -109,347 +131,465 @@ export function CourierForm({ slug, defaultValues, onSuccess }: CourierFormProps
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-0">
-      <div className="max-h-[65vh] overflow-y-auto pr-1">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-0 pt-1">
+      <div className="max-h-[65vh] space-y-5 overflow-y-auto pr-1">
         {/* ── Dados Pessoais ── */}
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Dados Pessoais
-        </p>
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="courier-name">Nome completo</Label>
-            <Input
-              id="courier-name"
-              name="name"
-              placeholder="Ex.: João Silva"
-              defaultValue={defaultValues?.name}
-              required
-            />
+        <div>
+          <div className="mb-3 flex items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+              Dados Pessoais
+            </span>
+            <div className="h-px flex-1 bg-slate-100" />
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label htmlFor="courier-phone">Telefone / WhatsApp</Label>
+              <Label htmlFor="courier-name" className="text-xs font-semibold text-slate-700">
+                Nome completo *
+              </Label>
               <Input
-                id="courier-phone"
-                name="phone"
-                placeholder="(11) 99999-9999"
-                value={phone}
-                onChange={(e) => setPhone(formatPhone(e.target.value))}
+                id="courier-name"
+                name="name"
+                placeholder="Ex.: João Silva"
+                defaultValue={defaultValues?.name}
                 required
+                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
               />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="courier-cpf">CPF</Label>
-              <Input
-                id="courier-cpf"
-                name="cpf"
-                placeholder="000.000.000-00"
-                value={cpf}
-                onChange={(e) => setCpf(formatCpf(e.target.value))}
-              />
-            </div>
-          </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="courier-rg">RG</Label>
-            <Input
-              id="courier-rg"
-              name="rg"
-              placeholder="00.000.000-0"
-              defaultValue={defaultValues?.rg ?? ""}
-            />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="courier-phone" className="text-xs font-semibold text-slate-700">
+                  Telefone / WhatsApp *
+                </Label>
+                <Input
+                  id="courier-phone"
+                  name="phone"
+                  placeholder="(11) 99999-9999"
+                  value={phone}
+                  onChange={(e) => setPhone(formatPhone(e.target.value))}
+                  required
+                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="courier-cpf" className="text-xs font-semibold text-slate-700">
+                  CPF
+                </Label>
+                <Input
+                  id="courier-cpf"
+                  name="cpf"
+                  placeholder="000.000.000-00"
+                  value={cpf}
+                  onChange={(e) => setCpf(formatCpf(e.target.value))}
+                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="courier-rg" className="text-xs font-semibold text-slate-700">
+                RG
+              </Label>
+              <Input
+                id="courier-rg"
+                name="rg"
+                placeholder="00.000.000-0"
+                defaultValue={defaultValues?.rg ?? ""}
+                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
+              />
+            </div>
           </div>
         </div>
-
-        {/* ── Divider ── */}
-        <div className="my-4 border-t" />
 
         {/* ── Endereço ── */}
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Endereço
-        </p>
-        <div className="space-y-3">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="courier-cep">CEP</Label>
-              <Input
-                id="courier-cep"
-                name="cep"
-                placeholder="00000-000"
-                value={cep}
-                onChange={(e) => setCep(formatCep(e.target.value))}
-                onBlur={handleCepBlur}
-              />
-            </div>
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="courier-logradouro">Logradouro</Label>
-              <Input
-                id="courier-logradouro"
-                name="logradouro"
-                placeholder="Rua, Av., etc."
-                value={logradouro}
-                onChange={(e) => setLogradouro(e.target.value)}
-              />
-            </div>
+        <div>
+          <div className="mb-3 flex items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+              Endereço
+            </span>
+            <div className="h-px flex-1 bg-slate-100" />
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="courier-numero">Número</Label>
-              <Input
-                id="courier-numero"
-                name="numero"
-                placeholder="123"
-                defaultValue={defaultValues?.numero ?? ""}
-              />
+          <div className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="courier-cep" className="text-xs font-semibold text-slate-700">
+                  CEP
+                </Label>
+                <Input
+                  id="courier-cep"
+                  name="cep"
+                  placeholder="00000-000"
+                  value={cep}
+                  onChange={(e) => setCep(formatCep(e.target.value))}
+                  onBlur={handleCepBlur}
+                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="courier-logradouro" className="text-xs font-semibold text-slate-700">
+                  Logradouro
+                </Label>
+                <Input
+                  id="courier-logradouro"
+                  name="logradouro"
+                  placeholder="Rua, Av., etc."
+                  value={logradouro}
+                  onChange={(e) => setLogradouro(e.target.value)}
+                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                />
+              </div>
             </div>
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="courier-complemento">Complemento</Label>
-              <Input
-                id="courier-complemento"
-                name="complemento"
-                placeholder="Apto, Bloco..."
-                defaultValue={defaultValues?.complemento ?? ""}
-              />
-            </div>
-          </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="courier-bairro">Bairro</Label>
-              <Input
-                id="courier-bairro"
-                name="bairro"
-                placeholder="Bairro"
-                value={bairro}
-                onChange={(e) => setBairro(e.target.value)}
-              />
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="courier-numero" className="text-xs font-semibold text-slate-700">
+                  Número
+                </Label>
+                <Input
+                  id="courier-numero"
+                  name="numero"
+                  placeholder="123"
+                  defaultValue={defaultValues?.numero ?? ""}
+                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="courier-complemento" className="text-xs font-semibold text-slate-700">
+                  Complemento
+                </Label>
+                <Input
+                  id="courier-complemento"
+                  name="complemento"
+                  placeholder="Apto, Bloco..."
+                  defaultValue={defaultValues?.complemento ?? ""}
+                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                />
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="courier-cidade">Cidade</Label>
-              <Input
-                id="courier-cidade"
-                name="cidade"
-                placeholder="Cidade"
-                value={cidade}
-                onChange={(e) => setCidade(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="courier-estado">Estado</Label>
-              <Select
-                value={estado || undefined}
-                onValueChange={(val) => setEstado(val)}
-              >
-                <SelectTrigger
-                  id="courier-estado"
-                  className="h-10 rounded-full border-slate-200 bg-white px-3 font-semibold text-sm uppercase text-slate-900"
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="courier-bairro" className="text-xs font-semibold text-slate-700">
+                  Bairro
+                </Label>
+                <Input
+                  id="courier-bairro"
+                  name="bairro"
+                  placeholder="Bairro"
+                  value={bairro}
+                  onChange={(e) => setBairro(e.target.value)}
+                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="courier-cidade" className="text-xs font-semibold text-slate-700">
+                  Cidade
+                </Label>
+                <Input
+                  id="courier-cidade"
+                  name="cidade"
+                  placeholder="Cidade"
+                  value={cidade}
+                  onChange={(e) => setCidade(e.target.value)}
+                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="courier-estado" className="text-xs font-semibold text-slate-700">
+                  Estado
+                </Label>
+                <Select
+                  value={estado || undefined}
+                  onValueChange={(val) => setEstado(val)}
                 >
-                  <SelectValue placeholder="UF" />
-                </SelectTrigger>
-                <SelectContent className="max-h-60 rounded-xl border-slate-200 bg-white shadow-xl">
-                  {BRAZIL_UFS.map((uf) => (
-                    <SelectItem key={uf.value} value={uf.value} className="text-xs font-medium">
-                      <span className="font-semibold text-slate-900">{uf.value}</span>
-                      <span className="ml-1.5 text-slate-500">- {uf.name}</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <input type="hidden" name="estado" value={estado} />
+                  <SelectTrigger
+                    id="courier-estado"
+                    className="h-10 rounded-xl border-slate-200 bg-white px-3 font-semibold text-sm uppercase text-slate-900 focus:border-primary"
+                  >
+                    <SelectValue placeholder="UF" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60 rounded-xl border-slate-200 bg-white shadow-xl">
+                    {BRAZIL_UFS.map((uf) => (
+                      <SelectItem key={uf.value} value={uf.value} className="text-xs font-medium">
+                        <span className="font-semibold text-slate-900">{uf.value}</span>
+                        <span className="ml-1.5 text-slate-500">- {uf.name}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <input type="hidden" name="estado" value={estado} />
+              </div>
             </div>
           </div>
         </div>
-
-        {/* ── Divider ── */}
-        <div className="my-4 border-t" />
 
         {/* ── Habilitação ── */}
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Carteira de Habilitação (CNH)
-        </p>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="courier-cnh-numero">Número CNH</Label>
-            <Input
-              id="courier-cnh-numero"
-              name="cnhNumero"
-              placeholder="00000000000"
-              defaultValue={defaultValues?.cnhNumero ?? ""}
-            />
+        <div>
+          <div className="mb-3 flex items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+              Carteira de Habilitação (CNH)
+            </span>
+            <div className="h-px flex-1 bg-slate-100" />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="courier-cnh-categoria">Categoria</Label>
-            <select
-              id="courier-cnh-categoria"
-              name="cnhCategoria"
-              defaultValue={defaultValues?.cnhCategoria ?? ""}
-              className="flex h-11 w-full rounded-2xl border border-input bg-background px-4 py-2 text-sm"
-            >
-              <option value="">—</option>
-              <option value="A">A</option>
-              <option value="B">B</option>
-              <option value="AB">AB</option>
-              <option value="C">C</option>
-              <option value="D">D</option>
-              <option value="E">E</option>
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="courier-cnh-vencimento">Vencimento</Label>
-            <DatePicker
-              id="courier-cnh-vencimento"
-              name="cnhVencimento"
-              defaultValue={defaultValues?.cnhVencimento ?? ""}
-              placeholder="Data de vencimento"
-            />
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="courier-cnh-numero" className="text-xs font-semibold text-slate-700">
+                Número CNH
+              </Label>
+              <Input
+                id="courier-cnh-numero"
+                name="cnhNumero"
+                placeholder="00000000000"
+                defaultValue={defaultValues?.cnhNumero ?? ""}
+                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="courier-cnh-categoria" className="text-xs font-semibold text-slate-700">
+                Categoria
+              </Label>
+              <Select
+                value={cnhCategoria || undefined}
+                onValueChange={(val) => setCnhCategoria(val)}
+              >
+                <SelectTrigger
+                  id="courier-cnh-categoria"
+                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-primary"
+                >
+                  <SelectValue placeholder="—" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-slate-200 bg-white shadow-xl">
+                  <SelectItem value="A">Categoria A (Moto)</SelectItem>
+                  <SelectItem value="B">Categoria B (Carro)</SelectItem>
+                  <SelectItem value="AB">Categoria AB (Moto e Carro)</SelectItem>
+                  <SelectItem value="C">Categoria C</SelectItem>
+                  <SelectItem value="D">Categoria D</SelectItem>
+                  <SelectItem value="E">Categoria E</SelectItem>
+                </SelectContent>
+              </Select>
+              <input type="hidden" name="cnhCategoria" value={cnhCategoria} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="courier-cnh-vencimento" className="text-xs font-semibold text-slate-700">
+                Vencimento
+              </Label>
+              <DatePicker
+                id="courier-cnh-vencimento"
+                name="cnhVencimento"
+                defaultValue={defaultValues?.cnhVencimento ?? ""}
+                placeholder="Data de vencimento"
+              />
+            </div>
           </div>
         </div>
-
-        {/* ── Divider ── */}
-        <div className="my-4 border-t" />
 
         {/* ── Veículo e Escala ── */}
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Veículo e Escala
-        </p>
-        <div className="space-y-3">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="courier-vehicle">Tipo de veículo</Label>
-              <select
-                id="courier-vehicle"
-                name="vehicleType"
-                defaultValue={defaultValues?.vehicleType ?? "MOTO"}
-                className="flex h-11 w-full rounded-2xl border border-input bg-background px-4 py-2 text-sm"
-              >
-                <option value="MOTO">Moto</option>
-                <option value="BIKE">Bike</option>
-                <option value="CARRO">Carro</option>
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="courier-plate">Placa</Label>
-              <Input
-                id="courier-plate"
-                name="licensePlate"
-                placeholder="ABC-1234"
-                defaultValue={defaultValues?.licensePlate ?? ""}
-              />
-            </div>
+        <div>
+          <div className="mb-3 flex items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+              Veículo e Escala
+            </span>
+            <div className="h-px flex-1 bg-slate-100" />
           </div>
 
-          <div className="space-y-1.5">
-            <Label>Posse do veículo utilizado</Label>
-            <div className="flex gap-3">
-              <label className="flex cursor-pointer items-center gap-2 rounded-lg border bg-slate-50 px-3 py-2 text-sm has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                <input
-                  type="radio"
-                  name="usesOwnVehicle"
-                  value="on"
-                  defaultChecked={defaultValues?.usesOwnVehicle !== false}
-                  className="accent-primary"
+          <div className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="courier-vehicle" className="text-xs font-semibold text-slate-700">
+                  Tipo de veículo *
+                </Label>
+                <Select
+                  value={vehicleType}
+                  onValueChange={(val) => setVehicleType(val)}
+                >
+                  <SelectTrigger
+                    id="courier-vehicle"
+                    className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-primary"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-slate-200 bg-white shadow-xl">
+                    <SelectItem value="MOTO">Moto</SelectItem>
+                    <SelectItem value="BIKE">Bicicleta</SelectItem>
+                    <SelectItem value="CARRO">Carro</SelectItem>
+                  </SelectContent>
+                </Select>
+                <input type="hidden" name="vehicleType" value={vehicleType} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="courier-plate" className="text-xs font-semibold text-slate-700">
+                  Placa
+                </Label>
+                <Input
+                  id="courier-plate"
+                  name="licensePlate"
+                  placeholder="ABC-1234"
+                  defaultValue={defaultValues?.licensePlate ?? ""}
+                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
                 />
-                Veículo próprio
-              </label>
-              <label className="flex cursor-pointer items-center gap-2 rounded-lg border bg-slate-50 px-3 py-2 text-sm has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                <input
-                  type="radio"
-                  name="usesOwnVehicle"
-                  value=""
-                  defaultChecked={defaultValues?.usesOwnVehicle === false}
-                  className="accent-primary"
-                />
-                Veículo da empresa
-              </label>
+              </div>
             </div>
-          </div>
 
-          <div className="space-y-1.5">
-            <Label>Dias de trabalho</Label>
-            <div className="flex flex-wrap gap-2">
-              {WORK_DAYS.map(({ value, label }) => (
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">Posse do veículo utilizado</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <button
-                  key={value}
                   type="button"
-                  onClick={() => toggleDay(value)}
+                  onClick={() => setUsesOwnVehicle(true)}
                   className={cn(
-                    "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
-                    selectedDays.includes(value)
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-input bg-slate-50 text-slate-600 hover:bg-slate-100",
+                    "flex items-center gap-2 rounded-xl border p-3 text-xs font-medium transition text-left",
+                    usesOwnVehicle
+                      ? "border-primary bg-primary/[0.06] text-primary shadow-xs ring-1 ring-primary/30"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
                   )}
                 >
-                  {label}
+                  <span className={cn(
+                    "h-3 w-3 rounded-full border flex items-center justify-center",
+                    usesOwnVehicle ? "border-primary bg-primary" : "border-slate-300 bg-white",
+                  )}>
+                    {usesOwnVehicle && <span className="h-1 w-1 rounded-full bg-white" />}
+                  </span>
+                  <span>Veículo próprio</span>
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => setUsesOwnVehicle(false)}
+                  className={cn(
+                    "flex items-center gap-2 rounded-xl border p-3 text-xs font-medium transition text-left",
+                    !usesOwnVehicle
+                      ? "border-primary bg-primary/[0.06] text-primary shadow-xs ring-1 ring-primary/30"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                  )}
+                >
+                  <span className={cn(
+                    "h-3 w-3 rounded-full border flex items-center justify-center",
+                    !usesOwnVehicle ? "border-primary bg-primary" : "border-slate-300 bg-white",
+                  )}>
+                    {!usesOwnVehicle && <span className="h-1 w-1 rounded-full bg-white" />}
+                  </span>
+                  <span>Veículo da empresa</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">Dias de trabalho</Label>
+              <div className="flex flex-wrap gap-2">
+                {WORK_DAYS.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => toggleDay(value)}
+                    className={cn(
+                      "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
+                      selectedDays.includes(value)
+                        ? "border-primary bg-primary text-primary-foreground shadow-sm shadow-primary/20"
+                        : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100",
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {selectedDays.map((day) => (
+                <input key={day} type="hidden" name="workDays" value={day} />
               ))}
             </div>
-            {selectedDays.map((day) => (
-              <input key={day} type="hidden" name="workDays" value={day} />
-            ))}
-          </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="courier-shift-start">Horário início</Label>
-              <Input
-                id="courier-shift-start"
-                name="shiftStart"
-                type="time"
-                defaultValue={defaultValues?.shiftStart ?? ""}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="courier-shift-end">Horário fim</Label>
-              <Input
-                id="courier-shift-end"
-                name="shiftEnd"
-                type="time"
-                defaultValue={defaultValues?.shiftEnd ?? ""}
-              />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="courier-shift-start" className="text-xs font-semibold text-slate-700">
+                  Horário início
+                </Label>
+                <Input
+                  id="courier-shift-start"
+                  name="shiftStart"
+                  type="time"
+                  defaultValue={defaultValues?.shiftStart ?? ""}
+                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-primary"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="courier-shift-end" className="text-xs font-semibold text-slate-700">
+                  Horário fim
+                </Label>
+                <Input
+                  id="courier-shift-end"
+                  name="shiftEnd"
+                  type="time"
+                  defaultValue={defaultValues?.shiftEnd ?? ""}
+                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-primary"
+                />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* ── Divider ── */}
-        <div className="my-4 border-t" />
-
         {/* ── Status ── */}
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Status
-        </p>
-        <div className="flex flex-col gap-2">
-          <label className="flex cursor-pointer items-center gap-2.5 rounded-md border bg-slate-50 px-3 py-2.5 text-sm font-medium">
-            <input
-              type="checkbox"
-              name="isActive"
-              defaultChecked={defaultValues?.isActive ?? true}
-              className="h-4 w-4 rounded"
-            />
-            Motoboy ativo
-          </label>
-          <label className="flex cursor-pointer items-center gap-2.5 rounded-md border bg-slate-50 px-3 py-2.5 text-sm font-medium">
-            <input
-              type="checkbox"
-              name="isAvailable"
-              defaultChecked={defaultValues?.isAvailable ?? false}
-              className="h-4 w-4 rounded"
-            />
-            Disponível agora para entregas
-          </label>
+        <div>
+          <div className="mb-3 flex items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+              Status e Disponibilidade
+            </span>
+            <div className="h-px flex-1 bg-slate-100" />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/50 p-3">
+              <div>
+                <Label className="text-xs font-semibold text-slate-900">Motoboy ativo</Label>
+                <p className="text-[11px] text-slate-500">
+                  Habilita ou desabilita o entregador no sistema
+                </p>
+              </div>
+              <Switch
+                checked={isActive}
+                onCheckedChange={setIsActive}
+                className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/50 p-3">
+              <div>
+                <Label className="text-xs font-semibold text-slate-900">Disponível agora para entregas</Label>
+                <p className="text-[11px] text-slate-500">
+                  Indica se o motoboy está apto para receber viagens no momento
+                </p>
+              </div>
+              <Switch
+                checked={isAvailable}
+                onCheckedChange={setIsAvailable}
+                className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
-      <Button type="submit" className="mt-4 w-full" disabled={isPending}>
-        {isPending
-          ? defaultValues
-            ? "Salvando..."
-            : "Cadastrando..."
-          : defaultValues
-            ? "Salvar motoboy"
-            : "Cadastrar motoboy"}
-      </Button>
+      <DialogFooter className="gap-2 pt-4 border-t border-slate-100">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          className="rounded-full border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-100"
+        >
+          Cancelar
+        </Button>
+        <Button
+          type="submit"
+          disabled={isPending}
+          className="rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 disabled:opacity-50"
+        >
+          {isPending && <Loader2Icon size={14} className="mr-1.5 animate-spin" />}
+          {isPending
+            ? defaultValues ? "Salvando..." : "Cadastrando..."
+            : defaultValues ? "Salvar Alterações" : "Cadastrar Motoboy"}
+        </Button>
+      </DialogFooter>
     </form>
   );
 }

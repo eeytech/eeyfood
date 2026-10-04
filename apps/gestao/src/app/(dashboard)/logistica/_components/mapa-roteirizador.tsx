@@ -780,20 +780,24 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
 
       {/* ── Dialog Localização do Restaurante ────────────── */}
       <Dialog open={isLocationDialogOpen} onOpenChange={setIsLocationDialogOpen}>
-        <DialogContent className="max-w-md rounded-2xl p-6 sm:max-w-lg">
+        <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-lg">
           <DialogHeader>
-            <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <StoreIcon size={20} />
+            <div className="flex items-center gap-2.5">
+              <div className="rounded-xl bg-primary/10 p-2 text-primary">
+                <StoreIcon size={20} />
+              </div>
+              <div>
+                <DialogTitle className="font-display text-lg font-bold text-slate-900">
+                  Configurar GPS da Loja
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500">
+                  Defina o endereço e as coordenadas de latitude/longitude para centralizar o mapa e permitir o cálculo de rotas inteligentes.
+                </DialogDescription>
+              </div>
             </div>
-            <DialogTitle className="font-display text-lg font-bold text-slate-900">
-              Configurar GPS da Loja
-            </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
-              Defina o endereço e as coordenadas de latitude/longitude para centralizar o mapa e permitir o cálculo de rotas inteligentes.
-            </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSaveStoreLocation} className="space-y-4">
+          <form onSubmit={handleSaveStoreLocation} className="space-y-4 pt-1">
             <div className="space-y-1.5">
               <Label htmlFor="storeAddress" className="text-xs font-semibold text-slate-700">
                 Endereço completo da loja *
@@ -804,7 +808,7 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
                   value={storeAddress}
                   onChange={(e) => setStoreAddress(e.target.value)}
                   placeholder="Ex: Av. Paulista, 1000, Bela Vista, São Paulo - SP"
-                  className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm focus:bg-white"
+                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
                   required
                 />
                 <Button
@@ -821,7 +825,7 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
                   <span>Buscar GPS</span>
                 </Button>
               </div>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-500">
                 O sistema usa OpenStreetMap para preencher automaticamente a latitude e longitude.
               </p>
             </div>
@@ -836,7 +840,7 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
                   value={storeLat}
                   onChange={(e) => setStoreLat(e.target.value)}
                   placeholder="-23.5505"
-                  className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm focus:bg-white"
+                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
                 />
               </div>
 
@@ -849,26 +853,26 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
                   value={storeLng}
                   onChange={(e) => setStoreLng(e.target.value)}
                   placeholder="-46.6333"
-                  className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm focus:bg-white"
+                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
                 />
               </div>
             </div>
 
-            <DialogFooter className="gap-2 border-t border-slate-100 pt-4 sm:gap-0">
+            <DialogFooter className="gap-2 pt-4 border-t border-slate-100">
               <Button
                 type="button"
-                variant="ghost"
+                variant="outline"
                 onClick={() => setIsLocationDialogOpen(false)}
-                className="rounded-full text-slate-600"
+                className="rounded-full border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-100"
               >
                 Cancelar
               </Button>
               <Button
                 type="submit"
                 disabled={isPending}
-                className="rounded-full bg-primary px-6 font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
+                className="rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 disabled:opacity-50"
               >
-                {isPending && <Loader2Icon size={14} className="mr-2 animate-spin" />}
+                {isPending && <Loader2Icon size={14} className="mr-1.5 animate-spin" />}
                 Salvar Localização
               </Button>
             </DialogFooter>

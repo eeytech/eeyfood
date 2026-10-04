@@ -4,7 +4,6 @@ import {
   CreditCardIcon,
   EyeIcon,
   EyeOffIcon,
-  ImageIcon,
   KeyRoundIcon,
   Loader2Icon,
   QrCodeIcon,
@@ -366,19 +365,26 @@ export const RestaurantFeaturesForm = ({
                       disabled={isPending}
                       className={`flex flex-col gap-1 rounded-xl border p-3 text-left transition ${
                         onlinePaymentGateway === "MERCADO_PAGO"
-                          ? "border-sky-500 bg-sky-50/70 ring-1 ring-sky-500/30 shadow-xs"
+                          ? "border-primary bg-primary/[0.06] ring-1 ring-primary/30 shadow-xs"
                           : "border-slate-200 bg-white hover:bg-slate-50"
                       }`}
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-slate-900 flex items-center gap-1">
-                          <CreditCardIcon size={13} className="text-sky-600" />
+                          <CreditCardIcon
+                            size={13}
+                            className={
+                              onlinePaymentGateway === "MERCADO_PAGO"
+                                ? "text-primary"
+                                : "text-slate-400"
+                            }
+                          />
                           Mercado Pago
                         </span>
                         <span
                           className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${
                             onlinePaymentGateway === "MERCADO_PAGO"
-                              ? "border border-sky-300 bg-sky-100 text-sky-800"
+                              ? "border border-primary/20 bg-primary/10 text-primary"
                               : "bg-slate-100 text-slate-600"
                           }`}
                         >
@@ -452,14 +458,14 @@ export const RestaurantFeaturesForm = ({
                   </div>
 
                   {onlinePaymentGateway === "MERCADO_PAGO" && (
-                    <div className="pt-2 border-t border-sky-200/80 space-y-2 animate-in fade-in slide-in-from-top-1">
+                    <div className="pt-2 border-t border-primary/20 space-y-2 animate-in fade-in slide-in-from-top-1">
                       <div className="flex flex-col sm:flex-row sm:items-start gap-2">
                         <div className="sm:w-1/3">
                           <Label
                             htmlFor="mercadoPagoAccessToken"
                             className="text-xs font-semibold text-slate-700 flex items-center gap-1"
                           >
-                            <KeyRoundIcon size={12} className="text-sky-600" />
+                            <KeyRoundIcon size={12} className="text-primary" />
                             Access Token (Produção):
                           </Label>
                           <p className="text-[11px] text-slate-400 leading-tight mt-0.5">
@@ -475,7 +481,7 @@ export const RestaurantFeaturesForm = ({
                               value={mercadoPagoAccessToken}
                               onChange={(e) => setMercadoPagoAccessToken(e.target.value.trim())}
                               placeholder="APP_USR-1234567890123456-123456-abcdef..."
-                              className="h-9 text-xs bg-white pr-9 font-mono focus-visible:ring-sky-500"
+                              className="h-9 text-xs bg-white pr-9 font-mono focus-visible:ring-primary"
                               disabled={isPending}
                             />
                             <button

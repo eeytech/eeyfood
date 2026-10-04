@@ -285,7 +285,7 @@ export function LogisticaClient({
         <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-2xl">
           <DialogHeader>
             <div className="flex items-center gap-2.5">
-              <div className="rounded-xl bg-slate-100 p-2 text-slate-900">
+              <div className="rounded-xl bg-primary/10 p-2 text-primary">
                 <BikeIcon size={20} />
               </div>
               <div>
@@ -298,7 +298,11 @@ export function LogisticaClient({
               </div>
             </div>
           </DialogHeader>
-          <CourierForm slug={slug} onSuccess={() => setCreateOpen(false)} />
+          <CourierForm
+            slug={slug}
+            onSuccess={() => setCreateOpen(false)}
+            onCancel={() => setCreateOpen(false)}
+          />
         </DialogContent>
       </Dialog>
 
@@ -309,7 +313,7 @@ export function LogisticaClient({
         <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-2xl">
           <DialogHeader>
             <div className="flex items-center gap-2.5">
-              <div className="rounded-xl bg-slate-100 p-2 text-slate-900">
+              <div className="rounded-xl bg-primary/10 p-2 text-primary">
                 <PencilIcon size={20} />
               </div>
               <div>
@@ -328,6 +332,7 @@ export function LogisticaClient({
               slug={slug}
               defaultValues={editCourier}
               onSuccess={() => setEditCourier(null)}
+              onCancel={() => setEditCourier(null)}
             />
           )}
         </DialogContent>
@@ -364,7 +369,7 @@ export function LogisticaClient({
             className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
           >
             <PlusIcon size={16} />
-            <span>Adicionar Veículo</span>
+            <span>Novo Veículo</span>
           </Button>
         )}
         {activeTab === "params" && (

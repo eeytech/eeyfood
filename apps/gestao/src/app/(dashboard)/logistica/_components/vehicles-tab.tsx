@@ -167,7 +167,7 @@ export function VehiclesTab({
         <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-lg">
           <DialogHeader>
             <div className="flex items-center gap-2.5">
-              <div className="rounded-xl bg-slate-100 p-2 text-slate-900">
+              <div className="rounded-xl bg-primary/10 p-2 text-primary">
                 <CarIcon size={20} />
               </div>
               <div>
@@ -180,7 +180,11 @@ export function VehiclesTab({
               </div>
             </div>
           </DialogHeader>
-          <VehicleForm slug={slug} onSuccess={() => setCreateOpen(false)} />
+          <VehicleForm
+            slug={slug}
+            onSuccess={() => setCreateOpen(false)}
+            onCancel={() => setCreateOpen(false)}
+          />
         </DialogContent>
       </Dialog>
 
@@ -191,7 +195,7 @@ export function VehiclesTab({
         <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-lg">
           <DialogHeader>
             <div className="flex items-center gap-2.5">
-              <div className="rounded-xl bg-slate-100 p-2 text-slate-900">
+              <div className="rounded-xl bg-primary/10 p-2 text-primary">
                 <PencilIcon size={20} />
               </div>
               <div>
@@ -210,6 +214,7 @@ export function VehiclesTab({
               slug={slug}
               defaultValues={editVehicle}
               onSuccess={() => setEditVehicle(null)}
+              onCancel={() => setEditVehicle(null)}
             />
           )}
         </DialogContent>
