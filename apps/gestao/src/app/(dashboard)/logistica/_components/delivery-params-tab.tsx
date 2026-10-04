@@ -20,6 +20,7 @@ import type { Restaurant } from "@fsw/db";
 interface DeliveryParamsTabProps {
   slug: string;
   restaurant: Restaurant;
+  onPendingChange?: (isPending: boolean) => void;
 }
 
 function CurrencyInput({
@@ -72,7 +73,11 @@ function CurrencyInput({
   );
 }
 
-export function DeliveryParamsTab({ slug, restaurant }: DeliveryParamsTabProps) {
+export function DeliveryParamsTab({
+  slug,
+  restaurant,
+  onPendingChange,
+}: DeliveryParamsTabProps) {
   const [isPending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
 
@@ -81,10 +86,15 @@ export function DeliveryParamsTab({ slug, restaurant }: DeliveryParamsTabProps) 
     const formData = new FormData(e.currentTarget);
     setSaved(false);
 
+    onPendingChange?.(true);
     startTransition(async () => {
-      await updateDeliveryParamsAction(slug, formData);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      try {
+        await updateDeliveryParamsAction(slug, formData);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000);
+      } finally {
+        onPendingChange?.(false);
+      }
     });
   };
 
@@ -99,11 +109,11 @@ export function DeliveryParamsTab({ slug, restaurant }: DeliveryParamsTabProps) 
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form id="delivery-params-form" onSubmit={handleSubmit} className="space-y-4">
         <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
           {/* ── Taxa de entrega fixa ── */}
           <div className="flex items-start gap-4 border-b border-slate-100 p-5">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
               <TruckIcon size={18} />
             </div>
             <div className="flex-1 space-y-1.5">
@@ -125,7 +135,7 @@ export function DeliveryParamsTab({ slug, restaurant }: DeliveryParamsTabProps) 
 
           {/* ── Valor mínimo do pedido ── */}
           <div className="flex items-start gap-4 border-b border-slate-100 p-5">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
               <PackageCheckIcon size={18} />
             </div>
             <div className="flex-1 space-y-1.5">
@@ -149,14 +159,14 @@ export function DeliveryParamsTab({ slug, restaurant }: DeliveryParamsTabProps) 
           </div>
 
           {/* ── Frete grátis ── */}
-          <div className="flex items-start gap-4 border-b border-slate-100 bg-emerald-50/30 p-5">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+          <div className="flex items-start gap-4 border-b border-slate-100 bg-primary/[0.02] p-5">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
               <CheckCircle2Icon size={18} />
             </div>
             <div className="flex-1 space-y-1.5">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold text-slate-900">Frete Grátis</span>
-                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
+                <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
                   Centralizado em Fidelização
                 </span>
               </div>
@@ -166,7 +176,7 @@ export function DeliveryParamsTab({ slug, restaurant }: DeliveryParamsTabProps) 
               <div className="pt-1">
                 <Link
                   href="/frete"
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:underline"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
                 >
                   Ir para Fidelização &gt; Frete &rarr;
                 </Link>
@@ -176,7 +186,7 @@ export function DeliveryParamsTab({ slug, restaurant }: DeliveryParamsTabProps) 
 
           {/* ── Tempo estimado ── */}
           <div className="flex items-start gap-4 p-5">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
               <TimerIcon size={18} />
             </div>
             <div className="flex-1 space-y-1.5">
@@ -207,7 +217,7 @@ export function DeliveryParamsTab({ slug, restaurant }: DeliveryParamsTabProps) 
           restaurant.minimumOrderValue > 0 ||
           restaurant.freeDeliveryThreshold != null ||
           restaurant.estimatedDeliveryTime) && (
-          <Card className="border-slate-200/80 bg-slate-50/60 p-4">
+          <Card className="border-slate-200/80 bg-white p-4 shadow-sm">
             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
               Resumo da Configuração Atual:
             </p>
@@ -215,7 +225,7 @@ export function DeliveryParamsTab({ slug, restaurant }: DeliveryParamsTabProps) 
               {restaurant.deliveryFee > 0 && (
                 <li>
                   Taxa de entrega padrão:{" "}
-                  <strong className="text-slate-900">
+                  <strong className="text-primary font-bold">
                     R$ {restaurant.deliveryFee.toFixed(2).replace(".", ",")}
                   </strong>
                 </li>
@@ -223,7 +233,7 @@ export function DeliveryParamsTab({ slug, restaurant }: DeliveryParamsTabProps) 
               {restaurant.minimumOrderValue > 0 && (
                 <li>
                   Pedido mínimo:{" "}
-                  <strong className="text-slate-900">
+                  <strong className="text-primary font-bold">
                     R$ {restaurant.minimumOrderValue.toFixed(2).replace(".", ",")}
                   </strong>
                 </li>
@@ -231,7 +241,7 @@ export function DeliveryParamsTab({ slug, restaurant }: DeliveryParamsTabProps) 
               {restaurant.freeDeliveryThreshold != null && (
                 <li>
                   Frete grátis acima de:{" "}
-                  <strong className="text-slate-900">
+                  <strong className="text-primary font-bold">
                     R$ {restaurant.freeDeliveryThreshold.toFixed(2).replace(".", ",")}
                   </strong>
                 </li>
@@ -239,7 +249,7 @@ export function DeliveryParamsTab({ slug, restaurant }: DeliveryParamsTabProps) 
               {restaurant.estimatedDeliveryTime && (
                 <li>
                   Tempo estimado:{" "}
-                  <strong className="text-slate-900">{restaurant.estimatedDeliveryTime}</strong>
+                  <strong className="text-primary font-bold">{restaurant.estimatedDeliveryTime}</strong>
                 </li>
               )}
             </ul>
@@ -256,7 +266,7 @@ export function DeliveryParamsTab({ slug, restaurant }: DeliveryParamsTabProps) 
             <span>{isPending ? "Salvando..." : "Salvar Parâmetros"}</span>
           </Button>
           {saved && (
-            <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-primary">
               <CheckCircle2Icon size={14} />
               Parâmetros salvos com sucesso!
             </span>

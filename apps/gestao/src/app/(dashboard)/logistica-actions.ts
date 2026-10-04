@@ -514,3 +514,30 @@ export const updateDeliveryParamsAction = async (
 
   revalidatePath(`/${slug}/logistica`);
 };
+
+export const alternarStatusCourierAction = async (
+  slug: string,
+  courierId: string,
+  isActive: boolean,
+) => {
+  await db
+    .update(couriersTable)
+    .set({ isActive, updatedAt: new Date() })
+    .where(eq(couriersTable.id, courierId));
+
+  revalidatePath(`/${slug}/logistica`);
+};
+
+export const alternarStatusVehicleAction = async (
+  slug: string,
+  vehicleId: string,
+  status: "ACTIVE" | "MAINTENANCE" | "INACTIVE",
+) => {
+  await db
+    .update(companyVehiclesTable)
+    .set({ status, updatedAt: new Date() })
+    .where(eq(companyVehiclesTable.id, vehicleId));
+
+  revalidatePath(`/${slug}/logistica`);
+};
+

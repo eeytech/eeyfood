@@ -339,6 +339,7 @@ export interface ListarCouriersFiltradoParams {
   availability?: string;
   status?: string;
   workDay?: string;
+  pageSize?: number;
 }
 
 export interface ListarCouriersFiltradoResult {
@@ -351,7 +352,7 @@ export interface ListarCouriersFiltradoResult {
 export const listarCouriersGestaoFiltrado = async (
   params: ListarCouriersFiltradoParams,
 ): Promise<ListarCouriersFiltradoResult> => {
-  const { slug, page = 1, search, vehicleType, availability, status, workDay } = params;
+  const { slug, page = 1, pageSize = 10, search, vehicleType, availability, status, workDay } = params;
 
   const restaurant = await buscarRestaurantePorSlug(slug);
   if (!restaurant) {
@@ -389,8 +390,9 @@ export const listarCouriersGestaoFiltrado = async (
     .from(couriersTable)
     .where(conditions);
 
+  const limit = pageSize || COURIERS_PER_PAGE;
   const totalCount = total ?? 0;
-  const totalPages = Math.ceil(totalCount / COURIERS_PER_PAGE);
+  const totalPages = Math.ceil(totalCount / limit);
   const currentPage = Math.max(1, Math.min(page, totalPages || 1));
 
   const couriers = await db
@@ -398,8 +400,8 @@ export const listarCouriersGestaoFiltrado = async (
     .from(couriersTable)
     .where(conditions)
     .orderBy(asc(couriersTable.name))
-    .limit(COURIERS_PER_PAGE)
-    .offset((currentPage - 1) * COURIERS_PER_PAGE);
+    .limit(limit)
+    .offset((currentPage - 1) * limit);
 
   return { couriers, total: totalCount, totalPages, currentPage };
 };
@@ -409,6 +411,7 @@ const VEHICLES_PER_PAGE = 10;
 export interface ListarVeiculosFiltradoParams {
   slug: string;
   page?: number;
+  pageSize?: number;
   search?: string;
   status?: string;
 }
@@ -423,7 +426,7 @@ export interface ListarVeiculosFiltradoResult {
 export const listarVeiculosGestao = async (
   params: ListarVeiculosFiltradoParams,
 ): Promise<ListarVeiculosFiltradoResult> => {
-  const { slug, page = 1, search, status } = params;
+  const { slug, page = 1, pageSize = 10, search, status } = params;
 
   const restaurant = await buscarRestaurantePorSlug(slug);
   if (!restaurant) {
@@ -449,8 +452,9 @@ export const listarVeiculosGestao = async (
     .from(companyVehiclesTable)
     .where(conditions);
 
+  const limit = pageSize || VEHICLES_PER_PAGE;
   const totalCount = total ?? 0;
-  const totalPages = Math.ceil(totalCount / VEHICLES_PER_PAGE);
+  const totalPages = Math.ceil(totalCount / limit);
   const currentPage = Math.max(1, Math.min(page, totalPages || 1));
 
   const vehicles = await db
@@ -458,8 +462,8 @@ export const listarVeiculosGestao = async (
     .from(companyVehiclesTable)
     .where(conditions)
     .orderBy(asc(companyVehiclesTable.brand), asc(companyVehiclesTable.model))
-    .limit(VEHICLES_PER_PAGE)
-    .offset((currentPage - 1) * VEHICLES_PER_PAGE);
+    .limit(limit)
+    .offset((currentPage - 1) * limit);
 
   return { vehicles, total: totalCount, totalPages, currentPage };
 };

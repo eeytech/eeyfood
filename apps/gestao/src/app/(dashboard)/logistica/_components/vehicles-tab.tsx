@@ -18,10 +18,9 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { deleteVehicleAction } from "@/app/(dashboard)/logistica-actions";
-import { Badge } from "@/components/ui/badge";
+import { deleteVehicleAction, alternarStatusVehicleAction } from "@/app/(dashboard)/logistica-actions";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import {
   Dialog,
@@ -46,6 +45,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -65,27 +65,13 @@ interface VehiclesTabProps {
   total: number;
   totalPages: number;
   currentPage: number;
+  pageSize?: number;
   initialSearch: string;
   initialStatus: string;
+  isCreateOpen?: boolean;
+  onOpenCreateChange?: (open: boolean) => void;
 }
 
-const statusConfig: Record<
-  string,
-  { label: string; badgeClass: string }
-> = {
-  ACTIVE: {
-    label: "Ativo",
-    badgeClass: "bg-emerald-50 text-emerald-800 border-emerald-200/80",
-  },
-  MAINTENANCE: {
-    label: "Em manutenção",
-    badgeClass: "bg-amber-50 text-amber-800 border-amber-200/80",
-  },
-  INACTIVE: {
-    label: "Inativo",
-    badgeClass: "bg-slate-100 text-slate-600 border-slate-200",
-  },
-};
 
 export function VehiclesTab({
   slug,
@@ -93,13 +79,22 @@ export function VehiclesTab({
   total,
   totalPages,
   currentPage,
+  pageSize = 10,
   initialSearch,
   initialStatus,
+  isCreateOpen,
+  onOpenCreateChange,
 }: VehiclesTabProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const [createOpen, setCreateOpen] = useState(false);
+  const [internalCreateOpen, setInternalCreateOpen] = useState(false);
+  const createOpen = isCreateOpen !== undefined ? isCreateOpen : internalCreateOpen;
+  const setCreateOpen = (open: boolean) => {
+    setInternalCreateOpen(open);
+    onOpenCreateChange?.(open);
+  };
+
   const [editVehicle, setEditVehicle] = useState<CompanyVehicle | null>(null);
   const [deletingVehicle, setDeletingVehicle] = useState<{ id: string; model: string } | null>(null);
   const [localSearch, setLocalSearch] = useState(initialSearch);
@@ -113,6 +108,7 @@ export function VehiclesTab({
     params.set("vsearch", overrides.vsearch ?? localSearch);
     params.set("vstatus", overrides.vstatus ?? localStatus);
     params.set("vpage", overrides.vpage ?? String(currentPage));
+    params.set("vpageSize", overrides.vpageSize ?? String(pageSize));
     router.push(`?${params.toString()}`);
   };
 
@@ -126,7 +122,27 @@ export function VehiclesTab({
     params.set("vsearch", "");
     params.set("vstatus", "all");
     params.set("vpage", "1");
+    params.set("vpageSize", String(pageSize));
     router.push(`?${params.toString()}`);
+  };
+
+  const handleToggleVehicleStatus = (
+    vehicleId: string,
+    currentStatus: string,
+    model: string,
+  ) => {
+    const nextStatus: "ACTIVE" | "INACTIVE" =
+      currentStatus === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+    startTransition(async () => {
+      try {
+        await alternarStatusVehicleAction(slug, vehicleId, nextStatus);
+        toast.success(
+          `Veículo "${model}" ${nextStatus === "ACTIVE" ? "ativado" : "desativado"} com sucesso.`,
+        );
+      } catch {
+        toast.error("Não foi possível alterar o status do veículo.");
+      }
+    });
   };
 
   const handleDeleteConfirm = () => {
@@ -199,24 +215,14 @@ export function VehiclesTab({
         </DialogContent>
       </Dialog>
 
-      {/* ── Header da Aba ───────────────────────────────── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="font-display text-lg font-bold tracking-tight text-slate-900">
-            Veículos da Empresa
-          </h2>
-          <p className="text-xs text-slate-500">
-            Gerencie a frota de veículos próprios do estabelecimento e seu estado de conservação.
-          </p>
-        </div>
-        <Button
-          size="sm"
-          onClick={() => setCreateOpen(true)}
-          className="h-9 gap-1.5 rounded-full bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
-        >
-          <PlusIcon size={14} />
-          <span>Adicionar Veículo</span>
-        </Button>
+      {/* ── Header da Aba (Padrão Parâmetros) ─────────────── */}
+      <div>
+        <h2 className="font-display text-lg font-bold tracking-tight text-slate-900">
+          Veículos da Empresa
+        </h2>
+        <p className="text-xs text-slate-500">
+          Gerencie a frota de veículos próprios do estabelecimento e seu estado de conservação.
+        </p>
       </div>
 
       {/* ── Tabela e Cards ───────────────────────────────── */}
@@ -351,10 +357,6 @@ export function VehiclesTab({
                 </TableHeader>
                 <TableBody className="divide-y divide-slate-100">
                   {vehicles.map((vehicle) => {
-                    const status = statusConfig[vehicle.status] ?? {
-                      label: vehicle.status,
-                      badgeClass: "bg-slate-100 text-slate-700 border-slate-200",
-                    };
                     return (
                       <TableRow
                         key={vehicle.id}
@@ -362,7 +364,7 @@ export function VehiclesTab({
                       >
                         <TableCell className="py-3.5">
                           <div className="flex items-center gap-3">
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
                               <CarIcon size={18} />
                             </div>
                             <span className="font-semibold text-slate-900">
@@ -384,15 +386,38 @@ export function VehiclesTab({
                         <TableCell className="py-3.5 text-xs text-slate-500">
                           {vehicle.year ?? "—"}
                         </TableCell>
+                        {/* Status Switch (Padrão Acessos) */}
                         <TableCell className="py-3.5 text-center">
-                          <Badge
-                            className={cn(
-                              "rounded-full px-2.5 py-0.5 text-xs font-medium",
-                              status.badgeClass,
-                            )}
-                          >
-                            {status.label}
-                          </Badge>
+                          <div className="inline-flex items-center gap-2">
+                            <Switch
+                              checked={vehicle.status === "ACTIVE"}
+                              disabled={isPending}
+                              onCheckedChange={() =>
+                                handleToggleVehicleStatus(
+                                  vehicle.id,
+                                  vehicle.status,
+                                  vehicle.model,
+                                )
+                              }
+                              className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
+                            />
+                            <span
+                              className={cn(
+                                "text-xs font-medium",
+                                vehicle.status === "ACTIVE"
+                                  ? "text-primary font-semibold"
+                                  : vehicle.status === "MAINTENANCE"
+                                    ? "text-amber-600 font-semibold"
+                                    : "text-slate-400",
+                              )}
+                            >
+                              {vehicle.status === "ACTIVE"
+                                ? "Ativo"
+                                : vehicle.status === "MAINTENANCE"
+                                  ? "Manutenção"
+                                  : "Inativo"}
+                            </span>
+                          </div>
                         </TableCell>
                         <TableCell className="py-3.5 text-right">
                           <DropdownMenu>
@@ -417,7 +442,7 @@ export function VehiclesTab({
                                 onClick={() => setEditVehicle(vehicle)}
                                 className="gap-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
                               >
-                                <PencilIcon size={14} className="text-slate-500" />
+                                <PencilIcon size={14} className="text-primary" />
                                 Editar dados
                               </DropdownMenuItem>
                               <DropdownMenuSeparator className="bg-slate-100" />
@@ -441,15 +466,11 @@ export function VehiclesTab({
             {/* Mobile Cards View */}
             <div className="divide-y divide-slate-100 sm:hidden">
               {vehicles.map((vehicle) => {
-                const status = statusConfig[vehicle.status] ?? {
-                  label: vehicle.status,
-                  badgeClass: "bg-slate-100 text-slate-700 border-slate-200",
-                };
                 return (
                   <div key={vehicle.id} className="space-y-3 p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-2.5">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
                           <CarIcon size={18} />
                         </div>
                         <div>
@@ -476,7 +497,7 @@ export function VehiclesTab({
                             onClick={() => setEditVehicle(vehicle)}
                             className="gap-2 rounded-lg text-xs font-medium text-slate-700"
                           >
-                            <PencilIcon size={14} />
+                            <PencilIcon size={14} className="text-primary" />
                             Editar dados
                           </DropdownMenuItem>
                           <DropdownMenuSeparator className="bg-slate-100" />
@@ -495,23 +516,45 @@ export function VehiclesTab({
                       <span className="font-mono text-xs font-semibold text-slate-800">
                         {vehicle.licensePlate}
                       </span>
-                      <Badge
-                        className={cn(
-                          "rounded-full px-2.5 py-0.5 text-xs font-medium",
-                          status.badgeClass,
-                        )}
-                      >
-                        {status.label}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={cn(
+                            "text-xs font-medium",
+                            vehicle.status === "ACTIVE"
+                              ? "text-primary font-semibold"
+                              : vehicle.status === "MAINTENANCE"
+                                ? "text-amber-600 font-semibold"
+                                : "text-slate-400",
+                          )}
+                        >
+                          {vehicle.status === "ACTIVE"
+                            ? "Ativo"
+                            : vehicle.status === "MAINTENANCE"
+                              ? "Manutenção"
+                              : "Inativo"}
+                        </span>
+                        <Switch
+                          checked={vehicle.status === "ACTIVE"}
+                          disabled={isPending}
+                          onCheckedChange={() =>
+                            handleToggleVehicleStatus(
+                              vehicle.id,
+                              vehicle.status,
+                              vehicle.model,
+                            )
+                          }
+                          className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
+                        />
+                      </div>
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            {/* Paginação e Contador */}
+            {/* Paginação e Contador (Padrão Acessos) */}
             <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-2 text-xs text-slate-500">
+              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
                 <span>
                   Exibindo <strong className="font-semibold text-slate-900">{vehicles.length}</strong> de{" "}
                   {total} veículo{total !== 1 ? "s" : ""}
@@ -521,61 +564,80 @@ export function VehiclesTab({
                     (Filtros aplicados)
                   </span>
                 )}
+                <span className="hidden sm:inline text-slate-300">|</span>
+                <div className="flex items-center gap-1.5">
+                  <span>Exibir</span>
+                  <Select
+                    value={String(pageSize)}
+                    onValueChange={(val) => {
+                      navigate({ vpageSize: val, vpage: "1" });
+                    }}
+                  >
+                    <SelectTrigger className="h-8 w-16 rounded-lg border-slate-200 bg-white text-xs font-medium text-slate-700">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+                      <SelectItem value="5">5</SelectItem>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="20">20</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span>por página</span>
+                </div>
               </div>
 
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between gap-2 sm:justify-end">
-                  <span className="text-xs text-slate-500">
-                    Página <strong className="font-semibold text-slate-900">{currentPage}</strong> de{" "}
-                    <strong className="font-semibold text-slate-900">{totalPages}</strong>
-                  </span>
+              <div className="flex items-center justify-between gap-2 sm:justify-end">
+                <span className="text-xs text-slate-500">
+                  Página <strong className="font-semibold text-slate-900">{currentPage}</strong> de{" "}
+                  <strong className="font-semibold text-slate-900">{totalPages || 1}</strong>
+                </span>
 
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      disabled={currentPage <= 1}
-                      onClick={() => navigate({ vpage: "1" })}
-                      className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
-                      title="Primeira página"
-                    >
-                      <ChevronsLeftIcon size={14} />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      disabled={currentPage <= 1}
-                      onClick={() => navigate({ vpage: String(Math.max(1, currentPage - 1)) })}
-                      className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
-                      title="Página anterior"
-                    >
-                      <ChevronLeftIcon size={14} />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      disabled={currentPage >= totalPages}
-                      onClick={() =>
-                        navigate({ vpage: String(Math.min(totalPages, currentPage + 1)) })
-                      }
-                      className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
-                      title="Próxima página"
-                    >
-                      <ChevronRightIcon size={14} />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      disabled={currentPage >= totalPages}
-                      onClick={() => navigate({ vpage: String(totalPages) })}
-                      className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
-                      title="Última página"
-                    >
-                      <ChevronsRightIcon size={14} />
-                    </Button>
-                  </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    disabled={currentPage <= 1}
+                    onClick={() => navigate({ vpage: "1" })}
+                    className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                    title="Primeira página"
+                  >
+                    <ChevronsLeftIcon size={14} />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    disabled={currentPage <= 1}
+                    onClick={() => navigate({ vpage: String(Math.max(1, currentPage - 1)) })}
+                    className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                    title="Página anterior"
+                  >
+                    <ChevronLeftIcon size={14} />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    disabled={currentPage >= totalPages}
+                    onClick={() =>
+                      navigate({ vpage: String(Math.min(totalPages, currentPage + 1)) })
+                    }
+                    className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                    title="Próxima página"
+                  >
+                    <ChevronRightIcon size={14} />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    disabled={currentPage >= totalPages}
+                    onClick={() => navigate({ vpage: String(totalPages) })}
+                    className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                    title="Última página"
+                  >
+                    <ChevronsRightIcon size={14} />
+                  </Button>
                 </div>
-              )}
+              </div>
             </div>
           </>
         )}

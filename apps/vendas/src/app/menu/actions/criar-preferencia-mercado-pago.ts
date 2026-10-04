@@ -4,7 +4,7 @@ import type { ConsumptionMethod } from "@fsw/db";
 import { MercadoPagoConfig, Preference } from "mercadopago";
 import { headers } from "next/headers";
 
-import { db, eq, ordersTable } from "@/lib/db";
+import { db, eq, ordersTable, restaurantsTable } from "@/lib/db";
 import { normalizePhoneNumber } from "../helpers/phone";
 
 interface CriarPreferenciaMercadoPagoInput {
@@ -14,6 +14,7 @@ interface CriarPreferenciaMercadoPagoInput {
   slug: string;
   consumptionMethod: ConsumptionMethod;
   phone: string;
+  accessToken?: string | null;
 }
 
 export const criarPreferenciaMercadoPago = async ({
@@ -23,6 +24,7 @@ export const criarPreferenciaMercadoPago = async ({
   slug,
   consumptionMethod,
   phone,
+  accessToken: explicitAccessToken,
 }: CriarPreferenciaMercadoPagoInput) => {
   if (consumptionMethod === "DINE_IN") {
     throw new Error("Pagamento via Mercado Pago não está disponível para consumo no local.");
@@ -97,12 +99,38 @@ export const criarPreferenciaMercadoPago = async ({
     );
   }
 
+  let restaurantToken = explicitAccessToken;
+
+  if (!restaurantToken && slug) {
+    try {
+      const [rest] = await db
+        .select({
+          mercadoPagoAccessToken: restaurantsTable.mercadoPagoAccessToken,
+        })
+        .from(restaurantsTable)
+        .where(eq(restaurantsTable.slug, slug))
+        .limit(1);
+
+      if (rest?.mercadoPagoAccessToken) {
+        restaurantToken = rest.mercadoPagoAccessToken;
+      }
+    } catch (err) {
+      console.error(
+        "Aviso: Não foi possível buscar o token do Mercado Pago no restaurante:",
+        err,
+      );
+    }
+  }
+
   const accessToken =
-    process.env.MERCADO_PAGO_ACCESS_TOKEN ??
+    restaurantToken ||
+    process.env.MERCADO_PAGO_ACCESS_TOKEN ||
     process.env.MERCADOPAGO_ACCESS_TOKEN;
 
   if (!accessToken) {
-    throw new Error("A chave do Mercado Pago não foi configurada.");
+    throw new Error(
+      "O Access Token do Mercado Pago não foi configurado nas opções de pagamento do estabelecimento.",
+    );
   }
 
   const cabecalhos = await headers();
@@ -122,11 +150,17 @@ export const criarPreferenciaMercadoPago = async ({
 
   const preference = new Preference(client);
 
-  const notificationUrl =
+  const notificationBase =
     process.env.MERCADO_PAGO_WEBHOOK_URL ??
     (origin.startsWith("https://")
       ? `${origin}/api/webhooks/mercado-pago`
       : undefined);
+
+  let notificationUrl = notificationBase;
+  if (notificationBase && slug) {
+    const separator = notificationBase.includes("?") ? "&" : "?";
+    notificationUrl = `${notificationBase}${separator}restaurantSlug=${encodeURIComponent(slug)}`;
+  }
 
   try {
     const response = await preference.create({

@@ -3,7 +3,7 @@
 import type { ConsumptionMethod } from "@fsw/db";
 import { headers } from "next/headers";
 
-import { db, eq, ordersTable } from "@/lib/db";
+import { db, eq, ordersTable, restaurantsTable } from "@/lib/db";
 import { normalizePhoneNumber } from "../helpers/phone";
 
 interface CriarCheckoutInfinitePayInput {
@@ -92,8 +92,29 @@ export const criarCheckoutInfinitePay = async ({
   }
 
   // Handle da InfinitePay (InfiniteTag)
+  let restaurantHandle = explicitHandle;
+
+  if (!restaurantHandle && slug) {
+    try {
+      const [rest] = await db
+        .select({ infinitePayHandle: restaurantsTable.infinitePayHandle })
+        .from(restaurantsTable)
+        .where(eq(restaurantsTable.slug, slug))
+        .limit(1);
+
+      if (rest?.infinitePayHandle) {
+        restaurantHandle = rest.infinitePayHandle;
+      }
+    } catch (err) {
+      console.error(
+        "Aviso: Não foi possível buscar o handle do restaurante no banco:",
+        err,
+      );
+    }
+  }
+
   const rawHandle =
-    explicitHandle ||
+    restaurantHandle ||
     process.env.INFINITEPAY_HANDLE ||
     process.env.INFINITE_PAY_HANDLE;
 

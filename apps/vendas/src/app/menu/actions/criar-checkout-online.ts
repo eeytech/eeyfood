@@ -14,6 +14,7 @@ export interface CriarCheckoutOnlineInput {
   consumptionMethod: ConsumptionMethod;
   phone: string;
   infinitePayHandle?: string | null;
+  mercadoPagoAccessToken?: string | null;
 }
 
 export const criarCheckoutOnline = async (input: CriarCheckoutOnlineInput) => {
@@ -37,5 +38,6 @@ export const criarCheckoutOnline = async (input: CriarCheckoutOnlineInput) => {
     slug: input.slug,
     consumptionMethod: input.consumptionMethod,
     phone: input.phone,
+    accessToken: input.mercadoPagoAccessToken,
   });
 };

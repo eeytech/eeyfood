@@ -830,12 +830,34 @@ export const updateRestaurantFeaturesAction = async (
     ? infinitePayHandleRaw.replace(/^[$@]/, "").trim()
     : null;
 
+  const mercadoPagoAccessTokenRaw = getStringValue(formData.get("mercadoPagoAccessToken"));
+  const mercadoPagoAccessToken = mercadoPagoAccessTokenRaw
+    ? mercadoPagoAccessTokenRaw.trim()
+    : null;
+
+  if (onlinePaymentGateway === "INFINITEPAY" && !infinitePayHandle) {
+    throw new Error(
+      "A InfiniteTag é obrigatória para ativar a InfinitePay como gateway de pagamento online.",
+    );
+  }
+
+  if (onlinePaymentGateway === "MERCADO_PAGO" && !mercadoPagoAccessToken) {
+    throw new Error(
+      "O Access Token do Mercado Pago é obrigatório para ativar o Mercado Pago como gateway de pagamento online.",
+    );
+  }
+
   await db
     .update(restaurantsTable)
     .set({
       acceptMercadoPago: onlinePaymentGateway !== "DISABLED",
       onlinePaymentGateway,
-      infinitePayHandle,
+      infinitePayHandle: formData.has("infinitePayHandle")
+        ? infinitePayHandle
+        : restaurant.infinitePayHandle,
+      mercadoPagoAccessToken: formData.has("mercadoPagoAccessToken")
+        ? mercadoPagoAccessToken
+        : ((restaurant as any).mercadoPagoAccessToken ?? null),
       acceptPix,
       pixKey,
       pixMode,

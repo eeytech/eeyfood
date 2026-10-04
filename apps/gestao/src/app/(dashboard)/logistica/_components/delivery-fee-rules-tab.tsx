@@ -2,7 +2,10 @@
 
 import type { DeliveryFeeRule } from "@fsw/db";
 import {
-  CheckCircle2Icon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ChevronsLeftIcon,
+  ChevronsRightIcon,
   CompassIcon,
   FilterXIcon,
   LayersIcon,
@@ -26,7 +29,7 @@ import {
 } from "@/app/(dashboard)/logistica-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import {
   Dialog,
@@ -62,10 +65,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 interface DeliveryFeeRulesTabProps {
   slug: string;
   rules: DeliveryFeeRule[];
+  isCreateOpen?: boolean;
+  onOpenCreateChange?: (open: boolean) => void;
 }
 
 const RULE_TYPE_CONFIG: Record<
@@ -74,19 +80,19 @@ const RULE_TYPE_CONFIG: Record<
 > = {
   RADIUS_KM: {
     label: "Raio (km)",
-    badgeClass: "bg-blue-50 text-blue-800 border-blue-200/80 hover:bg-blue-100",
+    badgeClass: "bg-primary/10 text-primary border-primary/20 hover:bg-primary/15",
     icon: CompassIcon,
     description: "Calculado pela distância em linha reta da loja até o cliente",
   },
   NEIGHBORHOOD: {
     label: "Bairro",
-    badgeClass: "bg-emerald-50 text-emerald-800 border-emerald-200/80 hover:bg-emerald-100",
+    badgeClass: "bg-primary/10 text-primary border-primary/20 hover:bg-primary/15",
     icon: MapPinIcon,
     description: "Identificado pelo nome do bairro informado no endereço",
   },
   CEP_RANGE: {
     label: "Faixa de CEP",
-    badgeClass: "bg-purple-50 text-purple-800 border-purple-200/80 hover:bg-purple-100",
+    badgeClass: "bg-primary/10 text-primary border-primary/20 hover:bg-primary/15",
     icon: LayersIcon,
     description: "Atribuído com base no CEP inicial e final",
   },
@@ -125,12 +131,23 @@ const defaultFormData: RuleFormData = {
   isActive: true,
 };
 
-export function DeliveryFeeRulesTab({ slug, rules: initialRules }: DeliveryFeeRulesTabProps) {
+export function DeliveryFeeRulesTab({
+  slug,
+  rules: initialRules,
+  isCreateOpen,
+  onOpenCreateChange,
+}: DeliveryFeeRulesTabProps) {
   const [rules, setRules] = useState<DeliveryFeeRule[]>(initialRules);
   const [isPending, startTransition] = useTransition();
 
   // Dialogs
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [internalDialogOpen, setInternalDialogOpen] = useState(false);
+  const isDialogOpen = isCreateOpen !== undefined ? isCreateOpen : internalDialogOpen;
+  const setIsDialogOpen = (open: boolean) => {
+    setInternalDialogOpen(open);
+    onOpenCreateChange?.(open);
+  };
+
   const [editingRule, setEditingRule] = useState<DeliveryFeeRule | null>(null);
   const [deletingRule, setDeletingRule] = useState<DeliveryFeeRule | null>(null);
   const [formData, setFormData] = useState<RuleFormData>(defaultFormData);
@@ -139,6 +156,10 @@ export function DeliveryFeeRulesTab({ slug, rules: initialRules }: DeliveryFeeRu
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
+
+  // Pagination
+  const [pageSize, setPageSize] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Filtered Rules
   const filteredRules = useMemo(() => {
@@ -163,11 +184,17 @@ export function DeliveryFeeRulesTab({ slug, rules: initialRules }: DeliveryFeeRu
     });
   }, [rules, searchQuery, typeFilter, statusFilter]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredRules.length / pageSize));
+  const validCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedRules = useMemo(() => {
+    return filteredRules.slice(
+      (validCurrentPage - 1) * pageSize,
+      validCurrentPage * pageSize,
+    );
+  }, [filteredRules, validCurrentPage, pageSize]);
+
   // Metric Stats
   const totalCount = rules.length;
-  const activeCount = rules.filter((r) => r.isActive).length;
-  const neighborhoodCount = rules.filter((r) => r.type === "NEIGHBORHOOD").length;
-  const radiusCount = rules.filter((r) => r.type === "RADIUS_KM").length;
 
   const isFiltering =
     searchQuery.trim() !== "" || typeFilter !== "ALL" || statusFilter !== "ALL";
@@ -176,6 +203,7 @@ export function DeliveryFeeRulesTab({ slug, rules: initialRules }: DeliveryFeeRu
     setSearchQuery("");
     setTypeFilter("ALL");
     setStatusFilter("ALL");
+    setCurrentPage(1);
   };
 
   const handleOpenCreate = () => {
@@ -284,111 +312,15 @@ export function DeliveryFeeRulesTab({ slug, rules: initialRules }: DeliveryFeeRu
   };
 
   return (
-    <div className="space-y-6">
-      {/* ── Page Header (Padrão Usuários) ───────────────── */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm shadow-primary/25">
-            <MapPinIcon size={22} />
-          </div>
-          <div>
-            <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
-              Zonas e Regras de Frete
-            </h1>
-            <p className="text-sm text-slate-500">
-              Configure taxas dinâmicas por bairro, raio em km ou faixa de CEP aplicadas automaticamente no cardápio.
-            </p>
-          </div>
-        </div>
-
-        <Button
-          onClick={handleOpenCreate}
-          className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
-        >
-          <PlusIcon size={16} />
-          <span>Nova Zona de Frete</span>
-        </Button>
-      </div>
-
-      {/* ── Metric Cards (Padrão 4 Colunas Usuários) ────── */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                Total de Zonas
-              </span>
-              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
-                <LayersIcon size={16} />
-              </div>
-            </div>
-            <p className="mt-2 font-display text-2xl font-bold text-primary">
-              {totalCount}
-            </p>
-            <p className="mt-0.5 text-xs text-slate-500">
-              {activeCount} ativas para entrega
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                Zonas por Bairro
-              </span>
-              <div className="rounded-lg bg-emerald-100 p-1.5 text-emerald-700">
-                <MapPinIcon size={16} />
-              </div>
-            </div>
-            <p className="mt-2 font-display text-2xl font-bold text-emerald-700">
-              {neighborhoodCount}
-            </p>
-            <p className="mt-0.5 text-xs text-slate-500">
-              Mapeadas por nome
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                Zonas por Raio
-              </span>
-              <div className="rounded-lg bg-blue-100 p-1.5 text-blue-700">
-                <CompassIcon size={16} />
-              </div>
-            </div>
-            <p className="mt-2 font-display text-2xl font-bold text-blue-700">
-              {radiusCount}
-            </p>
-            <p className="mt-0.5 text-xs text-slate-500">
-              Distância em km
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                Status Operacional
-              </span>
-              <div className="rounded-lg bg-teal-100 p-1.5 text-teal-700">
-                <CheckCircle2Icon size={16} />
-              </div>
-            </div>
-            <p className="mt-2 font-display text-2xl font-bold text-teal-700">
-              {activeCount}
-            </p>
-            <p className="mt-0.5 text-xs text-slate-500">
-              {totalCount - activeCount > 0
-                ? `${totalCount - activeCount} desativada(s)`
-                : "100% ativas no sistema"}
-            </p>
-          </CardContent>
-        </Card>
+    <div className="space-y-4">
+      {/* ── Page Header (Padrão Parâmetros: Sem ícone ao lado do título) ── */}
+      <div>
+        <h2 className="font-display text-lg font-bold tracking-tight text-slate-900">
+          Zonas e Regras de Frete
+        </h2>
+        <p className="text-xs text-slate-500">
+          Configure taxas dinâmicas por bairro, raio em km ou faixa de CEP aplicadas automaticamente no cardápio.
+        </p>
       </div>
 
       {/* ── Table Card ─────────────────────────────────── */}
@@ -486,171 +418,339 @@ export function DeliveryFeeRulesTab({ slug, rules: initialRules }: DeliveryFeeRu
             )}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader className="bg-slate-50/80">
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="font-semibold text-slate-700">Zona / Regra</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Tipo e Critério</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Taxa de Frete</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Pedido Mínimo</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Frete Grátis Acima de</TableHead>
-                  <TableHead className="text-center font-semibold text-slate-700">Ativa</TableHead>
-                  <TableHead className="w-16 text-right font-semibold text-slate-700">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredRules.map((rule) => {
-                  const typeConf = RULE_TYPE_CONFIG[rule.type] ?? RULE_TYPE_CONFIG.NEIGHBORHOOD;
-                  const TypeIcon = typeConf.icon;
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden overflow-x-auto sm:block">
+              <Table>
+                <TableHeader className="bg-slate-50/80">
+                  <TableRow className="border-b border-slate-200">
+                    <TableHead className="w-[280px] text-xs font-semibold text-slate-700">Zona / Regra</TableHead>
+                    <TableHead className="text-xs font-semibold text-slate-700">Tipo e Critério</TableHead>
+                    <TableHead className="text-xs font-semibold text-slate-700">Taxa de Frete</TableHead>
+                    <TableHead className="text-xs font-semibold text-slate-700">Pedido Mínimo</TableHead>
+                    <TableHead className="text-xs font-semibold text-slate-700">Frete Grátis Acima de</TableHead>
+                    <TableHead className="text-center text-xs font-semibold text-slate-700">Status</TableHead>
+                    <TableHead className="w-[80px] text-right text-xs font-semibold text-slate-700">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="divide-y divide-slate-100">
+                  {paginatedRules.map((rule) => {
+                    const typeConf = RULE_TYPE_CONFIG[rule.type] ?? RULE_TYPE_CONFIG.NEIGHBORHOOD;
+                    const TypeIcon = typeConf.icon;
 
-                  let criterionText = "—";
-                  if (rule.type === "RADIUS_KM") {
-                    criterionText = `Até ${rule.maxDistanceKm ?? 0} km da loja`;
-                  } else if (rule.type === "NEIGHBORHOOD") {
-                    criterionText = rule.neighborhood ? `Bairro: ${rule.neighborhood}` : "—";
-                  } else if (rule.type === "CEP_RANGE") {
-                    criterionText = `${rule.cepFrom ?? "—"} até ${rule.cepTo ?? "—"}`;
-                  }
+                    let criterionText = "—";
+                    if (rule.type === "RADIUS_KM") {
+                      criterionText = `Até ${rule.maxDistanceKm ?? 0} km da loja`;
+                    } else if (rule.type === "NEIGHBORHOOD") {
+                      criterionText = rule.neighborhood ? `Bairro: ${rule.neighborhood}` : "—";
+                    } else if (rule.type === "CEP_RANGE") {
+                      criterionText = `${rule.cepFrom ?? "—"} até ${rule.cepTo ?? "—"}`;
+                    }
 
-                  return (
-                    <TableRow key={rule.id} className="transition-colors hover:bg-slate-50/50">
-                      {/* Nome e Ordem */}
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2.5">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
-                            <TypeIcon size={16} />
+                    return (
+                      <TableRow key={rule.id} className="transition-colors hover:bg-slate-50/70">
+                        {/* Nome e Ordem */}
+                        <TableCell className="py-3.5">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+                              <TypeIcon size={16} />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-sm text-slate-900">{rule.name}</p>
+                              <p className="text-[11px] text-slate-400">
+                                Prioridade #{rule.displayOrder ?? 0}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-semibold text-slate-900">{rule.name}</p>
-                            <p className="text-[11px] text-slate-400">
-                              Prioridade #{rule.displayOrder ?? 0}
-                            </p>
-                          </div>
-                        </div>
-                      </TableCell>
+                        </TableCell>
 
-                      {/* Tipo e Critério */}
-                      <TableCell>
-                        <div className="space-y-1">
-                          <span
-                            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${typeConf.badgeClass}`}
-                          >
-                            <TypeIcon size={12} />
-                            {typeConf.label}
+                        {/* Tipo e Critério */}
+                        <TableCell className="py-3.5">
+                          <div className="space-y-1">
+                            <span
+                              className={cn(
+                                "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium tracking-normal transition-colors",
+                                typeConf.badgeClass,
+                              )}
+                            >
+                              <TypeIcon size={12} className="shrink-0 text-primary" />
+                              {typeConf.label}
+                            </span>
+                            <p className="text-xs text-slate-600">{criterionText}</p>
+                          </div>
+                        </TableCell>
+
+                        {/* Taxa */}
+                        <TableCell className="py-3.5">
+                          <span className="font-semibold text-slate-900">
+                            {rule.fee === 0 ? (
+                              <Badge className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary hover:bg-primary/15">
+                                Grátis
+                              </Badge>
+                            ) : (
+                              formatCurrency(rule.fee)
+                            )}
                           </span>
-                          <p className="text-xs text-slate-600">{criterionText}</p>
-                        </div>
-                      </TableCell>
+                        </TableCell>
 
-                      {/* Taxa */}
-                      <TableCell>
-                        <span className="font-semibold text-slate-900">
-                          {rule.fee === 0 ? (
-                            <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-200">
-                              Grátis
-                            </Badge>
+                        {/* Pedido Mínimo */}
+                        <TableCell className="py-3.5 text-xs text-slate-600">
+                          {rule.minimumOrderValue && rule.minimumOrderValue > 0
+                            ? formatCurrency(rule.minimumOrderValue)
+                            : "Sem mínimo"}
+                        </TableCell>
+
+                        {/* Frete Grátis Acima */}
+                        <TableCell className="py-3.5 text-xs text-slate-600">
+                          {rule.freeDeliveryThreshold && rule.freeDeliveryThreshold > 0 ? (
+                            <span className="font-medium text-primary">
+                              {formatCurrency(rule.freeDeliveryThreshold)}
+                            </span>
                           ) : (
-                            formatCurrency(rule.fee)
+                            <span className="text-slate-400">—</span>
                           )}
+                        </TableCell>
+
+                        {/* Switch Status (Padrão Acessos) */}
+                        <TableCell className="py-3.5 text-center">
+                          <div className="inline-flex items-center gap-2">
+                            <Switch
+                              checked={rule.isActive}
+                              onCheckedChange={() => handleToggleStatus(rule)}
+                              disabled={isPending}
+                              className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
+                            />
+                            <span
+                              className={cn(
+                                "text-xs font-medium",
+                                rule.isActive ? "text-primary font-semibold" : "text-slate-400",
+                              )}
+                            >
+                              {rule.isActive ? "Ativa" : "Inativa"}
+                            </span>
+                          </div>
+                        </TableCell>
+
+                        {/* Dropdown Ações */}
+                        <TableCell className="py-3.5 text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                              >
+                                <MoreHorizontalIcon size={16} />
+                                <span className="sr-only">Opções</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                              align="end"
+                              className="w-48 rounded-xl border-slate-200 bg-white p-1 text-slate-900 shadow-xl"
+                            >
+                              <DropdownMenuLabel className="px-2 py-1.5 text-xs font-semibold text-slate-500">
+                                Opções da Zona
+                              </DropdownMenuLabel>
+                              <DropdownMenuItem
+                                onClick={() => handleOpenEdit(rule)}
+                                className="gap-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
+                              >
+                                <PencilIcon size={14} className="text-primary" /> Editar dados
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator className="bg-slate-100" />
+                              <DropdownMenuItem
+                                onClick={() => setDeletingRule(rule)}
+                                className="gap-2 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-700"
+                              >
+                                <Trash2Icon size={14} /> Excluir zona
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Mobile Cards View */}
+            <div className="divide-y divide-slate-100 sm:hidden">
+              {paginatedRules.map((rule) => {
+                const typeConf = RULE_TYPE_CONFIG[rule.type] ?? RULE_TYPE_CONFIG.NEIGHBORHOOD;
+                const TypeIcon = typeConf.icon;
+
+                let criterionText = "—";
+                if (rule.type === "RADIUS_KM") {
+                  criterionText = `Até ${rule.maxDistanceKm ?? 0} km da loja`;
+                } else if (rule.type === "NEIGHBORHOOD") {
+                  criterionText = rule.neighborhood ? `Bairro: ${rule.neighborhood}` : "—";
+                } else if (rule.type === "CEP_RANGE") {
+                  criterionText = `${rule.cepFrom ?? "—"} até ${rule.cepTo ?? "—"}`;
+                }
+
+                return (
+                  <div key={rule.id} className="space-y-3 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+                          <TypeIcon size={16} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">{rule.name}</p>
+                          <p className="text-xs text-slate-500">{criterionText}</p>
+                        </div>
+                      </div>
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-900"
+                          >
+                            <MoreHorizontalIcon size={16} />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="end"
+                          className="w-48 rounded-xl border-slate-200 bg-white p-1 text-slate-900 shadow-xl"
+                        >
+                          <DropdownMenuItem
+                            onClick={() => handleOpenEdit(rule)}
+                            className="gap-2 rounded-lg text-xs font-medium text-slate-700"
+                          >
+                            <PencilIcon size={14} className="text-primary" />
+                            Editar dados
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator className="bg-slate-100" />
+                          <DropdownMenuItem
+                            onClick={() => setDeletingRule(rule)}
+                            className="gap-2 rounded-lg text-xs font-medium text-red-600"
+                          >
+                            <Trash2Icon size={14} />
+                            Excluir zona
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-xs font-semibold text-slate-900">
+                        {rule.fee === 0 ? "Frete Grátis" : formatCurrency(rule.fee)}
+                      </span>
+
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={cn(
+                            "text-xs font-medium",
+                            rule.isActive ? "text-primary font-semibold" : "text-slate-400",
+                          )}
+                        >
+                          {rule.isActive ? "Ativa" : "Inativa"}
                         </span>
-                      </TableCell>
-
-                      {/* Pedido Mínimo */}
-                      <TableCell className="text-xs text-slate-600">
-                        {rule.minimumOrderValue && rule.minimumOrderValue > 0
-                          ? formatCurrency(rule.minimumOrderValue)
-                          : "Sem mínimo"}
-                      </TableCell>
-
-                      {/* Frete Grátis Acima */}
-                      <TableCell className="text-xs text-slate-600">
-                        {rule.freeDeliveryThreshold && rule.freeDeliveryThreshold > 0 ? (
-                          <span className="font-medium text-emerald-700">
-                            {formatCurrency(rule.freeDeliveryThreshold)}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </TableCell>
-
-                      {/* Switch Ativa */}
-                      <TableCell className="text-center">
                         <Switch
                           checked={rule.isActive}
                           onCheckedChange={() => handleToggleStatus(rule)}
                           disabled={isPending}
-                          className="data-[state=checked]:bg-emerald-600"
+                          className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
                         />
-                      </TableCell>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
 
-                      {/* Dropdown Ações */}
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 rounded-lg hover:bg-slate-100"
-                            >
-                              <MoreHorizontalIcon size={16} />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent
-                            align="end"
-                            className="w-44 rounded-xl border-slate-200 bg-white p-1.5 shadow-lg"
-                          >
-                            <DropdownMenuLabel className="px-2 py-1 text-xs text-slate-400">
-                              Gerenciar Zona
-                            </DropdownMenuLabel>
-                            <DropdownMenuItem
-                              onClick={() => handleOpenEdit(rule)}
-                              className="cursor-pointer gap-2 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50 focus:bg-slate-50"
-                            >
-                              <PencilIcon size={14} /> Editar dados
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator className="my-1 bg-slate-100" />
-                            <DropdownMenuItem
-                              onClick={() => setDeletingRule(rule)}
-                              className="cursor-pointer gap-2 rounded-lg px-2.5 py-1.5 text-xs text-rose-600 hover:bg-rose-50 focus:bg-rose-50"
-                            >
-                              <Trash2Icon size={14} /> Excluir zona
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+            {/* Controles de Paginação & Contador (Padrão Acessos) */}
+            <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                <span>
+                  Exibindo{" "}
+                  <strong className="font-semibold text-slate-900">{filteredRules.length}</strong> de{" "}
+                  {totalCount} zona{totalCount !== 1 ? "s" : ""} de frete
+                </span>
+                {isFiltering && (
+                  <span className="text-[11px] font-medium text-amber-600">
+                    (Filtros aplicados)
+                  </span>
+                )}
+                <span className="hidden sm:inline text-slate-300">|</span>
+                <div className="flex items-center gap-1.5">
+                  <span>Exibir</span>
+                  <Select
+                    value={String(pageSize)}
+                    onValueChange={(val) => {
+                      setPageSize(Number(val));
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="h-8 w-16 rounded-lg border-slate-200 bg-white text-xs font-medium text-slate-700">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+                      <SelectItem value="5">5</SelectItem>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="20">20</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span>por página</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-2 sm:justify-end">
+                <span className="text-xs text-slate-500">
+                  Página <strong className="font-semibold text-slate-900">{validCurrentPage}</strong> de{" "}
+                  <strong className="font-semibold text-slate-900">{totalPages}</strong>
+                </span>
+
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    disabled={validCurrentPage <= 1}
+                    onClick={() => setCurrentPage(1)}
+                    className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                    title="Primeira página"
+                  >
+                    <ChevronsLeftIcon size={14} />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    disabled={validCurrentPage <= 1}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                    title="Página anterior"
+                  >
+                    <ChevronLeftIcon size={14} />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    disabled={validCurrentPage >= totalPages}
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                    title="Próxima página"
+                  >
+                    <ChevronRightIcon size={14} />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    disabled={validCurrentPage >= totalPages}
+                    onClick={() => setCurrentPage(totalPages)}
+                    className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                    title="Última página"
+                  >
+                    <ChevronsRightIcon size={14} />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </>
         )}
-
-        {/* Footer com Contador e Limpar */}
-        <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between text-xs text-slate-500">
-          <div className="flex items-center gap-2">
-            <span>
-              Exibindo <strong>{filteredRules.length}</strong> de <strong>{totalCount}</strong>{" "}
-              zona{totalCount !== 1 ? "s" : ""} de frete
-            </span>
-            {isFiltering && (
-              <span className="text-[11px] font-medium text-amber-600">
-                (Filtros aplicados)
-              </span>
-            )}
-          </div>
-          {isFiltering && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClearFilters}
-              className="h-8 gap-1 px-2.5 text-xs text-slate-600 hover:text-slate-900"
-            >
-              <FilterXIcon size={13} /> Limpar filtros
-            </Button>
-          )}
-        </div>
       </Card>
 
       {/* ── Dialog Criar / Editar (Padrão Usuários) ───────── */}

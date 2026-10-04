@@ -1,7 +1,6 @@
 "use client";
 
-import { deleteCourierAction } from "@/app/(dashboard)/logistica-actions";
-import { Badge } from "@/components/ui/badge";
+import { alternarStatusCourierAction, deleteCourierAction } from "@/app/(dashboard)/logistica-actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
@@ -28,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -55,6 +55,7 @@ import {
   PencilIcon,
   PhoneIcon,
   PlusIcon,
+  SaveIcon,
   SearchIcon,
   Settings2Icon,
   Trash2Icon,
@@ -63,7 +64,7 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { CourierForm } from "./courier-form";
@@ -90,6 +91,7 @@ interface LogisticaClientProps {
   courierTotal: number;
   courierTotalPages: number;
   courierCurrentPage: number;
+  courierPageSize?: number;
   initialSearch: string;
   initialVehicleType: string;
   initialAvailability: string;
@@ -99,6 +101,7 @@ interface LogisticaClientProps {
   vehicleTotal: number;
   vehicleTotalPages: number;
   vehicleCurrentPage: number;
+  vehiclePageSize?: number;
   initialVSearch: string;
   initialVStatus: string;
   initialTab: string;
@@ -112,17 +115,17 @@ const VEHICLE_CONFIG: Record<
   MOTO: {
     label: "Moto",
     icon: BikeIcon,
-    badgeClass: "bg-cyan-50 text-cyan-800 border-cyan-200/80 hover:bg-cyan-100",
+    badgeClass: "bg-primary/10 text-primary border-primary/20 hover:bg-primary/15",
   },
   BIKE: {
     label: "Bicicleta",
     icon: BikeIcon,
-    badgeClass: "bg-emerald-50 text-emerald-800 border-emerald-200/80 hover:bg-emerald-100",
+    badgeClass: "bg-primary/10 text-primary border-primary/20 hover:bg-primary/15",
   },
   CARRO: {
     label: "Carro",
     icon: CarIcon,
-    badgeClass: "bg-blue-50 text-blue-800 border-blue-200/80 hover:bg-blue-100",
+    badgeClass: "bg-primary/10 text-primary border-primary/20 hover:bg-primary/15",
   },
 };
 
@@ -152,6 +155,7 @@ export function LogisticaClient({
   courierTotal,
   courierTotalPages,
   courierCurrentPage,
+  courierPageSize,
   initialSearch,
   initialVehicleType,
   initialAvailability,
@@ -161,6 +165,7 @@ export function LogisticaClient({
   vehicleTotal,
   vehicleTotalPages,
   vehicleCurrentPage,
+  vehiclePageSize,
   initialVSearch,
   initialVStatus,
   initialTab,
@@ -169,9 +174,28 @@ export function LogisticaClient({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
+  const normalizedInitialTab =
+    initialTab === "vehicles"
+      ? "vehicles"
+      : initialTab === "params"
+        ? "params"
+        : initialTab === "roteirizador"
+          ? "roteirizador"
+          : initialTab === "zonas"
+            ? "zonas"
+            : "motoboys";
+
+  const [activeTab, setActiveTab] = useState(normalizedInitialTab);
   const [createOpen, setCreateOpen] = useState(false);
+  const [vehicleCreateOpen, setVehicleCreateOpen] = useState(false);
+  const [ruleCreateOpen, setRuleCreateOpen] = useState(false);
+  const [isParamsSaving, setIsParamsSaving] = useState(false);
   const [editCourier, setEditCourier] = useState<Courier | null>(null);
   const [deletingCourier, setDeletingCourier] = useState<{ id: string; name: string } | null>(null);
+
+  useEffect(() => {
+    setActiveTab(normalizedInitialTab);
+  }, [normalizedInitialTab]);
 
   // filtros dos motoboys (locais — aplicados via URL ao confirmar)
   const [localSearch, setLocalSearch] = useState(initialSearch);
@@ -196,6 +220,7 @@ export function LogisticaClient({
     params.set("status", overrides.status ?? localCourierStatus);
     params.set("workDay", overrides.workDay ?? localWorkDay);
     params.set("page", overrides.page ?? String(courierCurrentPage));
+    params.set("pageSize", overrides.pageSize ?? String(courierPageSize || 10));
     router.push(`?${params.toString()}`);
   };
 
@@ -215,7 +240,21 @@ export function LogisticaClient({
     params.set("status", "all");
     params.set("workDay", "all");
     params.set("page", "1");
+    params.set("pageSize", String(courierPageSize || 10));
     router.push(`?${params.toString()}`);
+  };
+
+  const handleToggleCourierStatus = (id: string, currentStatus: boolean, name: string) => {
+    startTransition(async () => {
+      try {
+        await alternarStatusCourierAction(slug, id, !currentStatus);
+        toast.success(
+          `Motoboy "${name}" foi ${!currentStatus ? "ativado" : "desativado"} com sucesso.`,
+        );
+      } catch {
+        toast.error("Não foi possível atualizar o status do motoboy.");
+      }
+    });
   };
 
   const handleDeleteConfirm = () => {
@@ -310,13 +349,48 @@ export function LogisticaClient({
           </div>
         </div>
 
-        <Button
-          onClick={() => setCreateOpen(true)}
-          className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
-        >
-          <PlusIcon size={16} />
-          <span>Novo Motoboy</span>
-        </Button>
+        {activeTab === "motoboys" && (
+          <Button
+            onClick={() => setCreateOpen(true)}
+            className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
+          >
+            <PlusIcon size={16} />
+            <span>Novo Motoboy</span>
+          </Button>
+        )}
+        {activeTab === "vehicles" && (
+          <Button
+            onClick={() => setVehicleCreateOpen(true)}
+            className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
+          >
+            <PlusIcon size={16} />
+            <span>Adicionar Veículo</span>
+          </Button>
+        )}
+        {activeTab === "params" && (
+          <Button
+            type="submit"
+            form="delivery-params-form"
+            disabled={isParamsSaving}
+            className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
+          >
+            {isParamsSaving ? (
+              <Loader2Icon size={16} className="animate-spin" />
+            ) : (
+              <SaveIcon size={16} />
+            )}
+            <span>Salvar Parâmetros</span>
+          </Button>
+        )}
+        {activeTab === "zonas" && (
+          <Button
+            onClick={() => setRuleCreateOpen(true)}
+            className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
+          >
+            <PlusIcon size={16} />
+            <span>Nova Zona de Frete</span>
+          </Button>
+        )}
       </div>
 
       {/* ── Metric Cards ────────────────────────────────── */}
@@ -346,11 +420,11 @@ export function LogisticaClient({
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Disponíveis Agora
               </span>
-              <div className="rounded-lg bg-emerald-100 p-1.5 text-emerald-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <CheckCircle2Icon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-emerald-700">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {availableCouriersCount}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -365,11 +439,11 @@ export function LogisticaClient({
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Frota da Empresa
               </span>
-              <div className="rounded-lg bg-blue-100 p-1.5 text-blue-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <CarIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-blue-700">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {vehicleTotal}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -384,11 +458,11 @@ export function LogisticaClient({
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Zonas e Regras
               </span>
-              <div className="rounded-lg bg-teal-100 p-1.5 text-teal-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <CompassIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-teal-700">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {feeRules.length}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -400,18 +474,9 @@ export function LogisticaClient({
 
       {/* ── Abas Principais ──────────────────────────────── */}
       <Tabs
-        defaultValue={
-          initialTab === "vehicles"
-            ? "vehicles"
-            : initialTab === "params"
-              ? "params"
-              : initialTab === "roteirizador"
-                ? "roteirizador"
-                : initialTab === "zonas"
-                  ? "zonas"
-                  : "motoboys"
-        }
+        value={activeTab}
         onValueChange={(tab) => {
+          setActiveTab(tab);
           const params = new URLSearchParams();
           params.set("tab", tab);
           router.push(`?${params.toString()}`);
@@ -670,7 +735,7 @@ export function LogisticaClient({
                             {/* Entregador */}
                             <TableCell className="py-3.5">
                               <div className="flex items-center gap-3">
-                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 font-display text-xs font-bold text-slate-700">
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10 font-display text-xs font-bold text-primary">
                                   {getInitials(courier.name)}
                                 </div>
                                 <div className="min-w-0">
@@ -678,7 +743,7 @@ export function LogisticaClient({
                                     {courier.name}
                                   </p>
                                   <p className="flex items-center gap-1 truncate text-xs text-slate-500">
-                                    <PhoneIcon size={12} className="shrink-0 text-slate-400" />
+                                    <PhoneIcon size={12} className="shrink-0 text-primary" />
                                     {courier.phone || "Sem telefone"}
                                   </p>
                                 </div>
@@ -693,7 +758,7 @@ export function LogisticaClient({
                                   vehicleCfg.badgeClass,
                                 )}
                               >
-                                <VehicleIcon size={12} className="shrink-0" />
+                                <VehicleIcon size={12} className="shrink-0 text-primary" />
                                 {vehicleCfg.label}
                               </span>
                             </TableCell>
@@ -733,14 +798,14 @@ export function LogisticaClient({
                                 className={cn(
                                   "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
                                   courier.isAvailable
-                                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200/80"
+                                    ? "bg-primary/10 text-primary border border-primary/20"
                                     : "bg-slate-100 text-slate-500 border border-slate-200",
                                 )}
                               >
                                 <span
                                   className={cn(
                                     "h-1.5 w-1.5 rounded-full",
-                                    courier.isAvailable ? "bg-emerald-500" : "bg-slate-400",
+                                    courier.isAvailable ? "bg-primary" : "bg-slate-400",
                                   )}
                                 />
                                 {courier.isAvailable ? "Disponível" : "Indisponível"}
@@ -749,17 +814,24 @@ export function LogisticaClient({
 
                             {/* Status */}
                             <TableCell className="py-3.5 text-center">
-                              <Badge
-                                variant={courier.isActive ? "success" : "secondary"}
-                                className={cn(
-                                  "rounded-full px-2.5 py-0.5 text-xs font-medium",
-                                  courier.isActive
-                                    ? "bg-emerald-50 text-emerald-800 border-emerald-200/80"
-                                    : "bg-slate-100 text-slate-600 border-slate-200",
-                                )}
-                              >
-                                {courier.isActive ? "Ativo" : "Inativo"}
-                              </Badge>
+                              <div className="inline-flex items-center gap-2">
+                                <Switch
+                                  checked={courier.isActive}
+                                  disabled={isPending}
+                                  onCheckedChange={() =>
+                                    handleToggleCourierStatus(courier.id, courier.isActive, courier.name)
+                                  }
+                                  className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
+                                />
+                                <span
+                                  className={cn(
+                                    "text-xs font-medium",
+                                    courier.isActive ? "text-primary font-semibold" : "text-slate-400",
+                                  )}
+                                >
+                                  {courier.isActive ? "Ativo" : "Inativo"}
+                                </span>
+                              </div>
                             </TableCell>
 
                             {/* Ações */}
@@ -786,8 +858,26 @@ export function LogisticaClient({
                                     onClick={() => setEditCourier(courier)}
                                     className="gap-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
                                   >
-                                    <PencilIcon size={14} className="text-slate-500" />
+                                    <PencilIcon size={14} className="text-primary" />
                                     Editar dados
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      handleToggleCourierStatus(courier.id, courier.isActive, courier.name)
+                                    }
+                                    className="gap-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
+                                  >
+                                    {courier.isActive ? (
+                                      <>
+                                        <UserXIcon size={14} className="text-primary" />
+                                        Desativar motoboy
+                                      </>
+                                    ) : (
+                                      <>
+                                        <CheckCircle2Icon size={14} className="text-primary" />
+                                        Ativar motoboy
+                                      </>
+                                    )}
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator className="bg-slate-100" />
                                   <DropdownMenuItem
@@ -818,13 +908,13 @@ export function LogisticaClient({
                       <div key={courier.id} className="space-y-3 p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-center gap-2.5">
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 font-display text-xs font-bold text-slate-700">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10 font-display text-xs font-bold text-primary">
                               {getInitials(courier.name)}
                             </div>
                             <div>
                               <p className="text-sm font-semibold text-slate-900">{courier.name}</p>
                               <p className="flex items-center gap-1 text-xs text-slate-500">
-                                <PhoneIcon size={11} className="text-slate-400" />
+                                <PhoneIcon size={11} className="text-primary" />
                                 {courier.phone || "Sem telefone"}
                               </p>
                             </div>
@@ -846,15 +936,33 @@ export function LogisticaClient({
                             >
                               <DropdownMenuItem
                                 onClick={() => setEditCourier(courier)}
-                                className="gap-2 rounded-lg text-xs font-medium text-slate-700"
+                                className="gap-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
                               >
-                                <PencilIcon size={14} />
+                                <PencilIcon size={14} className="text-primary" />
                                 Editar dados
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleToggleCourierStatus(courier.id, courier.isActive, courier.name)
+                                }
+                                className="gap-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
+                              >
+                                {courier.isActive ? (
+                                  <>
+                                    <UserXIcon size={14} className="text-primary" />
+                                    Desativar motoboy
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle2Icon size={14} className="text-primary" />
+                                    Ativar motoboy
+                                  </>
+                                )}
                               </DropdownMenuItem>
                               <DropdownMenuSeparator className="bg-slate-100" />
                               <DropdownMenuItem
                                 onClick={() => setDeletingCourier({ id: courier.id, name: courier.name })}
-                                className="gap-2 rounded-lg text-xs font-medium text-red-600"
+                                className="gap-2 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-700"
                               >
                                 <Trash2Icon size={14} />
                                 Excluir motoboy
@@ -867,11 +975,11 @@ export function LogisticaClient({
                           <div className="flex items-center gap-2">
                             <span
                               className={cn(
-                                "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium",
+                                "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium",
                                 vehicleCfg.badgeClass,
                               )}
                             >
-                              <VehicleIcon size={11} />
+                              <VehicleIcon size={11} className="text-primary" />
                               {vehicleCfg.label}
                             </span>
                             {courier.licensePlate && (
@@ -886,25 +994,37 @@ export function LogisticaClient({
                               className={cn(
                                 "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
                                 courier.isAvailable
-                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200/80"
+                                  ? "bg-primary/10 text-primary border border-primary/20"
                                   : "bg-slate-100 text-slate-500",
                               )}
                             >
                               <span
                                 className={cn(
                                   "h-1.5 w-1.5 rounded-full",
-                                  courier.isAvailable ? "bg-emerald-500" : "bg-slate-400",
+                                  courier.isAvailable ? "bg-primary" : "bg-slate-400",
                                 )}
                               />
                               {courier.isAvailable ? "Disponível" : "Indisp."}
                             </span>
 
-                            <Badge
-                              variant={courier.isActive ? "success" : "secondary"}
-                              className="text-[11px]"
-                            >
-                              {courier.isActive ? "Ativo" : "Inativo"}
-                            </Badge>
+                            <div className="inline-flex items-center gap-1.5">
+                              <span
+                                className={cn(
+                                  "text-xs font-medium",
+                                  courier.isActive ? "text-primary font-semibold" : "text-slate-400",
+                                )}
+                              >
+                                {courier.isActive ? "Ativo" : "Inativo"}
+                              </span>
+                              <Switch
+                                checked={courier.isActive}
+                                disabled={isPending}
+                                onCheckedChange={() =>
+                                  handleToggleCourierStatus(courier.id, courier.isActive, courier.name)
+                                }
+                                className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -914,75 +1034,101 @@ export function LogisticaClient({
 
                 {/* Controles de Paginação & Contador */}
                 <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                  {/* Items per page selector & Result counter */}
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
                     <span>
-                      Exibindo <strong className="font-semibold text-slate-900">{couriers.length}</strong> de{" "}
-                      {courierTotal} motoboy{courierTotal !== 1 ? "s" : ""}
+                      Exibindo{" "}
+                      <strong className="font-semibold text-slate-900">
+                        {couriers.length}
+                      </strong>{" "}
+                      de {courierTotal} motoboy{courierTotal !== 1 ? "s" : ""}
                     </span>
                     {isFiltering && (
                       <span className="text-[11px] font-medium text-amber-600">
                         (Filtros aplicados)
                       </span>
                     )}
+                    <span className="hidden sm:inline text-slate-300">|</span>
+                    <div className="flex items-center gap-1.5">
+                      <span>Exibir</span>
+                      <Select
+                        value={String(courierPageSize || 10)}
+                        onValueChange={(val) => {
+                          navigateCouriers({ pageSize: val, page: "1" });
+                        }}
+                      >
+                        <SelectTrigger className="h-8 w-16 rounded-lg border-slate-200 bg-white text-xs font-medium text-slate-700">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-lg border-slate-200 bg-white">
+                          <SelectItem value="5">5</SelectItem>
+                          <SelectItem value="10">10</SelectItem>
+                          <SelectItem value="20">20</SelectItem>
+                          <SelectItem value="50">50</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <span>por página</span>
+                    </div>
                   </div>
 
-                  {courierTotalPages > 1 && (
-                    <div className="flex items-center justify-between gap-2 sm:justify-end">
-                      <span className="text-xs text-slate-500">
-                        Página <strong className="font-semibold text-slate-900">{courierCurrentPage}</strong> de{" "}
-                        <strong className="font-semibold text-slate-900">{courierTotalPages}</strong>
-                      </span>
+                  {/* Page numbers & navigations */}
+                  <div className="flex items-center justify-between gap-2 sm:justify-end">
+                    <span className="text-xs text-slate-500">
+                      Página <strong className="font-semibold text-slate-900">{courierCurrentPage}</strong> de{" "}
+                      <strong className="font-semibold text-slate-900">{courierTotalPages || 1}</strong>
+                    </span>
 
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          disabled={courierCurrentPage <= 1}
-                          onClick={() => navigateCouriers({ page: "1" })}
-                          className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
-                          title="Primeira página"
-                        >
-                          <ChevronsLeftIcon size={14} />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          disabled={courierCurrentPage <= 1}
-                          onClick={() =>
-                            navigateCouriers({ page: String(Math.max(1, courierCurrentPage - 1)) })
-                          }
-                          className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
-                          title="Página anterior"
-                        >
-                          <ChevronLeftIcon size={14} />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          disabled={courierCurrentPage >= courierTotalPages}
-                          onClick={() =>
-                            navigateCouriers({
-                              page: String(Math.min(courierTotalPages, courierCurrentPage + 1)),
-                            })
-                          }
-                          className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
-                          title="Próxima página"
-                        >
-                          <ChevronRightIcon size={14} />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          disabled={courierCurrentPage >= courierTotalPages}
-                          onClick={() => navigateCouriers({ page: String(courierTotalPages) })}
-                          className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
-                          title="Última página"
-                        >
-                          <ChevronsRightIcon size={14} />
-                        </Button>
-                      </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        disabled={courierCurrentPage <= 1}
+                        onClick={() => navigateCouriers({ page: "1" })}
+                        className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                        title="Primeira página"
+                      >
+                        <ChevronsLeftIcon size={14} />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        disabled={courierCurrentPage <= 1}
+                        onClick={() =>
+                          navigateCouriers({
+                            page: String(Math.max(1, courierCurrentPage - 1)),
+                          })
+                        }
+                        className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                        title="Página anterior"
+                      >
+                        <ChevronLeftIcon size={14} />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        disabled={courierCurrentPage >= courierTotalPages}
+                        onClick={() =>
+                          navigateCouriers({
+                            page: String(Math.min(courierTotalPages, courierCurrentPage + 1)),
+                          })
+                        }
+                        className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                        title="Próxima página"
+                      >
+                        <ChevronRightIcon size={14} />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        disabled={courierCurrentPage >= courierTotalPages}
+                        onClick={() => navigateCouriers({ page: String(courierTotalPages) })}
+                        className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                        title="Última página"
+                      >
+                        <ChevronsRightIcon size={14} />
+                      </Button>
                     </div>
-                  )}
+                  </div>
                 </div>
               </>
             )}
@@ -999,17 +1145,29 @@ export function LogisticaClient({
             currentPage={vehicleCurrentPage}
             initialSearch={initialVSearch}
             initialStatus={initialVStatus}
+            pageSize={vehiclePageSize}
+            isCreateOpen={vehicleCreateOpen}
+            onOpenCreateChange={setVehicleCreateOpen}
           />
         </TabsContent>
 
         {/* ── Aba Parâmetros ── */}
         <TabsContent value="params" className="mt-5">
-          <DeliveryParamsTab slug={slug} restaurant={restaurant} />
+          <DeliveryParamsTab
+            slug={slug}
+            restaurant={restaurant}
+            onPendingChange={setIsParamsSaving}
+          />
         </TabsContent>
 
         {/* ── Aba Zonas de Frete ── */}
         <TabsContent value="zonas" className="mt-5">
-          <DeliveryFeeRulesTab slug={slug} rules={feeRules} />
+          <DeliveryFeeRulesTab
+            slug={slug}
+            rules={feeRules}
+            isCreateOpen={ruleCreateOpen}
+            onOpenCreateChange={setRuleCreateOpen}
+          />
         </TabsContent>
 
         {/* ── Aba Roteirizador ── */}

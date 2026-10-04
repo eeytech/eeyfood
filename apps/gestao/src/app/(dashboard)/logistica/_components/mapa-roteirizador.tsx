@@ -7,13 +7,10 @@ import L from "leaflet";
 import {
   AlertCircleIcon,
   BikeIcon,
-  CheckCircle2Icon,
   CompassIcon,
   Loader2Icon,
   MapPinIcon,
-  NavigationIcon,
   RefreshCwIcon,
-  RouteIcon,
   SearchIcon,
   SparklesIcon,
   StoreIcon,
@@ -31,7 +28,7 @@ import {
 } from "@/app/(dashboard)/logistica-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -183,13 +180,7 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
     });
   }, [orders, searchQuery, activeFilter]);
 
-  // Metrics
-  const totalOrders = orders.length;
-  const ordersWithGps = orders.filter(
-    (o) => o.deliveryLatitude != null && o.deliveryLongitude != null,
-  ).length;
-  const availableCouriers = couriers.filter((c) => c.isAvailable && c.isActive).length;
-  const hasStoreGps = currentStoreLat != null && currentStoreLng != null;
+
 
   const toggleOrder = (id: number) => {
     setSelectedIds((prev) => {
@@ -352,20 +343,15 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
 
   return (
     <div className="space-y-6">
-      {/* ── Page Header (Padrão Usuários) ───────────────── */}
+      {/* ── Sub Header ───────────────── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm shadow-primary/25">
-            <RouteIcon size={22} />
-          </div>
-          <div>
-            <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
-              Roteirizador e Painel de Despacho
-            </h1>
-            <p className="text-sm text-slate-500">
-              Agrupe pedidos prontos por proximidade geográfica, visualize mochilas de pizza e despache em lote.
-            </p>
-          </div>
+        <div>
+          <h2 className="font-display text-lg font-bold tracking-tight text-slate-900">
+            Roteirizador e Painel de Despacho
+          </h2>
+          <p className="text-xs text-slate-500">
+            Agrupe pedidos prontos por proximidade geográfica, visualize mochilas de pizza e despache em lote.
+          </p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -392,95 +378,6 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
             <span>Atualizar</span>
           </Button>
         </div>
-      </div>
-
-      {/* ── Metric Cards (Padrão 4 Colunas Usuários) ────── */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                Pedidos Prontos
-              </span>
-              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
-                <NavigationIcon size={16} />
-              </div>
-            </div>
-            <p className="mt-2 font-display text-2xl font-bold text-primary">
-              {totalOrders}
-            </p>
-            <p className="mt-0.5 text-xs text-slate-500">
-              Aguardando expedição
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                GPS Mapeado
-              </span>
-              <div className="rounded-lg bg-emerald-100 p-1.5 text-emerald-700">
-                <CheckCircle2Icon size={16} />
-              </div>
-            </div>
-            <p className="mt-2 font-display text-2xl font-bold text-emerald-700">
-              {ordersWithGps}
-            </p>
-            <p className="mt-0.5 text-xs text-slate-500">
-              {totalOrders - ordersWithGps > 0
-                ? `${totalOrders - ordersWithGps} sem localização exata`
-                : "100% visíveis no mapa"}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                Motoboys Livres
-              </span>
-              <div className="rounded-lg bg-blue-100 p-1.5 text-blue-700">
-                <BikeIcon size={16} />
-              </div>
-            </div>
-            <p className="mt-2 font-display text-2xl font-bold text-blue-700">
-              {availableCouriers}
-            </p>
-            <p className="mt-0.5 text-xs text-slate-500">
-              Disponíveis para viagem
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                Base Restaurante
-              </span>
-              <div
-                className={`rounded-lg p-1.5 ${
-                  hasStoreGps ? "bg-teal-100 text-teal-700" : "bg-amber-100 text-amber-700"
-                }`}
-              >
-                <StoreIcon size={16} />
-              </div>
-            </div>
-            <p
-              className={`mt-2 font-display text-2xl font-bold ${
-                hasStoreGps ? "text-teal-700" : "text-amber-700"
-              }`}
-            >
-              {hasStoreGps ? "Conectado" : "Pendente"}
-            </p>
-            <p className="mt-0.5 text-xs text-slate-500">
-              {hasStoreGps ? "Ponto de partida ativo" : "Clique para configurar GPS"}
-            </p>
-          </CardContent>
-        </Card>
       </div>
 
       {/* ── Main Router Box (Mapa + Painel Lateral) ─────── */}
@@ -637,7 +534,7 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
                       onClick={() => toggleOrder(order.id)}
                       className={`flex cursor-pointer items-start gap-3 p-3.5 transition-colors ${
                         isSelected
-                          ? "bg-emerald-50/70 border-l-4 border-l-emerald-600"
+                          ? "bg-primary/5 border-l-4 border-l-primary"
                           : "hover:bg-slate-50 border-l-4 border-l-transparent"
                       }`}
                     >
@@ -646,7 +543,7 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
                         checked={isSelected}
                         onChange={() => toggleOrder(order.id)}
                         onClick={(e) => e.stopPropagation()}
-                        className="mt-1 h-4 w-4 cursor-pointer rounded border-slate-300 accent-emerald-600"
+                        className="mt-1 h-4 w-4 cursor-pointer rounded border-slate-300 accent-primary"
                       />
 
                       <div className="min-w-0 flex-1 space-y-1">
@@ -828,7 +725,7 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
                           <p className="font-bold text-sm text-slate-900">
                             #{order.id} {order.customerName}
                           </p>
-                          <span className="font-bold text-xs text-emerald-700">
+                          <span className="font-bold text-xs text-primary">
                             {formatCurrency(order.total)}
                           </span>
                         </div>

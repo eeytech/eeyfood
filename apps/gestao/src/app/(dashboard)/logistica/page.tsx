@@ -34,6 +34,7 @@ const LogisticaPage = async ({ params, searchParams }: LogisticaPageProps) => {
 
   // ── Parâmetros de motoboys ──
   const page = parseInt(sp.page ?? "1", 10) || 1;
+  const pageSize = parseInt(sp.pageSize ?? "10", 10) || 10;
   const search = sp.search ?? "";
   const vehicleType = sp.vehicleType ?? "all";
   const availability = sp.availability ?? "all";
@@ -42,6 +43,7 @@ const LogisticaPage = async ({ params, searchParams }: LogisticaPageProps) => {
 
   // ── Parâmetros de veículos ──
   const vpage = parseInt(sp.vpage ?? "1", 10) || 1;
+  const vpageSize = parseInt(sp.vpageSize ?? "10", 10) || 10;
   const vsearch = sp.vsearch ?? "";
   const vstatus = sp.vstatus ?? "all";
 
@@ -51,6 +53,7 @@ const LogisticaPage = async ({ params, searchParams }: LogisticaPageProps) => {
     listarCouriersGestaoFiltrado({
       slug,
       page,
+      pageSize,
       search: search || undefined,
       vehicleType: vehicleType !== "all" ? vehicleType : undefined,
       availability: availability !== "all" ? availability : undefined,
@@ -60,6 +63,7 @@ const LogisticaPage = async ({ params, searchParams }: LogisticaPageProps) => {
     listarVeiculosGestao({
       slug,
       page: vpage,
+      pageSize: vpageSize,
       search: vsearch || undefined,
       status: vstatus !== "all" ? vstatus : undefined,
     }),
@@ -75,6 +79,7 @@ const LogisticaPage = async ({ params, searchParams }: LogisticaPageProps) => {
         courierTotal={courierResult.total}
         courierTotalPages={courierResult.totalPages}
         courierCurrentPage={courierResult.currentPage}
+        courierPageSize={pageSize}
         initialSearch={search}
         initialVehicleType={vehicleType}
         initialAvailability={availability}
@@ -84,6 +89,7 @@ const LogisticaPage = async ({ params, searchParams }: LogisticaPageProps) => {
         vehicleTotal={vehicleResult.total}
         vehicleTotalPages={vehicleResult.totalPages}
         vehicleCurrentPage={vehicleResult.currentPage}
+        vehiclePageSize={vpageSize}
         initialVSearch={vsearch}
         initialVStatus={vstatus}
         initialTab={tab}

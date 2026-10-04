@@ -2,6 +2,8 @@
 
 import {
   CreditCardIcon,
+  EyeIcon,
+  EyeOffIcon,
   ImageIcon,
   KeyRoundIcon,
   Loader2Icon,
@@ -32,6 +34,7 @@ interface RestaurantFeaturesFormProps {
     acceptMercadoPago: boolean;
     onlinePaymentGateway?: "MERCADO_PAGO" | "INFINITEPAY" | "DISABLED";
     infinitePayHandle?: string | null;
+    mercadoPagoAccessToken?: string | null;
     acceptPix?: boolean;
     pixKey?: string | null;
     pixMode?: "QRCODE" | "MANUAL";
@@ -58,6 +61,10 @@ export const RestaurantFeaturesForm = ({
   const [infinitePayHandle, setInfinitePayHandle] = useState(
     initialValues.infinitePayHandle ?? "",
   );
+  const [mercadoPagoAccessToken, setMercadoPagoAccessToken] = useState(
+    initialValues.mercadoPagoAccessToken ?? "",
+  );
+  const [showMpToken, setShowMpToken] = useState(false);
   const [acceptPix, setAcceptPix] = useState(
     initialValues.acceptPix ?? true,
   );
@@ -104,6 +111,17 @@ export const RestaurantFeaturesForm = ({
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (onlinePaymentGateway === "INFINITEPAY" && !infinitePayHandle.trim()) {
+      toast.error("Informe a sua InfiniteTag para ativar a InfinitePay como gateway online.");
+      return;
+    }
+
+    if (onlinePaymentGateway === "MERCADO_PAGO" && !mercadoPagoAccessToken.trim()) {
+      toast.error("Informe o Access Token do Mercado Pago para ativar o Mercado Pago como gateway online.");
+      return;
+    }
+
     const formData = new FormData();
     formData.append("onlinePaymentGateway", onlinePaymentGateway);
     if (onlinePaymentGateway !== "DISABLED") {
@@ -111,6 +129,9 @@ export const RestaurantFeaturesForm = ({
     }
     if (onlinePaymentGateway === "INFINITEPAY" && infinitePayHandle.trim()) {
       formData.append("infinitePayHandle", infinitePayHandle.trim());
+    }
+    if (onlinePaymentGateway === "MERCADO_PAGO" && mercadoPagoAccessToken.trim()) {
+      formData.append("mercadoPagoAccessToken", mercadoPagoAccessToken.trim());
     }
     if (acceptPix) {
       formData.append("acceptPix", "on");
@@ -123,15 +144,16 @@ export const RestaurantFeaturesForm = ({
     if (isDineInEnabled) formData.append("isDineInEnabled", "on");
     formData.append("pizzaPricingRule", pizzaPricingRule);
 
-  startTransition(async () => {
-    try {
-      await updateRestaurantFeaturesAction(slug, formData);
-      toast.success("Módulos e regras atualizados com sucesso!");
-    } catch {
-      toast.error("Erro ao salvar as configurações.");
-    }
-  });
-};
+    startTransition(async () => {
+      try {
+        await updateRestaurantFeaturesAction(slug, formData);
+        toast.success("Módulos e regras atualizados com sucesso!");
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Erro ao salvar as configurações.";
+        toast.error(message);
+      }
+    });
+  };
 
   const consumptionMethods = [
     {
@@ -344,24 +366,27 @@ export const RestaurantFeaturesForm = ({
                       disabled={isPending}
                       className={`flex flex-col gap-1 rounded-xl border p-3 text-left transition ${
                         onlinePaymentGateway === "MERCADO_PAGO"
-                          ? "border-primary bg-primary/[0.06] ring-1 ring-primary/30 shadow-xs"
+                          ? "border-sky-500 bg-sky-50/70 ring-1 ring-sky-500/30 shadow-xs"
                           : "border-slate-200 bg-white hover:bg-slate-50"
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-900">Mercado Pago</span>
+                        <span className="text-xs font-bold text-slate-900 flex items-center gap-1">
+                          <CreditCardIcon size={13} className="text-sky-600" />
+                          Mercado Pago
+                        </span>
                         <span
                           className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${
                             onlinePaymentGateway === "MERCADO_PAGO"
-                              ? "border border-primary/20 bg-primary/10 text-primary"
+                              ? "border border-sky-300 bg-sky-100 text-sky-800"
                               : "bg-slate-100 text-slate-600"
                           }`}
                         >
-                          Padrão
+                          Checkout Pro
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-500 leading-tight">
-                        Checkout Pro com cartão e Pix via conta central.
+                        Cartão e Pix direto na sua conta Mercado Pago.
                       </p>
                     </button>
 
@@ -425,6 +450,55 @@ export const RestaurantFeaturesForm = ({
                       </p>
                     </button>
                   </div>
+
+                  {onlinePaymentGateway === "MERCADO_PAGO" && (
+                    <div className="pt-2 border-t border-sky-200/80 space-y-2 animate-in fade-in slide-in-from-top-1">
+                      <div className="flex flex-col sm:flex-row sm:items-start gap-2">
+                        <div className="sm:w-1/3">
+                          <Label
+                            htmlFor="mercadoPagoAccessToken"
+                            className="text-xs font-semibold text-slate-700 flex items-center gap-1"
+                          >
+                            <KeyRoundIcon size={12} className="text-sky-600" />
+                            Access Token (Produção):
+                          </Label>
+                          <p className="text-[11px] text-slate-400 leading-tight mt-0.5">
+                            Credencial de Produção obtida no painel de desenvolvedores do Mercado Pago (inicia com APP_USR-)
+                          </p>
+                        </div>
+                        <div className="sm:w-2/3 space-y-1">
+                          <div className="relative">
+                            <Input
+                              id="mercadoPagoAccessToken"
+                              name="mercadoPagoAccessToken"
+                              type={showMpToken ? "text" : "password"}
+                              value={mercadoPagoAccessToken}
+                              onChange={(e) => setMercadoPagoAccessToken(e.target.value.trim())}
+                              placeholder="APP_USR-1234567890123456-123456-abcdef..."
+                              className="h-9 text-xs bg-white pr-9 font-mono focus-visible:ring-sky-500"
+                              disabled={isPending}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowMpToken(!showMpToken)}
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                              tabIndex={-1}
+                              title={showMpToken ? "Ocultar token" : "Exibir token"}
+                            >
+                              {showMpToken ? (
+                                <EyeOffIcon size={14} />
+                              ) : (
+                                <EyeIcon size={14} />
+                              )}
+                            </button>
+                          </div>
+                          <p className="text-[11px] text-slate-600">
+                            As vendas pagas online serão creditadas diretamente na conta do Mercado Pago vinculada a este token.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {onlinePaymentGateway === "INFINITEPAY" && (
                     <div className="pt-2 border-t border-primary/20 space-y-1.5 animate-in fade-in slide-in-from-top-1">
