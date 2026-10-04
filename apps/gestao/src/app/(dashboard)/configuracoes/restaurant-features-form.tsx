@@ -484,10 +484,6 @@ export const RestaurantFeaturesForm = ({
                         htmlFor="acceptPix"
                         className="cursor-pointer font-semibold text-slate-950 text-sm flex items-center gap-1.5"
                       >
-                        <QrCodeIcon
-                          size={16}
-                          className={acceptPix ? "text-primary" : "text-slate-500"}
-                        />
                         Pagamento via Pix
                       </Label>
                       <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
@@ -626,10 +622,6 @@ export const RestaurantFeaturesForm = ({
                       htmlFor="showOptionImages"
                       className="cursor-pointer font-semibold text-slate-950 text-sm flex items-center gap-1.5"
                     >
-                      <ImageIcon
-                        size={16}
-                        className={showOptionImages ? "text-primary" : "text-slate-500"}
-                      />
                       Imagens nos adicionais
                     </Label>
                     {showOptionImages && (
