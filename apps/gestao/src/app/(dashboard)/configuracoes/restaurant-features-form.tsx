@@ -2,6 +2,7 @@
 
 import {
   CreditCardIcon,
+  ImageIcon,
   KeyRoundIcon,
   Loader2Icon,
   QrCodeIcon,
@@ -310,7 +311,7 @@ export const RestaurantFeaturesForm = ({
               <div
                 className={`rounded-xl border transition-all p-3.5 shadow-2xs space-y-3 ${
                   onlinePaymentGateway !== "DISABLED"
-                    ? "border-blue-200/80 bg-blue-50/[0.25]"
+                    ? "border-primary/40 bg-primary/[0.03]"
                     : "border-slate-200/80 bg-white hover:border-slate-300"
                 }`}
               >
@@ -318,11 +319,10 @@ export const RestaurantFeaturesForm = ({
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-2">
                       <Label className="font-semibold text-slate-950 text-sm flex items-center gap-1.5">
-                        <CreditCardIcon size={16} className="text-blue-600" />
                         Pagamento Online no Cardápio
                       </Label>
                       {onlinePaymentGateway !== "DISABLED" && (
-                        <span className="rounded-full border border-blue-200 bg-blue-100/80 px-2 py-0.5 text-[10px] font-semibold text-blue-800">
+                        <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
                           {onlinePaymentGateway === "INFINITEPAY" ? "InfinitePay Ativa" : "Mercado Pago Ativo"}
                         </span>
                       )}
@@ -344,13 +344,19 @@ export const RestaurantFeaturesForm = ({
                       disabled={isPending}
                       className={`flex flex-col gap-1 rounded-xl border p-3 text-left transition ${
                         onlinePaymentGateway === "MERCADO_PAGO"
-                          ? "border-blue-500 bg-blue-50/80 ring-1 ring-blue-500/20"
+                          ? "border-primary bg-primary/[0.06] ring-1 ring-primary/30 shadow-xs"
                           : "border-slate-200 bg-white hover:bg-slate-50"
                       }`}
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-slate-900">Mercado Pago</span>
-                        <span className="rounded-full bg-blue-100 px-1.5 py-0.2 text-[9px] font-semibold text-blue-700">
+                        <span
+                          className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${
+                            onlinePaymentGateway === "MERCADO_PAGO"
+                              ? "border border-primary/20 bg-primary/10 text-primary"
+                              : "bg-slate-100 text-slate-600"
+                          }`}
+                        >
                           Padrão
                         </span>
                       </div>
@@ -365,16 +371,29 @@ export const RestaurantFeaturesForm = ({
                       disabled={isPending}
                       className={`flex flex-col gap-1 rounded-xl border p-3 text-left transition ${
                         onlinePaymentGateway === "INFINITEPAY"
-                          ? "border-emerald-500 bg-emerald-50/80 ring-1 ring-emerald-500/20"
+                          ? "border-primary bg-primary/[0.06] ring-1 ring-primary/30 shadow-xs"
                           : "border-slate-200 bg-white hover:bg-slate-50"
                       }`}
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-slate-900 flex items-center gap-1">
-                          <ZapIcon size={13} className="text-emerald-600 fill-emerald-600" />
+                          <ZapIcon
+                            size={13}
+                            className={
+                              onlinePaymentGateway === "INFINITEPAY"
+                                ? "text-primary fill-primary"
+                                : "text-slate-400 fill-slate-300"
+                            }
+                          />
                           InfinitePay
                         </span>
-                        <span className="rounded-full bg-emerald-100 px-1.5 py-0.2 text-[9px] font-semibold text-emerald-800">
+                        <span
+                          className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${
+                            onlinePaymentGateway === "INFINITEPAY"
+                              ? "border border-primary/20 bg-primary/10 text-primary"
+                              : "bg-slate-100 text-slate-600"
+                          }`}
+                        >
                           Menores Taxas
                         </span>
                       </div>
@@ -389,11 +408,18 @@ export const RestaurantFeaturesForm = ({
                       disabled={isPending}
                       className={`flex flex-col gap-1 rounded-xl border p-3 text-left transition ${
                         onlinePaymentGateway === "DISABLED"
-                          ? "border-slate-400 bg-slate-100/80 ring-1 ring-slate-400/20"
+                          ? "border-slate-400 bg-slate-100/90 ring-1 ring-slate-400/20 shadow-xs"
                           : "border-slate-200 bg-white hover:bg-slate-50"
                       }`}
                     >
-                      <span className="text-xs font-bold text-slate-800">Desativado</span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">Desativado</span>
+                        {onlinePaymentGateway === "DISABLED" && (
+                          <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[9px] font-semibold text-slate-700">
+                            Sem Online
+                          </span>
+                        )}
+                      </div>
                       <p className="text-[11px] text-slate-500 leading-tight">
                         Apenas pagamentos presenciais ou Pix direto.
                       </p>
@@ -401,7 +427,7 @@ export const RestaurantFeaturesForm = ({
                   </div>
 
                   {onlinePaymentGateway === "INFINITEPAY" && (
-                    <div className="pt-2 border-t border-emerald-200/60 space-y-1.5 animate-in fade-in slide-in-from-top-1">
+                    <div className="pt-2 border-t border-primary/20 space-y-1.5 animate-in fade-in slide-in-from-top-1">
                       <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                         <div className="sm:w-1/3">
                           <Label
@@ -416,7 +442,7 @@ export const RestaurantFeaturesForm = ({
                         </div>
                         <div className="sm:w-2/3">
                           <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-700">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-primary">
                               $
                             </span>
                             <Input
@@ -425,14 +451,18 @@ export const RestaurantFeaturesForm = ({
                               value={infinitePayHandle}
                               onChange={(e) => setInfinitePayHandle(e.target.value.replace(/^[$@]/, ""))}
                               placeholder="ex: suapizzaria"
-                              className="h-9 text-xs bg-white pl-7 font-mono"
+                              className="h-9 text-xs bg-white pl-7 font-mono focus-visible:ring-primary"
                               disabled={isPending}
                             />
                           </div>
                         </div>
                       </div>
-                      <p className="text-[11px] text-emerald-700">
-                        As vendas pagas online serão creditadas instantaneamente na conta <strong>${infinitePayHandle.trim() || "suatag"}</strong>.
+                      <p className="text-[11px] text-slate-600">
+                        As vendas pagas online serão creditadas instantaneamente na conta{" "}
+                        <strong className="text-primary font-semibold">
+                          ${infinitePayHandle.trim() || "suatag"}
+                        </strong>
+                        .
                       </p>
                     </div>
                   )}
@@ -454,6 +484,10 @@ export const RestaurantFeaturesForm = ({
                         htmlFor="acceptPix"
                         className="cursor-pointer font-semibold text-slate-950 text-sm flex items-center gap-1.5"
                       >
+                        <QrCodeIcon
+                          size={16}
+                          className={acceptPix ? "text-primary" : "text-slate-500"}
+                        />
                         Pagamento via Pix
                       </Label>
                       <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
@@ -493,7 +527,7 @@ export const RestaurantFeaturesForm = ({
                           value={pixKey}
                           onChange={(e) => setPixKey(e.target.value)}
                           placeholder="CNPJ, Celular, E-mail ou Chave Aleatória"
-                          className="h-9 text-xs bg-white"
+                          className="h-9 text-xs bg-white focus-visible:ring-primary"
                           disabled={isPending}
                         />
                       </div>
@@ -510,14 +544,14 @@ export const RestaurantFeaturesForm = ({
                           disabled={isPending}
                           className={`flex items-start gap-2.5 rounded-xl border p-3 text-left transition ${
                             pixMode === "QRCODE"
-                              ? "border-teal-500 bg-teal-50/70 ring-1 ring-teal-500/20"
+                              ? "border-primary bg-primary/[0.06] ring-1 ring-primary/30 shadow-xs"
                               : "border-slate-200 bg-white hover:bg-slate-50"
                           }`}
                         >
                           <div
-                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors ${
                               pixMode === "QRCODE"
-                                ? "bg-teal-600 text-white shadow-xs"
+                                ? "bg-primary text-primary-foreground shadow-xs"
                                 : "bg-slate-100 text-slate-500"
                             }`}
                           >
@@ -528,7 +562,13 @@ export const RestaurantFeaturesForm = ({
                               <span className="text-xs font-bold text-slate-900">
                                 QR Code + Copia e Cola
                               </span>
-                              <span className="rounded-full bg-teal-100 px-1.5 py-0.2 text-[9px] font-semibold text-teal-800">
+                              <span
+                                className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${
+                                  pixMode === "QRCODE"
+                                    ? "border border-primary/20 bg-primary/10 text-primary"
+                                    : "bg-slate-100 text-slate-600"
+                                }`}
+                              >
                                 Recomendado
                               </span>
                             </div>
@@ -544,14 +584,14 @@ export const RestaurantFeaturesForm = ({
                           disabled={isPending}
                           className={`flex items-start gap-2.5 rounded-xl border p-3 text-left transition ${
                             pixMode === "MANUAL"
-                              ? "border-teal-500 bg-teal-50/70 ring-1 ring-teal-500/20"
+                              ? "border-primary bg-primary/[0.06] ring-1 ring-primary/30 shadow-xs"
                               : "border-slate-200 bg-white hover:bg-slate-50"
                           }`}
                         >
                           <div
-                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors ${
                               pixMode === "MANUAL"
-                                ? "bg-teal-600 text-white shadow-xs"
+                                ? "bg-primary text-primary-foreground shadow-xs"
                                 : "bg-slate-100 text-slate-500"
                             }`}
                           >
@@ -573,14 +613,31 @@ export const RestaurantFeaturesForm = ({
               </div>
 
               {/* Imagens nos adicionais */}
-              <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-200/80 bg-white p-3.5 shadow-2xs transition hover:border-slate-300">
+              <div
+                className={`flex items-center justify-between gap-4 rounded-xl border p-3.5 shadow-2xs transition-all ${
+                  showOptionImages
+                    ? "border-primary/40 bg-primary/[0.03]"
+                    : "border-slate-200/80 bg-white hover:border-slate-300"
+                }`}
+              >
                 <div className="space-y-0.5">
-                  <Label
-                    htmlFor="showOptionImages"
-                    className="cursor-pointer font-semibold text-slate-950 text-sm"
-                  >
-                    Imagens nos adicionais
-                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Label
+                      htmlFor="showOptionImages"
+                      className="cursor-pointer font-semibold text-slate-950 text-sm flex items-center gap-1.5"
+                    >
+                      <ImageIcon
+                        size={16}
+                        className={showOptionImages ? "text-primary" : "text-slate-500"}
+                      />
+                      Imagens nos adicionais
+                    </Label>
+                    {showOptionImages && (
+                      <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                        Ativo
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-slate-500">
                     Exibe miniaturas de fotos ao lado de cada adicional no app do cliente.
                   </p>
