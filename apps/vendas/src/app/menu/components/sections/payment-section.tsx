@@ -226,38 +226,15 @@ export const PaymentSection = ({
           </div>
 
           {pixMode === "QRCODE" ? (
-            <div className="space-y-2">
+            pixKey ? (
               <p className="text-xs text-teal-800 leading-relaxed">
                 Ao clicar em confirmar o pedido, o <strong>QR Code</strong> e o código <strong>Pix Copia e Cola</strong> serão gerados na tela com o valor exato para você escanear ou pagar direto no app do seu banco.
               </p>
-              {pixKey && (
-                <div className="flex items-center justify-between gap-2 rounded-xl bg-white border border-teal-200/80 p-2.5 shadow-2xs">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[10px] uppercase font-semibold text-slate-400">Chave Pix do Restaurante</p>
-                    <p className="text-xs font-mono font-bold text-slate-900 truncate select-all">
-                      {pixKey}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleCopyPixKey}
-                    className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-teal-700 active:scale-95 transition"
-                  >
-                    {copiedKey ? (
-                      <>
-                        <CheckIcon size={13} />
-                        <span>Copiado!</span>
-                      </>
-                    ) : (
-                      <>
-                        <CopyIcon size={13} />
-                        <span>Copiar Chave</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
-            </div>
+            ) : (
+              <p className="text-xs text-teal-800 leading-relaxed">
+                O pagamento via Pix será realizado na entrega ou no balcão diretamente ao atendente/entregador.
+              </p>
+            )
           ) : pixKey ? (
             <div className="space-y-2">
               <p className="text-xs text-teal-800 leading-relaxed">
