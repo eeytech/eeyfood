@@ -628,7 +628,7 @@ export const FinishOrderSheet = ({
           consumptionMethod,
           phone: data.phone,
           infinitePayHandle: restaurant.infinitePayHandle,
-          mercadoPagoAccessToken: (restaurant as any).mercadoPagoAccessToken,
+          mercadoPagoAccessToken: restaurant.mercadoPagoAccessToken,
         });
 
         if (result.isFree || !result.initPoint) {

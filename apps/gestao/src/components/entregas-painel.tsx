@@ -967,7 +967,9 @@ export default function EntregasPainel({
                               ? "Cartão Presencial"
                               : order.paymentMethod === "PIX"
                                 ? "Pix"
-                                : "Mercado Pago"}
+                                : order.paymentMethod === "INFINITEPAY"
+                                  ? "InfinitePay"
+                                  : "Mercado Pago"}
                         </span>
                       </div>
                       <span className="font-bold text-slate-900">

@@ -22,8 +22,13 @@ const HEAD: [number, number, number] = [228, 29, 44];
 
 const PAYMENT_LABELS: Record<string, string> = {
   MERCADO_PAGO: "Mercado Pago",
+  INFINITEPAY: "InfinitePay",
+  PIX: "Pix",
   DINHEIRO: "Dinheiro",
   CARTAO_PRESENCIAL: "Cartão Presencial",
+  VALE_ALIMENTACAO: "Vale Alimentação",
+  VALE_REFEICAO: "Vale Refeição",
+  FIADO: "Fiado",
 };
 
 const CONSUMPTION_LABELS: Record<string, string> = {

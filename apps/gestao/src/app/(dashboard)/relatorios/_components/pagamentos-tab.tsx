@@ -19,8 +19,13 @@ const fmt = (v: number) =>
 
 const PAYMENT_LABELS: Record<string, string> = {
   MERCADO_PAGO: "Mercado Pago",
+  INFINITEPAY: "InfinitePay",
+  PIX: "Pix",
   DINHEIRO: "Dinheiro",
   CARTAO_PRESENCIAL: "Cartão Presencial",
+  VALE_ALIMENTACAO: "Vale Alimentação",
+  VALE_REFEICAO: "Vale Refeição",
+  FIADO: "Fiado",
 };
 
 const COLORS = ["#e41d2c", "#ff6b00", "#10b981", "#3b82f6", "#8b5cf6", "#f59e0b"];

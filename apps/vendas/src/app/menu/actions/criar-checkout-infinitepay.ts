@@ -173,8 +173,46 @@ export const criarCheckoutInfinitePay = async ({
   if (!response.ok) {
     const errorBody = await response.text().catch(() => "");
     console.error("Erro na API InfinitePay:", response.status, errorBody);
+
+    let parsed: {
+      error?: string;
+      message?: string;
+      redirect_url?: string;
+    } | null = null;
+
+    try {
+      parsed = JSON.parse(errorBody);
+    } catch {
+      // Body não é JSON
+    }
+
+    if (parsed?.error === "external_checkout_not_enabled") {
+      const redirectLink =
+        parsed.redirect_url ||
+        "https://app.infinitepay.io/external-checkout#configuracoes?enabled=true";
+      throw new Error(
+        `O Checkout Externo não está ativado na conta InfinitePay ($${cleanHandle}). Para ativar e receber pagamentos online, acesse as configurações da InfinitePay: ${redirectLink}`,
+      );
+    }
+
+    if (
+      parsed?.error === "merchant_not_found" ||
+      parsed?.message?.toLowerCase().includes("merchant not found") ||
+      parsed?.message?.toLowerCase().includes("handle not found")
+    ) {
+      throw new Error(
+        `A InfiniteTag ($${cleanHandle}) informada não foi encontrada na InfinitePay. Verifique as configurações do estabelecimento.`,
+      );
+    }
+
+    const message =
+      parsed?.message ||
+      (typeof parsed?.error === "string" ? parsed.error : null) ||
+      errorBody ||
+      response.statusText;
+
     throw new Error(
-      `Não foi possível gerar o link de pagamento na InfinitePay: ${errorBody || response.statusText}`,
+      `Não foi possível gerar o link de pagamento na InfinitePay: ${message}`,
     );
   }
 

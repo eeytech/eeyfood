@@ -2,6 +2,9 @@
 
 import type { ConsumptionMethod } from "@fsw/db";
 
+import { revalidatePath } from "next/cache";
+
+import { db, eq, ordersTable } from "@/lib/db";
 import { criarCheckoutInfinitePay } from "./criar-checkout-infinitepay";
 import { criarPreferenciaMercadoPago } from "./criar-preferencia-mercado-pago";
 
@@ -18,26 +21,53 @@ export interface CriarCheckoutOnlineInput {
 }
 
 export const criarCheckoutOnline = async (input: CriarCheckoutOnlineInput) => {
-  if (input.gateway === "INFINITEPAY") {
-    return criarCheckoutInfinitePay({
+  try {
+    if (input.gateway === "INFINITEPAY") {
+      return await criarCheckoutInfinitePay({
+        orderId: input.orderId,
+        orderTotal: input.orderTotal,
+        orderSummary: input.orderSummary,
+        slug: input.slug,
+        consumptionMethod: input.consumptionMethod,
+        phone: input.phone,
+        handle: input.infinitePayHandle,
+      });
+    }
+
+    // Padrão: Mercado Pago
+    return await criarPreferenciaMercadoPago({
       orderId: input.orderId,
       orderTotal: input.orderTotal,
       orderSummary: input.orderSummary,
       slug: input.slug,
       consumptionMethod: input.consumptionMethod,
       phone: input.phone,
-      handle: input.infinitePayHandle,
+      accessToken: input.mercadoPagoAccessToken,
     });
-  }
+  } catch (error) {
+    const numericOrderId = Number(input.orderId);
+    if (!Number.isNaN(numericOrderId) && numericOrderId > 0) {
+      try {
+        await db
+          .update(ordersTable)
+          .set({
+            status: "CANCELLED",
+            paymentStatus: "FAILED",
+            updatedAt: new Date(),
+          })
+          .where(eq(ordersTable.id, numericOrderId));
 
-  // Padrão: Mercado Pago
-  return criarPreferenciaMercadoPago({
-    orderId: input.orderId,
-    orderTotal: input.orderTotal,
-    orderSummary: input.orderSummary,
-    slug: input.slug,
-    consumptionMethod: input.consumptionMethod,
-    phone: input.phone,
-    accessToken: input.mercadoPagoAccessToken,
-  });
+        revalidatePath("/orders");
+        if (input.slug) {
+          revalidatePath(`/${input.slug}/orders`);
+        }
+      } catch (dbErr) {
+        console.error(
+          "Falha ao cancelar pedido após erro de checkout online:",
+          dbErr,
+        );
+      }
+    }
+    throw error;
+  }
 };

@@ -264,6 +264,7 @@ const getPaymentLabel = (paymentMethod: PedidoRecebimento["paymentMethod"]) => {
   if (paymentMethod === "VALE_ALIMENTACAO") return "Vale Alimentação";
   if (paymentMethod === "VALE_REFEICAO") return "Vale Refeição";
   if (paymentMethod === "FIADO") return "Fiado";
+  if (paymentMethod === "INFINITEPAY") return "InfinitePay";
   return "Mercado Pago";
 };
 

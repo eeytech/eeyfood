@@ -857,7 +857,7 @@ export const updateRestaurantFeaturesAction = async (
         : restaurant.infinitePayHandle,
       mercadoPagoAccessToken: formData.has("mercadoPagoAccessToken")
         ? mercadoPagoAccessToken
-        : ((restaurant as any).mercadoPagoAccessToken ?? null),
+        : (restaurant.mercadoPagoAccessToken ?? null),
       acceptPix,
       pixKey,
       pixMode,

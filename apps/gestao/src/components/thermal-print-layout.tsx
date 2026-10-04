@@ -175,7 +175,9 @@ export const ThermalPrintLayout = React.forwardRef<
                   ? "CARTÃO (PRESENCIAL)"
                   : order.paymentMethod === "PIX"
                     ? "PIX"
-                    : "ONLINE (MERCADO PAGO)"}
+                    : order.paymentMethod === "INFINITEPAY"
+                      ? "ONLINE (INFINITEPAY)"
+                      : "ONLINE (MERCADO PAGO)"}
             </p>
             <p>
               <span className="font-bold">STATUS:</span>{" "}

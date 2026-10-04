@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  AlertTriangleIcon,
   CreditCardIcon,
+  ExternalLinkIcon,
   EyeIcon,
   EyeOffIcon,
   KeyRoundIcon,
@@ -507,7 +509,7 @@ export const RestaurantFeaturesForm = ({
                   )}
 
                   {onlinePaymentGateway === "INFINITEPAY" && (
-                    <div className="pt-2 border-t border-primary/20 space-y-1.5 animate-in fade-in slide-in-from-top-1">
+                    <div className="pt-2 border-t border-primary/20 space-y-2.5 animate-in fade-in slide-in-from-top-1">
                       <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                         <div className="sm:w-1/3">
                           <Label
@@ -537,6 +539,26 @@ export const RestaurantFeaturesForm = ({
                           </div>
                         </div>
                       </div>
+
+                      <div className="rounded-lg bg-amber-50 border border-amber-200/80 p-3 text-xs text-amber-900 space-y-1.5">
+                        <div className="flex items-center gap-1.5 font-semibold text-amber-900">
+                          <AlertTriangleIcon className="h-4 w-4 text-amber-600 shrink-0" />
+                          <span>Passo obrigatório na sua InfinitePay:</span>
+                        </div>
+                        <p className="text-[11px] text-amber-800 leading-relaxed">
+                          Para conseguir gerar links de pagamento nas vendas do cardápio, você deve habilitar a opção <strong>Checkout Externo</strong> no painel da sua InfinitePay.
+                        </p>
+                        <a
+                          href="https://app.infinitepay.io/external-checkout#configuracoes?enabled=true"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline pt-0.5"
+                        >
+                          Ativar Checkout Externo no painel da InfinitePay
+                          <ExternalLinkIcon className="h-3 w-3 ml-0.5" />
+                        </a>
+                      </div>
+
                       <p className="text-[11px] text-slate-600">
                         As vendas pagas online serão creditadas instantaneamente na conta{" "}
                         <strong className="text-primary font-semibold">
