@@ -148,10 +148,11 @@ export const criarCheckoutInfinitePay = async ({
     handle: cleanHandle,
     items: [
       {
-        name: `Pedido #${orderId}`,
-        description: orderSummary?.trim() || `Pedido #${orderId} - ${slug}`,
+        description: (
+          orderSummary?.trim() || `Pedido #${orderId} - ${slug}`
+        ).slice(0, 255),
+        price: amountInCents,
         quantity: 1,
-        unit_price: amountInCents,
       },
     ],
     order_nsu: String(orderId),
@@ -178,6 +179,7 @@ export const criarCheckoutInfinitePay = async ({
       error?: string;
       message?: string;
       redirect_url?: string;
+      errors?: Record<string, unknown>;
     } | null = null;
 
     try {
@@ -205,11 +207,19 @@ export const criarCheckoutInfinitePay = async ({
       );
     }
 
-    const message =
+    let message =
       parsed?.message ||
       (typeof parsed?.error === "string" ? parsed.error : null) ||
       errorBody ||
       response.statusText;
+
+    if (parsed?.errors && typeof parsed.errors === "object") {
+      try {
+        message += ` - ${JSON.stringify(parsed.errors)}`;
+      } catch {
+        // ignore
+      }
+    }
 
     throw new Error(
       `Não foi possível gerar o link de pagamento na InfinitePay: ${message}`,
