@@ -528,6 +528,19 @@ export const alternarStatusCourierAction = async (
   revalidatePath(`/${slug}/logistica`);
 };
 
+export const alternarDisponibilidadeCourierAction = async (
+  slug: string,
+  courierId: string,
+  isAvailable: boolean,
+) => {
+  await db
+    .update(couriersTable)
+    .set({ isAvailable, updatedAt: new Date() })
+    .where(eq(couriersTable.id, courierId));
+
+  revalidatePath(`/${slug}/logistica`);
+};
+
 export const alternarStatusVehicleAction = async (
   slug: string,
   vehicleId: string,

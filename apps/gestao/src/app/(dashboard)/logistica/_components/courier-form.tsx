@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Loader2Icon } from "lucide-react";
+import { Loader2Icon, SearchIcon } from "lucide-react";
 
 import {
   createCourierAction,
@@ -56,26 +56,47 @@ const formatCpf = (v: string) => {
     .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
 };
 
+const formatRg = (v: string) => {
+  const cleaned = v.replace(/[^0-9xX]/g, "").toUpperCase().slice(0, 9);
+  return cleaned
+    .replace(/^(\d{2})(\d)/, "$1.$2")
+    .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})([0-9X]{1,2})$/, ".$1-$2");
+};
+
 const formatCep = (v: string) => {
   const d = v.replace(/\D/g, "").slice(0, 8);
   return d.replace(/(\d{5})(\d{1,3})$/, "$1-$2");
 };
 
+const formatCnh = (v: string) => {
+  const d = v.replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 9) return d;
+  return `${d.slice(0, 9)}-${d.slice(9)}`;
+};
+
 export function CourierForm({ slug, defaultValues, onSuccess, onCancel }: CourierFormProps) {
   const [isPending, startTransition] = useTransition();
 
-  const [phone, setPhone] = useState(defaultValues?.phone ?? "");
-  const [cpf, setCpf] = useState(defaultValues?.cpf ?? "");
-  const [cep, setCep] = useState(defaultValues?.cep ?? "");
+  const [phone, setPhone] = useState(defaultValues?.phone ? formatPhone(defaultValues.phone) : "");
+  const [cpf, setCpf] = useState(defaultValues?.cpf ? formatCpf(defaultValues.cpf) : "");
+  const [rg, setRg] = useState(defaultValues?.rg ? formatRg(defaultValues.rg) : "");
+  const [cep, setCep] = useState(defaultValues?.cep ? formatCep(defaultValues.cep) : "");
   const [logradouro, setLogradouro] = useState(defaultValues?.logradouro ?? "");
+  const [numero, setNumero] = useState(defaultValues?.numero ?? "");
+  const [complemento, setComplemento] = useState(defaultValues?.complemento ?? "");
   const [bairro, setBairro] = useState(defaultValues?.bairro ?? "");
   const [cidade, setCidade] = useState(defaultValues?.cidade ?? "");
   const [estado, setEstado] = useState(defaultValues?.estado ?? "");
-  const [vehicleType, setVehicleType] = useState(defaultValues?.vehicleType ?? "MOTO");
+  const [cnhNumero, setCnhNumero] = useState(
+    defaultValues?.cnhNumero ? formatCnh(defaultValues.cnhNumero) : "",
+  );
   const [cnhCategoria, setCnhCategoria] = useState(defaultValues?.cnhCategoria ?? "");
+  const [vehicleType, setVehicleType] = useState(defaultValues?.vehicleType ?? "MOTO");
   const [usesOwnVehicle, setUsesOwnVehicle] = useState(defaultValues?.usesOwnVehicle !== false);
   const [isActive, setIsActive] = useState(defaultValues?.isActive ?? true);
   const [isAvailable, setIsAvailable] = useState(defaultValues?.isAvailable ?? false);
+  const [isSearchingCep, setIsSearchingCep] = useState(false);
   const [selectedDays, setSelectedDays] = useState<string[]>(
     defaultValues?.workDays ?? [],
   );
@@ -89,6 +110,7 @@ export function CourierForm({ slug, defaultValues, onSuccess, onCancel }: Courie
   const handleCepBlur = async () => {
     const digits = cep.replace(/\D/g, "");
     if (digits.length !== 8) return;
+    setIsSearchingCep(true);
     try {
       const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
       const data = await res.json();
@@ -99,6 +121,8 @@ export function CourierForm({ slug, defaultValues, onSuccess, onCancel }: Courie
       setEstado(data.uf ?? "");
     } catch {
       // busca de CEP silenciosa
+    } finally {
+      setIsSearchingCep(false);
     }
   };
 
@@ -145,7 +169,7 @@ export function CourierForm({ slug, defaultValues, onSuccess, onCancel }: Courie
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label htmlFor="courier-name" className="text-xs font-semibold text-slate-700">
-                Nome completo *
+                Nome completo
               </Label>
               <Input
                 id="courier-name"
@@ -157,10 +181,11 @@ export function CourierForm({ slug, defaultValues, onSuccess, onCancel }: Courie
               />
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            {/* Telefone/WhatsApp, CPF e RG na mesma linha */}
+            <div className="grid gap-3 sm:grid-cols-3">
               <div className="space-y-1.5">
                 <Label htmlFor="courier-phone" className="text-xs font-semibold text-slate-700">
-                  Telefone / WhatsApp *
+                  Telefone / WhatsApp
                 </Label>
                 <Input
                   id="courier-phone"
@@ -172,6 +197,7 @@ export function CourierForm({ slug, defaultValues, onSuccess, onCancel }: Courie
                   className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
                 />
               </div>
+
               <div className="space-y-1.5">
                 <Label htmlFor="courier-cpf" className="text-xs font-semibold text-slate-700">
                   CPF
@@ -185,38 +211,45 @@ export function CourierForm({ slug, defaultValues, onSuccess, onCancel }: Courie
                   className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
                 />
               </div>
-            </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="courier-rg" className="text-xs font-semibold text-slate-700">
-                RG
-              </Label>
-              <Input
-                id="courier-rg"
-                name="rg"
-                placeholder="00.000.000-0"
-                defaultValue={defaultValues?.rg ?? ""}
-                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
-              />
+              <div className="space-y-1.5">
+                <Label htmlFor="courier-rg" className="text-xs font-semibold text-slate-700">
+                  RG
+                </Label>
+                <Input
+                  id="courier-rg"
+                  name="rg"
+                  placeholder="00.000.000-0"
+                  value={rg}
+                  onChange={(e) => setRg(formatRg(e.target.value))}
+                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* ── Endereço ── */}
+        {/* ── Endereço (Layout igual ao endereço do estabelecimento) ── */}
         <div>
-          <div className="mb-3 flex items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
-              Endereço
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                Endereço
+              </span>
+              <div className="h-px w-12 bg-slate-100" />
+            </div>
+            <span className="text-[11px] text-slate-500">
+              Digite o CEP para buscar o endereço automaticamente
             </span>
-            <div className="h-px flex-1 bg-slate-100" />
           </div>
 
-          <div className="space-y-3">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="courier-cep" className="text-xs font-semibold text-slate-700">
-                  CEP
-                </Label>
+          <div className="grid gap-3 sm:grid-cols-12">
+            {/* CEP */}
+            <div className="space-y-1.5 sm:col-span-4">
+              <Label htmlFor="courier-cep" className="text-xs font-semibold text-slate-700">
+                CEP
+              </Label>
+              <div className="relative">
                 <Input
                   id="courier-cep"
                   name="cep"
@@ -224,103 +257,119 @@ export function CourierForm({ slug, defaultValues, onSuccess, onCancel }: Courie
                   value={cep}
                   onChange={(e) => setCep(formatCep(e.target.value))}
                   onBlur={handleCepBlur}
-                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                  maxLength={9}
+                  className="h-10 rounded-xl border-slate-200 bg-white pr-9 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
                 />
-              </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="courier-logradouro" className="text-xs font-semibold text-slate-700">
-                  Logradouro
-                </Label>
-                <Input
-                  id="courier-logradouro"
-                  name="logradouro"
-                  placeholder="Rua, Av., etc."
-                  value={logradouro}
-                  onChange={(e) => setLogradouro(e.target.value)}
-                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
-                />
+                <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                  {isSearchingCep ? (
+                    <Loader2Icon size={15} className="animate-spin text-primary" />
+                  ) : (
+                    <SearchIcon size={15} />
+                  )}
+                </div>
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="courier-numero" className="text-xs font-semibold text-slate-700">
-                  Número
-                </Label>
-                <Input
-                  id="courier-numero"
-                  name="numero"
-                  placeholder="123"
-                  defaultValue={defaultValues?.numero ?? ""}
-                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
-                />
-              </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="courier-complemento" className="text-xs font-semibold text-slate-700">
-                  Complemento
-                </Label>
-                <Input
-                  id="courier-complemento"
-                  name="complemento"
-                  placeholder="Apto, Bloco..."
-                  defaultValue={defaultValues?.complemento ?? ""}
-                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
-                />
-              </div>
+            {/* Logradouro / Rua */}
+            <div className="space-y-1.5 sm:col-span-8">
+              <Label htmlFor="courier-logradouro" className="text-xs font-semibold text-slate-700">
+                Logradouro / Rua
+              </Label>
+              <Input
+                id="courier-logradouro"
+                name="logradouro"
+                placeholder="Ex: Av. Paulista, Rua das Flores"
+                value={logradouro}
+                onChange={(e) => setLogradouro(e.target.value)}
+                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
+              />
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="courier-bairro" className="text-xs font-semibold text-slate-700">
-                  Bairro
-                </Label>
-                <Input
-                  id="courier-bairro"
-                  name="bairro"
-                  placeholder="Bairro"
-                  value={bairro}
-                  onChange={(e) => setBairro(e.target.value)}
-                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="courier-cidade" className="text-xs font-semibold text-slate-700">
-                  Cidade
-                </Label>
-                <Input
-                  id="courier-cidade"
-                  name="cidade"
-                  placeholder="Cidade"
-                  value={cidade}
-                  onChange={(e) => setCidade(e.target.value)}
-                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="courier-estado" className="text-xs font-semibold text-slate-700">
-                  Estado
-                </Label>
-                <Select
-                  value={estado || undefined}
-                  onValueChange={(val) => setEstado(val)}
+            {/* Número */}
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="courier-numero" className="text-xs font-semibold text-slate-700">
+                Número
+              </Label>
+              <Input
+                id="courier-numero"
+                name="numero"
+                placeholder="Ex: 123"
+                value={numero}
+                onChange={(e) => setNumero(e.target.value)}
+                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
+              />
+            </div>
+
+            {/* UF */}
+            <div className="space-y-1.5 sm:col-span-3">
+              <Label htmlFor="courier-estado" className="text-xs font-semibold text-slate-700">
+                UF
+              </Label>
+              <Select
+                value={estado || undefined}
+                onValueChange={(val) => setEstado(val)}
+              >
+                <SelectTrigger
+                  id="courier-estado"
+                  className="h-10 rounded-xl border-slate-200 bg-white px-3 font-semibold text-sm uppercase text-slate-900 focus:border-primary"
                 >
-                  <SelectTrigger
-                    id="courier-estado"
-                    className="h-10 rounded-xl border-slate-200 bg-white px-3 font-semibold text-sm uppercase text-slate-900 focus:border-primary"
-                  >
-                    <SelectValue placeholder="UF" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60 rounded-xl border-slate-200 bg-white shadow-xl">
-                    {BRAZIL_UFS.map((uf) => (
-                      <SelectItem key={uf.value} value={uf.value} className="text-xs font-medium">
-                        <span className="font-semibold text-slate-900">{uf.value}</span>
-                        <span className="ml-1.5 text-slate-500">- {uf.name}</span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <input type="hidden" name="estado" value={estado} />
-              </div>
+                  <SelectValue placeholder="UF" />
+                </SelectTrigger>
+                <SelectContent className="max-h-60 rounded-xl border-slate-200 bg-white shadow-xl">
+                  {BRAZIL_UFS.map((uf) => (
+                    <SelectItem key={uf.value} value={uf.value} className="text-xs font-medium">
+                      <span className="font-semibold text-slate-900">{uf.value}</span>
+                      <span className="ml-1.5 text-slate-500">- {uf.name}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <input type="hidden" name="estado" value={estado} />
+            </div>
+
+            {/* Complemento */}
+            <div className="space-y-1.5 sm:col-span-7">
+              <Label htmlFor="courier-complemento" className="text-xs font-semibold text-slate-700">
+                Complemento
+              </Label>
+              <Input
+                id="courier-complemento"
+                name="complemento"
+                placeholder="Ex: Apto, Bloco..."
+                value={complemento}
+                onChange={(e) => setComplemento(e.target.value)}
+                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
+              />
+            </div>
+
+            {/* Bairro */}
+            <div className="space-y-1.5 sm:col-span-4">
+              <Label htmlFor="courier-bairro" className="text-xs font-semibold text-slate-700">
+                Bairro
+              </Label>
+              <Input
+                id="courier-bairro"
+                name="bairro"
+                placeholder="Ex: Centro"
+                value={bairro}
+                onChange={(e) => setBairro(e.target.value)}
+                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
+              />
+            </div>
+
+            {/* Cidade */}
+            <div className="space-y-1.5 sm:col-span-8">
+              <Label htmlFor="courier-cidade" className="text-xs font-semibold text-slate-700">
+                Cidade
+              </Label>
+              <Input
+                id="courier-cidade"
+                name="cidade"
+                placeholder="Ex: São Paulo"
+                value={cidade}
+                onChange={(e) => setCidade(e.target.value)}
+                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
+              />
             </div>
           </div>
         </div>
@@ -342,8 +391,10 @@ export function CourierForm({ slug, defaultValues, onSuccess, onCancel }: Courie
               <Input
                 id="courier-cnh-numero"
                 name="cnhNumero"
-                placeholder="00000000000"
-                defaultValue={defaultValues?.cnhNumero ?? ""}
+                placeholder="000000000-00"
+                value={cnhNumero}
+                onChange={(e) => setCnhNumero(formatCnh(e.target.value))}
+                maxLength={12}
                 className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
               />
             </div>
@@ -399,7 +450,7 @@ export function CourierForm({ slug, defaultValues, onSuccess, onCancel }: Courie
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="courier-vehicle" className="text-xs font-semibold text-slate-700">
-                  Tipo de veículo *
+                  Tipo de veículo
                 </Label>
                 <Select
                   value={vehicleType}
@@ -436,64 +487,75 @@ export function CourierForm({ slug, defaultValues, onSuccess, onCancel }: Courie
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-slate-700">Posse do veículo utilizado</Label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <button
+                <Button
                   type="button"
+                  variant="outline"
                   onClick={() => setUsesOwnVehicle(true)}
                   className={cn(
-                    "flex items-center gap-2 rounded-xl border p-3 text-xs font-medium transition text-left",
+                    "h-auto justify-start items-center gap-2.5 rounded-xl border p-3 text-xs font-medium transition text-left",
                     usesOwnVehicle
-                      ? "border-primary bg-primary/[0.06] text-primary shadow-xs ring-1 ring-primary/30"
-                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                      ? "border-primary bg-primary/[0.06] text-primary shadow-xs ring-1 ring-primary/30 hover:bg-primary/[0.08] hover:text-primary"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900",
                   )}
                 >
-                  <span className={cn(
-                    "h-3 w-3 rounded-full border flex items-center justify-center",
-                    usesOwnVehicle ? "border-primary bg-primary" : "border-slate-300 bg-white",
-                  )}>
-                    {usesOwnVehicle && <span className="h-1 w-1 rounded-full bg-white" />}
+                  <span
+                    className={cn(
+                      "h-3.5 w-3.5 rounded-full border flex items-center justify-center shrink-0",
+                      usesOwnVehicle ? "border-primary bg-primary" : "border-slate-300 bg-white",
+                    )}
+                  >
+                    {usesOwnVehicle && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
                   </span>
                   <span>Veículo próprio</span>
-                </button>
+                </Button>
 
-                <button
+                <Button
                   type="button"
+                  variant="outline"
                   onClick={() => setUsesOwnVehicle(false)}
                   className={cn(
-                    "flex items-center gap-2 rounded-xl border p-3 text-xs font-medium transition text-left",
+                    "h-auto justify-start items-center gap-2.5 rounded-xl border p-3 text-xs font-medium transition text-left",
                     !usesOwnVehicle
-                      ? "border-primary bg-primary/[0.06] text-primary shadow-xs ring-1 ring-primary/30"
-                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                      ? "border-primary bg-primary/[0.06] text-primary shadow-xs ring-1 ring-primary/30 hover:bg-primary/[0.08] hover:text-primary"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900",
                   )}
                 >
-                  <span className={cn(
-                    "h-3 w-3 rounded-full border flex items-center justify-center",
-                    !usesOwnVehicle ? "border-primary bg-primary" : "border-slate-300 bg-white",
-                  )}>
-                    {!usesOwnVehicle && <span className="h-1 w-1 rounded-full bg-white" />}
+                  <span
+                    className={cn(
+                      "h-3.5 w-3.5 rounded-full border flex items-center justify-center shrink-0",
+                      !usesOwnVehicle ? "border-primary bg-primary" : "border-slate-300 bg-white",
+                    )}
+                  >
+                    {!usesOwnVehicle && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
                   </span>
                   <span>Veículo da empresa</span>
-                </button>
+                </Button>
               </div>
             </div>
 
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-slate-700">Dias de trabalho</Label>
               <div className="flex flex-wrap gap-2">
-                {WORK_DAYS.map(({ value, label }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => toggleDay(value)}
-                    className={cn(
-                      "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
-                      selectedDays.includes(value)
-                        ? "border-primary bg-primary text-primary-foreground shadow-sm shadow-primary/20"
-                        : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100",
-                    )}
-                  >
-                    {label}
-                  </button>
-                ))}
+                {WORK_DAYS.map(({ value, label }) => {
+                  const isSelected = selectedDays.includes(value);
+                  return (
+                    <Button
+                      key={value}
+                      type="button"
+                      variant={isSelected ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => toggleDay(value)}
+                      className={cn(
+                        "h-8 rounded-lg px-3 text-xs font-semibold transition-colors",
+                        isSelected
+                          ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20 hover:bg-primary/90"
+                          : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                      )}
+                    >
+                      {label}
+                    </Button>
+                  );
+                })}
               </div>
               {selectedDays.map((day) => (
                 <input key={day} type="hidden" name="workDays" value={day} />
@@ -587,7 +649,7 @@ export function CourierForm({ slug, defaultValues, onSuccess, onCancel }: Courie
           {isPending && <Loader2Icon size={14} className="mr-1.5 animate-spin" />}
           {isPending
             ? defaultValues ? "Salvando..." : "Cadastrando..."
-            : defaultValues ? "Salvar Alterações" : "Cadastrar Motoboy"}
+            : defaultValues ? "Salvar Alterações" : "Cadastrar Novo Motoboy"}
         </Button>
       </DialogFooter>
     </form>

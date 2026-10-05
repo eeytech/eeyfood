@@ -779,7 +779,7 @@ export function DeliveryFeeRulesTab({
               {/* Nome da Zona */}
               <div className="space-y-1.5">
                 <Label htmlFor="name" className="text-xs font-semibold text-slate-700">
-                  Nome de identificação *
+                  Nome de identificação
                 </Label>
                 <Input
                   id="name"
@@ -795,7 +795,7 @@ export function DeliveryFeeRulesTab({
               {/* Tipo de Regra */}
               <div className="space-y-1.5">
                 <Label htmlFor="type" className="text-xs font-semibold text-slate-700">
-                  Critério de aplicação *
+                  Critério de aplicação
                 </Label>
                 <Select
                   value={formData.type}
@@ -818,7 +818,7 @@ export function DeliveryFeeRulesTab({
               {formData.type === "NEIGHBORHOOD" && (
                 <div className="space-y-1.5">
                   <Label htmlFor="neighborhood" className="text-xs font-semibold text-slate-700">
-                    Nome do Bairro *
+                    Nome do Bairro
                   </Label>
                   <Input
                     id="neighborhood"
@@ -838,7 +838,7 @@ export function DeliveryFeeRulesTab({
               {formData.type === "RADIUS_KM" && (
                 <div className="space-y-1.5">
                   <Label htmlFor="maxDistanceKm" className="text-xs font-semibold text-slate-700">
-                    Distância Máxima (km) *
+                    Distância Máxima (km)
                   </Label>
                   <Input
                     id="maxDistanceKm"
@@ -862,7 +862,7 @@ export function DeliveryFeeRulesTab({
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label htmlFor="cepFrom" className="text-xs font-semibold text-slate-700">
-                      CEP Inicial *
+                      CEP Inicial
                     </Label>
                     <Input
                       id="cepFrom"
@@ -876,7 +876,7 @@ export function DeliveryFeeRulesTab({
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="cepTo" className="text-xs font-semibold text-slate-700">
-                      CEP Final *
+                      CEP Final
                     </Label>
                     <Input
                       id="cepTo"
@@ -895,7 +895,7 @@ export function DeliveryFeeRulesTab({
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="fee" className="text-xs font-semibold text-slate-700">
-                    Taxa de Entrega (R$) *
+                    Taxa de Entrega (R$)
                   </Label>
                   <Input
                     id="fee"

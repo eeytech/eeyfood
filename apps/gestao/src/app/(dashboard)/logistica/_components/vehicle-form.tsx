@@ -71,7 +71,7 @@ export function VehicleForm({
                   htmlFor="vehicle-brand"
                   className="text-xs font-semibold text-slate-700"
                 >
-                  Marca *
+                  Marca
                 </Label>
                 <Input
                   id="vehicle-brand"
@@ -87,7 +87,7 @@ export function VehicleForm({
                   htmlFor="vehicle-model"
                   className="text-xs font-semibold text-slate-700"
                 >
-                  Modelo *
+                  Modelo
                 </Label>
                 <Input
                   id="vehicle-model"
@@ -153,7 +153,7 @@ export function VehicleForm({
                 htmlFor="vehicle-plate"
                 className="text-xs font-semibold text-slate-700"
               >
-                Placa *
+                Placa
               </Label>
               <Input
                 id="vehicle-plate"
@@ -261,7 +261,7 @@ export function VehicleForm({
               : "Cadastrando..."
             : defaultValues
               ? "Salvar Alterações"
-              : "Cadastrar Veículo"}
+              : "Cadastrar Novo Veículo"}
         </Button>
       </DialogFooter>
     </form>

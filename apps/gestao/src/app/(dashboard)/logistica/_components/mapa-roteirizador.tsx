@@ -645,7 +645,7 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
           </div>
 
           {/* ── Mapa Interativo ── */}
-          <div className="relative min-h-[450px] flex-1">
+          <div className="relative min-h-[450px] flex-1 isolate z-0">
             <MapContainer
               center={center}
               zoom={13}
@@ -780,7 +780,7 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
 
       {/* ── Dialog Localização do Restaurante ────────────── */}
       <Dialog open={isLocationDialogOpen} onOpenChange={setIsLocationDialogOpen}>
-        <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-lg">
+        <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-lg z-[9999]">
           <DialogHeader>
             <div className="flex items-center gap-2.5">
               <div className="rounded-xl bg-primary/10 p-2 text-primary">
@@ -800,7 +800,7 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
           <form onSubmit={handleSaveStoreLocation} className="space-y-4 pt-1">
             <div className="space-y-1.5">
               <Label htmlFor="storeAddress" className="text-xs font-semibold text-slate-700">
-                Endereço completo da loja *
+                Endereço completo da loja
               </Label>
               <div className="flex gap-2">
                 <Input

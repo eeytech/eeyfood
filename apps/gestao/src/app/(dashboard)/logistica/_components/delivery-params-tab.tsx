@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 
 import { updateDeliveryParamsAction } from "@/app/(dashboard)/logistica-actions";
 import { Button } from "@/components/ui/button";
@@ -91,7 +92,10 @@ export function DeliveryParamsTab({
       try {
         await updateDeliveryParamsAction(slug, formData);
         setSaved(true);
+        toast.success("Parâmetros de entrega salvos com sucesso!");
         setTimeout(() => setSaved(false), 3000);
+      } catch {
+        toast.error("Não foi possível salvar os parâmetros de entrega.");
       } finally {
         onPendingChange?.(false);
       }
@@ -211,67 +215,6 @@ export function DeliveryParamsTab({
             </div>
           </div>
         </Card>
-
-        {/* Resumo visual */}
-        {(restaurant.deliveryFee > 0 ||
-          restaurant.minimumOrderValue > 0 ||
-          restaurant.freeDeliveryThreshold != null ||
-          restaurant.estimatedDeliveryTime) && (
-          <Card className="border-slate-200/80 bg-white p-4 shadow-sm">
-            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Resumo da Configuração Atual:
-            </p>
-            <ul className="list-inside list-disc space-y-1 text-xs text-slate-600">
-              {restaurant.deliveryFee > 0 && (
-                <li>
-                  Taxa de entrega padrão:{" "}
-                  <strong className="text-primary font-bold">
-                    R$ {restaurant.deliveryFee.toFixed(2).replace(".", ",")}
-                  </strong>
-                </li>
-              )}
-              {restaurant.minimumOrderValue > 0 && (
-                <li>
-                  Pedido mínimo:{" "}
-                  <strong className="text-primary font-bold">
-                    R$ {restaurant.minimumOrderValue.toFixed(2).replace(".", ",")}
-                  </strong>
-                </li>
-              )}
-              {restaurant.freeDeliveryThreshold != null && (
-                <li>
-                  Frete grátis acima de:{" "}
-                  <strong className="text-primary font-bold">
-                    R$ {restaurant.freeDeliveryThreshold.toFixed(2).replace(".", ",")}
-                  </strong>
-                </li>
-              )}
-              {restaurant.estimatedDeliveryTime && (
-                <li>
-                  Tempo estimado:{" "}
-                  <strong className="text-primary font-bold">{restaurant.estimatedDeliveryTime}</strong>
-                </li>
-              )}
-            </ul>
-          </Card>
-        )}
-
-        <div className="flex items-center gap-3 pt-1">
-          <Button
-            type="submit"
-            disabled={isPending}
-            className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 disabled:opacity-50"
-          >
-            <SaveIcon size={15} />
-            <span>{isPending ? "Salvando..." : "Salvar Parâmetros"}</span>
-          </Button>
-          {saved && (
-            <span className="flex items-center gap-1.5 text-xs font-semibold text-primary">
-              <CheckCircle2Icon size={14} />
-              Parâmetros salvos com sucesso!
-            </span>
-          )}
-        </div>
       </form>
     </div>
   );

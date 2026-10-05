@@ -1,6 +1,10 @@
 "use client";
 
-import { alternarStatusCourierAction, deleteCourierAction } from "@/app/(dashboard)/logistica-actions";
+import {
+  alternarDisponibilidadeCourierAction,
+  alternarStatusCourierAction,
+  deleteCourierAction,
+} from "@/app/(dashboard)/logistica-actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
@@ -257,6 +261,23 @@ export function LogisticaClient({
     });
   };
 
+  const handleToggleCourierAvailability = (
+    id: string,
+    currentAvailability: boolean,
+    name: string,
+  ) => {
+    startTransition(async () => {
+      try {
+        await alternarDisponibilidadeCourierAction(slug, id, !currentAvailability);
+        toast.success(
+          `Disponibilidade de "${name}" alterada para ${!currentAvailability ? "disponível" : "indisponível"}.`,
+        );
+      } catch {
+        toast.error("Não foi possível atualizar a disponibilidade do motoboy.");
+      }
+    });
+  };
+
   const handleDeleteConfirm = () => {
     if (!deletingCourier) return;
     startTransition(async () => {
@@ -290,7 +311,7 @@ export function LogisticaClient({
               </div>
               <div>
                 <DialogTitle className="font-display text-lg font-bold text-slate-900">
-                  Novo Motoboy
+                  Cadastrar Novo Motoboy
                 </DialogTitle>
                 <DialogDescription className="text-xs text-slate-500">
                   Adicione um novo entregador à sua equipe de despacho.
@@ -360,7 +381,7 @@ export function LogisticaClient({
             className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
           >
             <PlusIcon size={16} />
-            <span>Novo Motoboy</span>
+            <span>Cadastrar Novo Motoboy</span>
           </Button>
         )}
         {activeTab === "vehicles" && (
@@ -369,7 +390,7 @@ export function LogisticaClient({
             className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
           >
             <PlusIcon size={16} />
-            <span>Novo Veículo</span>
+            <span>Cadastrar Novo Veículo</span>
           </Button>
         )}
         {activeTab === "params" && (
@@ -799,22 +820,30 @@ export function LogisticaClient({
 
                             {/* Disponibilidade */}
                             <TableCell className="py-3.5 text-center">
-                              <span
-                                className={cn(
-                                  "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
-                                  courier.isAvailable
-                                    ? "bg-primary/10 text-primary border border-primary/20"
-                                    : "bg-slate-100 text-slate-500 border border-slate-200",
-                                )}
-                              >
+                              <div className="inline-flex items-center gap-2">
+                                <Switch
+                                  checked={courier.isAvailable}
+                                  disabled={isPending}
+                                  onCheckedChange={() =>
+                                    handleToggleCourierAvailability(
+                                      courier.id,
+                                      courier.isAvailable,
+                                      courier.name,
+                                    )
+                                  }
+                                  className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
+                                />
                                 <span
                                   className={cn(
-                                    "h-1.5 w-1.5 rounded-full",
-                                    courier.isAvailable ? "bg-primary" : "bg-slate-400",
+                                    "text-xs font-medium",
+                                    courier.isAvailable
+                                      ? "text-primary font-semibold"
+                                      : "text-slate-400",
                                   )}
-                                />
-                                {courier.isAvailable ? "Disponível" : "Indisponível"}
-                              </span>
+                                >
+                                  {courier.isAvailable ? "Disponível" : "Indisponível"}
+                                </span>
+                              </div>
                             </TableCell>
 
                             {/* Status */}
@@ -995,22 +1024,28 @@ export function LogisticaClient({
                           </div>
 
                           <div className="flex items-center gap-2">
-                            <span
-                              className={cn(
-                                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
-                                courier.isAvailable
-                                  ? "bg-primary/10 text-primary border border-primary/20"
-                                  : "bg-slate-100 text-slate-500",
-                              )}
-                            >
+                            <div className="inline-flex items-center gap-1.5">
                               <span
                                 className={cn(
-                                  "h-1.5 w-1.5 rounded-full",
-                                  courier.isAvailable ? "bg-primary" : "bg-slate-400",
+                                  "text-xs font-medium",
+                                  courier.isAvailable ? "text-primary font-semibold" : "text-slate-400",
                                 )}
+                              >
+                                {courier.isAvailable ? "Disponível" : "Indisp."}
+                              </span>
+                              <Switch
+                                checked={courier.isAvailable}
+                                disabled={isPending}
+                                onCheckedChange={() =>
+                                  handleToggleCourierAvailability(
+                                    courier.id,
+                                    courier.isAvailable,
+                                    courier.name,
+                                  )
+                                }
+                                className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
                               />
-                              {courier.isAvailable ? "Disponível" : "Indisp."}
-                            </span>
+                            </div>
 
                             <div className="inline-flex items-center gap-1.5">
                               <span

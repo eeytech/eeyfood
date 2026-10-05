@@ -172,7 +172,7 @@ export function VehiclesTab({
               </div>
               <div>
                 <DialogTitle className="font-display text-lg font-bold text-slate-900">
-                  Novo Veículo
+                  Cadastrar Novo Veículo
                 </DialogTitle>
                 <DialogDescription className="text-xs text-slate-500">
                   Cadastre um veículo da frota própria do estabelecimento.
