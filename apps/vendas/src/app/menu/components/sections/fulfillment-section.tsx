@@ -1,7 +1,16 @@
 "use client";
 
-import { ArrowLeftIcon, CheckIcon, Loader2Icon, MapPinIcon, PlusIcon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  CheckIcon,
+  Loader2Icon,
+  MapPinIcon,
+  PlusIcon,
+  SearchIcon,
+} from "lucide-react";
+import { useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
+import { toast } from "sonner";
 
 import {
   FormControl,
@@ -56,6 +65,68 @@ export const FulfillmentSection = ({
 }: FulfillmentSectionProps) => {
   const addressMode = form.watch("deliveryAddressMode");
   const selectedAddressId = form.watch("selectedAddressId");
+  const [isSearchingCep, setIsSearchingCep] = useState(false);
+
+  const fetchCepData = async (digits: string) => {
+    if (digits.length !== 8) return;
+
+    setIsSearchingCep(true);
+    try {
+      // 1. Tenta ViaCEP
+      const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+      const data = await res.json();
+      if (!data.erro && (data.logradouro || data.bairro)) {
+        if (data.logradouro) {
+          form.setValue("street", data.logradouro, { shouldValidate: true });
+        }
+        if (data.bairro) {
+          form.setValue("neighborhood", data.bairro, { shouldValidate: true });
+        }
+        toast.success("Endereço localizado via CEP!");
+        return;
+      }
+    } catch {
+      // Falha do ViaCEP, tenta fallback
+    }
+
+    try {
+      // 2. Fallback BrasilAPI
+      const res = await fetch(`https://brasilapi.com.br/api/cep/v1/${digits}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.street) {
+          form.setValue("street", data.street, { shouldValidate: true });
+        }
+        if (data.neighborhood) {
+          form.setValue("neighborhood", data.neighborhood, { shouldValidate: true });
+        }
+        toast.success("Endereço localizado via CEP!");
+        return;
+      }
+      toast.info("CEP não localizado. Preencha a rua e o bairro manualmente.");
+    } catch {
+      // Falha silenciosa
+    } finally {
+      setIsSearchingCep(false);
+    }
+  };
+
+  const handleCepChange = (val: string) => {
+    const digits = val.replace(/\D/g, "").slice(0, 8);
+    const masked = digits.length > 5 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : digits;
+    form.setValue("cep", masked, { shouldValidate: true });
+    if (digits.length === 8) {
+      void fetchCepData(digits);
+    }
+  };
+
+  const handleCepBlur = () => {
+    const cepVal = form.getValues("cep") || "";
+    const digits = cepVal.replace(/\D/g, "");
+    if (digits.length === 8) {
+      void fetchCepData(digits);
+    }
+  };
 
   return (
     <section>
@@ -186,6 +257,48 @@ export const FulfillmentSection = ({
                 </div>
 
                 <div className="space-y-2.5">
+                  {/* Campo de CEP (Opcional) com busca automática */}
+                  <FormField
+                    control={form.control}
+                    name="cep"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <FormLabel className="text-xs font-medium text-slate-700">
+                            CEP <span className="font-normal text-slate-400">(Opcional)</span>
+                          </FormLabel>
+                          {isSearchingCep && (
+                            <span className="flex items-center gap-1 text-[11px] font-medium text-primary">
+                              <Loader2Icon size={12} className="animate-spin" />
+                              <span>Localizando endereço...</span>
+                            </span>
+                          )}
+                        </div>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              {...field}
+                              value={field.value ?? ""}
+                              placeholder="00000-000"
+                              maxLength={9}
+                              onChange={(e) => handleCepChange(e.target.value)}
+                              onBlur={handleCepBlur}
+                              className="h-10 rounded-xl bg-white pr-9 text-sm"
+                            />
+                            <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                              {isSearchingCep ? (
+                                <Loader2Icon size={14} className="animate-spin text-primary" />
+                              ) : (
+                                <SearchIcon size={14} />
+                              )}
+                            </div>
+                          </div>
+                        </FormControl>
+                        <FormMessage className="text-xs" />
+                      </FormItem>
+                    )}
+                  />
+
                   <div className="grid grid-cols-12 gap-2">
                     <FormField
                       control={form.control}

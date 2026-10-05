@@ -37,6 +37,7 @@ export const formSchema = z
     diningTableId: z.string().uuid().optional(),
     deliveryAddressMode: z.enum(["SAVED", "NEW"]).default("NEW"),
     selectedAddressId: z.string().uuid().optional(),
+    cep: z.string().trim().optional(),
     street: z.string().trim().optional(),
     number: z.string().trim().optional(),
     neighborhood: z.string().trim().optional(),

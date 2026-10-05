@@ -65,6 +65,10 @@ interface PedidoRoteirizador {
   deliveryLongitude: number | null;
   total: number;
   hasPizza?: boolean;
+  hasAcai?: boolean;
+  hasBar?: boolean;
+  hasColdKitchen?: boolean;
+  sectors?: string[];
 }
 
 interface MapaRoteirizadorProps {
@@ -114,7 +118,9 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilter, setActiveFilter] = useState<"ALL" | "PIZZA" | "NO_GPS">("ALL");
+  const [activeFilter, setActiveFilter] = useState<
+    "ALL" | "PIZZA" | "ACAI" | "BAR" | "COLD" | "NO_GPS"
+  >("ALL");
 
   // Store Location Dialog State
   const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
@@ -175,6 +181,9 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
       }
 
       if (activeFilter === "PIZZA" && !order.hasPizza) return false;
+      if (activeFilter === "ACAI" && !order.hasAcai) return false;
+      if (activeFilter === "BAR" && !order.hasBar) return false;
+      if (activeFilter === "COLD" && !order.hasColdKitchen) return false;
       if (
         activeFilter === "NO_GPS" &&
         order.deliveryLatitude != null &&
@@ -466,7 +475,7 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
               </div>
 
               {/* Filtros Rápidos (Pills) */}
-              <div className="flex items-center gap-1.5 pt-1">
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
                 <button
                   type="button"
                   onClick={() => setActiveFilter("ALL")}
@@ -488,6 +497,39 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
                   }`}
                 >
                   🍕 Pizza ({orders.filter((o) => o.hasPizza).length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveFilter("ACAI")}
+                  className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
+                    activeFilter === "ACAI"
+                      ? "bg-purple-600 text-white"
+                      : "bg-purple-50 text-purple-800 border border-purple-200 hover:bg-purple-100"
+                  }`}
+                >
+                  🍨 Açaí ({orders.filter((o) => o.hasAcai).length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveFilter("BAR")}
+                  className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
+                    activeFilter === "BAR"
+                      ? "bg-sky-600 text-white"
+                      : "bg-sky-50 text-sky-800 border border-sky-200 hover:bg-sky-100"
+                  }`}
+                >
+                  🍹 Bar/Copa ({orders.filter((o) => o.hasBar).length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveFilter("COLD")}
+                  className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
+                    activeFilter === "COLD"
+                      ? "bg-emerald-600 text-white"
+                      : "bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100"
+                  }`}
+                >
+                  🥗 Coz. Fria ({orders.filter((o) => o.hasColdKitchen).length})
                 </button>
                 <button
                   type="button"
@@ -596,6 +638,24 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
                           {order.hasPizza && (
                             <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
                               🍕 Mochila Redonda
+                            </span>
+                          )}
+
+                          {order.hasAcai && (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-purple-300 bg-purple-50 px-2 py-0.5 text-[10px] font-semibold text-purple-800">
+                              🍨 Açaí / Bag Térmica
+                            </span>
+                          )}
+
+                          {order.hasBar && (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-sky-300 bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-800">
+                              🍹 Copa / Bar
+                            </span>
+                          )}
+
+                          {order.hasColdKitchen && (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
+                              🥗 Cozinha Fria
                             </span>
                           )}
 
@@ -765,6 +825,21 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
                         {order.hasPizza && (
                           <div className="mt-1 inline-block rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">
                             🍕 Contém Pizza (Exige Mochila Redonda)
+                          </div>
+                        )}
+                        {order.hasAcai && (
+                          <div className="mt-1 inline-block rounded bg-purple-100 px-1.5 py-0.5 text-[10px] font-semibold text-purple-800">
+                            🍨 Contém Açaí / Gelados (Bag Térmica)
+                          </div>
+                        )}
+                        {order.hasBar && (
+                          <div className="mt-1 inline-block rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold text-sky-800">
+                            🍹 Bebidas (Copa / Bar)
+                          </div>
+                        )}
+                        {order.hasColdKitchen && (
+                          <div className="mt-1 inline-block rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">
+                            🥗 Cozinha Fria / Saladas
                           </div>
                         )}
                         <Button

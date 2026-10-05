@@ -22,6 +22,7 @@ import {
   menuCategoriesTable,
   orderProductsTable,
   ordersTable,
+  productionSectorsTable,
   productsTable,
   restaurantsTable,
 } from "@fsw/db";
@@ -242,21 +243,138 @@ export const buscarPedidosParaRoteirizadorAction = async (slug: string) => {
   }
 
   const orderIds = orders.map((o) => o.id);
-  const pizzaProducts = await db
-    .select({ orderId: orderProductsTable.orderId })
+  const orderItemsData = await db
+    .select({
+      orderId: orderProductsTable.orderId,
+      productName: productsTable.name,
+      categoryName: menuCategoriesTable.name,
+      isPizzaCategory: menuCategoriesTable.isPizzaCategory,
+      sectorName: productionSectorsTable.name,
+    })
     .from(orderProductsTable)
     .innerJoin(productsTable, eq(productsTable.id, orderProductsTable.productId))
     .innerJoin(menuCategoriesTable, eq(menuCategoriesTable.id, productsTable.menuCategoryId))
-    .where(
-      and(
-        inArray(orderProductsTable.orderId, orderIds),
-        eq(menuCategoriesTable.isPizzaCategory, true),
-      ),
-    );
+    .leftJoin(
+      productionSectorsTable,
+      eq(productionSectorsTable.id, productsTable.productionSectorId),
+    )
+    .where(inArray(orderProductsTable.orderId, orderIds));
 
-  const pizzaOrderIds = new Set(pizzaProducts.map((p) => p.orderId));
+  const orderTagsMap = new Map<
+    number,
+    {
+      hasPizza: boolean;
+      hasAcai: boolean;
+      hasBar: boolean;
+      hasColdKitchen: boolean;
+      sectors: Set<string>;
+    }
+  >();
 
-  return orders.map((o) => ({ ...o, hasPizza: pizzaOrderIds.has(o.id) }));
+  for (const id of orderIds) {
+    orderTagsMap.set(id, {
+      hasPizza: false,
+      hasAcai: false,
+      hasBar: false,
+      hasColdKitchen: false,
+      sectors: new Set<string>(),
+    });
+  }
+
+  for (const item of orderItemsData) {
+    const tags = orderTagsMap.get(item.orderId);
+    if (!tags) continue;
+
+    const pName = (item.productName || "").toLowerCase();
+    const cName = (item.categoryName || "").toLowerCase();
+    const sName = (item.sectorName || "").toLowerCase();
+
+    if (item.sectorName) {
+      tags.sectors.add(item.sectorName);
+    }
+
+    // 1. Pizza (exige mochila redonda)
+    if (
+      item.isPizzaCategory ||
+      cName.includes("pizza") ||
+      pName.includes("pizza") ||
+      sName.includes("pizza")
+    ) {
+      tags.hasPizza = true;
+    }
+
+    // 2. Açaí / Sorvetes / Gelados (exige bag térmica e entrega rápida para não derreter)
+    if (
+      pName.includes("açaí") ||
+      pName.includes("acai") ||
+      cName.includes("açaí") ||
+      cName.includes("acai") ||
+      pName.includes("sorvete") ||
+      cName.includes("sorvete") ||
+      pName.includes("gelato") ||
+      cName.includes("gelato") ||
+      pName.includes("picolé") ||
+      pName.includes("picole") ||
+      pName.includes("milkshake") ||
+      pName.includes("milk shake") ||
+      cName.includes("gelado") ||
+      sName.includes("açaí") ||
+      sName.includes("acai")
+    ) {
+      tags.hasAcai = true;
+    }
+
+    // 3. Copa / Bar (bebidas, drinks, sucos, chopp - cuidado com derramamento / suporte de copos)
+    if (
+      sName.includes("bar") ||
+      sName.includes("copa") ||
+      sName.includes("bebida") ||
+      cName.includes("bebida") ||
+      cName.includes("drink") ||
+      cName.includes("suco") ||
+      cName.includes("cerveja") ||
+      cName.includes("chopp") ||
+      cName.includes("refrigerante") ||
+      cName.includes("bar") ||
+      cName.includes("copa") ||
+      pName.includes("suco") ||
+      pName.includes("refrigerante") ||
+      pName.includes("cerveja") ||
+      pName.includes("coca-cola") ||
+      pName.includes("coca cola")
+    ) {
+      tags.hasBar = true;
+    }
+
+    // 4. Cozinha Fria / Saladas (saladas, poke, sushi, entradas frias)
+    if (
+      sName.includes("fria") ||
+      sName.includes("salada") ||
+      sName.includes("sushi") ||
+      sName.includes("poke") ||
+      cName.includes("salada") ||
+      cName.includes("fria") ||
+      cName.includes("sushi") ||
+      cName.includes("poke") ||
+      cName.includes("carpaccio") ||
+      pName.includes("salada") ||
+      pName.includes("poke")
+    ) {
+      tags.hasColdKitchen = true;
+    }
+  }
+
+  return orders.map((o) => {
+    const tags = orderTagsMap.get(o.id);
+    return {
+      ...o,
+      hasPizza: tags?.hasPizza ?? false,
+      hasAcai: tags?.hasAcai ?? false,
+      hasBar: tags?.hasBar ?? false,
+      hasColdKitchen: tags?.hasColdKitchen ?? false,
+      sectors: tags ? Array.from(tags.sectors) : [],
+    };
+  });
 };
 
 export const listarRegrasFreteAction = async (slug: string) => {

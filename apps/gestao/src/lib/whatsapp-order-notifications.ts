@@ -96,14 +96,20 @@ ${trackingUrl}
 Por favor, mantenha alguém atento ao interfone ou portão. Tenha uma excelente refeição! 😋`;
     }
 
-    // 3. Pedido pronto para retirada no balcão (Takeaway ou Dine-in)
+    // 3. Pedido pronto (Expedição para Delivery ou Balcão para Retirada)
     else if (status === "READY_FOR_PICKUP") {
-      messageText = `🎉 *Oba, ${customerFirstName}!*
+      if (order.consumptionMethod === "DELIVERY") {
+        messageText = `🍕 *${customerFirstName}, seu pedido #${orderId} acabou de ficar pronto!*
+
+Já está embalado com todo carinho na expedição do *${restaurantName}* e aguardando o entregador para iniciar a rota até você. Avisaremos assim que sair! 🛵`;
+      } else {
+        messageText = `🎉 *Oba, ${customerFirstName}!*
 
 Seu pedido *#${orderId}* está *PRONTO* no balcão do *${restaurantName}*!
 Você já pode retirá-lo informando o número do pedido ou seu nome.
 
 Aguardamos você! Bom apetite! 🍽️`;
+      }
     }
 
     // 4. Pedido concluído / entregue

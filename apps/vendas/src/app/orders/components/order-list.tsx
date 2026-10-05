@@ -20,11 +20,18 @@ interface OrderListProps {
   onBackClick?: () => void;
 }
 
-const getStatusLabel = (status: OrderStatus) => {
+const getStatusLabel = (
+  status: OrderStatus,
+  consumptionMethod?: OrderComItens["consumptionMethod"],
+) => {
   if (status === "FINISHED") return "Finalizado";
   if (status === "CANCELLED") return "Cancelado";
   if (status === "OUT_FOR_DELIVERY") return "Em entrega";
-  if (status === "READY_FOR_PICKUP") return "Pronto para retirada";
+  if (status === "READY_FOR_PICKUP") {
+    return consumptionMethod === "DELIVERY"
+      ? "Pronto para entrega"
+      : "Pronto para retirada";
+  }
   if (status === "IN_PREPARATION") return "Em produção";
   if (status === "PENDING") return "Pendente";
   return "";
@@ -97,7 +104,7 @@ const OrderCard = ({ order, isRated, onRatingSuccess }: OrderCardProps) => (
         <div
           className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${getStatusClassName(order.status)}`}
         >
-          {getStatusLabel(order.status)}
+          {getStatusLabel(order.status, order.consumptionMethod)}
         </div>
       </div>
 

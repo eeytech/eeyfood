@@ -332,17 +332,15 @@ const formatCurrency = (value: number | null) => {
 
 const getNextStatus = (order: PedidoRecebimento): OrderStatus | null => {
   if (order.status === "PENDING") return "IN_PREPARATION";
+  if (order.status === "IN_PREPARATION") return "READY_FOR_PICKUP";
 
-  if (order.status === "IN_PREPARATION") {
+  if (order.status === "READY_FOR_PICKUP") {
     return order.consumptionMethod === "DELIVERY"
       ? "OUT_FOR_DELIVERY"
-      : "READY_FOR_PICKUP";
+      : "FINISHED";
   }
 
-  if (
-    order.status === "READY_FOR_PICKUP" ||
-    order.status === "OUT_FOR_DELIVERY"
-  ) {
+  if (order.status === "OUT_FOR_DELIVERY") {
     return "FINISHED";
   }
 
@@ -351,12 +349,8 @@ const getNextStatus = (order: PedidoRecebimento): OrderStatus | null => {
 
 const getPreviousStatus = (order: PedidoRecebimento): OrderStatus | null => {
   if (order.status === "IN_PREPARATION") return "PENDING";
-  if (
-    order.status === "READY_FOR_PICKUP" ||
-    order.status === "OUT_FOR_DELIVERY"
-  ) {
-    return "IN_PREPARATION";
-  }
+  if (order.status === "READY_FOR_PICKUP") return "IN_PREPARATION";
+  if (order.status === "OUT_FOR_DELIVERY") return "READY_FOR_PICKUP";
 
   if (order.status === "FINISHED") {
     return order.consumptionMethod === "DELIVERY"
@@ -369,12 +363,12 @@ const getPreviousStatus = (order: PedidoRecebimento): OrderStatus | null => {
 
 const getNextStatusLabel = (order: PedidoRecebimento): string => {
   if (order.status === "PENDING") return "Iniciar preparo";
-  if (order.status === "IN_PREPARATION") {
+  if (order.status === "IN_PREPARATION") return "Marcar pronto";
+  if (order.status === "READY_FOR_PICKUP") {
     return order.consumptionMethod === "DELIVERY"
       ? "Despachar"
-      : "Marcar pronto";
+      : "Concluir pedido";
   }
-  if (order.status === "READY_FOR_PICKUP") return "Concluir pedido";
   if (order.status === "OUT_FOR_DELIVERY") return "Concluir entrega";
   return "Avançar";
 };

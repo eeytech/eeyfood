@@ -150,6 +150,7 @@ export const FinishOrderSheet = ({
       diningTableId: consumptionMethod === "DINE_IN" ? queryTableId : undefined,
       deliveryAddressMode: "NEW",
       selectedAddressId: undefined,
+      cep: "",
       street: "",
       number: "",
       neighborhood: "",
@@ -554,7 +555,8 @@ export const FinishOrderSheet = ({
             neighborhood: data.neighborhood,
             complement: data.complement || undefined,
           };
-          formattedDeliveryAddress = `${data.street}, ${data.number} - ${data.neighborhood}${data.complement ? ` (${data.complement})` : ""}`;
+          const cepSuffix = data.cep ? ` - CEP: ${data.cep}` : "";
+          formattedDeliveryAddress = `${data.street}, ${data.number} - ${data.neighborhood}${data.complement ? ` (${data.complement})` : ""}${cepSuffix}`;
         }
       }
 

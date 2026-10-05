@@ -297,9 +297,7 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
     const nextStatus: OrderStatus =
       order.status === "PENDING"
         ? "IN_PREPARATION"
-        : order.consumptionMethod === "DELIVERY"
-          ? "OUT_FOR_DELIVERY"
-          : "READY_FOR_PICKUP";
+        : "READY_FOR_PICKUP";
 
     try {
       setLoadingOrderIds((prev) => [...prev, order.id]);
@@ -819,7 +817,11 @@ const KdsPainel = ({ slug, initialOrders, sectors, initialSectorId }: KdsPainelP
                         )}
                       >
                         <PackageCheckIcon size={14} />
-                        {ready ? "Pronto para Retirada" : "Aguardando itens..."}
+                        {ready
+                          ? order.consumptionMethod === "DELIVERY"
+                            ? "Pronto para Despacho"
+                            : "Pronto para Retirada"
+                          : "Aguardando itens..."}
                       </button>
                     ) : selectedSectorId !== null ? (
                       /* Sector mode: no order-level button (items are marked individually) */
