@@ -155,6 +155,8 @@ export const FinishOrderSheet = ({
       number: "",
       neighborhood: "",
       complement: "",
+      city: "",
+      state: "",
     },
   });
 
@@ -537,6 +539,9 @@ export const FinishOrderSheet = ({
             number: string;
             neighborhood: string;
             complement?: string;
+            cep?: string;
+            city?: string;
+            state?: string;
           }
         | undefined;
       let formattedDeliveryAddress: string | undefined;
@@ -546,7 +551,8 @@ export const FinishOrderSheet = ({
           customerAddressId = data.selectedAddressId;
           const saved = customerAddresses.find((a) => a.id === data.selectedAddressId);
           if (saved) {
-            formattedDeliveryAddress = `${saved.street}, ${saved.number} - ${saved.neighborhood}${saved.complement ? ` (${saved.complement})` : ""}`;
+            const cityState = saved.city ? `, ${saved.city}${saved.state ? ` - ${saved.state}` : ""}` : "";
+            formattedDeliveryAddress = `${saved.street}, ${saved.number} - ${saved.neighborhood}${saved.complement ? ` (${saved.complement})` : ""}${cityState}`;
           }
         } else if (data.street && data.number && data.neighborhood) {
           deliveryAddressData = {
@@ -554,9 +560,13 @@ export const FinishOrderSheet = ({
             number: data.number,
             neighborhood: data.neighborhood,
             complement: data.complement || undefined,
+            cep: data.cep || undefined,
+            city: data.city || undefined,
+            state: data.state || undefined,
           };
+          const cityState = data.city ? `, ${data.city}${data.state ? ` - ${data.state}` : ""}` : "";
           const cepSuffix = data.cep ? ` - CEP: ${data.cep}` : "";
-          formattedDeliveryAddress = `${data.street}, ${data.number} - ${data.neighborhood}${data.complement ? ` (${data.complement})` : ""}${cepSuffix}`;
+          formattedDeliveryAddress = `${data.street}, ${data.number} - ${data.neighborhood}${data.complement ? ` (${data.complement})` : ""}${cityState}${cepSuffix}`;
         }
       }
 
@@ -579,6 +589,7 @@ export const FinishOrderSheet = ({
         deliveryAddress: formattedDeliveryAddress,
         customerAddressId,
         deliveryAddressData,
+        deliveryCep: data.cep,
         deliveryNeighborhood:
           data.deliveryAddressMode === "SAVED" && data.selectedAddressId
             ? customerAddresses.find((a) => a.id === data.selectedAddressId)?.neighborhood

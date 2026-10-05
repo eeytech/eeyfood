@@ -44,6 +44,9 @@ interface CreateOrderInput {
     neighborhood: string;
     complement?: string;
     reference?: string;
+    cep?: string;
+    city?: string;
+    state?: string;
   };
   deliveryLatitude?: number;
   deliveryLongitude?: number;
@@ -97,10 +100,32 @@ export const createOrder = async (input: CreateOrderInput) => {
     input.deliveryNeighborhood || input.deliveryAddressData?.neighborhood;
 
   if (input.consumptionMethod === "DELIVERY") {
+    const rawCep = input.deliveryCep || input.deliveryAddressData?.cep;
+    const cleanCep = rawCep ? rawCep.replace(/\D/g, "") : null;
+
     if (input.deliveryAddressData) {
-      const { street, number, neighborhood: addrNeighborhood, complement, reference } = input.deliveryAddressData;
-      const formatted = `${street}, ${number} - ${addrNeighborhood}${complement ? ` (${complement})` : ""}`;
-      formattedDeliveryAddress = formatted;
+      const {
+        street,
+        number,
+        neighborhood: addrNeighborhood,
+        complement,
+        reference,
+        city: addrCity,
+        state: addrState,
+      } = input.deliveryAddressData;
+
+      const cepSuffix = cleanCep && cleanCep.length === 8
+        ? ` - CEP: ${cleanCep.slice(0, 5)}-${cleanCep.slice(5)}`
+        : "";
+      const cityStateSuffix = addrCity ? `, ${addrCity}${addrState ? ` - ${addrState}` : ""}` : "";
+      const formatted = `${street}, ${number} - ${addrNeighborhood}${complement ? ` (${complement})` : ""}${cityStateSuffix}${cepSuffix}`;
+
+      // Preserva o endereço completo formatado com CEP e cidade
+      if (input.deliveryAddress && input.deliveryAddress.includes("CEP")) {
+        formattedDeliveryAddress = input.deliveryAddress;
+      } else {
+        formattedDeliveryAddress = formatted;
+      }
 
       try {
         const savedAddress = await salvarOuAtualizarEnderecoCliente({
@@ -110,6 +135,8 @@ export const createOrder = async (input: CreateOrderInput) => {
           neighborhood: addrNeighborhood,
           complement,
           reference,
+          city: addrCity,
+          state: addrState,
         });
         if (savedAddress) {
           resolvedAddressId = savedAddress.id;
@@ -125,10 +152,22 @@ export const createOrder = async (input: CreateOrderInput) => {
       }
     }
 
-    // Geocodificação automática se latitude e longitude ainda não foram passadas
+    // Geocodificação automática com tentativas inteligentes
     if ((deliveryLat === undefined || deliveryLng === undefined) && formattedDeliveryAddress) {
       try {
-        const coords = await geocodeAddress(formattedDeliveryAddress);
+        // 1. Tenta geocodificar o endereço formatado com CEP e cidade
+        let coords = await geocodeAddress(formattedDeliveryAddress);
+
+        // 2. Se falhou e temos CEP válido, tenta geocodificar direto pelo CEP
+        if (!coords && cleanCep && cleanCep.length === 8) {
+          coords = await geocodeAddress(`CEP: ${cleanCep}`);
+        }
+
+        // 3. Se ainda não achou e o restaurante tem endereço, tenta com contexto do restaurante
+        if (!coords && restaurant.address) {
+          coords = await geocodeAddress(`${formattedDeliveryAddress}, ${restaurant.address}`);
+        }
+
         if (coords) {
           deliveryLat = coords.latitude;
           deliveryLng = coords.longitude;

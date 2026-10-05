@@ -22,6 +22,7 @@ import { io } from "socket.io-client";
 import { toast } from "sonner";
 
 import {
+  atualizarLocalizacaoPedidoAction,
   atualizarLocalizacaoRestauranteAction,
   buscarPedidosParaRoteirizadorAction,
   despacharLoteAction,
@@ -133,6 +134,49 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
     restaurant.longitude != null ? String(restaurant.longitude) : "",
   );
   const [isGeocodingStore, setIsGeocodingStore] = useState(false);
+
+  // Order GPS Dialog State
+  const [editingOrder, setEditingOrder] = useState<PedidoRoteirizador | null>(null);
+  const [orderAddressInput, setOrderAddressInput] = useState("");
+  const [isLocatingOrderGps, setIsLocatingOrderGps] = useState(false);
+
+  const handleOpenOrderGpsDialog = (order: PedidoRoteirizador, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingOrder(order);
+    setOrderAddressInput(order.deliveryAddress || "");
+  };
+
+  const handleSaveOrderGps = async () => {
+    if (!editingOrder || !orderAddressInput.trim()) return;
+    setIsLocatingOrderGps(true);
+    try {
+      const res = await atualizarLocalizacaoPedidoAction(slug, editingOrder.id, orderAddressInput.trim());
+      if (res.latitude && res.longitude) {
+        toast.success(`GPS do pedido #${editingOrder.id} localizado e salvo com sucesso!`);
+        setOrders((prev) =>
+          prev.map((o) =>
+            o.id === editingOrder.id
+              ? {
+                  ...o,
+                  deliveryAddress: orderAddressInput.trim(),
+                  deliveryLatitude: res.latitude ?? null,
+                  deliveryLongitude: res.longitude ?? null,
+                }
+              : o,
+          ),
+        );
+        setEditingOrder(null);
+      } else {
+        toast.warning(
+          "Não conseguimos identificar as coordenadas exatas por esse endereço. Tente adicionar o CEP (ex: CEP: 00000-000) e a cidade.",
+        );
+      }
+    } catch {
+      toast.error("Erro ao buscar GPS do pedido.");
+    } finally {
+      setIsLocatingOrderGps(false);
+    }
+  };
 
   // Sincroniza estado com dados atualizados do restaurante
   useEffect(() => {
@@ -763,10 +807,15 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
                           )}
 
                           {!hasCoords && (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-medium text-rose-700">
+                            <button
+                              type="button"
+                              onClick={(e) => handleOpenOrderGpsDialog(order, e)}
+                              className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-medium text-rose-700 hover:bg-rose-100 transition-colors cursor-pointer"
+                              title="Clique para localizar ou corrigir o endereço e ativar o GPS deste pedido"
+                            >
                               <AlertCircleIcon size={10} />
-                              Sem GPS
-                            </span>
+                              Sem GPS • Localizar
+                            </button>
                           )}
                         </div>
                       </div>
@@ -1105,6 +1154,68 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+      {/* ── Dialog Localização do Pedido ────────────── */}
+      <Dialog
+        open={Boolean(editingOrder)}
+        onOpenChange={(open) => {
+          if (!open) setEditingOrder(null);
+        }}
+      >
+        <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-md z-[9999]">
+          <DialogHeader>
+            <div className="flex items-center gap-2.5">
+              <div className="rounded-xl bg-primary/10 p-2 text-primary">
+                <MapPinIcon size={20} />
+              </div>
+              <div>
+                <DialogTitle className="font-display text-lg font-bold text-slate-900">
+                  Localizar GPS do Pedido #{editingOrder?.id}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500">
+                  Cliente: <span className="font-semibold text-slate-700">{editingOrder?.customerName}</span>
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">Endereço de Entrega</Label>
+              <Input
+                value={orderAddressInput}
+                onChange={(e) => setOrderAddressInput(e.target.value)}
+                placeholder="Rua, número, bairro, cidade - CEP: 00000-000"
+                className="h-10 rounded-xl text-xs bg-slate-50"
+              />
+              <p className="text-[11px] text-slate-400">
+                Dica: adicione o CEP (ex: CEP: 00000-000) e a cidade para obter as coordenadas com precisão e exibir o pino no mapa.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setEditingOrder(null)}
+              className="h-9 rounded-full text-xs font-semibold"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSaveOrderGps}
+              disabled={isLocatingOrderGps || !orderAddressInput.trim()}
+              className="h-9 rounded-full bg-primary text-xs font-semibold text-primary-foreground gap-1.5"
+            >
+              {isLocatingOrderGps ? (
+                <Loader2Icon size={14} className="animate-spin" />
+              ) : (
+                <SearchIcon size={14} />
+              )}
+              <span>Localizar no Mapa</span>
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

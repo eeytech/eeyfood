@@ -224,7 +224,11 @@ export const buscarPedidosParaRoteirizadorAction = async (slug: string) => {
   for (const order of orders) {
     if ((order.deliveryLatitude == null || order.deliveryLongitude == null) && order.deliveryAddress) {
       try {
-        const coords = await geocodeAddress(order.deliveryAddress);
+        let coords = await geocodeAddress(order.deliveryAddress);
+        // Fallback: se não encontrou, tenta enriquecer com o endereço/cidade do restaurante
+        if (!coords && restaurant.address) {
+          coords = await geocodeAddress(`${order.deliveryAddress}, ${restaurant.address}`);
+        }
         if (coords) {
           order.deliveryLatitude = coords.latitude;
           order.deliveryLongitude = coords.longitude;
@@ -683,5 +687,42 @@ export const alternarStatusVehicleAction = async (
     .where(eq(companyVehiclesTable.id, vehicleId));
 
   revalidatePath(`/${slug}/logistica`);
+};
+
+export const atualizarLocalizacaoPedidoAction = async (
+  slug: string,
+  orderId: number,
+  address: string,
+  latitude?: number | null,
+  longitude?: number | null,
+) => {
+  const restaurant = await getRestaurantOrThrow(slug);
+
+  let finalLat = latitude;
+  let finalLng = longitude;
+
+  if (finalLat == null || finalLng == null) {
+    let coords = await geocodeAddress(address);
+    if (!coords && restaurant.address) {
+      coords = await geocodeAddress(`${address}, ${restaurant.address}`);
+    }
+    if (coords) {
+      finalLat = coords.latitude;
+      finalLng = coords.longitude;
+    }
+  }
+
+  await db
+    .update(ordersTable)
+    .set({
+      deliveryAddress: address,
+      deliveryLatitude: finalLat ?? null,
+      deliveryLongitude: finalLng ?? null,
+    })
+    .where(and(eq(ordersTable.id, orderId), eq(ordersTable.restaurantId, restaurant.id)));
+
+  revalidatePath(`/${slug}/logistica`);
+
+  return { success: true, latitude: finalLat, longitude: finalLng };
 };
 

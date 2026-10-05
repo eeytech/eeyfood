@@ -42,6 +42,8 @@ export const formSchema = z
     number: z.string().trim().optional(),
     neighborhood: z.string().trim().optional(),
     complement: z.string().trim().optional(),
+    city: z.string().trim().optional(),
+    state: z.string().trim().optional(),
     deliveryAddress: z.string().trim().optional(),
   })
   .superRefine((values, context) => {

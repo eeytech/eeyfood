@@ -75,12 +75,18 @@ export const FulfillmentSection = ({
       // 1. Tenta ViaCEP
       const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
       const data = await res.json();
-      if (!data.erro && (data.logradouro || data.bairro)) {
+      if (!data.erro && (data.logradouro || data.bairro || data.localidade)) {
         if (data.logradouro) {
           form.setValue("street", data.logradouro, { shouldValidate: true });
         }
         if (data.bairro) {
           form.setValue("neighborhood", data.bairro, { shouldValidate: true });
+        }
+        if (data.localidade) {
+          form.setValue("city", data.localidade);
+        }
+        if (data.uf) {
+          form.setValue("state", data.uf);
         }
         toast.success("Endereço localizado via CEP!");
         return;
@@ -99,6 +105,12 @@ export const FulfillmentSection = ({
         }
         if (data.neighborhood) {
           form.setValue("neighborhood", data.neighborhood, { shouldValidate: true });
+        }
+        if (data.city) {
+          form.setValue("city", data.city);
+        }
+        if (data.state) {
+          form.setValue("state", data.state);
         }
         toast.success("Endereço localizado via CEP!");
         return;
