@@ -223,6 +223,7 @@ export const restaurantsTable = pgTable("Restaurant", {
     acceptMercadoPago: boolean("acceptMercadoPago").default(true).notNull(),
     onlinePaymentGateway: text("onlinePaymentGateway").default("MERCADO_PAGO").notNull(), // "MERCADO_PAGO" | "INFINITEPAY" | "DISABLED"
     infinitePayHandle: text("infinitePayHandle"), // InfiniteTag ($handle)
+    mercadoPagoAccessToken: text("mercadoPagoAccessToken"), // Access Token do Mercado Pago do restaurante
     acceptPix: boolean("acceptPix").default(true).notNull(),
     pixKey: text("pixKey"),
     pixMode: text("pixMode").default("QRCODE").notNull(),

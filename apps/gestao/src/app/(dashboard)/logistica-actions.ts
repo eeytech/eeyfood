@@ -343,6 +343,19 @@ export const alternarStatusRegraFreteAction = async (
   revalidatePath(`/${slug}/logistica`);
 };
 
+export const buscarCoordenadasEnderecoAction = async (
+  address: string,
+): Promise<{ success: boolean; latitude?: number; longitude?: number; error?: string }> => {
+  if (!address || address.trim().length < 4) {
+    return { success: false, error: "Informe um endereço válido." };
+  }
+  const coords = await geocodeAddress(address);
+  if (coords) {
+    return { success: true, latitude: coords.latitude, longitude: coords.longitude };
+  }
+  return { success: false, error: "Não foi possível localizar as coordenadas para este endereço." };
+};
+
 export const atualizarLocalizacaoRestauranteAction = async (
   slug: string,
   address: string,

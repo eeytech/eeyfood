@@ -481,7 +481,7 @@ export function UsuariosClient({
           )}
         >
           <UtensilsCrossedIcon size={16} />
-          <span>Garçons e Salão</span>
+          <span>Garçons</span>
           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary font-medium">
             {garconsData?.garcons.length || 0}
           </span>

@@ -422,7 +422,7 @@ export type {
   TicketSender,
   SupportTicketComMensagens,
 } from "./types";
-export { geocodeAddress } from "./geocoding";
+export { geocodeAddress, cleanAddressForGeocoding } from "./geocoding";
 export type { GeocodedCoordinates } from "./geocoding";
 
 

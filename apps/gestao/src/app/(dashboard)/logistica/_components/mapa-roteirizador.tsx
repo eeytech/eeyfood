@@ -127,6 +127,13 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
   );
   const [isGeocodingStore, setIsGeocodingStore] = useState(false);
 
+  // Sincroniza estado com dados atualizados do restaurante
+  useEffect(() => {
+    if (restaurant.address) setStoreAddress(restaurant.address);
+    if (restaurant.latitude != null) setStoreLat(String(restaurant.latitude));
+    if (restaurant.longitude != null) setStoreLng(String(restaurant.longitude));
+  }, [restaurant.address, restaurant.latitude, restaurant.longitude]);
+
   // Active Coordinates for Map Center
   const currentStoreLat = storeLat ? parseFloat(storeLat) : restaurant.latitude;
   const currentStoreLng = storeLng ? parseFloat(storeLng) : restaurant.longitude;
@@ -280,13 +287,15 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
     try {
       const res = await atualizarLocalizacaoRestauranteAction(slug, storeAddress);
       if (res.latitude && res.longitude) {
-        setStoreLat(String(res.latitude));
-        setStoreLng(String(res.longitude));
-        toast.success("Coordenadas GPS encontradas e salvas com sucesso!");
+        const latFixed = Number(res.latitude).toFixed(6);
+        const lngFixed = Number(res.longitude).toFixed(6);
+        setStoreLat(latFixed);
+        setStoreLng(lngFixed);
+        toast.success(`Coordenadas GPS encontradas e salvas com sucesso! (${latFixed}, ${lngFixed})`);
         setIsLocationDialogOpen(false);
       } else {
         toast.warning(
-          "Não conseguimos identificar as coordenadas exatas pelo endereço. Digite latitude/longitude manualmente.",
+          "Não conseguimos identificar as coordenadas exatas pelo endereço. Você pode usar o botão 'Usar GPS deste dispositivo' ou digitar latitude/longitude manualmente.",
         );
       }
     } catch {
@@ -294,6 +303,29 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
     } finally {
       setIsGeocodingStore(false);
     }
+  };
+
+  // Captura localização atual do dispositivo pelo navegador
+  const handleUseCurrentLocation = () => {
+    if (typeof window === "undefined" || !navigator.geolocation) {
+      toast.error("Geolocalização não é suportada pelo seu navegador.");
+      return;
+    }
+    toast.info("Obtendo GPS do dispositivo...");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude.toFixed(6);
+        const lng = pos.coords.longitude.toFixed(6);
+        setStoreLat(lat);
+        setStoreLng(lng);
+        toast.success(`GPS obtido: (${lat}, ${lng})! Clique em Salvar Localização para confirmar.`);
+      },
+      (err) => {
+        console.error("Erro ao obter GPS do navegador:", err);
+        toast.error("Não foi possível acessar a localização do dispositivo. Verifique as permissões de GPS no navegador.");
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
   };
 
   const handleSaveStoreLocation = async (e: React.FormEvent) => {
@@ -592,7 +624,7 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
             <div className="border-t border-slate-200 bg-slate-50/80 p-4 space-y-3">
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-slate-700">
-                  Vincular ao Motoboy / Entregador *
+                  Vincular ao Motoboy / Entregador
                 </Label>
                 <Select value={selectedCourierId} onValueChange={setSelectedCourierId}>
                   <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs font-medium text-slate-800">
@@ -826,35 +858,51 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
                 </Button>
               </div>
               <p className="text-[11px] text-slate-500">
-                O sistema usa OpenStreetMap para preencher automaticamente a latitude e longitude.
+                O sistema busca no OpenStreetMap, Photon e BrasilAPI para identificar automaticamente a latitude e longitude.
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="storeLat" className="text-xs font-semibold text-slate-700">
-                  Latitude (ex: -23.5505)
-                </Label>
-                <Input
-                  id="storeLat"
-                  value={storeLat}
-                  onChange={(e) => setStoreLat(e.target.value)}
-                  placeholder="-23.5505"
-                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
-                />
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-700">Coordenadas geográficas</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleUseCurrentLocation}
+                  className="h-7 gap-1.5 rounded-lg border-slate-200 px-2.5 text-[11px] font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                >
+                  <MapPinIcon size={12} className="text-primary" />
+                  <span>Usar GPS deste dispositivo</span>
+                </Button>
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="storeLng" className="text-xs font-semibold text-slate-700">
-                  Longitude (ex: -46.6333)
-                </Label>
-                <Input
-                  id="storeLng"
-                  value={storeLng}
-                  onChange={(e) => setStoreLng(e.target.value)}
-                  placeholder="-46.6333"
-                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="storeLat" className="text-xs font-semibold text-slate-700">
+                    Latitude (ex: -23.5505)
+                  </Label>
+                  <Input
+                    id="storeLat"
+                    value={storeLat}
+                    onChange={(e) => setStoreLat(e.target.value)}
+                    placeholder="-23.5505"
+                    className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="storeLng" className="text-xs font-semibold text-slate-700">
+                    Longitude (ex: -46.6333)
+                  </Label>
+                  <Input
+                    id="storeLng"
+                    value={storeLng}
+                    onChange={(e) => setStoreLng(e.target.value)}
+                    placeholder="-46.6333"
+                    className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                  />
+                </div>
               </div>
             </div>
 

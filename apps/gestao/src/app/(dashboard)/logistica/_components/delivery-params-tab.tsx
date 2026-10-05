@@ -104,15 +104,6 @@ export function DeliveryParamsTab({
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="font-display text-lg font-bold tracking-tight text-slate-900">
-          Parâmetros Gerais de Entrega
-        </h2>
-        <p className="text-xs text-slate-500">
-          Configure as taxas padrão, limites mínimos de pedido e o tempo estimado de entrega exibido no cardápio digital do cliente.
-        </p>
-      </div>
-
       <form id="delivery-params-form" onSubmit={handleSubmit} className="space-y-4">
         <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
           {/* ── Taxa de entrega fixa ── */}
@@ -158,32 +149,6 @@ export function DeliveryParamsTab({
                   name="minimumOrderValue"
                   initialValue={restaurant.minimumOrderValue}
                 />
-              </div>
-            </div>
-          </div>
-
-          {/* ── Frete grátis ── */}
-          <div className="flex items-start gap-4 border-b border-slate-100 bg-primary/[0.02] p-5">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
-              <CheckCircle2Icon size={18} />
-            </div>
-            <div className="flex-1 space-y-1.5">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-slate-900">Frete Grátis</span>
-                <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
-                  Centralizado em Fidelização
-                </span>
-              </div>
-              <p className="text-xs text-slate-500">
-                As regras de bônus e o valor mínimo de pedido para frete grátis agora são configurados de forma centralizada na seção de Fidelização.
-              </p>
-              <div className="pt-1">
-                <Link
-                  href="/frete"
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-                >
-                  Ir para Fidelização &gt; Frete &rarr;
-                </Link>
               </div>
             </div>
           </div>

@@ -313,16 +313,6 @@ export function DeliveryFeeRulesTab({
 
   return (
     <div className="space-y-4">
-      {/* ── Page Header (Padrão Parâmetros: Sem ícone ao lado do título) ── */}
-      <div>
-        <h2 className="font-display text-lg font-bold tracking-tight text-slate-900">
-          Zonas e Regras de Frete
-        </h2>
-        <p className="text-xs text-slate-500">
-          Configure taxas dinâmicas por bairro, raio em km ou faixa de CEP aplicadas automaticamente no cardápio.
-        </p>
-      </div>
-
       {/* ── Table Card ─────────────────────────────────── */}
       <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
         {/* Filtros da Tabela de Zonas de Frete */}
@@ -763,7 +753,7 @@ export function DeliveryFeeRulesTab({
               </div>
               <div>
                 <DialogTitle className="font-display text-lg font-bold text-slate-900">
-                  {editingRule ? "Editar Zona de Frete" : "Nova Zona de Frete"}
+                  {editingRule ? "Editar Zona de Frete" : "Cadastrar Nova Zona de Frete"}
                 </DialogTitle>
                 <DialogDescription className="text-xs text-slate-500">
                   {editingRule

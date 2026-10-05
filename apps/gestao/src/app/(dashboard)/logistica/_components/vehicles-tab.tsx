@@ -220,16 +220,6 @@ export function VehiclesTab({
         </DialogContent>
       </Dialog>
 
-      {/* ── Header da Aba (Padrão Parâmetros) ─────────────── */}
-      <div>
-        <h2 className="font-display text-lg font-bold tracking-tight text-slate-900">
-          Veículos da Empresa
-        </h2>
-        <p className="text-xs text-slate-500">
-          Gerencie a frota de veículos próprios do estabelecimento e seu estado de conservação.
-        </p>
-      </div>
-
       {/* ── Tabela e Cards ───────────────────────────────── */}
       <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
         {/* Filtros da Frota */}
@@ -654,7 +644,7 @@ export function VehiclesTab({
         onOpenChange={(open) => {
           if (!open) setDeletingVehicle(null);
         }}
-        title="Excluir veículo"
+        title="Excluir Veículo"
         description={
           <>
             Tem certeza que deseja remover o veículo{" "}

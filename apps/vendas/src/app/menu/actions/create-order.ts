@@ -128,8 +128,7 @@ export const createOrder = async (input: CreateOrderInput) => {
     // Geocodificação automática se latitude e longitude ainda não foram passadas
     if ((deliveryLat === undefined || deliveryLng === undefined) && formattedDeliveryAddress) {
       try {
-        const geoQuery = `${formattedDeliveryAddress}, ${restaurant.name || ""}`;
-        const coords = await geocodeAddress(geoQuery);
+        const coords = await geocodeAddress(formattedDeliveryAddress);
         if (coords) {
           deliveryLat = coords.latitude;
           deliveryLng = coords.longitude;

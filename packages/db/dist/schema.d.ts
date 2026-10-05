@@ -385,6 +385,23 @@ export declare const restaurantsTable: import("drizzle-orm/pg-core").PgTableWith
             identity: undefined;
             generated: undefined;
         }, {}, {}>;
+        mercadoPagoAccessToken: import("drizzle-orm/pg-core").PgColumn<{
+            name: "mercadoPagoAccessToken";
+            tableName: "Restaurant";
+            dataType: "string";
+            columnType: "PgText";
+            data: string;
+            driverParam: string;
+            notNull: false;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
         acceptPix: import("drizzle-orm/pg-core").PgColumn<{
             name: "acceptPix";
             tableName: "Restaurant";

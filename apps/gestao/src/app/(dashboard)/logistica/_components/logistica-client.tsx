@@ -381,7 +381,7 @@ export function LogisticaClient({
             className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
           >
             <PlusIcon size={16} />
-            <span>Cadastrar Novo Motoboy</span>
+            <span>Novo Motoboy</span>
           </Button>
         )}
         {activeTab === "vehicles" && (
@@ -390,7 +390,7 @@ export function LogisticaClient({
             className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
           >
             <PlusIcon size={16} />
-            <span>Cadastrar Novo Veículo</span>
+            <span>Novo Veículo</span>
           </Button>
         )}
         {activeTab === "params" && (
@@ -1222,7 +1222,7 @@ export function LogisticaClient({
         onOpenChange={(open) => {
           if (!open) setDeletingCourier(null);
         }}
-        title="Excluir motoboy"
+        title="Excluir Motoboy"
         description={
           <>
             Tem certeza que deseja remover o motoboy{" "}

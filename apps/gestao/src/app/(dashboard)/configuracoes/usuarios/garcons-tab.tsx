@@ -1332,7 +1332,7 @@ export function GarconsTab({
             <strong className="text-slate-900 font-semibold">
               {deletingGarcom?.name}
             </strong>
-            ? Esta ação não pode ser desfeita e removerá o garçom da lista do salão.
+            ? Esta ação não pode ser desfeita.
           </>
         }
         confirmLabel="Sim, excluir garçom"
