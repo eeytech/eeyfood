@@ -6,6 +6,7 @@ import {
   eq,
   ordersTable,
   registrarComprovanteEntrega,
+  restaurantsTable,
 } from "@fsw/db";
 import { NextResponse } from "next/server";
 
@@ -15,8 +16,10 @@ const notificarLocalizacao = async (
   latitude: number,
   longitude: number,
 ) => {
-  const url = process.env.WEBSOCKET_SERVER_URL;
-  if (!url) return;
+  const url =
+    process.env.WEBSOCKET_SERVER_URL ||
+    process.env.NEXT_PUBLIC_WEBSOCKET_URL ||
+    "http://localhost:4000";
   try {
     await fetch(`${url}/eventos/localizacao-entregador`, {
       method: "POST",
@@ -33,18 +36,26 @@ export async function GET(
 ) {
   const { courierId } = await params;
 
-  const [courier] = await db
-    .select()
+  const [result] = await db
+    .select({
+      courier: couriersTable,
+      restaurantSlug: restaurantsTable.slug,
+    })
     .from(couriersTable)
+    .innerJoin(restaurantsTable, eq(restaurantsTable.id, couriersTable.restaurantId))
     .where(eq(couriersTable.id, courierId))
     .limit(1);
 
-  if (!courier) {
+  if (!result) {
     return NextResponse.json({ error: "Entregador não encontrado." }, { status: 404 });
   }
 
   const orders = await buscarPedidosParaEntregador(courierId);
-  return NextResponse.json({ courier, orders });
+  return NextResponse.json({
+    courier: result.courier,
+    restaurantSlug: result.restaurantSlug,
+    orders,
+  });
 }
 
 export async function PATCH(
@@ -63,8 +74,13 @@ export async function PATCH(
   };
 
   const [courier] = await db
-    .select({ id: couriersTable.id, restaurantId: couriersTable.restaurantId })
+    .select({
+      id: couriersTable.id,
+      restaurantId: couriersTable.restaurantId,
+      restaurantSlug: restaurantsTable.slug,
+    })
     .from(couriersTable)
+    .innerJoin(restaurantsTable, eq(restaurantsTable.id, couriersTable.restaurantId))
     .where(eq(couriersTable.id, courierId))
     .limit(1);
 
@@ -74,8 +90,9 @@ export async function PATCH(
 
   if (body.action === "update_location" && body.latitude !== undefined && body.longitude !== undefined) {
     await atualizarLocalizacaoEntregador(courierId, body.latitude, body.longitude);
-    if (body.restaurantSlug) {
-      await notificarLocalizacao(courierId, body.restaurantSlug, body.latitude, body.longitude);
+    const targetSlug = body.restaurantSlug || courier.restaurantSlug;
+    if (targetSlug) {
+      await notificarLocalizacao(courierId, targetSlug, body.latitude, body.longitude);
     }
     return NextResponse.json({ ok: true });
   }

@@ -62,13 +62,13 @@ const io = new Server(httpServer, {
 });
 
 io.on("connection", (socket) => {
-  socket.on("JOIN_RESTAURANT_ROOM", (restaurantSlug: string) => {
-    if (!restaurantSlug) {
-      return;
-    }
-
+  const handleJoin = (restaurantSlug: string) => {
+    if (!restaurantSlug) return;
     socket.join(restaurantSlug);
-  });
+  };
+
+  socket.on("JOIN_RESTAURANT_ROOM", handleJoin);
+  socket.on("join-restaurant", handleJoin);
 });
 
 app.post(

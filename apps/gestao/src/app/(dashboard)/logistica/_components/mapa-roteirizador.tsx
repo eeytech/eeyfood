@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { MapContainer, Marker, Polyline, Popup, TileLayer } from "react-leaflet";
+import { io } from "socket.io-client";
 import { toast } from "sonner";
 
 import {
@@ -168,6 +169,80 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  // Conexão em tempo real via WebSocket para movimentação dos motoboys
+  const [socketConnected, setSocketConnected] = useState(false);
+
+  useEffect(() => {
+    const raw = process.env.NEXT_PUBLIC_WEBSOCKET_URL?.trim();
+    let websocketUrl = raw || "http://localhost:4000";
+    if (raw && raw.includes("websocket.eeytech.com") && !raw.includes("fswdonalds")) {
+      websocketUrl = raw.replace("websocket.eeytech.com", "websocket.fswdonalds.eeytech.com");
+    }
+
+    const socket = io(websocketUrl, {
+      transports: ["websocket", "polling"],
+      reconnectionAttempts: 10,
+      reconnectionDelay: 5000,
+    });
+
+    socket.on("connect", () => {
+      setSocketConnected(true);
+      socket.emit("JOIN_RESTAURANT_ROOM", slug);
+    });
+
+    socket.on("disconnect", () => setSocketConnected(false));
+    socket.on("connect_error", () => setSocketConnected(false));
+
+    socket.on(
+      "COURIER_LOCATION_UPDATE",
+      (data: {
+        courierId: string;
+        restaurantSlug: string;
+        latitude: number;
+        longitude: number;
+        sentAt?: string;
+      }) => {
+        if (data.restaurantSlug !== slug) return;
+
+        setCouriers((prev) => {
+          const exists = prev.some((c) => c.id === data.courierId);
+          if (!exists) {
+            void loadData();
+            return prev;
+          }
+          return prev.map((c) => {
+            if (c.id === data.courierId) {
+              return {
+                ...c,
+                latitude: data.latitude,
+                longitude: data.longitude,
+              };
+            }
+            return c;
+          });
+        });
+      },
+    );
+
+    socket.on("NEW_ORDER", (data: { restaurantSlug: string }) => {
+      if (data.restaurantSlug === slug) void loadData();
+    });
+
+    socket.on("ORDER_UPDATED", (data: { restaurantSlug: string }) => {
+      if (data.restaurantSlug === slug) void loadData();
+    });
+
+    return () => {
+      socket.off("connect");
+      socket.off("disconnect");
+      socket.off("connect_error");
+      socket.off("COURIER_LOCATION_UPDATE");
+      socket.off("NEW_ORDER");
+      socket.off("ORDER_UPDATED");
+      socket.disconnect();
+    };
+  }, [slug, loadData]);
 
   // Filtered orders list
   const filteredOrders = useMemo(() => {
@@ -387,11 +462,32 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
       {/* ── Sub Header ───────────────── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="font-display text-lg font-bold tracking-tight text-slate-900">
-            Roteirizador e Painel de Despacho
-          </h2>
+          <div className="flex items-center gap-2.5">
+            <h2 className="font-display text-lg font-bold tracking-tight text-slate-900">
+              Roteirizador e Painel de Despacho
+            </h2>
+            <div
+              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-all ${
+                socketConnected
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                  : "bg-slate-100 text-slate-500 border border-slate-200"
+              }`}
+              title={
+                socketConnected
+                  ? "Canal de tempo real ativo — a localização dos motoboys é atualizada ao vivo no mapa"
+                  : "Conectando ao canal em tempo real..."
+              }
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${
+                  socketConnected ? "bg-emerald-500 animate-pulse" : "bg-slate-400"
+                }`}
+              />
+              <span>{socketConnected ? "GPS em Tempo Real Ativo" : "Reconectando..."}</span>
+            </div>
+          </div>
           <p className="text-xs text-slate-500">
-            Agrupe pedidos prontos por proximidade geográfica, visualize mochilas de pizza e despache em lote.
+            Agrupe pedidos prontos por proximidade geográfica, acompanhe entregadores no mapa e despache em lote.
           </p>
         </div>
 
@@ -696,21 +792,28 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
                         Nenhum motoboy cadastrado.
                       </div>
                     ) : (
-                      couriers.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`h-2 w-2 rounded-full ${
-                                c.isAvailable ? "bg-emerald-500" : "bg-rose-400"
-                              }`}
-                            />
-                            <span className="font-semibold text-slate-900">{c.name}</span>
-                            <span className="text-slate-400 text-xs">
-                              ({c.vehicleType ?? "MOTO"} • {c.phone})
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))
+                      couriers.map((c) => {
+                        const hasGps = c.latitude !== null && c.longitude !== null;
+                        return (
+                          <SelectItem key={c.id} value={c.id}>
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`h-2 w-2 rounded-full ${
+                                  hasGps
+                                    ? "bg-sky-500 animate-pulse"
+                                    : c.isAvailable
+                                      ? "bg-emerald-500"
+                                      : "bg-slate-300"
+                                }`}
+                              />
+                              <span className="font-semibold text-slate-900">{c.name}</span>
+                              <span className="text-slate-400 text-xs">
+                                ({c.vehicleType ?? "MOTO"} • {hasGps ? "GPS Ativo" : "Sem GPS"} • {c.phone})
+                              </span>
+                            </div>
+                          </SelectItem>
+                        );
+                      })
                     )}
                   </SelectContent>
                 </Select>
@@ -869,7 +972,9 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
                 </div>
                 <div className="flex items-center gap-2.5">
                   <span className="h-3 w-3 rounded-full bg-sky-600 shadow-sm" />
-                  <span className="font-medium">Motoboy no GPS</span>
+                  <span className="font-medium">
+                    Motoboy no GPS ({couriersWithCoords.length})
+                  </span>
                 </div>
                 <div className="flex items-center gap-2.5">
                   <span className="h-3 w-3 rounded-full bg-indigo-500 shadow-sm" />

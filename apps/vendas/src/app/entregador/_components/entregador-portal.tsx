@@ -36,6 +36,7 @@ const formatCurrency = (v: number) =>
 
 export function EntregadorPortal({ slug, courier: initialCourier, initialOrders }: EntregadorPortalProps) {
   const [courier, setCourier] = useState<Courier | null>(initialCourier);
+  const [currentSlug, setCurrentSlug] = useState(slug);
   const [orders, setOrders] = useState<OrderItem[]>(initialOrders);
   const [isAvailable, setIsAvailable] = useState(initialCourier?.isAvailable ?? false);
   const [isTracking, setIsTracking] = useState(false);
@@ -78,7 +79,7 @@ export function EntregadorPortal({ slug, courier: initialCourier, initialOrders 
             action: "update_location",
             latitude: pos.coords.latitude,
             longitude: pos.coords.longitude,
-            restaurantSlug: slug,
+            restaurantSlug: currentSlug,
           }),
         }).catch(() => null);
       },
@@ -88,7 +89,7 @@ export function EntregadorPortal({ slug, courier: initialCourier, initialOrders 
       },
       { enableHighAccuracy: true, maximumAge: 30000, timeout: 20000 },
     );
-  }, [courierId, apiBase, slug]);
+  }, [courierId, apiBase, currentSlug]);
 
   const stopGpsTracking = useCallback(() => {
     if (watchIdRef.current !== null) {
@@ -109,9 +110,16 @@ export function EntregadorPortal({ slug, courier: initialCourier, initialOrders 
         toast.error("Entregador não encontrado. Verifique o código.");
         return;
       }
-      const data = (await res.json()) as { courier: Courier; orders: OrderItem[] };
+      const data = (await res.json()) as {
+        courier: Courier;
+        restaurantSlug?: string;
+        orders: OrderItem[];
+      };
       setCourier(data.courier);
       setCourierId(data.courier.id);
+      if (data.restaurantSlug) {
+        setCurrentSlug(data.restaurantSlug);
+      }
       setIsAvailable(data.courier.isAvailable);
       setOrders(data.orders);
       window.history.replaceState({}, "", `?id=${data.courier.id}`);

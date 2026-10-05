@@ -52,9 +52,11 @@ import {
   ChevronsLeftIcon,
   ChevronsRightIcon,
   CompassIcon,
+  CopyIcon,
   FilterXIcon,
   Loader2Icon,
   MapIcon,
+  MessageCircleIcon,
   MoreHorizontalIcon,
   PencilIcon,
   PhoneIcon,
@@ -276,6 +278,35 @@ export function LogisticaClient({
         toast.error("Não foi possível atualizar a disponibilidade do motoboy.");
       }
     });
+  };
+
+  const getCourierPortalUrl = (courierId: string) => {
+    const rawVendas =
+      process.env.NEXT_PUBLIC_VENDAS_URL ||
+      (typeof window !== "undefined" ? window.location.origin : "https://fswdonalds.eeytech.com");
+    const baseUrl = rawVendas.replace(/\/$/, "");
+    return `${baseUrl}/entregador?id=${encodeURIComponent(courierId)}`;
+  };
+
+  const handleCopyCourierPortalLink = async (courierId: string, courierName: string) => {
+    const url = getCourierPortalUrl(courierId);
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success(`Link do Portal do Entregador (${courierName}) copiado para a área de transferência!`);
+    } catch {
+      toast.error("Não foi possível copiar o link.");
+    }
+  };
+
+  const handleShareCourierWhatsApp = (courier: Courier) => {
+    const url = getCourierPortalUrl(courier.id);
+    const cleanPhone = (courier.phone || "").replace(/\D/g, "");
+    const phoneFormatted = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`;
+    const message = `Olá, ${courier.name}! Segue seu link de acesso ao Portal do Entregador (${restaurant.name}):\n\n${url}\n\nAbra o link no navegador do celular e ative o botão "Disponível" para compartilhar sua localização GPS no mapa e receber pedidos.`;
+    const waUrl = cleanPhone
+      ? `https://wa.me/${phoneFormatted}?text=${encodeURIComponent(message)}`
+      : `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, "_blank");
   };
 
   const handleDeleteConfirm = () => {
@@ -765,9 +796,27 @@ export function LogisticaClient({
                                   {getInitials(courier.name)}
                                 </div>
                                 <div className="min-w-0">
-                                  <p className="truncate text-sm font-semibold text-slate-900">
-                                    {courier.name}
-                                  </p>
+                                  <div className="flex items-center gap-2">
+                                    <p className="truncate text-sm font-semibold text-slate-900">
+                                      {courier.name}
+                                    </p>
+                                    {courier.latitude !== null && courier.longitude !== null ? (
+                                      <span
+                                        className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700 border border-sky-200"
+                                        title={`GPS Ativo (${courier.latitude.toFixed(4)}, ${courier.longitude.toFixed(4)})`}
+                                      >
+                                        <span className="h-1.5 w-1.5 rounded-full bg-sky-500 animate-pulse" />
+                                        GPS Ativo
+                                      </span>
+                                    ) : (
+                                      <span
+                                        className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-1.5 py-0.5 text-[10px] font-medium text-slate-400 border border-slate-200"
+                                        title="Aguardando conexão no Portal do Entregador"
+                                      >
+                                        Sem GPS
+                                      </span>
+                                    )}
+                                  </div>
                                   <p className="flex items-center gap-1 truncate text-xs text-slate-500">
                                     <PhoneIcon size={12} className="shrink-0 text-primary" />
                                     {courier.phone || "Sem telefone"}
@@ -889,8 +938,23 @@ export function LogisticaClient({
                                     Opções do Entregador
                                   </DropdownMenuLabel>
                                   <DropdownMenuItem
+                                    onClick={() => handleCopyCourierPortalLink(courier.id, courier.name)}
+                                    className="gap-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 focus:bg-slate-100 cursor-pointer"
+                                  >
+                                    <CopyIcon size={14} className="text-primary" />
+                                    Copiar link do Portal
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleShareCourierWhatsApp(courier)}
+                                    className="gap-2 rounded-lg text-xs font-medium text-emerald-700 hover:bg-emerald-50 focus:bg-emerald-50 cursor-pointer"
+                                  >
+                                    <MessageCircleIcon size={14} className="text-emerald-600" />
+                                    Enviar acesso no WhatsApp
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator className="bg-slate-100" />
+                                  <DropdownMenuItem
                                     onClick={() => setEditCourier(courier)}
-                                    className="gap-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
+                                    className="gap-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 focus:bg-slate-100 cursor-pointer"
                                   >
                                     <PencilIcon size={14} className="text-primary" />
                                     Editar dados
@@ -946,7 +1010,15 @@ export function LogisticaClient({
                               {getInitials(courier.name)}
                             </div>
                             <div>
-                              <p className="text-sm font-semibold text-slate-900">{courier.name}</p>
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-sm font-semibold text-slate-900">{courier.name}</p>
+                                {courier.latitude !== null && courier.longitude !== null ? (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-1.5 py-0.2 text-[9px] font-semibold text-sky-700 border border-sky-200">
+                                    <span className="h-1 w-1 rounded-full bg-sky-500 animate-pulse" />
+                                    GPS
+                                  </span>
+                                ) : null}
+                              </div>
                               <p className="flex items-center gap-1 text-xs text-slate-500">
                                 <PhoneIcon size={11} className="text-primary" />
                                 {courier.phone || "Sem telefone"}
@@ -968,6 +1040,21 @@ export function LogisticaClient({
                               align="end"
                               className="w-48 rounded-xl border-slate-200 bg-white p-1 text-slate-900 shadow-xl"
                             >
+                              <DropdownMenuItem
+                                onClick={() => handleCopyCourierPortalLink(courier.id, courier.name)}
+                                className="gap-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 focus:bg-slate-100 cursor-pointer"
+                              >
+                                <CopyIcon size={14} className="text-primary" />
+                                Copiar link do Portal
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleShareCourierWhatsApp(courier)}
+                                className="gap-2 rounded-lg text-xs font-medium text-emerald-700 hover:bg-emerald-50 focus:bg-emerald-50 cursor-pointer"
+                              >
+                                <MessageCircleIcon size={14} className="text-emerald-600" />
+                                Enviar no WhatsApp
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator className="bg-slate-100" />
                               <DropdownMenuItem
                                 onClick={() => setEditCourier(courier)}
                                 className="gap-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
