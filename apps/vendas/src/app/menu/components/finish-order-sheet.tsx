@@ -183,13 +183,24 @@ export const FinishOrderSheet = ({
     ? !isOpen && fulfillmentTiming !== "SCHEDULED"
     : !isOpen;
 
+  const activeFeeRules = useMemo(
+    () => (restaurant.deliveryFeeRules ?? []).filter((r) => r.isActive !== false),
+    [restaurant.deliveryFeeRules],
+  );
+  const minRuleFee = useMemo(
+    () => (activeFeeRules.length > 0 ? Math.min(...activeFeeRules.map((r) => Number(r.fee || 0))) : 0),
+    [activeFeeRules],
+  );
+  const restaurantBaseFee = Number(restaurant.deliveryFee || 0);
+  const fallbackDeliveryFee = restaurantBaseFee > 0 ? restaurantBaseFee : minRuleFee;
+
   const defaultDeliveryFee =
     consumptionMethod === "DELIVERY"
       ? (restaurant.freeDeliveryThreshold !== null &&
          restaurant.freeDeliveryThreshold !== undefined &&
          total >= Number(restaurant.freeDeliveryThreshold)
           ? 0
-          : Number(restaurant.deliveryFee ?? 0))
+          : fallbackDeliveryFee)
       : 0;
 
   // When benefits are available (phone validated), use them fully.

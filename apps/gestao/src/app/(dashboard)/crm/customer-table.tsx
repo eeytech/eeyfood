@@ -121,7 +121,7 @@ export function CustomerTable({
     <div className="w-full">
       {customers.length === 0 ? (
         <div className="flex min-h-[260px] flex-col items-center justify-center p-8 text-center">
-          <div className="rounded-full bg-slate-100 p-3.5 text-slate-400">
+          <div className="rounded-2xl bg-primary/10 p-4 text-primary border border-primary/20">
             <UsersIcon size={32} />
           </div>
           <h3 className="mt-3 font-display text-base font-semibold text-slate-900">
@@ -134,7 +134,7 @@ export function CustomerTable({
             variant="outline"
             size="sm"
             onClick={handleClearFilters}
-            className="mt-4 gap-1.5 rounded-full border-slate-200 text-xs text-slate-700 hover:bg-slate-100"
+            className="mt-4 gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-xs hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-all"
           >
             Limpar filtros
           </Button>
@@ -184,19 +184,19 @@ export function CustomerTable({
                   return (
                     <TableRow
                       key={c.id}
-                      className="group transition-colors hover:bg-slate-50/70"
+                      className="group transition-colors hover:bg-primary/[0.02]"
                     >
                       {/* Cliente */}
                       <TableCell className="py-3.5">
                         <Link
                           href={`/crm/${c.id}`}
-                          className="flex items-center gap-3 group-hover:text-slate-900"
+                          className="flex items-center gap-3 group-hover:text-primary transition-colors"
                         >
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 font-display text-xs font-bold text-slate-700">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10 font-display text-xs font-bold text-primary group-hover:scale-105 transition-transform">
                             {getInitials(c.name)}
                           </div>
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-slate-900 group-hover:underline">
+                            <p className="truncate text-sm font-semibold text-slate-900 group-hover:text-primary group-hover:underline transition-colors">
                               {c.name}
                             </p>
                             <p className="truncate text-xs text-slate-500">
@@ -267,7 +267,7 @@ export function CustomerTable({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                            className="h-8 w-8 rounded-full text-slate-400 hover:bg-primary/10 hover:text-primary transition-colors"
                             title="Ver detalhes do cliente"
                           >
                             <EyeIcon size={15} />
@@ -293,16 +293,16 @@ export function CustomerTable({
               const SegIcon = segInfo.icon;
 
               return (
-                <div key={c.id} className="space-y-2.5 p-4">
+                <div key={c.id} className="space-y-2.5 p-4 transition-colors hover:bg-primary/[0.01]">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 font-display text-xs font-bold text-slate-700">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10 font-display text-xs font-bold text-primary">
                         {getInitials(c.name)}
                       </div>
                       <div className="min-w-0">
                         <Link
                           href={`/crm/${c.id}`}
-                          className="text-sm font-semibold text-slate-900 hover:underline block truncate"
+                          className="text-sm font-semibold text-slate-900 hover:text-primary hover:underline block truncate transition-colors"
                         >
                           {c.name}
                         </Link>
@@ -323,7 +323,7 @@ export function CustomerTable({
 
                   {/* Endereço de Entrega no card mobile */}
                   {c.deliveryAddress ? (
-                    <div className="flex items-start gap-1.5 rounded-lg bg-slate-50 px-2.5 py-1.5 text-xs text-slate-700 border border-slate-100">
+                    <div className="flex items-start gap-1.5 rounded-xl bg-slate-50 px-2.5 py-1.5 text-xs text-slate-700 border border-slate-100">
                       <MapPinIcon size={13} className="shrink-0 text-rose-500 mt-0.5" />
                       <span className="line-clamp-2">{c.deliveryAddress}</span>
                     </div>
@@ -360,7 +360,7 @@ export function CustomerTable({
                     <span>Último pedido: {formatDate(c.lastOrderAt)}</span>
                     <Link
                       href={`/crm/${c.id}`}
-                      className="font-medium text-slate-900 hover:underline flex items-center gap-1"
+                      className="font-medium text-primary hover:underline flex items-center gap-1"
                     >
                       Ver perfil
                       <ChevronRightIcon size={13} />
@@ -380,7 +380,7 @@ export function CustomerTable({
 
             <div className="flex items-center justify-between gap-2 sm:justify-end">
               <span className="text-xs text-slate-500 mr-1">
-                Página <strong className="font-semibold text-slate-900">{page}</strong> de{" "}
+                Página <strong className="font-semibold text-primary">{page}</strong> de{" "}
                 <strong className="font-semibold text-slate-900">{totalPages}</strong>
               </span>
 
@@ -390,7 +390,7 @@ export function CustomerTable({
                   size="icon"
                   disabled={page <= 1}
                   onClick={() => goToPage(1)}
-                  className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                  className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-primary/10 hover:text-primary hover:border-primary/30 disabled:opacity-40 transition-all"
                   title="Primeira página"
                 >
                   <ChevronsLeftIcon size={14} />
@@ -400,7 +400,7 @@ export function CustomerTable({
                   size="icon"
                   disabled={page <= 1}
                   onClick={() => goToPage(Math.max(1, page - 1))}
-                  className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                  className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-primary/10 hover:text-primary hover:border-primary/30 disabled:opacity-40 transition-all"
                   title="Página anterior"
                 >
                   <ChevronLeftIcon size={14} />
@@ -410,7 +410,7 @@ export function CustomerTable({
                   size="icon"
                   disabled={page >= totalPages}
                   onClick={() => goToPage(Math.min(totalPages, page + 1))}
-                  className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                  className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-primary/10 hover:text-primary hover:border-primary/30 disabled:opacity-40 transition-all"
                   title="Próxima página"
                 >
                   <ChevronRightIcon size={14} />
@@ -420,7 +420,7 @@ export function CustomerTable({
                   size="icon"
                   disabled={page >= totalPages}
                   onClick={() => goToPage(totalPages)}
-                  className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                  className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-primary/10 hover:text-primary hover:border-primary/30 disabled:opacity-40 transition-all"
                   title="Última página"
                 >
                   <ChevronsRightIcon size={14} />

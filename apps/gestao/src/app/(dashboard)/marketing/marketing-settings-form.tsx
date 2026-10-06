@@ -132,7 +132,7 @@ export function MarketingSettingsForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* ── Page Header com Botão Salvar Configurações no lugar da tag ── */}
+      {/* ── Page Header com Botão Salvar Configurações ── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm shadow-primary/25">
@@ -140,7 +140,7 @@ export function MarketingSettingsForm({
           </div>
           <div>
             <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
-              Rastreamento
+              Rastreamento de Marketing
             </h1>
             <p className="text-sm text-slate-500">
               Configure o rastreamento de anúncios (Meta, Google) e recuperação de carrinho via WhatsApp.
@@ -148,7 +148,6 @@ export function MarketingSettingsForm({
           </div>
         </div>
 
-        {/* Botão de Salvar Configurações posicionado no topo onde ficava 'Injeção de Tags Ativa' */}
         <div className="flex items-center gap-2">
           <Button
             type="submit"
@@ -173,37 +172,61 @@ export function MarketingSettingsForm({
       {/* ── Metric Cards ─────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         {/* Meta Ads Card */}
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300 hover:shadow-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">
                 Meta Ads e Pixel
               </span>
-              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
+              <div
+                className={cn(
+                  "rounded-lg p-1.5 transition-colors",
+                  isMetaActive
+                    ? "bg-primary/10 text-primary"
+                    : "bg-slate-100 text-slate-400",
+                )}
+              >
                 <Share2Icon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-xl sm:text-2xl font-bold text-primary">
+            <p
+              className={cn(
+                "mt-2 font-display text-xl sm:text-2xl font-bold",
+                isMetaActive ? "text-primary" : "text-slate-600",
+              )}
+            >
               {isMetaActive ? "Configurado" : "Pendente"}
             </p>
             <p className="mt-0.5 text-xs text-slate-500 truncate">
-              {pixelId ? `ID: ${pixelId}` : tokenValue ? "CAPI Configurado" : "Facebook e Instagram"}
+              {pixelId ? `ID: ${pixelId}` : tokenValue ? "CAPI Ativo" : "Facebook e Instagram"}
             </p>
           </CardContent>
         </Card>
 
         {/* Google Analytics Card */}
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300 hover:shadow-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">
                 Google Analytics
               </span>
-              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
+              <div
+                className={cn(
+                  "rounded-lg p-1.5 transition-colors",
+                  isGoogleActive
+                    ? "bg-primary/10 text-primary"
+                    : "bg-slate-100 text-slate-400",
+                )}
+              >
                 <TrendingUpIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-xl sm:text-2xl font-bold text-primary">
+            <p
+              className={cn(
+                "mt-2 font-display text-xl sm:text-2xl font-bold",
+                isGoogleActive ? "text-primary" : "text-slate-600",
+              )}
+            >
               {isGoogleActive ? "Configurado" : "Pendente"}
             </p>
             <p className="mt-0.5 text-xs text-slate-500 truncate">
@@ -213,17 +236,29 @@ export function MarketingSettingsForm({
         </Card>
 
         {/* Carrinho Abandonado Card */}
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300 hover:shadow-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">
                 Carrinho Abandonado
               </span>
-              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
+              <div
+                className={cn(
+                  "rounded-lg p-1.5 transition-colors",
+                  cartEnabled
+                    ? "bg-primary/10 text-primary"
+                    : "bg-slate-100 text-slate-400",
+                )}
+              >
                 <ShoppingCartIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-xl sm:text-2xl font-bold text-primary">
+            <p
+              className={cn(
+                "mt-2 font-display text-xl sm:text-2xl font-bold",
+                cartEnabled ? "text-primary" : "text-slate-600",
+              )}
+            >
               {cartEnabled ? "Ativo" : "Inativo"}
             </p>
             <p className="mt-0.5 text-xs text-slate-500 truncate">
@@ -235,7 +270,7 @@ export function MarketingSettingsForm({
         </Card>
 
         {/* Eventos Padrão Card */}
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300 hover:shadow-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">
@@ -264,20 +299,20 @@ export function MarketingSettingsForm({
             <CardHeader className="p-4 sm:p-5 border-b border-slate-100">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shrink-0">
                     <Share2Icon size={18} />
                   </div>
                   <div>
-                    <CardTitle className="font-display text-base font-semibold text-slate-900">
+                    <CardTitle className="font-display text-base sm:text-lg font-bold text-slate-900">
                       Meta Ads (Facebook e Instagram)
                     </CardTitle>
-                    <CardDescription className="text-xs text-slate-500">
+                    <CardDescription className="text-xs sm:text-sm text-slate-500">
                       Rastreie visualizações e vendas vindas de anúncios no Facebook e Instagram.
                     </CardDescription>
                   </div>
                 </div>
                 {isMetaActive ? (
-                  <Badge className="border-primary/20 bg-primary/10 text-[11px] font-medium text-primary">
+                  <Badge className="border-primary/20 bg-primary/10 text-[11px] font-semibold text-primary">
                     Ativo
                   </Badge>
                 ) : (
@@ -301,18 +336,22 @@ export function MarketingSettingsForm({
                   placeholder="Digite o ID do Pixel do Facebook"
                   value={pixelId}
                   onChange={(e) => setPixelId(e.target.value)}
-                  className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-primary"
+                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-1 focus:ring-primary shadow-2xs"
                 />
                 <p className="text-[11px] text-slate-500">
                   Encontre no Gerenciador de Eventos da Meta em Fontes de Dados &gt; Configurações.
                 </p>
               </div>
 
-              <div className="space-y-1.5">
+              {/* Box CAPI com layout enriquecido */}
+              <div className="rounded-2xl border border-primary/20 bg-primary/[0.02] p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="metaCapiToken" className="text-xs font-semibold text-slate-700">
-                    Token da API de Conversões (CAPI)
-                  </Label>
+                  <div className="flex items-center gap-2">
+                    <ZapIcon size={15} className="text-primary shrink-0" />
+                    <Label htmlFor="metaCapiToken" className="text-xs font-semibold text-slate-800">
+                      Token da API de Conversões (CAPI)
+                    </Label>
+                  </div>
                   <button
                     type="button"
                     onClick={() => setShowToken(!showToken)}
@@ -338,7 +377,7 @@ export function MarketingSettingsForm({
                   onChange={(e) => setTokenValue(e.target.value)}
                   autoComplete="new-password"
                   data-lpignore="true"
-                  className="h-10 rounded-xl border-slate-200 bg-slate-50/70 font-mono text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-primary"
+                  className="h-10 rounded-xl border-slate-200 bg-white font-mono text-xs text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-1 focus:ring-primary shadow-2xs"
                 />
                 <p className="text-[11px] text-slate-500">
                   Permite o envio seguro de compras diretamente do servidor, contornando bloqueadores de anúncios (iOS 14+).
@@ -352,20 +391,20 @@ export function MarketingSettingsForm({
             <CardHeader className="p-4 sm:p-5 border-b border-slate-100">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shrink-0">
                     <TrendingUpIcon size={18} />
                   </div>
                   <div>
-                    <CardTitle className="font-display text-base font-semibold text-slate-900">
+                    <CardTitle className="font-display text-base sm:text-lg font-bold text-slate-900">
                       Google Analytics e Tag Manager
                     </CardTitle>
-                    <CardDescription className="text-xs text-slate-500">
+                    <CardDescription className="text-xs sm:text-sm text-slate-500">
                       Monitore o comportamento de navegação no Google Analytics 4 (GA4) e gerencie tags via GTM.
                     </CardDescription>
                   </div>
                 </div>
                 {isGoogleActive ? (
-                  <Badge className="border-primary/20 bg-primary/10 text-[11px] font-medium text-primary">
+                  <Badge className="border-primary/20 bg-primary/10 text-[11px] font-semibold text-primary">
                     Ativo
                   </Badge>
                 ) : (
@@ -389,7 +428,7 @@ export function MarketingSettingsForm({
                     placeholder="Ex: G-XXXXXXXXXX"
                     value={ga4Id}
                     onChange={(e) => setGa4Id(e.target.value)}
-                    className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-primary"
+                    className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-1 focus:ring-primary shadow-2xs"
                   />
                   <p className="text-[11px] text-slate-500">ID de métrica do fluxo da web GA4.</p>
                 </div>
@@ -406,7 +445,7 @@ export function MarketingSettingsForm({
                     placeholder="Ex: GTM-XXXXXXX"
                     value={gtmId}
                     onChange={(e) => setGtmId(e.target.value)}
-                    className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-primary"
+                    className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-1 focus:ring-primary shadow-2xs"
                   />
                   <p className="text-[11px] text-slate-500">Código do contêiner Web no GTM.</p>
                 </div>
@@ -419,14 +458,14 @@ export function MarketingSettingsForm({
             <CardHeader className="p-4 sm:p-5 border-b border-slate-100">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shrink-0">
                     <ShoppingCartIcon size={18} />
                   </div>
                   <div>
-                    <CardTitle className="font-display text-base font-semibold text-slate-900">
+                    <CardTitle className="font-display text-base sm:text-lg font-bold text-slate-900">
                       Recuperação de Carrinho Abandonado
                     </CardTitle>
-                    <CardDescription className="text-xs text-slate-500">
+                    <CardDescription className="text-xs sm:text-sm text-slate-500">
                       Envie mensagens automáticas pelo WhatsApp com incentivo de cupom de desconto para resgatar vendas.
                     </CardDescription>
                   </div>
@@ -445,50 +484,73 @@ export function MarketingSettingsForm({
               </div>
             </CardHeader>
             <CardContent className="p-4 sm:p-5 space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="abandonedCartDelayMinutes" className="text-xs font-semibold text-slate-700">
-                    Tempo de Espera (minutos)
-                  </Label>
-                  <Input
-                    id="abandonedCartDelayMinutes"
-                    name="abandonedCartDelayMinutes"
-                    type="number"
-                    min={30}
-                    max={1440}
-                    value={cartDelay}
-                    onChange={(e) => setCartDelay(Number(e.target.value))}
-                    disabled={!cartEnabled}
-                    className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-primary disabled:opacity-50"
-                  />
-                  <p className="text-[11px] text-slate-500">
-                    Tempo que o sistema aguarda após o abandono para enviar o lembrete (mínimo 30m).
-                  </p>
-                </div>
+              <div className="rounded-2xl border border-primary/20 bg-primary/[0.02] p-4 space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="abandonedCartDelayMinutes" className="text-xs font-semibold text-slate-700">
+                      Tempo de Espera (minutos)
+                    </Label>
+                    <Input
+                      id="abandonedCartDelayMinutes"
+                      name="abandonedCartDelayMinutes"
+                      type="number"
+                      min={30}
+                      max={1440}
+                      value={cartDelay}
+                      onChange={(e) => setCartDelay(Number(e.target.value))}
+                      disabled={!cartEnabled}
+                      className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-1 focus:ring-primary shadow-2xs disabled:opacity-50"
+                    />
+                    <p className="text-[11px] text-slate-500">
+                      Tempo que o sistema aguarda após o abandono para enviar o lembrete (mínimo 30m).
+                    </p>
+                  </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="abandonedCartCouponPercent" className="text-xs font-semibold text-slate-700">
-                    Desconto do Cupom Especial (%)
-                  </Label>
-                  <Input
-                    id="abandonedCartCouponPercent"
-                    name="abandonedCartCouponPercent"
-                    type="number"
-                    min={0}
-                    max={50}
-                    step={0.5}
-                    value={couponPercent}
-                    onChange={(e) => setCouponPercent(Number(e.target.value))}
-                    disabled={!cartEnabled}
-                    className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-primary disabled:opacity-50"
-                  />
-                  <p className="text-[11px] text-slate-500">
-                    Porcentagem de desconto concedida no cupom gerado na mensagem (0 a 50%).
-                  </p>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="abandonedCartCouponPercent" className="text-xs font-semibold text-slate-700">
+                      Desconto do Cupom Especial (%)
+                    </Label>
+                    <Input
+                      id="abandonedCartCouponPercent"
+                      name="abandonedCartCouponPercent"
+                      type="number"
+                      min={0}
+                      max={50}
+                      step={0.5}
+                      value={couponPercent}
+                      onChange={(e) => setCouponPercent(Number(e.target.value))}
+                      disabled={!cartEnabled}
+                      className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-1 focus:ring-primary shadow-2xs disabled:opacity-50"
+                    />
+                    <p className="text-[11px] text-slate-500">
+                      Porcentagem de desconto concedida no cupom gerado na mensagem (0 a 50%).
+                    </p>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
+
+          {/* Bottom Save Button */}
+          <div className="flex items-center justify-end pt-2">
+            <Button
+              type="submit"
+              disabled={isPending}
+              className="h-10 gap-2 rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 disabled:opacity-50 transition-all"
+            >
+              {isPending ? (
+                <>
+                  <Loader2Icon size={16} className="animate-spin" />
+                  <span>Salvando...</span>
+                </>
+              ) : (
+                <>
+                  <SaveIcon size={16} />
+                  <span>Salvar Configurações</span>
+                </>
+              )}
+            </Button>
+          </div>
         </div>
 
         {/* Right Column: Informative cards (5 cols) */}
@@ -497,11 +559,11 @@ export function MarketingSettingsForm({
           <Card className="border-slate-200/80 bg-white shadow-sm">
             <CardHeader className="p-4 sm:p-5 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shrink-0">
                   <ZapIcon size={16} />
                 </div>
                 <div>
-                  <CardTitle className="font-display text-base font-semibold text-slate-900">
+                  <CardTitle className="font-display text-base font-bold text-slate-900">
                     Eventos Monitorados no Cardápio
                   </CardTitle>
                   <CardDescription className="text-xs text-slate-500">
@@ -517,9 +579,9 @@ export function MarketingSettingsForm({
                 return (
                   <div
                     key={event.name}
-                    className="flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3 transition-colors hover:bg-slate-50"
+                    className="flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3 transition-colors hover:border-primary/30 hover:bg-primary/[0.02]"
                   >
-                    <div className={cn("rounded-lg p-2 shrink-0 border", event.colorClass)}>
+                    <div className="rounded-xl p-2 shrink-0 border border-primary/20 bg-primary/10 text-primary">
                       <Icon size={16} />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -553,21 +615,21 @@ export function MarketingSettingsForm({
               <p>
                 O sistema monitora os clientes que adicionaram produtos e iniciaram o checkout mas não finalizaram o pedido.
               </p>
-              <div className="space-y-2 rounded-xl bg-slate-50 p-3 border border-slate-200/70">
-                <div className="flex items-center gap-2 font-medium text-slate-800">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+              <div className="space-y-2 rounded-2xl border border-primary/20 bg-primary/[0.02] p-3.5">
+                <div className="flex items-center gap-2.5 font-medium text-slate-800">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground shadow-xs shadow-primary/25">
                     1
                   </span>
                   <span>Cliente abandona o pedido no checkout</span>
                 </div>
-                <div className="flex items-center gap-2 font-medium text-slate-800">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                <div className="flex items-center gap-2.5 font-medium text-slate-800">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground shadow-xs shadow-primary/25">
                     2
                   </span>
                   <span>Sistema aguarda o tempo de espera configurado</span>
                 </div>
-                <div className="flex items-center gap-2 font-medium text-slate-800">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                <div className="flex items-center gap-2.5 font-medium text-slate-800">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground shadow-xs shadow-primary/25">
                     3
                   </span>
                   <span>WhatsApp IA envia mensagem amigável com cupom</span>

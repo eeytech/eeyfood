@@ -105,6 +105,7 @@ export interface ValidarBeneficiosPedidoInput {
   deliveryLongitude?: number;
   deliveryNeighborhood?: string;
   deliveryCep?: string;
+  isValidation?: boolean;
   products: Array<{
     id: string;
     name?: string;
@@ -734,17 +735,20 @@ const carregarContextoPedidoCalculado = async (
   ]);
 
   const { isOpen } = isRestaurantOpen(restaurant.status, operatingHours);
+  const isValidation = (input as any).isValidation === true;
 
-  if (isScheduled && restaurant.isOrderSchedulingEnabled === false) {
-    throw new Error(
-      "O agendamento de pedidos está desativado para este estabelecimento.",
-    );
-  }
+  if (!isValidation) {
+    if (isScheduled && restaurant.isOrderSchedulingEnabled === false) {
+      throw new Error(
+        "O agendamento de pedidos está desativado para este estabelecimento.",
+      );
+    }
 
-  if (!isOpen && !isScheduled) {
-    throw new Error(
-      "O restaurante está fechado no momento e não aceita novos pedidos.",
-    );
+    if (!isOpen && !isScheduled) {
+      throw new Error(
+        "O restaurante está fechado no momento e não aceita novos pedidos.",
+      );
+    }
   }
 
   const productsMap = new Map<string, Product>(productsWithPrices.map((p) => [p.id, p]));
@@ -859,7 +863,14 @@ const carregarContextoPedidoCalculado = async (
       ? arredondarMoeda(Math.min(wallet.balance, totalAfterCoupon))
       : 0;
 
-  let deliveryFee = Number(restaurant.deliveryFee ?? 0);
+  const defaultRuleFee = feeRulesRaw.length > 0
+    ? Math.min(...feeRulesRaw.map((r) => Number(r.fee || 0)))
+    : 0;
+  const fallbackDeliveryFee = Number(restaurant.deliveryFee ?? 0) > 0
+    ? Number(restaurant.deliveryFee)
+    : defaultRuleFee;
+
+  let deliveryFee = input.consumptionMethod === "DELIVERY" ? fallbackDeliveryFee : 0;
   let matchedDeliveryRule: {
     id: string;
     name: string;
@@ -931,7 +942,7 @@ const carregarContextoPedidoCalculado = async (
           ? 0
           : Number(matched.fee);
     } else {
-      deliveryFee = Number(restaurant.deliveryFee ?? 0);
+      deliveryFee = fallbackDeliveryFee;
     }
   } else if (input.consumptionMethod !== "DELIVERY") {
     deliveryFee = 0;
@@ -1453,7 +1464,10 @@ export const buscarPedidosPorTelefone = async (
 export const validarBeneficiosPedido = async (
   input: ValidarBeneficiosPedidoInput,
 ): Promise<PedidoBeneficiosValidado> => {
-  const contexto = await carregarContextoPedidoCalculado(input);
+  const contexto = await carregarContextoPedidoCalculado({
+    ...input,
+    isValidation: true,
+  });
 
   return {
     subtotal: contexto.subtotal,

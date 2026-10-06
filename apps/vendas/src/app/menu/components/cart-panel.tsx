@@ -75,10 +75,17 @@ const CartPanel = ({
   const isBelowMinimumOrder = isDelivery && minOrderValue > 0 && total < minOrderValue;
 
   // Estimativa de taxa de entrega
-  const baseDeliveryFee = isDelivery
-    ? (freeDeliveryAchieved ? 0 : Number(restaurant.deliveryFee || 0))
+  const activeFeeRules = (restaurant.deliveryFeeRules ?? []).filter((r) => r.isActive !== false);
+  const minRuleFee = activeFeeRules.length > 0
+    ? Math.min(...activeFeeRules.map((r) => Number(r.fee || 0)))
     : 0;
-  const hasFeeRules = isDelivery && (restaurant.deliveryFeeRules?.length ?? 0) > 0;
+  const restaurantBaseFee = Number(restaurant.deliveryFee || 0);
+  const fallbackDeliveryFee = restaurantBaseFee > 0 ? restaurantBaseFee : minRuleFee;
+
+  const baseDeliveryFee = isDelivery
+    ? (freeDeliveryAchieved ? 0 : fallbackDeliveryFee)
+    : 0;
+  const hasFeeRules = isDelivery && activeFeeRules.length > 0;
   const estimatedTotal = total + baseDeliveryFee;
 
   const content = (

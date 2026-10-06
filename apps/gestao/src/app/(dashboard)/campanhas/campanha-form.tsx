@@ -240,15 +240,15 @@ export function CampanhaForm({
         <div className="lg:col-span-7">
           <Card className="border-slate-200/80 bg-white shadow-sm">
             <CardHeader className="p-4 sm:p-5 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <div className="rounded-lg bg-slate-900 p-1.5 text-white">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shrink-0">
                   <SendIcon size={16} />
                 </div>
                 <div>
-                  <CardTitle className="font-display text-base font-semibold text-slate-900">
+                  <CardTitle className="font-display text-base sm:text-lg font-bold text-slate-900">
                     Novo Disparo de Mensagem
                   </CardTitle>
-                  <CardDescription className="text-xs text-slate-500">
+                  <CardDescription className="text-xs sm:text-sm text-slate-500">
                     Escolha entre segmentação por grupo ou contatos específicos para enviar mensagens via WhatsApp.
                   </CardDescription>
                 </div>
@@ -269,7 +269,7 @@ export function CampanhaForm({
                       className={cn(
                         "flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all",
                         targetType === "SEGMENT"
-                          ? "bg-white text-slate-900 shadow-sm"
+                          ? "bg-white text-primary shadow-xs font-bold"
                           : "text-slate-500 hover:text-slate-800",
                       )}
                     >
@@ -282,14 +282,14 @@ export function CampanhaForm({
                       className={cn(
                         "flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all",
                         targetType === "SPECIFIC"
-                          ? "bg-white text-slate-900 shadow-sm"
+                          ? "bg-white text-primary shadow-xs font-bold"
                           : "text-slate-500 hover:text-slate-800",
                       )}
                     >
                       <UserCheckIcon size={14} />
                       Contatos Específicos
                       {selectedCustomerIds.size > 0 && (
-                        <span className="ml-1 px-1.5 py-0.5 rounded-full bg-slate-900 text-white text-[10px] font-bold">
+                        <span className="ml-1 px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
                           {selectedCustomerIds.size}
                         </span>
                       )}
@@ -308,7 +308,7 @@ export function CampanhaForm({
                       value={segment}
                       onValueChange={setSegment}
                     >
-                      <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-xs font-medium text-slate-700 focus:bg-white">
+                      <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs font-medium text-slate-700 focus:border-primary focus:ring-1 focus:ring-primary shadow-2xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
@@ -333,7 +333,7 @@ export function CampanhaForm({
 
                 {/* ── Mode 2: Specific Contacts Picker ── */}
                 {targetType === "SPECIFIC" && (
-                  <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-3.5">
+                  <div className="space-y-3 rounded-2xl border border-primary/20 bg-primary/[0.02] p-4">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
                         <UserCheckIcon size={14} className="text-primary" />
@@ -344,7 +344,7 @@ export function CampanhaForm({
                         className={cn(
                           "text-[11px] font-semibold",
                           selectedCustomerIds.size > 0
-                            ? "bg-slate-900 text-white"
+                            ? "bg-primary text-primary-foreground shadow-xs shadow-primary/25"
                             : "text-slate-500",
                         )}
                       >
@@ -363,7 +363,7 @@ export function CampanhaForm({
                           placeholder="Buscar por nome ou telefone..."
                           value={searchContact}
                           onChange={(e) => setSearchContact(e.target.value)}
-                          className="h-9 pl-8 pr-8 rounded-lg border-slate-200 bg-white text-xs focus:border-slate-400"
+                          className="h-9 pl-8 pr-8 rounded-xl border-slate-200 bg-white text-xs focus:border-primary focus:ring-1 focus:ring-primary shadow-2xs"
                         />
                         {searchContact && (
                           <button
@@ -381,7 +381,7 @@ export function CampanhaForm({
                           value={contactSegmentFilter}
                           onValueChange={setContactSegmentFilter}
                         >
-                          <SelectTrigger className="h-9 rounded-lg border-slate-200 bg-white text-xs text-slate-700">
+                          <SelectTrigger className="h-9 rounded-xl border-slate-200 bg-white text-xs text-slate-700 focus:border-primary focus:ring-1 focus:ring-primary shadow-2xs">
                             <SelectValue placeholder="Filtrar grupo" />
                           </SelectTrigger>
                           <SelectContent className="rounded-xl border-slate-200 bg-white text-xs shadow-lg">
@@ -445,8 +445,8 @@ export function CampanhaForm({
                               className={cn(
                                 "flex items-center justify-between gap-3 p-2.5 text-xs cursor-pointer transition-colors select-none",
                                 isSelected
-                                  ? "bg-slate-50/90 font-medium"
-                                  : "hover:bg-slate-50/50",
+                                  ? "bg-primary/[0.06] font-medium text-primary"
+                                  : "hover:bg-slate-50/70",
                               )}
                             >
                               <div className="flex items-center gap-2.5 min-w-0">
@@ -454,7 +454,7 @@ export function CampanhaForm({
                                   {isSelected ? (
                                     <CheckSquareIcon
                                       size={16}
-                                      className="text-slate-900"
+                                      className="text-primary"
                                     />
                                   ) : (
                                     <SquareIcon
@@ -494,7 +494,7 @@ export function CampanhaForm({
 
                     {/* Selected Chips Bar */}
                     {selectedCustomers.length > 0 && (
-                      <div className="space-y-1 pt-1 border-t border-slate-200">
+                      <div className="space-y-1.5 pt-2 border-t border-slate-200">
                         <p className="text-[11px] font-semibold text-slate-600">
                           Contatos selecionados ({selectedCustomers.length}):
                         </p>
@@ -502,7 +502,7 @@ export function CampanhaForm({
                           {selectedCustomers.map((c) => (
                             <span
                               key={c.id}
-                              className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-700 shadow-2xs"
+                              className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/[0.05] px-2.5 py-0.5 text-[11px] font-medium text-slate-800 shadow-2xs"
                             >
                               <span className="max-w-[120px] truncate">{c.name}</span>
                               <button
@@ -511,7 +511,7 @@ export function CampanhaForm({
                                   e.stopPropagation();
                                   toggleSelectCustomer(c.id);
                                 }}
-                                className="text-slate-400 hover:text-rose-600"
+                                className="text-slate-400 hover:text-rose-600 transition-colors"
                               >
                                 <XIcon size={11} />
                               </button>
@@ -548,7 +548,7 @@ export function CampanhaForm({
                             setSegment(tmpl.segment);
                           }
                         }}
-                        className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+                        className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600 transition-all hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
                       >
                         {tmpl.title}
                       </button>
@@ -575,7 +575,7 @@ export function CampanhaForm({
                     onChange={(e) => setMessage(e.target.value)}
                     required
                     minLength={5}
-                    className="rounded-xl border-slate-200 bg-slate-50/70 p-3 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white resize-none"
+                    className="rounded-xl border-slate-200 bg-white p-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-1 focus:ring-primary shadow-2xs resize-none"
                   />
                   <div className="flex items-center justify-between text-xs text-slate-500 pt-0.5">
                     <span>{message.length} caracteres digitados</span>
@@ -589,7 +589,7 @@ export function CampanhaForm({
                 <Button
                   type="submit"
                   disabled={isPending || !message.trim() || totalRecipients === 0}
-                  className="h-10 w-full gap-2 rounded-full bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50 transition-all"
+                  className="h-11 w-full gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 disabled:opacity-50 transition-all"
                 >
                   {isPending ? (
                     <>
@@ -618,8 +618,10 @@ export function CampanhaForm({
           <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
             <CardHeader className="p-4 border-b border-slate-100 bg-slate-50/60">
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-600">
-                  <SmartphoneIcon size={14} className="text-slate-500" />
+                <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-700">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20 shrink-0">
+                    <SmartphoneIcon size={13} />
+                  </div>
                   Prévia no WhatsApp
                 </CardTitle>
                 <span className="text-[11px] text-slate-400">
@@ -657,8 +659,10 @@ export function CampanhaForm({
           {/* Best Practices Guide Card */}
           <Card className="border-slate-200/80 bg-white shadow-sm">
             <CardHeader className="p-4 border-b border-slate-100">
-              <CardTitle className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-600">
-                <InfoIcon size={14} className="text-blue-500" />
+              <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-700">
+                <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20 shrink-0">
+                  <InfoIcon size={13} />
+                </div>
                 Diretrizes de Envio e Segurança
               </CardTitle>
             </CardHeader>
@@ -698,7 +702,7 @@ export function CampanhaForm({
       <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
         <DialogContent className="sm:max-w-md rounded-2xl border-slate-200 bg-white p-6 shadow-xl">
           <DialogHeader>
-            <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm mb-2">
+            <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm shadow-primary/25 mb-2">
               <SendIcon size={20} />
             </div>
             <DialogTitle className="font-display text-lg font-bold text-center text-slate-900">
@@ -756,7 +760,7 @@ export function CampanhaForm({
             <Button
               type="button"
               onClick={handleExecuteDispatch}
-              className="h-10 gap-2 rounded-full bg-slate-900 px-5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800"
+              className="h-10 gap-2 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
             >
               <SendIcon size={14} />
               Confirmar e Enviar

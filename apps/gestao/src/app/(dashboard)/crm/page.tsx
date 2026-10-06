@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import {
   customersTable,
   db,
@@ -28,6 +29,10 @@ import { CustomerTable } from "./customer-table";
 
 export const dynamic = "force-dynamic";
 
+export const metadata: Metadata = {
+  title: "Clientes (CRM) | Gestão",
+};
+
 interface PageProps {
   params?: Promise<{ slug?: string }>;
   searchParams: Promise<{ segment?: string; search?: string; page?: string }>;
@@ -39,7 +44,7 @@ const SEGMENT_CARDS = [
     label: "Total de Clientes",
     description: "Base total de clientes",
     icon: UsersIcon,
-    badgeClass: "bg-primary/10 text-primary",
+    badgeClass: "bg-primary/10 text-primary border border-primary/20",
     textClass: "text-primary",
   },
   {
@@ -155,7 +160,7 @@ export default async function CrmPage({ params, searchParams }: PageProps) {
           return (
             <Card
               key={card.key}
-              className="border-slate-200/80 bg-white shadow-sm transition-all"
+              className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300 hover:shadow-md"
             >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">

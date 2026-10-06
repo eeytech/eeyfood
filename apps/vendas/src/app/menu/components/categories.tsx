@@ -9,6 +9,7 @@ import type {
 } from "@fsw/db";
 import { ClockIcon, SearchIcon, StarIcon } from "lucide-react";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import { useContext, useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -147,8 +148,17 @@ function SearchProductCard({
 
 const RestaurantCategories = ({
   restaurant,
-  consumptionMethod,
+  consumptionMethod: consumptionMethodProp,
 }: RestaurantCategoriesProps) => {
+  const searchParams = useSearchParams();
+  const consumptionMethod =
+    consumptionMethodProp ??
+    (searchParams.get("consumptionMethod")?.toUpperCase() as
+      | "DINE_IN"
+      | "TAKEAWAY"
+      | "DELIVERY"
+      | undefined);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSearchProduct, setSelectedSearchProduct] =
     useState<ProductComRestaurante | null>(null);
@@ -159,6 +169,45 @@ const RestaurantCategories = ({
   const [pizzaCategoryId, setPizzaCategoryId] = useState("");
   const { products, total, toggleCart, totalQuantity } =
     useContext(CartContext);
+
+  const isDelivery = consumptionMethod !== "DINE_IN" && consumptionMethod !== "TAKEAWAY";
+
+  const hasItemWithFreeDelivery = isDelivery && Boolean(
+    restaurant.freeDeliveryRules?.some((rule) => {
+      if (!rule.isActive) return false;
+      const now = new Date();
+      if (rule.startsAt && new Date(rule.startsAt) > now) return false;
+      if (rule.endsAt && new Date(rule.endsAt) < now) return false;
+
+      const minOrder = Number(rule.minOrderValue || 0);
+      if (minOrder > 0 && total < minOrder) return false;
+
+      if (rule.criterion === "PRODUCT" && rule.productId) {
+        return products.some((p) => p.id === rule.productId);
+      }
+      if (rule.criterion === "CATEGORY" && rule.menuCategoryId) {
+        return products.some((p) => p.menuCategoryId === rule.menuCategoryId);
+      }
+      return false;
+    }),
+  );
+
+  const threshold = restaurant.freeDeliveryThreshold;
+  const freeDeliveryAchieved =
+    isDelivery && (hasItemWithFreeDelivery || (threshold != null && threshold > 0 && total >= threshold));
+
+  const activeFeeRules = (restaurant.deliveryFeeRules ?? []).filter((r) => r.isActive !== false);
+  const minRuleFee = activeFeeRules.length > 0
+    ? Math.min(...activeFeeRules.map((r) => Number(r.fee || 0)))
+    : 0;
+  const restaurantBaseFee = Number(restaurant.deliveryFee || 0);
+  const fallbackDeliveryFee = restaurantBaseFee > 0 ? restaurantBaseFee : minRuleFee;
+
+  const baseDeliveryFee = isDelivery
+    ? (freeDeliveryAchieved ? 0 : fallbackDeliveryFee)
+    : 0;
+
+  const estimatedTotal = total + baseDeliveryFee;
 
   const { isOpen, closeTime } = isRestaurantOpen(restaurant.status, restaurant.operatingHours);
   const nextOpening = getNextOpeningTime(restaurant.operatingHours);
@@ -330,7 +379,7 @@ const RestaurantCategories = ({
               <div className="mt-2 flex items-end justify-between gap-4">
                 <div>
                   <p className="text-xl font-semibold text-slate-950">
-                    {formatCurrency(total)}
+                    {formatCurrency(isDelivery && products.length > 0 ? estimatedTotal : total)}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {totalQuantity === 0
@@ -552,9 +601,11 @@ const RestaurantCategories = ({
       {products.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-between border-t bg-white px-5 py-2.5 shadow-[0_-8px_30px_rgba(15,23,42,0.08)] lg:hidden">
           <div>
-            <p className="text-xs text-muted-foreground">Total do pedido</p>
+            <p className="text-xs text-muted-foreground">
+              {isDelivery ? "Total estimado" : "Total do pedido"}
+            </p>
             <p className="text-base font-semibold">
-              {formatCurrency(total)}
+              {formatCurrency(isDelivery ? estimatedTotal : total)}
               <span className="text-xs font-normal text-muted-foreground">
                 {" "}
                 / {String(totalQuantity)}{" "}

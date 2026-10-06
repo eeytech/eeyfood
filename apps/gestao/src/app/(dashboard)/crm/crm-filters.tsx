@@ -96,7 +96,7 @@ export function CrmFilters({
               placeholder="Buscar cliente por nome ou telefone..."
               value={searchValue}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="h-10 rounded-xl border-slate-200 bg-slate-50/70 pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white"
+              className="h-10 rounded-xl border-slate-200 bg-white pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-1 focus:ring-primary shadow-2xs"
             />
             {searchValue && (
               <button
@@ -120,7 +120,7 @@ export function CrmFilters({
                 value={currentSegment || "ALL"}
                 onValueChange={(val) => updateParam("segment", val === "ALL" ? "" : val)}
               >
-                <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs font-medium text-slate-700">
+                <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs font-medium text-slate-700 focus:border-primary focus:ring-1 focus:ring-primary shadow-2xs">
                   <SelectValue placeholder="Segmento..." />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
@@ -142,7 +142,7 @@ export function CrmFilters({
                 variant="ghost"
                 size="sm"
                 onClick={handleClearFilters}
-                className="h-10 gap-1.5 rounded-xl px-3 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                className="h-10 gap-1.5 rounded-xl px-3 text-xs font-medium text-slate-600 hover:bg-primary/10 hover:text-primary transition-colors"
               >
                 <FilterXIcon size={14} />
                 Limpar
@@ -165,9 +165,9 @@ export function CrmFilters({
                 type="button"
                 onClick={() => updateParam("segment", seg.value)}
                 className={cn(
-                  "rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
+                  "rounded-full px-2.5 py-1 text-xs font-medium transition-all",
                   isActive
-                    ? "bg-slate-900 text-white shadow-sm"
+                    ? "bg-primary text-primary-foreground shadow-xs shadow-primary/25 font-semibold"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900",
                 )}
               >

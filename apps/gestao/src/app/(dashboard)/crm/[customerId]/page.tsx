@@ -123,7 +123,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
       {/* Back + header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm font-display text-sm font-bold">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm shadow-primary/25 font-display text-sm font-bold">
             {customer.name?.slice(0, 2).toUpperCase() || "CL"}
           </div>
           <div>
@@ -144,7 +144,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
         <Link href="/crm">
           <Button
             variant="outline"
-            className="h-10 gap-1.5 rounded-full border-slate-200 bg-white px-4 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-100"
+            className="h-10 gap-1.5 rounded-full border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-xs hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-all"
           >
             <ArrowLeftIcon size={14} />
             <span>Voltar para Clientes</span>
@@ -157,13 +157,15 @@ export default async function CustomerDetailPage({ params }: PageProps) {
         <div className="space-y-4">
           {/* KPIs */}
           <Card className="border-slate-200/80 bg-white shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base text-slate-900 font-semibold">
-                <ShoppingBagIcon className="h-4 w-4 text-slate-500" />
-                Dados do cliente
+            <CardHeader className="p-4 sm:p-5 border-b border-slate-100">
+              <CardTitle className="flex items-center gap-2.5 font-display text-base font-bold text-slate-900">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shrink-0">
+                  <ShoppingBagIcon size={16} />
+                </div>
+                Dados do Cliente
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm">
+            <CardContent className="p-4 sm:p-5 space-y-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-slate-500">Telefone</span>
                 <span className="font-medium text-slate-900">{customer.phone}</span>
@@ -211,22 +213,24 @@ export default async function CustomerDetailPage({ params }: PageProps) {
 
           {/* Endereços de Entrega */}
           <Card className="border-slate-200/80 bg-white shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base text-slate-900 font-semibold">
-                <MapPinIcon className="h-4 w-4 text-rose-500" />
+            <CardHeader className="p-4 sm:p-5 border-b border-slate-100">
+              <CardTitle className="flex items-center gap-2.5 font-display text-base font-bold text-slate-900">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shrink-0">
+                  <MapPinIcon size={16} />
+                </div>
                 Endereços de Entrega ({allCustomerAddresses.length})
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2.5 text-xs">
+            <CardContent className="p-4 sm:p-5 space-y-2.5 text-xs">
               {allCustomerAddresses.length === 0 ? (
                 <p className="text-slate-400 italic">Nenhum endereço de entrega registrado.</p>
               ) : (
                 allCustomerAddresses.map((addrStr, idx) => (
                   <div
                     key={idx}
-                    className="flex items-start gap-2 rounded-xl border border-slate-100 bg-slate-50/70 p-2.5 text-slate-700"
+                    className="flex items-start gap-2.5 rounded-xl border border-primary/20 bg-primary/[0.02] p-3 text-slate-700 transition-colors hover:border-primary/40"
                   >
-                    <MapPinIcon size={14} className="text-rose-500 shrink-0 mt-0.5" />
+                    <MapPinIcon size={14} className="text-primary shrink-0 mt-0.5" />
                     <span className="leading-relaxed font-medium">{addrStr}</span>
                   </div>
                 ))
@@ -237,13 +241,15 @@ export default async function CustomerDetailPage({ params }: PageProps) {
           {/* Wallet */}
           {walletData && (
             <Card className="border-slate-200/80 bg-white shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base text-slate-900 font-semibold">
-                  <WalletIcon className="h-4 w-4 text-emerald-600" />
+              <CardHeader className="p-4 sm:p-5 border-b border-slate-100">
+                <CardTitle className="flex items-center gap-2.5 font-display text-base font-bold text-slate-900">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 border border-emerald-200 shrink-0">
+                    <WalletIcon size={16} />
+                  </div>
                   Cashback e Carteira
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm">
+              <CardContent className="p-4 sm:p-5 space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-slate-500">Saldo disponível</span>
                   <span className="font-bold text-emerald-600">{formatCurrency(walletData.balance)}</span>
@@ -269,13 +275,15 @@ export default async function CustomerDetailPage({ params }: PageProps) {
           {/* Interaction history */}
           {customer.interactions && customer.interactions.length > 0 && (
             <Card className="border-slate-200/80 bg-white shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base text-slate-900 font-semibold">
-                  <MessageSquareIcon className="h-4 w-4 text-slate-500" />
-                  Histórico de interações
+              <CardHeader className="p-4 sm:p-5 border-b border-slate-100">
+                <CardTitle className="flex items-center gap-2.5 font-display text-base font-bold text-slate-900">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shrink-0">
+                    <MessageSquareIcon size={16} />
+                  </div>
+                  Histórico de Interações
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="p-4 sm:p-5 space-y-3">
                 {customer.interactions.map((interaction) => (
                   <div key={interaction.id} className="space-y-1 border-b border-slate-100 pb-3 last:border-0 last:pb-0">
                     <div className="flex items-center justify-between">
@@ -297,10 +305,12 @@ export default async function CustomerDetailPage({ params }: PageProps) {
         {/* Right column — order history */}
         <div className="lg:col-span-2">
           <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
-            <CardHeader className="border-b border-slate-100">
-              <CardTitle className="flex items-center gap-2 text-base text-slate-900 font-semibold">
-                <PackageIcon className="h-4 w-4 text-slate-500" />
-                Histórico de pedidos ({orders.length})
+            <CardHeader className="p-4 sm:p-5 border-b border-slate-100">
+              <CardTitle className="flex items-center gap-2.5 font-display text-base font-bold text-slate-900">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shrink-0">
+                  <PackageIcon size={16} />
+                </div>
+                Histórico de Pedidos ({orders.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -322,8 +332,8 @@ export default async function CustomerDetailPage({ params }: PageProps) {
                     </TableHeader>
                     <TableBody className="divide-y divide-slate-100">
                       {orders.map((order) => (
-                        <TableRow key={order.id} className="transition-colors hover:bg-slate-50/70">
-                          <TableCell className="font-semibold text-slate-900">#{order.id}</TableCell>
+                        <TableRow key={order.id} className="transition-colors hover:bg-primary/[0.02]">
+                          <TableCell className="font-display font-semibold text-slate-900">#{order.id}</TableCell>
                           <TableCell className="text-xs text-slate-500">
                             {formatDateTime(order.createdAt)}
                           </TableCell>

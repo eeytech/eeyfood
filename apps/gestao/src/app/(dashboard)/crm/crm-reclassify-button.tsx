@@ -28,7 +28,7 @@ export function CrmReclassifyButton({ action }: CrmReclassifyButtonProps) {
     <Button
       onClick={handleReclassify}
       disabled={isPending}
-      className="h-10 gap-2 rounded-full bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60 transition-all"
+      className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 disabled:opacity-60 transition-all"
     >
       <RefreshCwIcon size={16} className={isPending ? "animate-spin" : ""} />
       <span>{isPending ? "Reclassificando..." : "Reclassificar Segmentos"}</span>
