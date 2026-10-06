@@ -128,7 +128,8 @@ export const FinishOrderSheet = ({
 
   const queryTableId = searchParams.get("tableId") || undefined;
   const abandonedCartSessionIdRef = useRef(createAbandonedCartSessionId());
-  const validateBenefitsRef = useRef<(() => Promise<void>) | null>(null);
+  const validateBenefitsRef = useRef<((overrideAddr?: CustomerAddress) => Promise<void>) | null>(null);
+  const customerAddressesRef = useRef<CustomerAddress[]>([]);
 
   const form = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
@@ -310,12 +311,14 @@ export const FinishOrderSheet = ({
       .then((addresses) => {
         if (!isMounted) return;
         setCustomerAddresses(addresses);
+        customerAddressesRef.current = addresses;
         if (addresses.length > 0) {
           form.setValue("deliveryAddressMode", "SAVED");
           const currentSelected = form.getValues("selectedAddressId");
-          if (!currentSelected || !addresses.some((a) => a.id === currentSelected)) {
-            form.setValue("selectedAddressId", addresses[0].id);
-          }
+          const targetAddr = addresses.find((a) => a.id === currentSelected) ?? addresses[0];
+          form.setValue("selectedAddressId", targetAddr.id);
+          // Recalcula imediatamente frete e benefícios com o endereço salvo recuperado
+          void handleValidateBenefits(useWalletBalance, true, targetAddr);
         } else {
           form.setValue("deliveryAddressMode", "NEW");
         }
@@ -360,7 +363,8 @@ export const FinishOrderSheet = ({
 
   // Keep ref to latest validate fn so the debounce always calls fresh closure
   // silent=true: auto-trigger failures don't show invasive toasts
-  validateBenefitsRef.current = () => handleValidateBenefits(useWalletBalance, true);
+  validateBenefitsRef.current = (overrideAddr?: CustomerAddress) =>
+    handleValidateBenefits(useWalletBalance, true, overrideAddr);
 
   // Auto-validate when phone reaches a valid 11-digit number (silent on error)
   useEffect(() => {
@@ -493,6 +497,7 @@ export const FinishOrderSheet = ({
   const handleValidateBenefits = async (
     nextUseWalletBalance = useWalletBalance,
     silent = false,
+    overrideAddress?: CustomerAddress,
   ) => {
     const phoneValid = isValidPhoneNumber(watchedPhone);
     if (!phoneValid && !silent && watchedPhone) {
@@ -507,8 +512,14 @@ export const FinishOrderSheet = ({
     let currentCep: string | undefined;
     let currentFormattedAddress: string | undefined;
 
-    if (currentAddressMode === "SAVED" && currentSelectedId) {
-      const saved = customerAddresses.find((a) => a.id === currentSelectedId);
+    if (overrideAddress) {
+      currentNeighborhood = overrideAddress.neighborhood;
+      const cityState = overrideAddress.city ? `, ${overrideAddress.city}${overrideAddress.state ? ` - ${overrideAddress.state}` : ""}` : "";
+      currentFormattedAddress = `${overrideAddress.street}, ${overrideAddress.number} - ${overrideAddress.neighborhood}${overrideAddress.complement ? ` (${overrideAddress.complement})` : ""}${cityState}`;
+    } else if (currentAddressMode === "SAVED" && currentSelectedId) {
+      const saved =
+        customerAddressesRef.current.find((a) => a.id === currentSelectedId) ??
+        customerAddresses.find((a) => a.id === currentSelectedId);
       currentNeighborhood = saved?.neighborhood;
       if (saved) {
         const cityState = saved.city ? `, ${saved.city}${saved.state ? ` - ${saved.state}` : ""}` : "";
@@ -794,6 +805,18 @@ export const FinishOrderSheet = ({
                           customerAddresses={customerAddresses}
                           isLoadingAddresses={isLoadingAddresses}
                           allowsScheduling={allowsScheduling}
+                          onSelectAddress={(addr) => {
+                            void handleValidateBenefits(useWalletBalance, true, addr);
+                          }}
+                          onAddressUpdated={(updatedAddr) => {
+                            setCustomerAddresses((prev) =>
+                              prev.map((a) => (a.id === updatedAddr.id ? updatedAddr : a)),
+                            );
+                            customerAddressesRef.current = customerAddressesRef.current.map((a) =>
+                              a.id === updatedAddr.id ? updatedAddr : a,
+                            );
+                            void handleValidateBenefits(useWalletBalance, true, updatedAddr);
+                          }}
                         />
                       )}
 

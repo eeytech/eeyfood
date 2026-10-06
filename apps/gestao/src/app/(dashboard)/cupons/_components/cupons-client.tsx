@@ -373,7 +373,7 @@ export function CuponsClient({
           className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
         >
           <PlusIcon size={16} />
-          <span>Novo Cupom</span>
+          <span>+ Novo Cupom</span>
         </Button>
       </div>
 
@@ -386,40 +386,28 @@ export function CuponsClient({
             : "border-slate-200/80 bg-slate-50/70",
         )}
       >
-        <div className="flex items-center gap-3.5">
-          <div
-            className={cn(
-              "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition",
-              isCouponsEnabled
-                ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
-                : "bg-slate-200 text-slate-500",
-            )}
-          >
-            <TicketPercentIcon size={20} />
+        <div>
+          <div className="flex items-center gap-2">
+            <Label
+              htmlFor="toggle-coupons-module"
+              className="text-sm font-semibold text-slate-900 cursor-pointer"
+            >
+              Habilitar Cupons de Desconto
+            </Label>
+            <span
+              className={cn(
+                "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                isCouponsEnabled
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200/80"
+                  : "bg-slate-100 text-slate-600 border border-slate-200",
+              )}
+            >
+              {isCouponsEnabled ? "Ativo no Cardápio" : "Desativado"}
+            </span>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <Label
-                htmlFor="toggle-coupons-module"
-                className="text-sm font-semibold text-slate-900 cursor-pointer"
-              >
-                Habilitar Cupons de Desconto
-              </Label>
-              <span
-                className={cn(
-                  "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold",
-                  isCouponsEnabled
-                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200/80"
-                    : "bg-slate-100 text-slate-600 border border-slate-200",
-                )}
-              >
-                {isCouponsEnabled ? "Ativo no Cardápio" : "Desativado"}
-              </span>
-            </div>
-            <p className="text-xs text-slate-500">
-              Quando ativado, os clientes visualizam a opção de aplicar cupons de desconto no checkout do app de Vendas.
-            </p>
-          </div>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Quando ativado, os clientes visualizam a opção de aplicar cupons de desconto no checkout do app de Vendas.
+          </p>
         </div>
 
         <Switch
@@ -427,13 +415,14 @@ export function CuponsClient({
           checked={isCouponsEnabled}
           disabled={isTogglingModule}
           onCheckedChange={handleToggleModule}
+          className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
         />
       </div>
 
       {/* ── Metric Cards ────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         {/* Total de Cupons */}
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300 hover:shadow-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -453,17 +442,17 @@ export function CuponsClient({
         </Card>
 
         {/* Cupons Ativos */}
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300 hover:shadow-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Cupons Ativos
               </span>
-              <div className="rounded-lg bg-emerald-100 p-1.5 text-emerald-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <CheckCircle2Icon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-emerald-700">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {activeCount}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -473,7 +462,7 @@ export function CuponsClient({
         </Card>
 
         {/* Total de Utilizações */}
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300 hover:shadow-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -494,17 +483,17 @@ export function CuponsClient({
         </Card>
 
         {/* Desconto Médio */}
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300 hover:shadow-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Desconto Médio (%)
               </span>
-              <div className="rounded-lg bg-amber-100 p-1.5 text-amber-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <PercentIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-amber-700">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {avgPercentageDiscount ? `${avgPercentageDiscount}%` : "—"}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -769,12 +758,12 @@ export function CuponsClient({
                                 coupon.code,
                               )
                             }
-                            className="data-[state=checked]:bg-emerald-600 data-[state=unchecked]:bg-slate-200"
+                            className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
                           />
                           <span
                             className={cn(
                               "text-xs font-medium",
-                              coupon.isActive ? "text-emerald-700" : "text-slate-400",
+                              coupon.isActive ? "text-primary font-semibold" : "text-slate-400",
                             )}
                           >
                             {coupon.isActive ? "Ativo" : "Inativo"}
@@ -969,7 +958,7 @@ export function CuponsClient({
                       <span
                         className={cn(
                           "text-xs font-medium",
-                          coupon.isActive ? "text-emerald-700" : "text-slate-400",
+                          coupon.isActive ? "text-primary font-semibold" : "text-slate-400",
                         )}
                       >
                         {coupon.isActive ? "Ativo" : "Inativo"}
@@ -984,7 +973,7 @@ export function CuponsClient({
                             coupon.code,
                           )
                         }
-                        className="data-[state=checked]:bg-emerald-600 data-[state=unchecked]:bg-slate-200"
+                        className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
                       />
                     </div>
                   </div>

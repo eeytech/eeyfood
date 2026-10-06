@@ -44,6 +44,8 @@ export {
   salvarCarrinhoAbandonado,
   salvarClienteCrm,
   salvarOuAtualizarEnderecoCliente,
+  editarEnderecoCliente,
   validarBeneficiosPedido,
   geocodeAddress,
 } from "@fsw/db";
+export type { EditarEnderecoClienteInput } from "@fsw/db";

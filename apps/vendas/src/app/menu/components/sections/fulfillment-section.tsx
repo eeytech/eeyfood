@@ -5,13 +5,15 @@ import {
   CheckIcon,
   Loader2Icon,
   MapPinIcon,
+  PencilIcon,
   PlusIcon,
   SearchIcon,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { toast } from "sonner";
 
+import { Button } from "@/components/ui/button";
 import {
   FormControl,
   FormField,
@@ -31,6 +33,7 @@ import {
 } from "@/components/ui/select";
 import type { ConsumptionMethod, CustomerAddress } from "@/lib/db";
 
+import { updateCustomerAddress } from "../../actions/update-customer-address";
 import type { FormSchema } from "../finish-order-schema";
 import { SectionHeader } from "./section-header";
 
@@ -50,6 +53,8 @@ interface FulfillmentSectionProps {
   customerAddresses?: CustomerAddress[];
   isLoadingAddresses?: boolean;
   allowsScheduling?: boolean;
+  onSelectAddress?: (address: CustomerAddress) => void;
+  onAddressUpdated?: (address: CustomerAddress) => void;
 }
 
 export const FulfillmentSection = ({
@@ -62,60 +67,74 @@ export const FulfillmentSection = ({
   customerAddresses = [],
   isLoadingAddresses = false,
   allowsScheduling = true,
+  onSelectAddress,
+  onAddressUpdated,
 }: FulfillmentSectionProps) => {
   const addressMode = form.watch("deliveryAddressMode");
   const selectedAddressId = form.watch("selectedAddressId");
   const [isSearchingCep, setIsSearchingCep] = useState(false);
+  const [editingAddress, setEditingAddress] = useState<CustomerAddress | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const cepAbortRef = useRef<AbortController | null>(null);
 
   const fetchCepData = async (digits: string) => {
     if (digits.length !== 8) return;
 
-    setIsSearchingCep(true);
-    try {
-      // 1. Tenta ViaCEP
-      const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
-      const data = await res.json();
-      if (!data.erro && (data.logradouro || data.bairro || data.localidade)) {
-        if (data.logradouro) {
-          form.setValue("street", data.logradouro, { shouldValidate: true });
-        }
-        if (data.bairro) {
-          form.setValue("neighborhood", data.bairro, { shouldValidate: true });
-        }
-        if (data.localidade) {
-          form.setValue("city", data.localidade);
-        }
-        if (data.uf) {
-          form.setValue("state", data.uf);
-        }
-        toast.success("Endereço localizado via CEP!");
-        return;
-      }
-    } catch {
-      // Falha do ViaCEP, tenta fallback
+    if (cepAbortRef.current) {
+      cepAbortRef.current.abort();
     }
+    const controller = new AbortController();
+    cepAbortRef.current = controller;
+
+    setIsSearchingCep(true);
+    let found = false;
 
     try {
-      // 2. Fallback BrasilAPI
-      const res = await fetch(`https://brasilapi.com.br/api/cep/v1/${digits}`);
-      if (res.ok) {
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+      // 1. Tenta ViaCEP
+      try {
+        const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`, {
+          signal: controller.signal,
+        });
         const data = await res.json();
-        if (data.street) {
-          form.setValue("street", data.street, { shouldValidate: true });
+        if (!data.erro && (data.logradouro || data.bairro || data.localidade)) {
+          if (data.logradouro) form.setValue("street", data.logradouro, { shouldValidate: true });
+          if (data.bairro) form.setValue("neighborhood", data.bairro, { shouldValidate: true });
+          if (data.localidade) form.setValue("city", data.localidade);
+          if (data.uf) form.setValue("state", data.uf);
+          toast.success("Endereço localizado via CEP!");
+          found = true;
         }
-        if (data.neighborhood) {
-          form.setValue("neighborhood", data.neighborhood, { shouldValidate: true });
-        }
-        if (data.city) {
-          form.setValue("city", data.city);
-        }
-        if (data.state) {
-          form.setValue("state", data.state);
-        }
-        toast.success("Endereço localizado via CEP!");
-        return;
+      } catch {
+        // ViaCEP falhou ou deu timeout
       }
-      toast.info("CEP não localizado. Preencha a rua e o bairro manualmente.");
+
+      if (!found && !controller.signal.aborted) {
+        // 2. Fallback BrasilAPI
+        try {
+          const res = await fetch(`https://brasilapi.com.br/api/cep/v1/${digits}`, {
+            signal: controller.signal,
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.street) form.setValue("street", data.street, { shouldValidate: true });
+            if (data.neighborhood) form.setValue("neighborhood", data.neighborhood, { shouldValidate: true });
+            if (data.city) form.setValue("city", data.city);
+            if (data.state) form.setValue("state", data.state);
+            toast.success("Endereço localizado via CEP!");
+            found = true;
+          }
+        } catch {
+          // BrasilAPI falhou
+        }
+      }
+
+      clearTimeout(timeoutId);
+
+      if (!found && !controller.signal.aborted) {
+        toast.info("CEP não localizado. Preencha a rua e o bairro manualmente.");
+      }
     } catch {
       // Falha silenciosa
     } finally {
@@ -135,8 +154,64 @@ export const FulfillmentSection = ({
   const handleCepBlur = () => {
     const cepVal = form.getValues("cep") || "";
     const digits = cepVal.replace(/\D/g, "");
-    if (digits.length === 8) {
+    if (digits.length === 8 && !isSearchingCep) {
       void fetchCepData(digits);
+    }
+  };
+
+  const handleStartEdit = (addr: CustomerAddress) => {
+    setEditingAddress(addr);
+    form.setValue("street", addr.street, { shouldValidate: true });
+    form.setValue("number", addr.number, { shouldValidate: true });
+    form.setValue("neighborhood", addr.neighborhood, { shouldValidate: true });
+    form.setValue("complement", addr.complement || "");
+    form.setValue("reference", addr.reference || "");
+    form.setValue("city", addr.city || "");
+    form.setValue("state", addr.state || "");
+    form.setValue("deliveryAddressMode", "NEW");
+    onSelectAddress?.(addr);
+  };
+
+  const handleSaveAddressEdit = async () => {
+    if (!editingAddress) return;
+    const street = form.getValues("street");
+    const number = form.getValues("number");
+    const neighborhood = form.getValues("neighborhood");
+    const complement = form.getValues("complement");
+    const reference = form.getValues("reference");
+    const city = form.getValues("city");
+    const state = form.getValues("state");
+
+    if (!street?.trim() || !number?.trim() || !neighborhood?.trim()) {
+      toast.error("Informe rua, número e bairro para salvar o endereço.");
+      return;
+    }
+
+    setIsSavingEdit(true);
+    try {
+      const updated = await updateCustomerAddress({
+        id: editingAddress.id,
+        street: street.trim(),
+        number: number.trim(),
+        neighborhood: neighborhood.trim(),
+        complement: complement?.trim() || undefined,
+        reference: reference?.trim() || undefined,
+        city: city?.trim() || undefined,
+        state: state?.trim() || undefined,
+      });
+
+      if (updated) {
+        toast.success("Endereço atualizado com sucesso!");
+        onAddressUpdated?.(updated);
+        form.setValue("deliveryAddressMode", "SAVED");
+        form.setValue("selectedAddressId", updated.id);
+        setEditingAddress(null);
+        onSelectAddress?.(updated);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao atualizar endereço.");
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -169,6 +244,7 @@ export const FulfillmentSection = ({
                   <button
                     type="button"
                     onClick={() => {
+                      setEditingAddress(null);
                       form.setValue("deliveryAddressMode", "NEW");
                     }}
                     className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
@@ -187,11 +263,13 @@ export const FulfillmentSection = ({
                         {customerAddresses.map((addr, idx) => {
                           const isSelected = field.value === addr.id;
                           return (
-                            <button
+                            <div
                               key={addr.id}
-                              type="button"
-                              onClick={() => field.onChange(addr.id)}
-                              className={`w-full flex items-start justify-between p-3 rounded-2xl border text-left transition-all ${
+                              onClick={() => {
+                                field.onChange(addr.id);
+                                onSelectAddress?.(addr);
+                              }}
+                              className={`w-full flex items-start justify-between p-3 rounded-2xl border text-left cursor-pointer transition-all ${
                                 isSelected
                                   ? "border-primary bg-primary/5 ring-1 ring-primary/20 shadow-sm"
                                   : "border-slate-200 bg-white hover:bg-slate-50/80"
@@ -218,7 +296,18 @@ export const FulfillmentSection = ({
                                 </div>
                               </div>
 
-                              <div className="flex flex-col items-end gap-1 shrink-0">
+                              <div className="flex items-center gap-2 shrink-0">
+                                <button
+                                  type="button"
+                                  title="Editar endereço"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleStartEdit(addr);
+                                  }}
+                                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-primary hover:bg-primary/5 hover:text-primary transition-all shadow-xs"
+                                >
+                                  <PencilIcon size={12} />
+                                </button>
                                 {idx === 0 && (
                                   <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
                                     Último
@@ -234,7 +323,7 @@ export const FulfillmentSection = ({
                                   {isSelected && <CheckIcon size={12} strokeWidth={3} />}
                                 </div>
                               </div>
-                            </button>
+                            </div>
                           );
                         })}
                       </div>
@@ -247,17 +336,21 @@ export const FulfillmentSection = ({
               <div className="space-y-3 animate-in fade-in duration-200">
                 <div className="flex items-center justify-between">
                   <FormLabel className="text-xs font-bold uppercase text-slate-400">
-                    {customerAddresses.length > 0
-                      ? "Cadastrar novo endereço"
-                      : "Endereço de entrega"}
+                    {editingAddress
+                      ? "Editar endereço cadastrado"
+                      : customerAddresses.length > 0
+                        ? "Cadastrar novo endereço"
+                        : "Endereço de entrega"}
                   </FormLabel>
                   {customerAddresses.length > 0 && (
                     <button
                       type="button"
                       onClick={() => {
+                        setEditingAddress(null);
                         form.setValue("deliveryAddressMode", "SAVED");
                         if (!selectedAddressId && customerAddresses[0]) {
                           form.setValue("selectedAddressId", customerAddresses[0].id);
+                          onSelectAddress?.(customerAddresses[0]);
                         }
                       }}
                       className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-primary transition-colors"
@@ -385,7 +478,7 @@ export const FulfillmentSection = ({
                           <FormControl>
                             <Input
                               {...field}
-                              placeholder="Apto, Bloco, etc."
+                              placeholder="Apto 12, Bloco B"
                               className="h-10 rounded-xl text-sm bg-white"
                             />
                           </FormControl>
@@ -394,6 +487,49 @@ export const FulfillmentSection = ({
                       )}
                     />
                   </div>
+
+                  <FormField
+                    control={form.control}
+                    name="reference"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1">
+                        <FormLabel className="text-xs font-medium text-slate-700">
+                          Ponto de Referência
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="Ex: Próximo à padaria central"
+                            className="h-10 rounded-xl text-sm bg-white"
+                          />
+                        </FormControl>
+                        <FormMessage className="text-xs" />
+                      </FormItem>
+                    )}
+                  />
+
+                  {editingAddress && (
+                    <div className="pt-1">
+                      <Button
+                        type="button"
+                        disabled={isSavingEdit}
+                        onClick={handleSaveAddressEdit}
+                        className="w-full h-10 rounded-xl bg-slate-900 text-white font-semibold text-xs gap-1.5 shadow-xs hover:bg-slate-800"
+                      >
+                        {isSavingEdit ? (
+                          <>
+                            <Loader2Icon size={14} className="animate-spin" />
+                            <span>Salvando alterações...</span>
+                          </>
+                        ) : (
+                          <>
+                            <CheckIcon size={14} />
+                            <span>Salvar alterações neste endereço</span>
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -402,49 +538,53 @@ export const FulfillmentSection = ({
 
         {allowsScheduling && (
           <>
-            <div className="space-y-1">
-              <p className="text-sm font-semibold">Horário da {schedulingLabel}</p>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Escolha se deseja receber o pedido o quanto antes ou em um horário agendado.
-              </p>
-            </div>
-
             <FormField
               control={form.control}
               name="fulfillmentTiming"
               render={({ field }) => (
                 <FormItem className="space-y-2">
+                  <FormLabel className="text-xs font-bold uppercase text-slate-400">
+                    Previsão para {schedulingLabel}
+                  </FormLabel>
                   <FormControl>
-                    <div className="grid gap-2.5">
-                      {[
-                        {
-                          value: "ASAP" as const,
-                          title: "O quanto antes",
-                          description:
-                            consumptionMethod === "DELIVERY"
-                              ? "Preparo e despacho imediato."
-                              : "Preparo imediato para retirada.",
-                        },
-                        {
-                          value: "SCHEDULED" as const,
-                          title: "Agendar horário",
-                          description: "Escolha uma data e hora futura.",
-                        },
-                      ].map((option) => (
-                        <button
-                          key={option.value}
-                          type="button"
-                          onClick={() => field.onChange(option.value)}
-                          className={`rounded-xl border px-3 py-2 text-left transition-all ${
-                            field.value === option.value
-                              ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                              : "border-border bg-background hover:bg-slate-50"
-                          }`}
-                        >
-                          <p className="text-sm font-bold">{option.title}</p>
-                          <p className="text-xs text-muted-foreground">{option.description}</p>
-                        </button>
-                      ))}
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          field.onChange("ASAP");
+                          form.setValue("scheduledFor", "");
+                        }}
+                        className={`h-11 rounded-2xl border text-sm font-semibold transition-all ${
+                          field.value === "ASAP"
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                        }`}
+                      >
+                        O quanto antes
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          field.onChange("SCHEDULED");
+                          if (
+                            schedulingSlots.length > 0 &&
+                            schedulingSlots[0]?.items?.[0] &&
+                            !form.getValues("scheduledFor")
+                          ) {
+                            form.setValue(
+                              "scheduledFor",
+                              schedulingSlots[0].items[0].value,
+                            );
+                          }
+                        }}
+                        className={`h-11 rounded-2xl border text-sm font-semibold transition-all ${
+                          field.value === "SCHEDULED"
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                        }`}
+                      >
+                        Agendar
+                      </button>
                     </div>
                   </FormControl>
                   <FormMessage className="text-xs" />

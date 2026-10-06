@@ -3128,6 +3128,38 @@ export const atualizarUsoEnderecoCliente = async (addressId: string) => {
   return updated;
 };
 
+export interface EditarEnderecoClienteInput {
+  id: string;
+  street: string;
+  number: string;
+  neighborhood: string;
+  complement?: string | null;
+  reference?: string | null;
+  city?: string | null;
+  state?: string | null;
+}
+
+export const editarEnderecoCliente = async (
+  input: EditarEnderecoClienteInput,
+) => {
+  const [updated] = await db
+    .update(customerAddressesTable)
+    .set({
+      street: input.street.trim(),
+      number: input.number.trim(),
+      neighborhood: input.neighborhood.trim(),
+      complement: input.complement?.trim() || null,
+      reference: input.reference?.trim() || null,
+      city: input.city?.trim() || null,
+      state: input.state?.trim() || null,
+      lastUsedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(customerAddressesTable.id, input.id))
+    .returning();
+  return updated;
+};
+
 export interface SalvarClienteCrmInput {
   restaurantId: string;
   customerName: string;

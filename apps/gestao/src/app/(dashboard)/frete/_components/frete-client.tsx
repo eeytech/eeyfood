@@ -7,9 +7,12 @@ import {
   CheckCircle2Icon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  ChevronsLeftIcon,
+  ChevronsRightIcon,
   FilterXIcon,
   LayersIcon,
   LoaderCircleIcon,
+  MoreHorizontalIcon,
   PackageIcon,
   PencilIcon,
   PlusIcon,
@@ -41,6 +44,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -185,7 +195,7 @@ export function FreteClient({
   const [criterionFilter, setCriterionFilter] = useState<string>("ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(10);
 
   // Simulator
   const [simulatedSubtotal, setSimulatedSubtotal] = useState(45.0);
@@ -366,11 +376,12 @@ export function FreteClient({
   const isFiltering =
     searchQuery.trim() !== "" || criterionFilter !== "ALL" || statusFilter !== "ALL";
 
-  const totalPages = Math.ceil(filteredRegras.length / pageSize) || 1;
+  const totalPages = Math.max(1, Math.ceil(filteredRegras.length / pageSize));
+  const validCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
   const paginatedRegras = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
+    const start = (validCurrentPage - 1) * pageSize;
     return filteredRegras.slice(start, start + pageSize);
-  }, [filteredRegras, currentPage, pageSize]);
+  }, [filteredRegras, validCurrentPage, pageSize]);
 
   const handleClearFilters = () => {
     setSearchQuery("");
@@ -406,13 +417,13 @@ export function FreteClient({
           className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
         >
           <PlusIcon size={16} />
-          <span>Nova Regra</span>
+          <span>+ Nova Regra Frete Grátis</span>
         </Button>
       </div>
 
       {/* ── Metric Summary Cards ── */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <Card className="border-slate-200/80 bg-white shadow-sm">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300 hover:shadow-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -429,17 +440,17 @@ export function FreteClient({
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/80 bg-white shadow-sm">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300 hover:shadow-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Regras Ativas
               </span>
-              <div className="rounded-lg bg-emerald-50 p-2 text-emerald-600">
+              <div className="rounded-lg bg-primary/10 p-2 text-primary">
                 <CheckCircle2Icon className="h-4 w-4" />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-emerald-600">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {activeCount}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -450,17 +461,17 @@ export function FreteClient({
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/80 bg-white shadow-sm">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300 hover:shadow-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Ocasiões
               </span>
-              <div className="rounded-lg bg-amber-50 p-2 text-amber-600">
+              <div className="rounded-lg bg-primary/10 p-2 text-primary">
                 <SparklesIcon className="h-4 w-4" />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-slate-900">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {uniqueOccasionsCount}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -469,17 +480,17 @@ export function FreteClient({
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/80 bg-white shadow-sm">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300 hover:shadow-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Valor Mín. Geral
               </span>
-              <div className="rounded-lg bg-purple-50 p-2 text-purple-600">
+              <div className="rounded-lg bg-primary/10 p-2 text-primary">
                 <BadgeDollarSignIcon className="h-4 w-4" />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-purple-700">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {currentGeneralThreshold > 0 ? formatCurrency(currentGeneralThreshold) : "Não definido"}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -645,18 +656,19 @@ export function FreteClient({
                       key={rule.id}
                       className="border-b border-slate-100 transition-colors hover:bg-slate-50/60"
                     >
-                      {/* Status */}
-                      <TableCell className="text-center">
-                        <div className="flex flex-col items-center gap-1">
+                      {/* Status Switch (Padrão Acessos) */}
+                      <TableCell className="py-3.5 text-center">
+                        <div className="inline-flex items-center gap-2">
                           <Switch
                             checked={rule.isActive}
                             onCheckedChange={(checked) => handleToggleStatus(rule, checked)}
                             disabled={isPending}
+                            className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
                           />
                           <span
                             className={cn(
-                              "text-[10px] font-semibold",
-                              rule.isActive ? "text-emerald-600" : "text-slate-400",
+                              "text-xs font-medium",
+                              rule.isActive ? "text-primary font-semibold" : "text-slate-400",
                             )}
                           >
                             {rule.isActive ? "Ativa" : "Inativa"}
@@ -664,25 +676,15 @@ export function FreteClient({
                         </div>
                       </TableCell>
 
-                      {/* Descrição */}
-                      <TableCell>
-                        <div className="flex items-center gap-2.5">
-                          <div
-                            className={cn(
-                              "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border",
-                              config.badgeClass,
-                            )}
-                          >
-                            <CriterionIcon className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <p className="font-semibold text-slate-900 text-sm">
-                              {rule.name}
-                            </p>
-                            <p className="text-xs text-slate-500 line-clamp-1">
-                              {config.description}
-                            </p>
-                          </div>
+                      {/* Descrição (sem ícone) */}
+                      <TableCell className="py-3.5">
+                        <div>
+                          <p className="font-semibold text-slate-900 text-sm">
+                            {rule.name}
+                          </p>
+                          <p className="text-xs text-slate-500 line-clamp-1">
+                            {config.description}
+                          </p>
                         </div>
                       </TableCell>
 
@@ -765,28 +767,40 @@ export function FreteClient({
                         </div>
                       </TableCell>
 
-                      {/* Ações */}
-                      <TableCell className="text-right pr-4">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleOpenEdit(rule)}
-                            className="h-8 w-8 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                            title="Editar regra"
+                      {/* Ações (Padrão Acessos) */}
+                      <TableCell className="py-3.5 text-right pr-4">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                            >
+                              <MoreHorizontalIcon size={16} />
+                              <span className="sr-only">Opções</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            className="w-48 rounded-xl border-slate-200 bg-white p-1 text-slate-900 shadow-xl"
                           >
-                            <PencilIcon className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setDeletingRule(rule)}
-                            className="h-8 w-8 text-rose-500 hover:bg-rose-50 hover:text-rose-600"
-                            title="Excluir regra"
-                          >
-                            <Trash2Icon className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
+                            <DropdownMenuItem
+                              onClick={() => handleOpenEdit(rule)}
+                              className="gap-2 rounded-lg text-xs font-medium text-slate-700"
+                            >
+                              <PencilIcon size={14} className="text-primary" />
+                              Editar regra
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator className="bg-slate-100" />
+                            <DropdownMenuItem
+                              onClick={() => setDeletingRule(rule)}
+                              className="gap-2 rounded-lg text-xs font-medium text-red-600"
+                            >
+                              <Trash2Icon size={14} />
+                              Excluir regra
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   );
@@ -796,9 +810,10 @@ export function FreteClient({
           </div>
         )}
 
-        {/* Pagination & Counter Footer */}
-        <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between text-xs text-slate-600">
-          <div className="flex items-center gap-2">
+        {/* Controles de Paginação & Contador (Padrão Acessos) */}
+        <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          {/* Items per page selector & Result counter */}
+          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
             <span>
               Exibindo{" "}
               <strong className="font-semibold text-slate-900">
@@ -808,43 +823,88 @@ export function FreteClient({
             </span>
             {isFiltering && (
               <span className="text-[11px] font-medium text-amber-600">
-                (Filtros ativos)
+                (Filtros aplicados)
               </span>
             )}
-          </div>
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between gap-2 sm:justify-end">
-              <span>
-                Página <strong className="font-semibold text-slate-900">{currentPage}</strong> de{" "}
-                <strong className="font-semibold text-slate-900">{totalPages}</strong>
-              </span>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  disabled={currentPage <= 1}
-                  onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                  className="h-8 w-8 rounded-lg"
-                >
-                  <ChevronLeftIcon className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  disabled={currentPage >= totalPages}
-                  onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                  className="h-8 w-8 rounded-lg"
-                >
-                  <ChevronRightIcon className="h-4 w-4" />
-                </Button>
-              </div>
+            <span className="hidden sm:inline text-slate-300">|</span>
+            <div className="flex items-center gap-1.5">
+              <span>Exibir</span>
+              <Select
+                value={String(pageSize)}
+                onValueChange={(val) => {
+                  setPageSize(Number(val));
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="h-8 w-16 rounded-lg border-slate-200 bg-white text-xs font-medium text-slate-700">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-lg border-slate-200 bg-white">
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </SelectContent>
+              </Select>
+              <span>por página</span>
             </div>
-          )}
+          </div>
+
+          {/* Page numbers & navigations */}
+          <div className="flex items-center justify-between gap-2 sm:justify-end">
+            <span className="text-xs text-slate-500">
+              Página <strong className="font-semibold text-slate-900">{validCurrentPage}</strong> de{" "}
+              <strong className="font-semibold text-slate-900">{totalPages}</strong>
+            </span>
+
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                disabled={validCurrentPage <= 1}
+                onClick={() => setCurrentPage(1)}
+                className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                title="Primeira página"
+              >
+                <ChevronsLeftIcon size={14} />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                disabled={validCurrentPage <= 1}
+                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                title="Página anterior"
+              >
+                <ChevronLeftIcon size={14} />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                disabled={validCurrentPage >= totalPages}
+                onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                title="Próxima página"
+              >
+                <ChevronRightIcon size={14} />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                disabled={validCurrentPage >= totalPages}
+                onClick={() => setCurrentPage(totalPages)}
+                className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                title="Última página"
+              >
+                <ChevronsRightIcon size={14} />
+              </Button>
+            </div>
+          </div>
         </div>
       </Card>
 
       {/* ── Simulator / How it Works Card ── */}
-      <Card className="border-slate-200/80 bg-gradient-to-r from-slate-50 to-orange-50/20 shadow-sm">
+      <Card className="border-slate-200/80 bg-gradient-to-r from-slate-50 to-primary/[0.03] shadow-sm">
         <CardContent className="p-5">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-start gap-3">

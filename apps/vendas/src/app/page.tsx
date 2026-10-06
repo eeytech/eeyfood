@@ -111,20 +111,22 @@ const RestaurantPage = async ({ searchParams }: RestaurantPageProps) => {
     );
   }
 
+  const hasDelivery = restaurant.isDeliveryEnabled !== false;
+
   const availableMethods = [
-    restaurant.isDeliveryEnabled && {
+    hasDelivery && {
       option: "DELIVERY" as const,
       buttonText: "Delivery",
       imageAlt: "Delivery",
       imageUrl: "/delivery.png",
     },
-    restaurant.isTakeawayEnabled && {
+    restaurant.isTakeawayEnabled !== false && {
       option: "TAKEAWAY" as const,
       buttonText: "Para retirada",
       imageAlt: "Para retirada",
       imageUrl: "/takeaway.png",
     },
-    restaurant.isDineInEnabled && {
+    restaurant.isDineInEnabled !== false && {
       option: "DINE_IN" as const,
       buttonText: "Consumo no local",
       imageAlt: "Consumo no local",
@@ -200,6 +202,7 @@ const RestaurantPage = async ({ searchParams }: RestaurantPageProps) => {
             buttonText={method.buttonText}
             imageAlt={method.imageAlt}
             imageUrl={method.imageUrl}
+            slug={targetSlug || restaurant.slug}
           />
         ))}
       </div>

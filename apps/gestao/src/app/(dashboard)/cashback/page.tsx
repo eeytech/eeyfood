@@ -12,7 +12,7 @@ import { CashbackClient } from "./_components/cashback-client";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Regras de Cashback | Gestão",
+  title: "Cashback | Gestão",
 };
 
 interface CashbackPageProps {
