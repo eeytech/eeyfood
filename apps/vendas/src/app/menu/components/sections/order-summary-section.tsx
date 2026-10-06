@@ -1,4 +1,4 @@
-import { CoinsIcon, ShoppingBagIcon, TrendingUpIcon } from "lucide-react";
+import { AlertCircleIcon, CoinsIcon, ShoppingBagIcon, TrendingUpIcon } from "lucide-react";
 
 import { formatCurrency } from "@/helpers/format-currency";
 import type { ConsumptionMethod } from "@/lib/db";
@@ -32,12 +32,14 @@ interface OrderSummarySectionProps {
   checkoutSummary: CheckoutSummary;
   isCashbackEnabled: boolean;
   consumptionMethod?: ConsumptionMethod;
+  minimumOrderValue?: number;
 }
 
 export const OrderSummarySection = ({
   checkoutSummary,
   isCashbackEnabled,
   consumptionMethod,
+  minimumOrderValue,
 }: OrderSummarySectionProps) => {
   const isDelivery = consumptionMethod ? consumptionMethod === "DELIVERY" : true;
   const nextRule = checkoutSummary.nextLoyaltyRule;
@@ -100,6 +102,21 @@ export const OrderSummarySection = ({
             {formatCurrency(checkoutSummary.total)}
           </span>
         </div>
+
+        {/* Alerta de Pedido Mínimo */}
+        {isDelivery && minimumOrderValue !== undefined && minimumOrderValue > checkoutSummary.subtotal && (
+          <div className="mt-2.5 rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800 flex items-start gap-2">
+            <AlertCircleIcon size={16} className="text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold">Pedido mínimo não atingido</p>
+              <p className="mt-0.5 text-amber-700 leading-relaxed">
+                O valor mínimo para entrega é de{" "}
+                <strong className="font-bold">{formatCurrency(minimumOrderValue)}</strong>. Faltam{" "}
+                <strong className="font-bold">{formatCurrency(minimumOrderValue - checkoutSummary.subtotal)}</strong> em produtos para poder finalizar.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Cashback earned — highlighted in emerald */}
         {isCashbackEnabled && checkoutSummary.cashbackEarnedAmount > 0 && (

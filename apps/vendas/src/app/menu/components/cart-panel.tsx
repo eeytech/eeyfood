@@ -38,16 +38,48 @@ const CartPanel = ({
   const { products, total, totalQuantity } = useContext(CartContext);
   const hasProducts = products.length > 0;
 
-  const isDineIn = consumptionMethod === "DINE_IN";
+  const isDelivery = consumptionMethod !== "DINE_IN" && consumptionMethod !== "TAKEAWAY";
+
+  // Verifica se algum produto no carrinho dá direito a Frete Grátis por regra de Categoria ou Produto
+  const hasItemWithFreeDelivery = isDelivery && Boolean(
+    restaurant.freeDeliveryRules?.some((rule) => {
+      if (!rule.isActive) return false;
+      const now = new Date();
+      if (rule.startsAt && new Date(rule.startsAt) > now) return false;
+      if (rule.endsAt && new Date(rule.endsAt) < now) return false;
+
+      const minOrder = Number(rule.minOrderValue || 0);
+      if (minOrder > 0 && total < minOrder) return false;
+
+      if (rule.criterion === "PRODUCT" && rule.productId) {
+        return products.some((p) => p.id === rule.productId);
+      }
+      if (rule.criterion === "CATEGORY" && rule.menuCategoryId) {
+        return products.some((p) => p.menuCategoryId === rule.menuCategoryId);
+      }
+      return false;
+    }),
+  );
+
   const threshold = restaurant.freeDeliveryThreshold;
   const showFreeDelivery =
-    !isDineIn &&
-    consumptionMethod !== "TAKEAWAY" &&
-    threshold != null &&
-    threshold > 0;
-  const freeDeliveryRemaining = showFreeDelivery ? Math.max(threshold - total, 0) : 0;
-  const freeDeliveryProgress = showFreeDelivery ? Math.min((total / threshold) * 100, 100) : 0;
-  const freeDeliveryAchieved = showFreeDelivery && freeDeliveryRemaining === 0;
+    isDelivery &&
+    ((threshold != null && threshold > 0) || hasItemWithFreeDelivery);
+  const freeDeliveryRemaining = threshold != null && threshold > 0 ? Math.max(threshold - total, 0) : 0;
+  const freeDeliveryProgress = threshold != null && threshold > 0 ? Math.min((total / threshold) * 100, 100) : 100;
+  const freeDeliveryAchieved =
+    isDelivery && (hasItemWithFreeDelivery || (threshold != null && threshold > 0 && freeDeliveryRemaining === 0));
+
+  // Pedido mínimo para entrega
+  const minOrderValue = isDelivery ? Number(restaurant.minimumOrderValue || 0) : 0;
+  const isBelowMinimumOrder = isDelivery && minOrderValue > 0 && total < minOrderValue;
+
+  // Estimativa de taxa de entrega
+  const baseDeliveryFee = isDelivery
+    ? (freeDeliveryAchieved ? 0 : Number(restaurant.deliveryFee || 0))
+    : 0;
+  const hasFeeRules = isDelivery && (restaurant.deliveryFeeRules?.length ?? 0) > 0;
+  const estimatedTotal = total + baseDeliveryFee;
 
   const content = (
     <>
@@ -130,22 +162,59 @@ const CartPanel = ({
       <div
         className={
           variant === "sheet"
-            ? "mt-auto shrink-0 flex flex-col gap-4 border-t bg-white p-6 shadow-[0_-8px_30px_rgba(0,0,0,0.04)]"
-            : "mt-auto shrink-0 flex flex-col gap-3.5 border-t bg-slate-50/40 px-4 py-4"
+            ? "mt-auto shrink-0 flex flex-col gap-3.5 border-t bg-white p-6 shadow-[0_-8px_30px_rgba(0,0,0,0.04)]"
+            : "mt-auto shrink-0 flex flex-col gap-3 border-t bg-slate-50/40 px-4 py-4"
         }
       >
+        {isDelivery && hasProducts && (
+          <div className="space-y-1.5 text-xs text-slate-500 pb-1 border-b border-slate-100">
+            <div className="flex items-center justify-between">
+              <span>Subtotal</span>
+              <span className="font-semibold text-slate-700">{formatCurrency(total)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>
+                Taxa de entrega
+                {hasFeeRules && !freeDeliveryAchieved && (
+                  <span className="text-[10px] text-slate-400 ml-1">
+                    (varia por endereço)
+                  </span>
+                )}
+              </span>
+              <span className="font-semibold">
+                {freeDeliveryAchieved || baseDeliveryFee === 0 ? (
+                  <span className="text-emerald-600 font-bold">Grátis</span>
+                ) : (
+                  <span>
+                    {hasFeeRules ? `a partir de ${formatCurrency(baseDeliveryFee)}` : formatCurrency(baseDeliveryFee)}
+                  </span>
+                )}
+              </span>
+            </div>
+          </div>
+        )}
+
         <div className="flex w-full items-center justify-between">
-          <p className="text-base font-semibold text-slate-500">Total do pedido</p>
+          <p className="text-base font-semibold text-slate-600">
+            {isDelivery ? "Total estimado" : "Total do pedido"}
+          </p>
           <p className="text-2xl font-extrabold text-slate-900" aria-live="polite">
-            {formatCurrency(total)}
+            {formatCurrency(isDelivery ? estimatedTotal : total)}
           </p>
         </div>
+
+        {isBelowMinimumOrder && (
+          <p className="rounded-xl bg-amber-50 p-2 text-center text-xs font-medium text-amber-700 border border-amber-200">
+            Pedido mínimo para entrega: <strong>{formatCurrency(minOrderValue)}</strong> (faltam {formatCurrency(minOrderValue - total)})
+          </p>
+        )}
+
         <Button
           className="h-12 w-full rounded-2xl bg-destructive text-base font-bold shadow-lg shadow-destructive/20 transition-all hover:scale-[1.01] active:scale-[0.99]"
-          disabled={!hasProducts}
+          disabled={!hasProducts || isBelowMinimumOrder}
           onClick={() => setFinishOrderSheetIsOpen(true)}
         >
-          Finalizar pedido
+          {isBelowMinimumOrder ? "Pedido mínimo não atingido" : "Finalizar pedido"}
         </Button>
       </div>
     </>

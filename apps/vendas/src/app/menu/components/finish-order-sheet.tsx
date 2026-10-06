@@ -165,6 +165,11 @@ export const FinishOrderSheet = ({
   const watchedPhone = form.watch("phone");
   const watchedCouponCode = form.watch("couponCode");
   const watchedNeighborhood = form.watch("neighborhood");
+  const watchedCep = form.watch("cep");
+  const watchedStreet = form.watch("street");
+  const watchedNumber = form.watch("number");
+  const watchedCity = form.watch("city");
+  const watchedState = form.watch("state");
   const watchedSelectedAddressId = form.watch("selectedAddressId");
   const watchedAddressMode = form.watch("deliveryAddressMode");
   const fulfillmentTiming = form.watch("fulfillmentTiming");
@@ -201,6 +206,17 @@ export const FinishOrderSheet = ({
     wallet: null,
     nextLoyaltyRule: loyaltyUpsell,
   };
+
+  const minOrderValue =
+    consumptionMethod === "DELIVERY"
+      ? Math.max(
+          Number(restaurant.minimumOrderValue || 0),
+          Number(checkoutSummary.matchedDeliveryRule?.minimumOrderValue || 0),
+        )
+      : 0;
+
+  const isBelowMinimumOrder =
+    consumptionMethod === "DELIVERY" && minOrderValue > 0 && total < minOrderValue;
 
   useEffect(() => {
     if (!allowsScheduling && form.getValues("fulfillmentTiming") !== "ASAP") {
@@ -347,18 +363,27 @@ export const FinishOrderSheet = ({
     return () => window.clearTimeout(timeoutId);
   }, [watchedPhone]);
 
-  // Auto-validate benefits whenever the neighborhood or delivery address changes
+  // Auto-validate benefits whenever the neighborhood, CEP or delivery address changes
   useEffect(() => {
     if (consumptionMethod !== "DELIVERY") return;
-    const digits = watchedPhone?.replace(/\D/g, "") ?? "";
-    if (digits.length !== 11 || !isValidPhoneNumber(watchedPhone)) return;
 
     const timeoutId = window.setTimeout(() => {
       void validateBenefitsRef.current?.();
     }, 600);
 
     return () => window.clearTimeout(timeoutId);
-  }, [watchedNeighborhood, watchedSelectedAddressId, watchedAddressMode, consumptionMethod, watchedPhone]);
+  }, [
+    watchedNeighborhood,
+    watchedCep,
+    watchedStreet,
+    watchedNumber,
+    watchedCity,
+    watchedState,
+    watchedSelectedAddressId,
+    watchedAddressMode,
+    consumptionMethod,
+    watchedPhone,
+  ]);
 
   useEffect(() => {
     if (!open || products.length === 0) return;
@@ -458,36 +483,52 @@ export const FinishOrderSheet = ({
     nextUseWalletBalance = useWalletBalance,
     silent = false,
   ) => {
-    if (!isValidPhoneNumber(watchedPhone)) {
-      if (!silent) {
-        form.setError("phone", {
-          message: "Informe um celular válido para consultar benefícios.",
-        });
-      }
-      return;
+    const phoneValid = isValidPhoneNumber(watchedPhone);
+    if (!phoneValid && !silent && watchedPhone) {
+      form.setError("phone", {
+        message: "Informe um celular válido para consultar benefícios.",
+      });
     }
 
     const currentAddressMode = form.getValues("deliveryAddressMode");
     const currentSelectedId = form.getValues("selectedAddressId");
     let currentNeighborhood: string | undefined;
+    let currentCep: string | undefined;
+    let currentFormattedAddress: string | undefined;
 
     if (currentAddressMode === "SAVED" && currentSelectedId) {
       const saved = customerAddresses.find((a) => a.id === currentSelectedId);
       currentNeighborhood = saved?.neighborhood;
+      if (saved) {
+        const cityState = saved.city ? `, ${saved.city}${saved.state ? ` - ${saved.state}` : ""}` : "";
+        currentFormattedAddress = `${saved.street}, ${saved.number} - ${saved.neighborhood}${saved.complement ? ` (${saved.complement})` : ""}${cityState}`;
+      }
     } else {
       currentNeighborhood = form.getValues("neighborhood");
+      currentCep = form.getValues("cep");
+      const street = form.getValues("street");
+      const number = form.getValues("number");
+      const city = form.getValues("city");
+      const state = form.getValues("state");
+      if (street && number) {
+        const cityState = city ? `, ${city}${state ? ` - ${state}` : ""}` : "";
+        const cepSuffix = currentCep ? ` - CEP: ${currentCep}` : "";
+        currentFormattedAddress = `${street}, ${number} - ${currentNeighborhood || ""}${cityState}${cepSuffix}`;
+      }
     }
 
     try {
       setIsValidatingBenefits(true);
 
       const validatedBenefits = await validateOrderBenefits({
-        customerPhone: watchedPhone,
+        customerPhone: phoneValid ? watchedPhone : undefined,
         slug,
         consumptionMethod,
         couponCode: watchedCouponCode,
         useWalletBalance: nextUseWalletBalance,
         deliveryNeighborhood: currentNeighborhood,
+        deliveryCep: currentCep,
+        deliveryAddress: currentFormattedAddress,
         products: products.map((product) => ({
           id: product.id,
           quantity: product.quantity,
@@ -504,7 +545,7 @@ export const FinishOrderSheet = ({
         setUseWalletBalance(false);
       }
       if (!silent) {
-        toast.error("Não foi possível validar cupom e cashback.", {
+        toast.error("Não foi possível validar benefícios.", {
           description:
             error instanceof Error
               ? error.message
@@ -589,7 +630,7 @@ export const FinishOrderSheet = ({
         deliveryAddress: formattedDeliveryAddress,
         customerAddressId,
         deliveryAddressData,
-        deliveryCep: data.cep,
+        deliveryCep: data.deliveryAddressMode === "SAVED" ? undefined : (data.cep || undefined),
         deliveryNeighborhood:
           data.deliveryAddressMode === "SAVED" && data.selectedAddressId
             ? customerAddresses.find((a) => a.id === data.selectedAddressId)?.neighborhood
@@ -784,6 +825,7 @@ export const FinishOrderSheet = ({
                         checkoutSummary={checkoutSummary}
                         isCashbackEnabled={restaurant.isCashbackEnabled}
                         consumptionMethod={consumptionMethod}
+                        minimumOrderValue={minOrderValue}
                       />
                     </div>
                   </div>
@@ -804,14 +846,16 @@ export const FinishOrderSheet = ({
                 <Button
                   type="submit"
                   className="h-11 w-full rounded-2xl bg-destructive text-base font-bold shadow-lg shadow-destructive/20 transition-all hover:scale-[1.01] active:scale-[0.99]"
-                  disabled={isLoading || isActionDisabled}
+                  disabled={isLoading || isActionDisabled || isBelowMinimumOrder}
                 >
                   {isLoading ? (
                     <Loader2Icon className="animate-spin mr-2 h-4 w-4" />
                   ) : null}
-                  {(paymentMethod === "MERCADO_PAGO" ||
-                    paymentMethod === "INFINITEPAY") &&
-                  checkoutSummary.total > 0
+                  {isBelowMinimumOrder
+                    ? "Pedido mínimo não atingido"
+                    : (paymentMethod === "MERCADO_PAGO" ||
+                        paymentMethod === "INFINITEPAY") &&
+                      checkoutSummary.total > 0
                     ? "Ir para Pagamento Online"
                     : "Confirmar Pedido"}
                 </Button>

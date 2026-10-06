@@ -96,7 +96,7 @@ export interface CriarPedidoInput {
 }
 
 export interface ValidarBeneficiosPedidoInput {
-  customerPhone: string;
+  customerPhone?: string;
   slug: string;
   consumptionMethod?: ConsumptionMethod;
   couponCode?: string;
@@ -699,12 +699,18 @@ const carregarContextoPedidoCalculado = async (
     .from(recipeItemsTable)
     .innerJoin(inventoryItemsTable, eq(inventoryItemsTable.id, recipeItemsTable.inventoryItemId))
     .where(inArray(recipeItemsTable.productId, productIds)),
-    db.select().from(walletsTable).where(
-      and(
-        eq(walletsTable.restaurantId, restaurant.id),
-        eq(walletsTable.customerPhone, input.customerPhone),
-      ),
-    ).limit(1),
+    input.customerPhone
+      ? db
+          .select()
+          .from(walletsTable)
+          .where(
+            and(
+              eq(walletsTable.restaurantId, restaurant.id),
+              eq(walletsTable.customerPhone, input.customerPhone),
+            ),
+          )
+          .limit(1)
+      : Promise.resolve([] as (typeof walletsTable.$inferSelect)[]),
     input.consumptionMethod === "DELIVERY"
       ? db.select().from(deliveryFeeRulesTable).where(
           and(
@@ -837,12 +843,14 @@ const carregarContextoPedidoCalculado = async (
   }
 
   // Rodada 2: cupom (depende do subtotal calculado)
-  const coupon = await resolverCupomAplicado({
-    couponCode: input.couponCode,
-    restaurantId: restaurant.id,
-    customerPhone: input.customerPhone,
-    subtotal,
-  });
+  const coupon = input.customerPhone
+    ? await resolverCupomAplicado({
+        couponCode: input.couponCode,
+        restaurantId: restaurant.id,
+        customerPhone: input.customerPhone,
+        subtotal,
+      })
+    : null;
 
   const couponDiscountAmount = coupon?.discountAmount ?? 0;
   const totalAfterCoupon = Math.max(subtotal - couponDiscountAmount, 0);
@@ -1231,10 +1239,43 @@ export const buscarRestauranteComCardapioPorSlug = async (
       categoriesMap.set(row.category.id, currentCategory);
     }
 
+    let deliveryFeeRules: (typeof deliveryFeeRulesTable.$inferSelect)[] = [];
+    try {
+      deliveryFeeRules = await db
+        .select()
+        .from(deliveryFeeRulesTable)
+        .where(
+          and(
+            eq(deliveryFeeRulesTable.restaurantId, restaurant.id),
+            eq(deliveryFeeRulesTable.isActive, true),
+          ),
+        )
+        .orderBy(asc(deliveryFeeRulesTable.displayOrder));
+    } catch (e) {
+      console.warn("⚠️ [buscarRestauranteComCardapioPorSlug] Erro ao buscar regras de frete:", e);
+    }
+
+    let freeDeliveryRules: (typeof freeDeliveryRulesTable.$inferSelect)[] = [];
+    try {
+      freeDeliveryRules = await db
+        .select()
+        .from(freeDeliveryRulesTable)
+        .where(
+          and(
+            eq(freeDeliveryRulesTable.restaurantId, restaurant.id),
+            eq(freeDeliveryRulesTable.isActive, true),
+          ),
+        );
+    } catch (e) {
+      console.warn("⚠️ [buscarRestauranteComCardapioPorSlug] Erro ao buscar regras de frete grátis:", e);
+    }
+
     return {
       ...restaurant,
       menuCategories: Array.from(categoriesMap.values()),
       operatingHours,
+      deliveryFeeRules,
+      freeDeliveryRules,
       rating,
       ratingCount,
     };

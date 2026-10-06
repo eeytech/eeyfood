@@ -226,6 +226,8 @@ export type AbandonedCartStatus =
 export interface RestaurantComCategoriasEProdutos extends Restaurant {
   menuCategories: Array<MenuCategory & { products: Product[] }>;
   operatingHours: OperatingHours[];
+  deliveryFeeRules?: DeliveryFeeRule[];
+  freeDeliveryRules?: FreeDeliveryRule[];
 }
 
 export interface MesaComanda {

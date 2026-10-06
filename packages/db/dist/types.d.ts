@@ -83,6 +83,8 @@ export interface RestaurantComCategoriasEProdutos extends Restaurant {
         products: Product[];
     }>;
     operatingHours: OperatingHours[];
+    deliveryFeeRules?: DeliveryFeeRule[];
+    freeDeliveryRules?: FreeDeliveryRule[];
 }
 export interface MesaComanda {
     table: DiningTable;
