@@ -531,28 +531,6 @@ export function MarketingSettingsForm({
             </CardContent>
           </Card>
 
-          {/* Bottom Save Button */}
-          <div className="flex items-center justify-end pt-2">
-            <Button
-              type="submit"
-              disabled={isPending}
-              className="h-10 gap-2 rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 disabled:opacity-50 transition-all"
-            >
-              {isPending ? (
-                <>
-                  <Loader2Icon size={16} className="animate-spin" />
-                  <span>Salvando...</span>
-                </>
-              ) : (
-                <>
-                  <SaveIcon size={16} />
-                  <span>Salvar Configurações</span>
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-
         {/* Right Column: Informative cards (5 cols) */}
         <div className="space-y-4 lg:col-span-5">
           {/* Automatic Events Card */}

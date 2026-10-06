@@ -548,7 +548,7 @@ export function DeliveryFeeRulesTab({
                                 onClick={() => setDeletingRule(rule)}
                                 className="gap-2 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-700"
                               >
-                                <Trash2Icon size={14} /> Excluir zona
+                                <Trash2Icon size={14} /> Excluir zona de frete
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>

@@ -59,7 +59,7 @@ export function AiPromptEditor({
       />
 
       <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-        <SparklesIcon size={12} className="text-amber-500 shrink-0" />
+        <SparklesIcon size={12} className="text-primary shrink-0" />
         O prompt modelo oficial orienta o robô a listar o cardápio com precisão, sugerir acompanhamentos, gerar o link do carrinho e transferir para atendimento humano quando solicitado.
       </p>
     </div>

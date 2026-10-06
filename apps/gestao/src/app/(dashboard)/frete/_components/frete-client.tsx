@@ -797,7 +797,7 @@ export function FreteClient({
                               className="gap-2 rounded-lg text-xs font-semibold text-red-600"
                             >
                               <Trash2Icon size={14} />
-                              Excluir regra
+                              Excluir regra frete grátis
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
