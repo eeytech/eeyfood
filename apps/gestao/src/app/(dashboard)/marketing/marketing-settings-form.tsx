@@ -530,6 +530,7 @@ export function MarketingSettingsForm({
               </div>
             </CardContent>
           </Card>
+        </div>
 
         {/* Right Column: Informative cards (5 cols) */}
         <div className="space-y-4 lg:col-span-5">

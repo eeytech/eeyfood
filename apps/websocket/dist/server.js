@@ -19,12 +19,13 @@ const io = new Server(httpServer, {
     },
 });
 io.on("connection", (socket) => {
-    socket.on("JOIN_RESTAURANT_ROOM", (restaurantSlug) => {
-        if (!restaurantSlug) {
+    const handleJoin = (restaurantSlug) => {
+        if (!restaurantSlug)
             return;
-        }
         socket.join(restaurantSlug);
-    });
+    };
+    socket.on("JOIN_RESTAURANT_ROOM", handleJoin);
+    socket.on("join-restaurant", handleJoin);
 });
 app.post("/eventos/chamar-garcom", (request, response) => {
     const { restaurantSlug, tableId, tableName } = request.body;
