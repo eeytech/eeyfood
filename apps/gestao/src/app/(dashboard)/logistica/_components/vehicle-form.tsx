@@ -261,7 +261,7 @@ export function VehicleForm({
               : "Cadastrando..."
             : defaultValues
               ? "Salvar Alterações"
-              : "Cadastrar Novo Veículo"}
+              : "Cadastrar Veículo"}
         </Button>
       </DialogFooter>
     </form>

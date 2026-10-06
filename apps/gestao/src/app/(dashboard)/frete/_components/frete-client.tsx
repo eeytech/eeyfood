@@ -417,7 +417,7 @@ export function FreteClient({
           className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
         >
           <PlusIcon size={16} />
-          <span>+ Nova Regra Frete Grátis</span>
+          <span>Nova Regra Frete Grátis</span>
         </Button>
       </div>
 
@@ -1242,7 +1242,7 @@ export function FreteClient({
         onOpenChange={(open) => {
           if (!open) setDeletingRule(null);
         }}
-        title="Excluir regra de frete grátis"
+        title="Excluir Regra de Frete Grátis"
         description={
           <>
             Tem certeza que deseja excluir a regra{" "}

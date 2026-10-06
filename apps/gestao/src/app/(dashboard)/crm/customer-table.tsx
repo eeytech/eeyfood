@@ -43,27 +43,27 @@ const SEGMENT_CONFIG: Record<
   NEW: {
     label: "Novo",
     icon: UserPlusIcon,
-    badgeClass: "bg-blue-50 text-blue-700 border-blue-200/80",
+    badgeClass: "bg-primary/10 text-primary border-primary/20",
   },
   VIP: {
     label: "VIP",
     icon: SparklesIcon,
-    badgeClass: "bg-amber-50 text-amber-700 border-amber-200/80",
+    badgeClass: "bg-primary/10 text-primary border-primary/20",
   },
   RECOVERED: {
     label: "Recuperado",
     icon: RotateCcwIcon,
-    badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200/80",
+    badgeClass: "bg-primary/10 text-primary border-primary/20",
   },
   AT_RISK: {
     label: "Em Risco",
     icon: AlertTriangleIcon,
-    badgeClass: "bg-orange-50 text-orange-700 border-orange-200/80",
+    badgeClass: "bg-primary/10 text-primary border-primary/20",
   },
   INACTIVE: {
     label: "Inativo",
     icon: UserXIcon,
-    badgeClass: "bg-rose-50 text-rose-700 border-rose-200/80",
+    badgeClass: "bg-primary/10 text-primary border-primary/20",
   },
 };
 
@@ -215,7 +215,7 @@ export function CustomerTable({
                           >
                             <MapPinIcon
                               size={14}
-                              className="shrink-0 text-rose-500 mt-0.5"
+                              className="shrink-0 text-primary mt-0.5"
                             />
                             <span className="truncate text-xs font-medium text-slate-700">
                               {c.deliveryAddress}
@@ -324,7 +324,7 @@ export function CustomerTable({
                   {/* Endereço de Entrega no card mobile */}
                   {c.deliveryAddress ? (
                     <div className="flex items-start gap-1.5 rounded-xl bg-slate-50 px-2.5 py-1.5 text-xs text-slate-700 border border-slate-100">
-                      <MapPinIcon size={13} className="shrink-0 text-rose-500 mt-0.5" />
+                      <MapPinIcon size={13} className="shrink-0 text-primary mt-0.5" />
                       <span className="line-clamp-2">{c.deliveryAddress}</span>
                     </div>
                   ) : null}

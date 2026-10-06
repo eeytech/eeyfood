@@ -131,9 +131,9 @@ export default async function CustomerDetailPage({ params }: PageProps) {
               <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
                 {customer.name}
               </h1>
-              <Badge variant={segmentVariant} className="rounded-full px-2.5 py-0.5 text-xs font-medium">
+              <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
                 {segmentLabel}
-              </Badge>
+              </span>
             </div>
             <p className="text-sm text-slate-500">
               Telefone: {customer.phone} {customer.email ? `• ${customer.email}` : ""}

@@ -972,7 +972,7 @@ export function DeliveryFeeRulesTab({
                 className="rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 disabled:opacity-50"
               >
                 {isPending && <Loader2Icon size={14} className="mr-1.5 animate-spin" />}
-                {editingRule ? "Salvar Alterações" : "Cadastrar Zona"}
+                {editingRule ? "Salvar Alterações" : "Cadastrar Zona de Frete"}
               </Button>
             </DialogFooter>
           </form>

@@ -124,7 +124,7 @@ const EMPTY_FORM = {
   name: "",
   cashbackPercent: "",
   criterionType: "minOrderValue" as CriterionType,
-  minOrderValue: "0",
+  minOrderValue: "0,00",
   menuCategoryId: "",
   productId: "",
   startsAt: "",
@@ -271,6 +271,19 @@ export function CashbackClient({
     setCurrentPage(1);
   };
 
+  const handleCurrencyChange = (valueStr: string) => {
+    const digits = valueStr.replace(/\D/g, "");
+    if (!digits) {
+      setForm((prev) => ({ ...prev, minOrderValue: "0,00" }));
+      return;
+    }
+    const numeric = parseInt(digits, 10) / 100;
+    setForm((prev) => ({
+      ...prev,
+      minOrderValue: numeric.toFixed(2).replace(".", ","),
+    }));
+  };
+
   // Open Create Dialog
   const handleOpenCreate = () => {
     setEditingRule(null);
@@ -286,7 +299,7 @@ export function CashbackClient({
       name: rule.name,
       cashbackPercent: String(rule.cashbackPercent),
       criterionType: ruleCriterionType(rule),
-      minOrderValue: String(rule.minOrderValue),
+      minOrderValue: Number(rule.minOrderValue || 0).toFixed(2).replace(".", ","),
       menuCategoryId: rule.menuCategoryId ?? "",
       productId: rule.productId ?? "",
       startsAt: toDatetimeLocal(rule.startsAt),
@@ -396,7 +409,7 @@ export function CashbackClient({
           className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
         >
           <PlusIcon size={16} />
-          <span>+ Nova Regra Cashback</span>
+          <span>Nova Regra Cashback</span>
         </Button>
       </div>
 
@@ -723,7 +736,7 @@ export function CashbackClient({
 
                         {/* Retorno */}
                         <TableCell className="py-3.5">
-                          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200/80 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-800">
+                          <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">
                             {rule.cashbackPercent}% Cashback
                           </span>
                         </TableCell>
@@ -731,22 +744,22 @@ export function CashbackClient({
                         {/* Critério */}
                         <TableCell className="py-3.5">
                           {cType === "product" ? (
-                            <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200/80 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-800">
-                              <PackageIcon size={12} className="shrink-0" />
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                              <PackageIcon size={12} className="shrink-0 text-primary" />
                               <span className="truncate max-w-[180px]">
                                 {rule.product?.name ?? "Produto"}
                               </span>
                             </span>
                           ) : cType === "category" ? (
-                            <span className="inline-flex items-center gap-1.5 rounded-full border border-purple-200/80 bg-purple-50 px-2.5 py-1 text-xs font-medium text-purple-800">
-                              <TagIcon size={12} className="shrink-0" />
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                              <TagIcon size={12} className="shrink-0 text-primary" />
                               <span className="truncate max-w-[180px]">
                                 {rule.menuCategory?.name ?? "Categoria"}
                               </span>
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
-                              <CircleDollarSignIcon size={12} className="shrink-0" />
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                              <CircleDollarSignIcon size={12} className="shrink-0 text-primary" />
                               {rule.minOrderValue > 0
                                 ? `Mínimo: ${formatCurrency(rule.minOrderValue)}`
                                 : "Qualquer valor"}
@@ -878,7 +891,7 @@ export function CashbackClient({
                           {rule.name}
                         </p>
                         <div className="mt-1 flex items-center gap-2">
-                          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200/80 bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-800">
+                          <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
                             {rule.cashbackPercent}% Cashback
                           </span>
                         </div>
@@ -924,7 +937,7 @@ export function CashbackClient({
                               <>
                                 <CheckCircle2Icon
                                   size={14}
-                                  className="text-emerald-600"
+                                  className="text-primary"
                                 />
                                 Ativar regra
                               </>
@@ -944,18 +957,18 @@ export function CashbackClient({
 
                     <div className="pt-1">
                       {cType === "product" ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200/80 bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-800">
-                          <PackageIcon size={11} />
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                          <PackageIcon size={11} className="shrink-0 text-primary" />
                           {rule.product?.name ?? "Produto"}
                         </span>
                       ) : cType === "category" ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-full border border-purple-200/80 bg-purple-50 px-2.5 py-0.5 text-xs font-medium text-purple-800">
-                          <TagIcon size={11} />
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                          <TagIcon size={11} className="shrink-0 text-primary" />
                           {rule.menuCategory?.name ?? "Categoria"}
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">
-                          <CircleDollarSignIcon size={11} />
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                          <CircleDollarSignIcon size={11} className="shrink-0 text-primary" />
                           {rule.minOrderValue > 0
                             ? `Mín: ${formatCurrency(rule.minOrderValue)}`
                             : "Sem valor mínimo"}
@@ -1107,12 +1120,12 @@ export function CashbackClient({
         <DialogContent className="max-h-[90vh] overflow-y-auto border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-md">
           <DialogHeader>
             <div className="flex items-center gap-2">
-              <div className="rounded-xl bg-slate-100 p-2 text-slate-900">
-                {editingRule ? <PencilIcon size={20} /> : <PlusIcon size={20} />}
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+                {editingRule ? <PencilIcon size={18} /> : <PlusIcon size={18} />}
               </div>
               <div>
                 <DialogTitle className="font-display text-lg font-bold text-slate-900">
-                  {editingRule ? "Editar Regra" : "Nova Regra de Cashback"}
+                  {editingRule ? "Editar Regra de Cashback" : "Nova Regra de Cashback"}
                 </DialogTitle>
                 <DialogDescription className="text-xs text-slate-500">
                   {editingRule
@@ -1206,18 +1219,20 @@ export function CashbackClient({
                 >
                   Valor Mínimo do Pedido (R$)
                 </Label>
-                <Input
-                  id="minOrderValue"
-                  name="minOrderValue"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.minOrderValue}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, minOrderValue: e.target.value }))
-                  }
-                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-slate-400"
-                />
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400">
+                    R$
+                  </span>
+                  <Input
+                    id="minOrderValue"
+                    name="minOrderValue"
+                    type="text"
+                    inputMode="numeric"
+                    value={form.minOrderValue}
+                    onChange={(e) => handleCurrencyChange(e.target.value)}
+                    className="h-10 pl-9 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-primary focus:ring-1 focus:ring-primary shadow-2xs"
+                  />
+                </div>
               </div>
             )}
 
@@ -1318,7 +1333,7 @@ export function CashbackClient({
               </div>
             </div>
 
-            <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+            <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/[0.03] p-3">
               <div>
                 <p className="text-xs font-semibold text-slate-800">
                   Regra ativa
@@ -1332,7 +1347,7 @@ export function CashbackClient({
                 onCheckedChange={(checked) =>
                   setForm((f) => ({ ...f, isActive: checked }))
                 }
-                className="data-[state=checked]:bg-emerald-600 data-[state=unchecked]:bg-slate-200"
+                className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
               />
             </div>
 
@@ -1348,7 +1363,7 @@ export function CashbackClient({
               <Button
                 type="submit"
                 disabled={isPending}
-                className="rounded-full bg-slate-900 px-5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
+                className="rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 disabled:opacity-50"
               >
                 {isPending && (
                   <LoaderCircleIcon size={14} className="mr-1.5 animate-spin" />

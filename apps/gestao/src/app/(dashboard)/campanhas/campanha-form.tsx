@@ -87,14 +87,14 @@ const TEMPLATES = [
 ];
 
 const SEGMENT_BADGES: Record<string, { label: string; className: string }> = {
-  ALL: { label: "Todos", className: "bg-slate-100 text-slate-700" },
-  NEW: { label: "Novo", className: "bg-blue-100 text-blue-700 border-blue-200" },
-  VIP: { label: "VIP", className: "bg-amber-100 text-amber-700 border-amber-200" },
-  LOYAL: { label: "Leal", className: "bg-purple-100 text-purple-700 border-purple-200" },
-  AT_RISK: { label: "Em Risco", className: "bg-orange-100 text-orange-700 border-orange-200" },
-  CHURNED: { label: "Inativo", className: "bg-rose-100 text-rose-700 border-rose-200" },
-  INACTIVE: { label: "Inativo", className: "bg-rose-100 text-rose-700 border-rose-200" },
-  RECOVERED: { label: "Recuperado", className: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+  ALL: { label: "Todos", className: "border-primary/20 bg-primary/10 text-primary" },
+  NEW: { label: "Novo", className: "border-primary/20 bg-primary/10 text-primary" },
+  VIP: { label: "VIP", className: "border-primary/20 bg-primary/10 text-primary" },
+  LOYAL: { label: "Leal", className: "border-primary/20 bg-primary/10 text-primary" },
+  AT_RISK: { label: "Em Risco", className: "border-primary/20 bg-primary/10 text-primary" },
+  CHURNED: { label: "Inativo", className: "border-primary/20 bg-primary/10 text-primary" },
+  INACTIVE: { label: "Inativo", className: "border-primary/20 bg-primary/10 text-primary" },
+  RECOVERED: { label: "Recuperado", className: "border-primary/20 bg-primary/10 text-primary" },
 };
 
 function formatPhone(phone: string) {
@@ -527,7 +527,7 @@ export function CampanhaForm({
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold text-slate-700 flex items-center gap-1">
-                      <SparklesIcon size={13} className="text-amber-500" />
+                      <SparklesIcon size={13} className="text-primary" />
                       Modelos Rápidos de Mensagem
                     </span>
                     <span className="text-[11px] text-slate-400">
@@ -579,7 +579,7 @@ export function CampanhaForm({
                   />
                   <div className="flex items-center justify-between text-xs text-slate-500 pt-0.5">
                     <span>{message.length} caracteres digitados</span>
-                    <Badge variant="outline" className="border-slate-200 bg-slate-50 text-[11px] font-medium text-slate-600">
+                    <Badge variant="outline" className="border-primary/20 bg-primary/5 text-[11px] font-semibold text-primary">
                       {totalRecipients} {targetType === "SPECIFIC" ? "contato" : "cliente"}{totalRecipients !== 1 ? "s" : ""} selecionado{totalRecipients !== 1 ? "s" : ""}
                     </Badge>
                   </div>
@@ -635,12 +635,12 @@ export function CampanhaForm({
               {/* WhatsApp Chat Bubble Mockup */}
               <div className="rounded-2xl bg-white p-3.5 shadow-sm border border-slate-200/60 text-slate-800 space-y-2">
                 <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-                  <div className="h-7 w-7 rounded-full bg-emerald-600 flex items-center justify-center text-white text-[11px] font-bold">
+                  <div className="h-7 w-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-[11px] font-bold shadow-xs">
                     EEY
                   </div>
                   <div>
                     <p className="text-xs font-bold text-slate-900">Seu Restaurante</p>
-                    <p className="text-[10px] text-emerald-600 font-medium">Conta Comercial Verificada</p>
+                    <p className="text-[10px] text-primary font-semibold">Conta Comercial Verificada</p>
                   </div>
                 </div>
 
@@ -650,7 +650,7 @@ export function CampanhaForm({
 
                 <div className="flex items-center justify-end gap-1 text-[10px] text-slate-400 pt-1">
                   <span>14:30</span>
-                  <CheckCheckIcon size={13} className="text-blue-500" />
+                  <CheckCheckIcon size={13} className="text-primary" />
                 </div>
               </div>
             </CardContent>
@@ -668,7 +668,7 @@ export function CampanhaForm({
             </CardHeader>
             <CardContent className="p-4 space-y-2.5 text-xs text-slate-600">
               <div className="flex items-start gap-2">
-                <div className="rounded bg-blue-50 p-1 text-blue-600 shrink-0 mt-0.5">
+                <div className="rounded-lg border border-primary/20 bg-primary/10 p-1 text-primary shrink-0 mt-0.5">
                   <MessageSquareIcon size={12} />
                 </div>
                 <p>
@@ -677,7 +677,7 @@ export function CampanhaForm({
               </div>
 
               <div className="flex items-start gap-2">
-                <div className="rounded bg-emerald-50 p-1 text-emerald-600 shrink-0 mt-0.5">
+                <div className="rounded-lg border border-primary/20 bg-primary/10 p-1 text-primary shrink-0 mt-0.5">
                   <SparklesIcon size={12} />
                 </div>
                 <p>
@@ -686,7 +686,7 @@ export function CampanhaForm({
               </div>
 
               <div className="flex items-start gap-2">
-                <div className="rounded bg-amber-50 p-1 text-amber-600 shrink-0 mt-0.5">
+                <div className="rounded-lg border border-primary/20 bg-primary/10 p-1 text-primary shrink-0 mt-0.5">
                   <AlertCircleIcon size={12} />
                 </div>
                 <p>

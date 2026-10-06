@@ -649,7 +649,7 @@ export function CourierForm({ slug, defaultValues, onSuccess, onCancel }: Courie
           {isPending && <Loader2Icon size={14} className="mr-1.5 animate-spin" />}
           {isPending
             ? defaultValues ? "Salvando..." : "Cadastrando..."
-            : defaultValues ? "Salvar Alterações" : "Cadastrar Novo Motoboy"}
+            : defaultValues ? "Salvar Alterações" : "Cadastrar Motoboy"}
         </Button>
       </DialogFooter>
     </form>

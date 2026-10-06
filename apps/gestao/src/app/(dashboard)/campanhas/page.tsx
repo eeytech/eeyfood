@@ -144,8 +144,8 @@ export default async function CampanhasPage({ params }: PageProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-medium text-slate-700 shadow-sm">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+          <div className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3.5 py-1.5 text-xs font-semibold text-primary shadow-xs">
+            <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
             <span>Disparador WhatsApp Ativo</span>
           </div>
         </div>

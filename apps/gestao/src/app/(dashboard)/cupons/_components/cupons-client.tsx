@@ -398,7 +398,7 @@ export function CuponsClient({
               className={cn(
                 "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold",
                 isCouponsEnabled
-                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200/80"
+                  ? "bg-primary/10 text-primary border border-primary/20"
                   : "bg-slate-100 text-slate-600 border border-slate-200",
               )}
             >
@@ -703,12 +703,7 @@ export function CuponsClient({
                       {/* Desconto */}
                       <TableCell className="py-3.5">
                         <span
-                          className={cn(
-                            "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold",
-                            coupon.discountType === "PERCENTAGE"
-                              ? "border-amber-200/80 bg-amber-50 text-amber-800"
-                              : "border-blue-200/80 bg-blue-50 text-blue-800",
-                          )}
+                          className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary"
                         >
                           {coupon.discountType === "PERCENTAGE"
                             ? `${coupon.discountValue}% OFF`
@@ -919,12 +914,7 @@ export function CuponsClient({
 
                   <div className="flex flex-wrap items-center gap-2 pt-1">
                     <span
-                      className={cn(
-                        "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold",
-                        coupon.discountType === "PERCENTAGE"
-                          ? "border-amber-200/80 bg-amber-50 text-amber-800"
-                          : "border-blue-200/80 bg-blue-50 text-blue-800",
-                      )}
+                      className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary"
                     >
                       {coupon.discountType === "PERCENTAGE"
                         ? `${coupon.discountValue}% OFF`
@@ -1087,7 +1077,7 @@ export function CuponsClient({
         <DialogContent className="max-h-[90vh] overflow-y-auto border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-lg">
           <DialogHeader>
             <div className="flex items-center gap-2">
-              <div className="rounded-xl bg-slate-100 p-2 text-slate-900">
+              <div className="rounded-xl border border-primary/20 bg-primary/10 p-2 text-primary">
                 {editingCoupon ? <PencilIcon size={20} /> : <PlusIcon size={20} />}
               </div>
               <div>
@@ -1293,7 +1283,7 @@ export function CuponsClient({
                 />
               </div>
 
-              <div className="col-span-2 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+              <div className="col-span-2 flex items-center justify-between rounded-xl border border-primary/20 bg-primary/[0.03] p-3">
                 <div>
                   <p className="text-xs font-semibold text-slate-800">
                     Cupom ativo para resgate
@@ -1307,7 +1297,7 @@ export function CuponsClient({
                   onCheckedChange={(checked) =>
                     setForm((f) => ({ ...f, isActive: checked }))
                   }
-                  className="data-[state=checked]:bg-emerald-600 data-[state=unchecked]:bg-slate-200"
+                  className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
                 />
               </div>
             </div>
@@ -1324,7 +1314,7 @@ export function CuponsClient({
               <Button
                 type="submit"
                 disabled={isPending}
-                className="rounded-full bg-slate-900 px-5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
+                className="rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 disabled:opacity-50"
               >
                 {isPending && (
                   <LoaderCircleIcon size={14} className="mr-1.5 animate-spin" />
