@@ -700,15 +700,15 @@ export function FiadosClient({ slug, fiados, contas }: FiadosClientProps) {
                               >
                                 <DropdownMenuItem
                                   onClick={() => setEditFiado(fiado)}
-                                  className="gap-2 rounded-lg text-xs font-medium text-slate-700"
+                                  className="gap-2 rounded-lg text-xs font-semibold text-slate-700"
                                 >
-                                  <PencilIcon size={14} />
+                                  <PencilIcon size={14} className="text-primary" />
                                   Editar dados
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator className="bg-slate-100" />
                                 <DropdownMenuItem
                                   onClick={() => setInativandoFiado({ id: fiado.id, name: fiado.customerName })}
-                                  className="gap-2 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50"
+                                  className="gap-2 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50"
                                 >
                                   <XCircleIcon size={14} />
                                   Inativar cliente

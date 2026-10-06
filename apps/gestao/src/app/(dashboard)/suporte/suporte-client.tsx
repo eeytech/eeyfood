@@ -983,22 +983,19 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                               align="end"
                               className="w-52 rounded-xl border-slate-200 bg-white p-1 text-slate-900 shadow-xl"
                             >
-                              <DropdownMenuLabel className="px-2.5 py-1.5 text-xs font-semibold text-slate-500">
-                                Opções do Chamado
-                              </DropdownMenuLabel>
                               <DropdownMenuItem
                                 onClick={() => setSelectedTicket(t)}
-                                className="gap-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
+                                className="gap-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
                               >
-                                <MessageSquareIcon size={14} className="text-blue-600" />
+                                <MessageSquareIcon size={14} className="text-primary" />
                                 Ver detalhes e respostas
                               </DropdownMenuItem>
 
                               <DropdownMenuItem
                                 onClick={() => handleCopyProtocol(t.protocol)}
-                                className="gap-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
+                                className="gap-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
                               >
-                                <CopyIcon size={14} className="text-slate-500" />
+                                <CopyIcon size={14} className="text-primary" />
                                 Copiar protocolo
                               </DropdownMenuItem>
 
@@ -1007,17 +1004,17 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                               {t.status !== "RESOLVED" && t.status !== "CLOSED" ? (
                                 <DropdownMenuItem
                                   onClick={() => handleUpdateStatus(t.id, "RESOLVED")}
-                                  className="gap-2 rounded-lg text-xs font-medium text-emerald-700 hover:bg-emerald-50 focus:bg-emerald-50"
+                                  className="gap-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
                                 >
-                                  <CheckCircle2Icon size={14} />
+                                  <CheckCircle2Icon size={14} className="text-primary" />
                                   Marcar como Resolvido
                                 </DropdownMenuItem>
                               ) : (
                                 <DropdownMenuItem
                                   onClick={() => handleUpdateStatus(t.id, "IN_PROGRESS")}
-                                  className="gap-2 rounded-lg text-xs font-medium text-amber-700 hover:bg-amber-50 focus:bg-amber-50"
+                                  className="gap-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
                                 >
-                                  <ClockIcon size={14} />
+                                  <ClockIcon size={14} className="text-primary" />
                                   Reabrir Chamado
                                 </DropdownMenuItem>
                               )}
@@ -1026,7 +1023,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
 
                               <DropdownMenuItem
                                 onClick={() => setDeletingTicket(t)}
-                                className="gap-2 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-700"
+                                className="gap-2 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-700"
                               >
                                 <Trash2Icon size={14} />
                                 Excluir chamado
@@ -1092,22 +1089,22 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                         >
                           <DropdownMenuItem
                             onClick={() => setSelectedTicket(t)}
-                            className="gap-2 rounded-lg text-xs font-medium text-slate-700"
+                            className="gap-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
                           >
-                            <MessageSquareIcon size={14} />
+                            <MessageSquareIcon size={14} className="text-primary" />
                             Ver detalhes
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleCopyProtocol(t.protocol)}
-                            className="gap-2 rounded-lg text-xs font-medium text-slate-700"
+                            className="gap-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
                           >
-                            <CopyIcon size={14} />
+                            <CopyIcon size={14} className="text-primary" />
                             Copiar protocolo
                           </DropdownMenuItem>
                           <DropdownMenuSeparator className="bg-slate-100" />
                           <DropdownMenuItem
                             onClick={() => setDeletingTicket(t)}
-                            className="gap-2 rounded-lg text-xs font-medium text-red-600"
+                            className="gap-2 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-700"
                           >
                             <Trash2Icon size={14} />
                             Excluir chamado

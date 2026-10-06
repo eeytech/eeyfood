@@ -235,7 +235,7 @@ export async function buscarClienteDetalheAction(slug: string, customerId: strin
       eq(ordersTable.customerPhone, customer.phone),
     ),
     orderBy: [desc(ordersTable.createdAt)],
-    limit: 30,
+    limit: 100,
     with: { orderProducts: { with: { product: true } } },
   });
 

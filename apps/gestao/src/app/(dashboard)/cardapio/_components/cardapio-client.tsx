@@ -666,21 +666,18 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-40 rounded-xl border-slate-200 bg-white">
-                                <DropdownMenuLabel className="text-xs font-medium text-slate-500">
-                                  Ações
-                                </DropdownMenuLabel>
                                 <DropdownMenuItem
                                   onClick={() => setEditProduct(product)}
-                                  className="cursor-pointer gap-2 text-xs font-medium text-slate-700"
+                                  className="cursor-pointer gap-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
                                 >
-                                  <PencilIcon size={14} />
+                                  <PencilIcon size={14} className="text-primary" />
                                   <span>Editar Produto</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   onClick={() => setDeletingProduct({ id: product.id, name: product.name })}
                                   disabled={isPending}
-                                  className="cursor-pointer gap-2 text-xs font-medium text-rose-600 focus:bg-rose-50 focus:text-rose-700"
+                                  className="cursor-pointer gap-2 text-xs font-semibold text-red-600 focus:bg-red-50 focus:text-red-700 hover:bg-red-50"
                                 >
                                   <Trash2Icon size={14} />
                                   <span>Excluir</span>
@@ -1005,21 +1002,18 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-40 rounded-xl border-slate-200 bg-white">
-                              <DropdownMenuLabel className="text-xs font-medium text-slate-500">
-                                Ações
-                              </DropdownMenuLabel>
                               <DropdownMenuItem
                                 onClick={() => setEditCategory(category)}
-                                className="cursor-pointer gap-2 text-xs font-medium text-slate-700"
+                                className="cursor-pointer gap-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
                               >
-                                <PencilIcon size={14} />
+                                <PencilIcon size={14} className="text-primary" />
                                 <span>Editar Categoria</span>
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 onClick={() => setDeletingCategory({ id: category.id, name: category.name })}
                                 disabled={isPending}
-                                className="cursor-pointer gap-2 text-xs font-medium text-rose-600 focus:bg-rose-50 focus:text-rose-700"
+                                className="cursor-pointer gap-2 text-xs font-semibold text-red-600 focus:bg-red-50 focus:text-red-700 hover:bg-red-50"
                               >
                                 <Trash2Icon size={14} />
                                 <span>Excluir</span>

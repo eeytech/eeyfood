@@ -1023,9 +1023,6 @@ export function FinanceiroClient({
                                   align="end"
                                   className="w-48 rounded-xl border-slate-200 bg-white p-1 text-slate-900 shadow-xl"
                                 >
-                                  <DropdownMenuLabel className="px-2 py-1.5 text-xs font-semibold text-slate-500">
-                                    Opções do Lançamento
-                                  </DropdownMenuLabel>
                                   {item.transaction.status === "PENDING" && (
                                     <DropdownMenuItem
                                       onClick={() =>
@@ -1035,17 +1032,17 @@ export function FinanceiroClient({
                                           item.transaction.description,
                                         )
                                       }
-                                      className="gap-2 rounded-lg text-xs font-medium text-emerald-700 hover:bg-emerald-50 focus:bg-emerald-50"
+                                      className="gap-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
                                     >
-                                      <CheckCircle2Icon size={14} className="text-emerald-600" />
+                                      <CheckCircle2Icon size={14} className="text-primary" />
                                       Marcar como Quitado
                                     </DropdownMenuItem>
                                   )}
                                   <DropdownMenuItem
                                     onClick={() => setEditTransaction(item.transaction)}
-                                    className="gap-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
+                                    className="gap-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
                                   >
-                                    <PencilIcon size={14} className="text-slate-500" />
+                                    <PencilIcon size={14} className="text-primary" />
                                     Editar lançamento
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator className="bg-slate-100" />
@@ -1056,7 +1053,7 @@ export function FinanceiroClient({
                                         description: item.transaction.description,
                                       })
                                     }
-                                    className="gap-2 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-700"
+                                    className="gap-2 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-700"
                                   >
                                     <Trash2Icon size={14} />
                                     Excluir lançamento
@@ -1132,17 +1129,17 @@ export function FinanceiroClient({
                                       item.transaction.description,
                                     )
                                   }
-                                  className="gap-2 rounded-lg text-xs font-medium text-emerald-700"
+                                  className="gap-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
                                 >
-                                  <CheckCircle2Icon size={14} />
+                                  <CheckCircle2Icon size={14} className="text-primary" />
                                   Marcar como Quitado
                                 </DropdownMenuItem>
                               )}
                               <DropdownMenuItem
                                 onClick={() => setEditTransaction(item.transaction)}
-                                className="gap-2 rounded-lg text-xs font-medium text-slate-700"
+                                className="gap-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
                               >
-                                <PencilIcon size={14} />
+                                <PencilIcon size={14} className="text-primary" />
                                 Editar dados
                               </DropdownMenuItem>
                               <DropdownMenuSeparator className="bg-slate-100" />
@@ -1153,7 +1150,7 @@ export function FinanceiroClient({
                                     description: item.transaction.description,
                                   })
                                 }
-                                className="gap-2 rounded-lg text-xs font-medium text-red-600"
+                                className="gap-2 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-700"
                               >
                                 <Trash2Icon size={14} />
                                 Excluir

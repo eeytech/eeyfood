@@ -646,7 +646,7 @@ export function GarconsTab({
                             <DropdownMenuContent align="end" className="w-48">
                               <DropdownMenuItem
                                 onClick={() => handleOpenEditGarcom(g)}
-                                className="gap-2 text-xs"
+                                className="gap-2 text-xs font-semibold"
                               >
                                 <Edit2Icon size={13} className="text-primary" />
                                 Editar dados
@@ -660,7 +660,7 @@ export function GarconsTab({
                                     g.waiter.status as "ACTIVE" | "INACTIVE",
                                   )
                                 }
-                                className="gap-2 text-xs"
+                                className="gap-2 text-xs font-semibold"
                               >
                                 {isAvailable ? (
                                   <>
@@ -679,7 +679,7 @@ export function GarconsTab({
 
                               <DropdownMenuItem
                                 onClick={() => setDeletingGarcom({ id: g.waiter.id, name: g.waiter.name })}
-                                className="gap-2 text-xs text-red-600 focus:text-red-600"
+                                className="gap-2 text-xs font-semibold text-red-600 focus:text-red-600"
                               >
                                 <Trash2Icon size={13} />
                                 Excluir garçom
@@ -720,12 +720,12 @@ export function GarconsTab({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem onClick={() => handleOpenEditGarcom(g)} className="gap-2 text-xs">
+                          <DropdownMenuItem onClick={() => handleOpenEditGarcom(g)} className="gap-2 text-xs font-semibold">
                             <Edit2Icon size={13} className="text-primary" />
                             Editar dados
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => setDeletingGarcom({ id: g.waiter.id, name: g.waiter.name })} className="gap-2 text-xs text-red-600">
+                          <DropdownMenuItem onClick={() => setDeletingGarcom({ id: g.waiter.id, name: g.waiter.name })} className="gap-2 text-xs font-semibold text-red-600">
                             <Trash2Icon size={13} />
                             Excluir garçom
                           </DropdownMenuItem>

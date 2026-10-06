@@ -786,7 +786,7 @@ export function FreteClient({
                           >
                             <DropdownMenuItem
                               onClick={() => handleOpenEdit(rule)}
-                              className="gap-2 rounded-lg text-xs font-medium text-slate-700"
+                              className="gap-2 rounded-lg text-xs font-semibold text-slate-700"
                             >
                               <PencilIcon size={14} className="text-primary" />
                               Editar regra
@@ -794,7 +794,7 @@ export function FreteClient({
                             <DropdownMenuSeparator className="bg-slate-100" />
                             <DropdownMenuItem
                               onClick={() => setDeletingRule(rule)}
-                              className="gap-2 rounded-lg text-xs font-medium text-red-600"
+                              className="gap-2 rounded-lg text-xs font-semibold text-red-600"
                             >
                               <Trash2Icon size={14} />
                               Excluir regra
