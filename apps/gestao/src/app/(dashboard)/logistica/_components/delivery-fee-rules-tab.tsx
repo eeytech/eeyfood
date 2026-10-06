@@ -615,7 +615,7 @@ export function DeliveryFeeRulesTab({
                             className="gap-2 rounded-lg text-xs font-semibold text-red-600"
                           >
                             <Trash2Icon size={14} />
-                            Excluir zona
+                            Excluir zona de frete
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

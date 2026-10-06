@@ -944,7 +944,6 @@ export function LogisticaClient({
                                     <MessageCircleIcon size={14} className="text-primary" />
                                     Enviar acesso no WhatsApp
                                   </DropdownMenuItem>
-                                  <DropdownMenuSeparator className="bg-slate-100" />
                                   <DropdownMenuItem
                                     onClick={() => setEditCourier(courier)}
                                     className="gap-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100 cursor-pointer"

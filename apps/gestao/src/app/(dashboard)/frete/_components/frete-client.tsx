@@ -789,7 +789,7 @@ export function FreteClient({
                               className="gap-2 rounded-lg text-xs font-semibold text-slate-700"
                             >
                               <PencilIcon size={14} className="text-primary" />
-                              Editar regra
+                              Editar dados
                             </DropdownMenuItem>
                             <DropdownMenuSeparator className="bg-slate-100" />
                             <DropdownMenuItem
