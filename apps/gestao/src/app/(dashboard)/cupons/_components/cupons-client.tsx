@@ -85,6 +85,29 @@ function formatCurrency(value: number) {
   }).format(value);
 }
 
+function formatNumberToBRL(value: number): string {
+  return value.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function parseCurrencyInput(valueStr: string, allowEmpty = false): string {
+  const digits = valueStr.replace(/\D/g, "");
+  if (!digits) {
+    return allowEmpty ? "" : "0,00";
+  }
+  const numeric = parseInt(digits, 10) / 100;
+  return formatNumberToBRL(numeric);
+}
+
+function currencyStringToNumber(valueStr: string): number {
+  if (!valueStr) return 0;
+  const digits = valueStr.replace(/\D/g, "");
+  if (!digits) return 0;
+  return parseInt(digits, 10) / 100;
+}
+
 function formatDatetime(date: Date | string | null | undefined) {
   if (!date) return "—";
   try {
@@ -112,7 +135,7 @@ const EMPTY_FORM = {
   description: "",
   discountType: "PERCENTAGE" as "PERCENTAGE" | "FIXED",
   discountValue: "",
-  minimumOrderValue: "0",
+  minimumOrderValue: "0,00",
   maxDiscountAmount: "",
   usageLimit: "",
   perCustomerLimit: "1",
@@ -249,6 +272,19 @@ export function CuponsClient({
     setCurrentPage(1);
   };
 
+  const handlePercentChange = (valueStr: string) => {
+    let cleaned = valueStr.replace(/[^0-9,.]/g, "").replace(".", ",");
+    const parts = cleaned.split(",");
+    if (parts.length > 2) {
+      cleaned = parts[0] + "," + parts.slice(1).join("");
+    }
+    const num = parseFloat(cleaned.replace(",", "."));
+    if (!isNaN(num) && num > 100) {
+      cleaned = "100";
+    }
+    setForm((f) => ({ ...f, discountValue: cleaned }));
+  };
+
   // Open Create Dialog
   const handleOpenCreate = () => {
     setEditingCoupon(null);
@@ -264,10 +300,15 @@ export function CuponsClient({
       code: coupon.code,
       description: coupon.description ?? "",
       discountType: coupon.discountType,
-      discountValue: String(coupon.discountValue),
-      minimumOrderValue: String(coupon.minimumOrderValue),
+      discountValue:
+        coupon.discountType === "FIXED"
+          ? formatNumberToBRL(coupon.discountValue)
+          : String(coupon.discountValue).replace(".", ","),
+      minimumOrderValue: formatNumberToBRL(coupon.minimumOrderValue),
       maxDiscountAmount:
-        coupon.maxDiscountAmount != null ? String(coupon.maxDiscountAmount) : "",
+        coupon.maxDiscountAmount != null
+          ? formatNumberToBRL(coupon.maxDiscountAmount)
+          : "",
       usageLimit: coupon.usageLimit != null ? String(coupon.usageLimit) : "",
       perCustomerLimit: String(coupon.perCustomerLimit),
       startsAt: toDatetimeLocal(coupon.startsAt),
@@ -288,6 +329,38 @@ export function CuponsClient({
       formData.set("isActive", "on");
     } else {
       formData.delete("isActive");
+    }
+
+    if (form.discountType === "FIXED") {
+      const val = currencyStringToNumber(form.discountValue);
+      if (val <= 0) {
+        setFormError("Informe um valor de desconto maior que zero.");
+        return;
+      }
+      formData.set("discountValue", val.toString());
+    } else {
+      const val = parseFloat(form.discountValue.replace(",", "."));
+      if (isNaN(val) || val <= 0) {
+        setFormError("Informe um percentual de desconto maior que zero.");
+        return;
+      }
+      formData.set("discountValue", val.toString());
+    }
+
+    formData.set(
+      "minimumOrderValue",
+      currencyStringToNumber(form.minimumOrderValue).toString(),
+    );
+
+    if (form.maxDiscountAmount && form.maxDiscountAmount.trim()) {
+      const maxVal = currencyStringToNumber(form.maxDiscountAmount);
+      if (maxVal > 0) {
+        formData.set("maxDiscountAmount", maxVal.toString());
+      } else {
+        formData.delete("maxDiscountAmount");
+      }
+    } else {
+      formData.delete("maxDiscountAmount");
     }
 
     startTransition(async () => {
@@ -373,7 +446,7 @@ export function CuponsClient({
           className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
         >
           <PlusIcon size={16} />
-          <span>+ Novo Cupom</span>
+          <span>Novo Cupom</span>
         </Button>
       </div>
 
@@ -1077,12 +1150,9 @@ export function CuponsClient({
         <DialogContent className="max-h-[90vh] overflow-y-auto border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-lg">
           <DialogHeader>
             <div className="flex items-center gap-2">
-              <div className="rounded-xl border border-primary/20 bg-primary/10 p-2 text-primary">
-                {editingCoupon ? <PencilIcon size={20} /> : <PlusIcon size={20} />}
-              </div>
               <div>
                 <DialogTitle className="font-display text-lg font-bold text-slate-900">
-                  {editingCoupon ? "Editar Cupom" : "Novo Cupom de Desconto"}
+                  {editingCoupon ? "Editar Cupom de Desconto" : "Novo Cupom de Desconto"}
                 </DialogTitle>
                 <DialogDescription className="text-xs text-slate-500">
                   {editingCoupon
@@ -1145,12 +1215,17 @@ export function CuponsClient({
                 <Select
                   name="discountType"
                   value={form.discountType}
-                  onValueChange={(v) =>
+                  onValueChange={(v) => {
+                    const nextType = v as "PERCENTAGE" | "FIXED";
                     setForm((f) => ({
                       ...f,
-                      discountType: v as "PERCENTAGE" | "FIXED",
-                    }))
-                  }
+                      discountType: nextType,
+                      discountValue:
+                        nextType === "FIXED"
+                          ? (f.discountValue ? parseCurrencyInput(f.discountValue, false) : "0,00")
+                          : (f.discountValue ? f.discountValue.replace(/\D/g, "").slice(0, 3) : ""),
+                    }));
+                  }}
                 >
                   <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs font-medium text-slate-700">
                     <SelectValue />
@@ -1166,56 +1241,98 @@ export function CuponsClient({
                 <Label htmlFor="coupon-val" className="text-xs font-semibold text-slate-700">
                   {form.discountType === "PERCENTAGE" ? "Valor (%)" : "Valor (R$)"}
                 </Label>
-                <Input
-                  id="coupon-val"
-                  name="discountValue"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.discountValue}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, discountValue: e.target.value }))
-                  }
-                  required
-                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-slate-400"
-                />
+                {form.discountType === "FIXED" ? (
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400">
+                      R$
+                    </span>
+                    <Input
+                      id="coupon-val"
+                      name="discountValue"
+                      type="text"
+                      inputMode="numeric"
+                      value={form.discountValue}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          discountValue: parseCurrencyInput(e.target.value, false),
+                        }))
+                      }
+                      required
+                      placeholder="0,00"
+                      className="h-10 pl-9 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-slate-400"
+                    />
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <Input
+                      id="coupon-val"
+                      name="discountValue"
+                      type="text"
+                      inputMode="decimal"
+                      value={form.discountValue}
+                      onChange={(e) => handlePercentChange(e.target.value)}
+                      required
+                      placeholder="Ex.: 10"
+                      className="h-10 pr-8 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-slate-400"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400">
+                      %
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="coupon-min" className="text-xs font-semibold text-slate-700">
                   Pedido Mínimo (R$)
                 </Label>
-                <Input
-                  id="coupon-min"
-                  name="minimumOrderValue"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.minimumOrderValue}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, minimumOrderValue: e.target.value }))
-                  }
-                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-slate-400"
-                />
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400">
+                    R$
+                  </span>
+                  <Input
+                    id="coupon-min"
+                    name="minimumOrderValue"
+                    type="text"
+                    inputMode="numeric"
+                    value={form.minimumOrderValue}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        minimumOrderValue: parseCurrencyInput(e.target.value, false),
+                      }))
+                    }
+                    placeholder="0,00"
+                    className="h-10 pl-9 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-slate-400"
+                  />
+                </div>
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="coupon-max" className="text-xs font-semibold text-slate-700">
                   Teto de Desconto (R$)
                 </Label>
-                <Input
-                  id="coupon-max"
-                  name="maxDiscountAmount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="Sem limite"
-                  value={form.maxDiscountAmount}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, maxDiscountAmount: e.target.value }))
-                  }
-                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-slate-400"
-                />
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400">
+                    R$
+                  </span>
+                  <Input
+                    id="coupon-max"
+                    name="maxDiscountAmount"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Sem limite"
+                    value={form.maxDiscountAmount}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        maxDiscountAmount: parseCurrencyInput(e.target.value, true),
+                      }))
+                    }
+                    className="h-10 pl-9 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-slate-400"
+                  />
+                </div>
               </div>
 
               <div className="space-y-1.5">
@@ -1323,7 +1440,7 @@ export function CuponsClient({
                   ? "Salvando..."
                   : editingCoupon
                     ? "Salvar Alterações"
-                    : "Criar Cupom"}
+                    : "Cadastrar Cupom"}
               </Button>
             </DialogFooter>
           </form>

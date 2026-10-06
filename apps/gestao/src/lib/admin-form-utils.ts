@@ -13,9 +13,15 @@ export const getNumberValue = (
   value: FormDataEntryValue | null,
   defaultValue = 0,
 ) => {
-  const normalizedValue = getStringValue(value).replace(",", ".");
-  if (!normalizedValue) return defaultValue;
-  const num = Number(normalizedValue);
+  const raw = getStringValue(value);
+  if (!raw) return defaultValue;
+  let normalized = raw.replace(/[^\d.,-]/g, "");
+  if (normalized.includes(",") && normalized.includes(".")) {
+    normalized = normalized.replace(/\./g, "").replace(",", ".");
+  } else if (normalized.includes(",")) {
+    normalized = normalized.replace(",", ".");
+  }
+  const num = Number(normalized);
   return isNaN(num) ? defaultValue : num;
 };
 
@@ -26,9 +32,15 @@ export const getBooleanValue = (value: FormDataEntryValue | null) => {
 };
 
 export const getOptionalNumberValue = (value: FormDataEntryValue | null) => {
-  const str = getStringValue(value).replace(",", ".");
-  if (!str) return undefined;
-  const num = Number(str);
+  const raw = getStringValue(value);
+  if (!raw) return undefined;
+  let normalized = raw.replace(/[^\d.,-]/g, "");
+  if (normalized.includes(",") && normalized.includes(".")) {
+    normalized = normalized.replace(/\./g, "").replace(",", ".");
+  } else if (normalized.includes(",")) {
+    normalized = normalized.replace(",", ".");
+  }
+  const num = Number(normalized);
   return isNaN(num) ? undefined : num;
 };
 

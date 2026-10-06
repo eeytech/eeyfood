@@ -8,12 +8,18 @@ import {
   AlertCircleIcon,
   BikeIcon,
   CompassIcon,
+  IceCreamBowlIcon,
+  LayersIcon,
   Loader2Icon,
   MapPinIcon,
+  MapPinOffIcon,
+  PizzaIcon,
   RefreshCwIcon,
+  SaladIcon,
   SearchIcon,
   SparklesIcon,
   StoreIcon,
+  WineIcon,
   XIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
@@ -586,7 +592,7 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
                   className="h-8 gap-1.5 rounded-full border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-100"
                   title="Otimizar Rota pelo vizinho mais próximo"
                 >
-                  <SparklesIcon size={13} className="text-amber-500" />
+                  <SparklesIcon size={13} className="text-primary" />
                   <span>Otimizar Rota</span>
                 </Button>
               </div>
@@ -619,68 +625,92 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
                 <button
                   type="button"
                   onClick={() => setActiveFilter("ALL")}
-                  className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
+                  className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
                     activeFilter === "ALL"
                       ? "bg-primary text-primary-foreground shadow-xs"
                       : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
                   }`}
                 >
-                  Todos ({orders.length})
+                  <LayersIcon
+                    size={12}
+                    className={activeFilter === "ALL" ? "text-primary-foreground" : "text-primary"}
+                  />
+                  <span>Todos ({orders.length})</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveFilter("PIZZA")}
-                  className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
+                  className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
                     activeFilter === "PIZZA"
-                      ? "bg-amber-600 text-white"
-                      : "bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100"
+                      ? "bg-primary text-primary-foreground shadow-xs"
+                      : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
                   }`}
                 >
-                  🍕 Pizza ({orders.filter((o) => o.hasPizza).length})
+                  <PizzaIcon
+                    size={12}
+                    className={activeFilter === "PIZZA" ? "text-primary-foreground" : "text-primary"}
+                  />
+                  <span>Pizza ({orders.filter((o) => o.hasPizza).length})</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveFilter("ACAI")}
-                  className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
+                  className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
                     activeFilter === "ACAI"
-                      ? "bg-purple-600 text-white"
-                      : "bg-purple-50 text-purple-800 border border-purple-200 hover:bg-purple-100"
+                      ? "bg-primary text-primary-foreground shadow-xs"
+                      : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
                   }`}
                 >
-                  🍨 Açaí ({orders.filter((o) => o.hasAcai).length})
+                  <IceCreamBowlIcon
+                    size={12}
+                    className={activeFilter === "ACAI" ? "text-primary-foreground" : "text-primary"}
+                  />
+                  <span>Açaí ({orders.filter((o) => o.hasAcai).length})</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveFilter("BAR")}
-                  className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
+                  className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
                     activeFilter === "BAR"
-                      ? "bg-sky-600 text-white"
-                      : "bg-sky-50 text-sky-800 border border-sky-200 hover:bg-sky-100"
+                      ? "bg-primary text-primary-foreground shadow-xs"
+                      : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
                   }`}
                 >
-                  🍹 Bar/Copa ({orders.filter((o) => o.hasBar).length})
+                  <WineIcon
+                    size={12}
+                    className={activeFilter === "BAR" ? "text-primary-foreground" : "text-primary"}
+                  />
+                  <span>Bar/Copa ({orders.filter((o) => o.hasBar).length})</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveFilter("COLD")}
-                  className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
+                  className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
                     activeFilter === "COLD"
-                      ? "bg-emerald-600 text-white"
-                      : "bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100"
+                      ? "bg-primary text-primary-foreground shadow-xs"
+                      : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
                   }`}
                 >
-                  🥗 Coz. Fria ({orders.filter((o) => o.hasColdKitchen).length})
+                  <SaladIcon
+                    size={12}
+                    className={activeFilter === "COLD" ? "text-primary-foreground" : "text-primary"}
+                  />
+                  <span>Coz. Fria ({orders.filter((o) => o.hasColdKitchen).length})</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveFilter("NO_GPS")}
-                  className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
+                  className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
                     activeFilter === "NO_GPS"
-                      ? "bg-rose-600 text-white"
-                      : "bg-white text-rose-700 border border-rose-200 hover:bg-rose-50"
+                      ? "bg-primary text-primary-foreground shadow-xs"
+                      : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
                   }`}
                 >
-                  Sem GPS ({orders.filter((o) => o.deliveryLatitude == null).length})
+                  <MapPinOffIcon
+                    size={12}
+                    className={activeFilter === "NO_GPS" ? "text-primary-foreground" : "text-primary"}
+                  />
+                  <span>Sem GPS ({orders.filter((o) => o.deliveryLatitude == null).length})</span>
                 </button>
               </div>
 

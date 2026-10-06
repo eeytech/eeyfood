@@ -434,7 +434,7 @@ export function CashbackClient({
               className={cn(
                 "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold",
                 isCashbackEnabled
-                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200/80"
+                  ? "bg-primary/10 text-primary border border-primary/20"
                   : "bg-slate-100 text-slate-600 border border-slate-200",
               )}
             >
@@ -1120,9 +1120,6 @@ export function CashbackClient({
         <DialogContent className="max-h-[90vh] overflow-y-auto border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-md">
           <DialogHeader>
             <div className="flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
-                {editingRule ? <PencilIcon size={18} /> : <PlusIcon size={18} />}
-              </div>
               <div>
                 <DialogTitle className="font-display text-lg font-bold text-slate-900">
                   {editingRule ? "Editar Regra de Cashback" : "Nova Regra de Cashback"}
@@ -1372,7 +1369,7 @@ export function CashbackClient({
                   ? "Salvando..."
                   : editingRule
                     ? "Salvar Alterações"
-                    : "Criar Regra"}
+                    : "Cadastrar Regra de Cashback"}
               </Button>
             </DialogFooter>
           </form>

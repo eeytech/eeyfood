@@ -167,9 +167,6 @@ export function VehiclesTab({
         <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-lg">
           <DialogHeader>
             <div className="flex items-center gap-2.5">
-              <div className="rounded-xl bg-primary/10 p-2 text-primary">
-                <CarIcon size={20} />
-              </div>
               <div>
                 <DialogTitle className="font-display text-lg font-bold text-slate-900">
                   Cadastrar Novo Veículo

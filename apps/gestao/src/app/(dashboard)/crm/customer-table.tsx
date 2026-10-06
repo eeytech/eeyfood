@@ -73,6 +73,25 @@ const formatCurrency = (value: number) =>
 const formatDate = (d: Date | string | null) =>
   d ? new Intl.DateTimeFormat("pt-BR").format(new Date(d)) : "—";
 
+function formatPhone(phone?: string | null) {
+  if (!phone) return "—";
+  let digits = phone.replace(/\D/g, "");
+  if (!digits) return phone;
+  if (digits.startsWith("55") && (digits.length === 12 || digits.length === 13)) {
+    digits = digits.slice(2);
+  }
+  if (digits.length === 11) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  }
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+  if (digits.length === 13) {
+    return `+${digits.slice(0, 2)} (${digits.slice(2, 4)}) ${digits.slice(4, 9)}-${digits.slice(9)}`;
+  }
+  return phone;
+}
+
 function getInitials(name?: string | null) {
   if (!name) return "CL";
   const parts = name.trim().split(" ");
@@ -200,7 +219,7 @@ export function CustomerTable({
                               {c.name}
                             </p>
                             <p className="truncate text-xs text-slate-500">
-                              {c.phone}
+                              {formatPhone(c.phone)}
                             </p>
                           </div>
                         </Link>
@@ -306,7 +325,7 @@ export function CustomerTable({
                         >
                           {c.name}
                         </Link>
-                        <p className="text-xs text-slate-500">{c.phone}</p>
+                        <p className="text-xs text-slate-500">{formatPhone(c.phone)}</p>
                       </div>
                     </div>
 

@@ -4,14 +4,18 @@ import {
   AlertCircleIcon,
   CheckCheckIcon,
   CheckSquareIcon,
+  FlameIcon,
   InfoIcon,
   Loader2Icon,
   MessageSquareIcon,
+  MousePointerClickIcon,
+  PartyPopperIcon,
   SearchIcon,
   SendIcon,
   SmartphoneIcon,
   SparklesIcon,
   SquareIcon,
+  StarIcon,
   UserCheckIcon,
   UsersIcon,
   XIcon,
@@ -70,17 +74,20 @@ interface CampanhaFormProps {
 
 const TEMPLATES = [
   {
-    title: "🎉 Desconto de Volta",
+    icon: PartyPopperIcon,
+    title: "Desconto de Volta",
     segment: "INACTIVE",
     text: "Oi {nome}! Sentimos sua falta por aqui. Preparamos um presente: 10% de desconto no seu próximo pedido com o cupom VOLTA10. Peça hoje e aproveite!",
   },
   {
-    title: "⭐ Benefício VIP",
+    icon: StarIcon,
+    title: "Benefício VIP",
     segment: "VIP",
     text: "Olá {nome}! Você é um dos nossos clientes mais especiais. Como agradecimento, liberamos frete grátis no seu próximo pedido válido para hoje!",
   },
   {
-    title: "🔥 Novidade no Cardápio",
+    icon: FlameIcon,
+    title: "Novidade no Cardápio",
     segment: "ALL",
     text: "Oi {nome}! Tem novidade quentinha no nosso cardápio hoje. Acesse nosso cardápio digital e venha experimentar!",
   },
@@ -526,33 +533,38 @@ export function CampanhaForm({
                 {/* Template quick pills */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-slate-700 flex items-center gap-1">
-                      <SparklesIcon size={13} className="text-primary" />
+                    <span className="font-semibold text-slate-700 flex items-center gap-1.5">
+                      <SparklesIcon size={13} className="text-primary shrink-0" />
                       Modelos Rápidos de Mensagem
                     </span>
-                    <span className="text-[11px] text-slate-400">
+                    <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                      <MousePointerClickIcon size={12} className="text-primary shrink-0" />
                       Clique para preencher
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {TEMPLATES.map((tmpl, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => {
-                          setMessage(tmpl.text);
-                          if (
-                            targetType === "SEGMENT" &&
-                            counts[tmpl.segment] !== undefined
-                          ) {
-                            setSegment(tmpl.segment);
-                          }
-                        }}
-                        className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600 transition-all hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
-                      >
-                        {tmpl.title}
-                      </button>
-                    ))}
+                    {TEMPLATES.map((tmpl, idx) => {
+                      const Icon = tmpl.icon;
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            setMessage(tmpl.text);
+                            if (
+                              targetType === "SEGMENT" &&
+                              counts[tmpl.segment] !== undefined
+                            ) {
+                              setSegment(tmpl.segment);
+                            }
+                          }}
+                          className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600 transition-all hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
+                        >
+                          <Icon size={13} className="text-primary shrink-0" />
+                          <span>{tmpl.title}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 

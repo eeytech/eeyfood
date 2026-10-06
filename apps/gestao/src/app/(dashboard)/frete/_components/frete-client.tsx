@@ -1230,7 +1230,7 @@ export function FreteClient({
                 ? "Salvando..."
                 : editingRule
                   ? "Salvar Alterações"
-                  : "Criar Regra"}
+                  : "Cadastrar Regra de Frete Grátis"}
             </Button>
           </DialogFooter>
         </DialogContent>

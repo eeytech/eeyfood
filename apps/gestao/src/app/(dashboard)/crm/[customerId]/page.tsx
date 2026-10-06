@@ -23,6 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { buscarClienteDetalheAction } from "../../crm-actions";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,25 @@ const SEGMENT_VARIANTS: Record<string, "default" | "secondary" | "success" | "wa
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
+
+function formatPhone(phone?: string | null) {
+  if (!phone) return "—";
+  let digits = phone.replace(/\D/g, "");
+  if (!digits) return phone;
+  if (digits.startsWith("55") && (digits.length === 12 || digits.length === 13)) {
+    digits = digits.slice(2);
+  }
+  if (digits.length === 11) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  }
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+  if (digits.length === 13) {
+    return `+${digits.slice(0, 2)} (${digits.slice(2, 4)}) ${digits.slice(4, 9)}-${digits.slice(9)}`;
+  }
+  return phone;
+}
 
 const formatDate = (d: Date | string | null) =>
   d
@@ -136,7 +156,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
               </span>
             </div>
             <p className="text-sm text-slate-500">
-              Telefone: {customer.phone} {customer.email ? `• ${customer.email}` : ""}
+              WhatsApp: {formatPhone(customer.phone)} {customer.email ? `• ${customer.email}` : ""}
             </p>
           </div>
         </div>
@@ -167,8 +187,8 @@ export default async function CustomerDetailPage({ params }: PageProps) {
             </CardHeader>
             <CardContent className="p-4 sm:p-5 space-y-3 text-sm">
               <div className="flex justify-between">
-                <span className="text-slate-500">Telefone</span>
-                <span className="font-medium text-slate-900">{customer.phone}</span>
+                <span className="text-slate-500">WhatsApp / Telefone</span>
+                <span className="font-medium text-slate-900">{formatPhone(customer.phone)}</span>
               </div>
               {customer.email && (
                 <div className="flex justify-between">
@@ -238,39 +258,37 @@ export default async function CustomerDetailPage({ params }: PageProps) {
             </CardContent>
           </Card>
 
-          {/* Wallet */}
-          {walletData && (
-            <Card className="border-slate-200/80 bg-white shadow-sm">
-              <CardHeader className="p-4 sm:p-5 border-b border-slate-100">
-                <CardTitle className="flex items-center gap-2.5 font-display text-base font-bold text-slate-900">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 border border-emerald-200 shrink-0">
-                    <WalletIcon size={16} />
-                  </div>
-                  Cashback e Carteira
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-5 space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Saldo disponível</span>
-                  <span className="font-bold text-emerald-600">{formatCurrency(walletData.balance)}</span>
+          {/* Wallet - Sempre visível e com a cor do tema */}
+          <Card className="border-slate-200/80 bg-white shadow-sm">
+            <CardHeader className="p-4 sm:p-5 border-b border-slate-100">
+              <CardTitle className="flex items-center gap-2.5 font-display text-base font-bold text-slate-900">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shrink-0">
+                  <WalletIcon size={16} />
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Total ganho</span>
-                  <span className="text-slate-800">{formatCurrency(walletData.totalEarned)}</span>
+                Cashback e Carteira
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 sm:p-5 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Saldo disponível</span>
+                <span className="font-bold text-primary">{formatCurrency(walletData?.balance ?? 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Total ganho</span>
+                <span className="text-slate-800">{formatCurrency(walletData?.totalEarned ?? 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Total resgatado</span>
+                <span className="text-slate-800">{formatCurrency(walletData?.totalRedeemed ?? 0)}</span>
+              </div>
+              {(walletData?.points ?? 0) > 0 && (
+                <div className="flex justify-between border-t border-slate-100 pt-2">
+                  <span className="text-slate-500">Pontos</span>
+                  <span className="font-bold text-slate-900">{(walletData?.points ?? 0).toFixed(0)} pts</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Total resgatado</span>
-                  <span className="text-slate-800">{formatCurrency(walletData.totalRedeemed)}</span>
-                </div>
-                {walletData.points > 0 && (
-                  <div className="flex justify-between border-t border-slate-100 pt-2">
-                    <span className="text-slate-500">Pontos</span>
-                    <span className="font-bold text-slate-900">{walletData.points.toFixed(0)} pts</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+              )}
+            </CardContent>
+          </Card>
 
           {/* Interaction history */}
           {customer.interactions && customer.interactions.length > 0 && (
@@ -338,9 +356,16 @@ export default async function CustomerDetailPage({ params }: PageProps) {
                             {formatDateTime(order.createdAt)}
                           </TableCell>
                           <TableCell>
-                            <Badge variant={order.status === "CANCELLED" ? "danger" : order.status === "FINISHED" ? "secondary" : "default"} className="rounded-full text-xs">
+                            <span
+                              className={cn(
+                                "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-normal",
+                                order.status === "CANCELLED"
+                                  ? "border border-slate-200 bg-slate-100 text-slate-500"
+                                  : "border border-primary/20 bg-primary/10 text-primary",
+                              )}
+                            >
                               {STATUS_LABELS[order.status] ?? order.status}
-                            </Badge>
+                            </span>
                           </TableCell>
                           <TableCell className="text-sm text-slate-600">
                             {order.orderProducts
