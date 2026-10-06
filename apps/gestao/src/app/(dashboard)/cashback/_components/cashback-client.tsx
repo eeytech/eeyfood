@@ -829,7 +829,7 @@ export function CashbackClient({
                                 onClick={() => handleOpenEdit(rule)}
                                 className="gap-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
                               >
-                                <PencilIcon size={14} className="text-slate-500" />
+                                <PencilIcon size={14} className="text-primary" />
                                 Editar dados
                               </DropdownMenuItem>
                               <DropdownMenuItem
@@ -846,7 +846,7 @@ export function CashbackClient({
                                   <>
                                     <AlertCircleIcon
                                       size={14}
-                                      className="text-amber-500"
+                                      className="text-primary"
                                     />
                                     Desativar regra
                                   </>
@@ -854,7 +854,7 @@ export function CashbackClient({
                                   <>
                                     <CheckCircle2Icon
                                       size={14}
-                                      className="text-emerald-600"
+                                      className="text-primary"
                                     />
                                     Ativar regra
                                   </>
@@ -915,7 +915,7 @@ export function CashbackClient({
                             onClick={() => handleOpenEdit(rule)}
                             className="gap-2 rounded-lg text-xs font-medium text-slate-700"
                           >
-                            <PencilIcon size={14} />
+                            <PencilIcon size={14} className="text-primary" />
                             Editar dados
                           </DropdownMenuItem>
                           <DropdownMenuItem
@@ -930,7 +930,7 @@ export function CashbackClient({
                           >
                             {rule.isActive ? (
                               <>
-                                <AlertCircleIcon size={14} className="text-amber-500" />
+                                <AlertCircleIcon size={14} className="text-primary" />
                                 Desativar regra
                               </>
                             ) : (
