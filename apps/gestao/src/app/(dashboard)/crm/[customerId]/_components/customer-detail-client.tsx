@@ -139,37 +139,85 @@ const STATUS_CONFIG: Record<
 > = {
   PENDING: {
     label: "Pendente",
-    badgeClass: "border-amber-200 bg-amber-50 text-amber-700",
+    badgeClass: "border border-primary/20 bg-primary/10 text-primary font-semibold",
   },
   IN_PREPARATION: {
     label: "Em preparo",
-    badgeClass: "border-amber-200 bg-amber-50 text-amber-700",
+    badgeClass: "border border-primary/20 bg-primary/10 text-primary font-semibold",
   },
   READY_FOR_PICKUP: {
     label: "Pronto",
-    badgeClass: "border-purple-200 bg-purple-50 text-purple-700",
+    badgeClass: "border border-primary/20 bg-primary/10 text-primary font-semibold",
   },
   OUT_FOR_DELIVERY: {
     label: "Em entrega",
-    badgeClass: "border-blue-200 bg-blue-50 text-blue-700",
+    badgeClass: "border border-primary/20 bg-primary/10 text-primary font-semibold",
   },
   FINISHED: {
     label: "Finalizado",
-    badgeClass: "border-primary/20 bg-primary/10 text-primary font-semibold",
+    badgeClass: "border border-primary/20 bg-primary/10 text-primary font-semibold",
   },
   COMPLETED: {
     label: "Concluído",
-    badgeClass: "border-primary/20 bg-primary/10 text-primary font-semibold",
+    badgeClass: "border border-primary/20 bg-primary/10 text-primary font-semibold",
   },
   DELIVERED: {
     label: "Entregue",
-    badgeClass: "border-primary/20 bg-primary/10 text-primary font-semibold",
+    badgeClass: "border border-primary/20 bg-primary/10 text-primary font-semibold",
   },
   CANCELLED: {
     label: "Cancelado",
-    badgeClass: "border-slate-200 bg-slate-100 text-slate-500",
+    badgeClass: "border border-primary/20 bg-primary/10 text-primary font-semibold",
   },
 };
+
+function getOrderStatusInfo(rawStatus?: string | null): { label: string; badgeClass: string } {
+  if (!rawStatus) {
+    return {
+      label: "Não informado",
+      badgeClass: "border border-primary/20 bg-primary/10 text-primary font-semibold",
+    };
+  }
+
+  const normalized = String(rawStatus).trim().toUpperCase();
+
+  const labels: Record<string, string> = {
+    PENDING: "Pendente",
+    PENDENTE: "Pendente",
+    IN_PREPARATION: "Em preparo",
+    EM_PREPARO: "Em preparo",
+    PREPARO: "Em preparo",
+    PREPARANDO: "Em preparo",
+    READY_FOR_PICKUP: "Pronto",
+    READY: "Pronto",
+    PRONTO: "Pronto",
+    OUT_FOR_DELIVERY: "Em entrega",
+    EM_ENTREGA: "Em entrega",
+    ENTREGANDO: "Em entrega",
+    DELIVERING: "Em entrega",
+    FINISHED: "Finalizado",
+    FINALIZADO: "Finalizado",
+    COMPLETED: "Concluído",
+    CONCLUIDO: "Concluído",
+    CONCLUÍDO: "Concluído",
+    DELIVERED: "Entregue",
+    ENTREGUE: "Entregue",
+    CANCELLED: "Cancelado",
+    CANCELED: "Cancelado",
+    CANCELADO: "Cancelado",
+    CONFIRMED: "Confirmado",
+    CONFIRMADO: "Confirmado",
+    PAID: "Pago",
+    PAGO: "Pago",
+  };
+
+  const label = labels[normalized] ?? rawStatus;
+
+  return {
+    label,
+    badgeClass: "border border-primary/20 bg-primary/10 text-primary font-semibold",
+  };
+}
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
@@ -313,7 +361,37 @@ export function CustomerDetailClient({
 
     // Status filter
     if (orderStatus !== "ALL") {
-      result = result.filter((o) => o.status === orderStatus);
+      result = result.filter((o) => {
+        if (!o.status) return false;
+        const norm = o.status.trim().toUpperCase();
+        if (orderStatus === "FINISHED") {
+          return (
+            norm === "FINISHED" ||
+            norm === "FINALIZADO" ||
+            norm === "COMPLETED" ||
+            norm === "CONCLUIDO" ||
+            norm === "CONCLUÍDO" ||
+            norm === "DELIVERED" ||
+            norm === "ENTREGUE"
+          );
+        }
+        if (orderStatus === "PENDING") {
+          return norm === "PENDING" || norm === "PENDENTE";
+        }
+        if (orderStatus === "IN_PREPARATION") {
+          return norm === "IN_PREPARATION" || norm === "EM_PREPARO" || norm === "PREPARANDO" || norm === "PREPARO";
+        }
+        if (orderStatus === "READY_FOR_PICKUP") {
+          return norm === "READY_FOR_PICKUP" || norm === "READY" || norm === "PRONTO";
+        }
+        if (orderStatus === "OUT_FOR_DELIVERY") {
+          return norm === "OUT_FOR_DELIVERY" || norm === "EM_ENTREGA" || norm === "DELIVERING" || norm === "ENTREGANDO";
+        }
+        if (orderStatus === "CANCELLED") {
+          return norm === "CANCELLED" || norm === "CANCELED" || norm === "CANCELADO";
+        }
+        return norm === orderStatus.toUpperCase();
+      });
     }
 
     // Search filter (ID or items)
@@ -859,11 +937,7 @@ export function CustomerDetailClient({
                   </TableHeader>
                   <TableBody className="divide-y divide-slate-100">
                     {paginatedOrders.map((order) => {
-                      const statusInfo =
-                        STATUS_CONFIG[order.status] ?? {
-                          label: order.status,
-                          badgeClass: "border-slate-200 bg-slate-100 text-slate-600",
-                        };
+                      const statusInfo = getOrderStatusInfo(order.status);
 
                       return (
                         <TableRow
@@ -939,11 +1013,7 @@ export function CustomerDetailClient({
               {/* Cards para Mobile */}
               <div className="divide-y divide-slate-100 sm:hidden">
                 {paginatedOrders.map((order) => {
-                  const statusInfo =
-                    STATUS_CONFIG[order.status] ?? {
-                      label: order.status,
-                      badgeClass: "border-slate-200 bg-slate-100 text-slate-600",
-                    };
+                  const statusInfo = getOrderStatusInfo(order.status);
 
                   return (
                     <div key={order.id} className="space-y-2.5 p-4">

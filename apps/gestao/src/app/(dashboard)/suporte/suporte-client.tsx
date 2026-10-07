@@ -103,31 +103,31 @@ interface StatusConfig {
 const STATUS_CONFIG: Record<TicketStatus, StatusConfig> = {
   OPEN: {
     label: "Aberto",
-    badgeClass: "bg-blue-50 text-blue-800 border-blue-200/80 hover:bg-blue-100",
+    badgeClass: "border-primary/20 bg-primary/10 text-primary hover:bg-primary/15",
     icon: AlertCircleIcon,
     description: "Aguardando primeiro retorno da equipe técnica",
   },
   IN_PROGRESS: {
     label: "Em Análise",
-    badgeClass: "bg-amber-50 text-amber-800 border-amber-200/80 hover:bg-amber-100",
+    badgeClass: "border-primary/20 bg-primary/10 text-primary hover:bg-primary/15",
     icon: ClockIcon,
     description: "Um técnico está investigando a solicitação",
   },
   WAITING_CUSTOMER: {
     label: "Aguardando Retorno",
-    badgeClass: "bg-purple-50 text-purple-800 border-purple-200/80 hover:bg-purple-100",
+    badgeClass: "border-primary/20 bg-primary/10 text-primary hover:bg-primary/15",
     icon: MessageSquareIcon,
     description: "Aguardando resposta ou dados adicionais do restaurante",
   },
   RESOLVED: {
     label: "Resolvido",
-    badgeClass: "bg-emerald-50 text-emerald-800 border-emerald-200/80 hover:bg-emerald-100",
+    badgeClass: "border-primary/20 bg-primary/10 text-primary hover:bg-primary/15",
     icon: CheckCircle2Icon,
     description: "Chamado solucionado com sucesso",
   },
   CLOSED: {
     label: "Encerrado",
-    badgeClass: "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200",
+    badgeClass: "border-primary/20 bg-primary/10 text-primary hover:bg-primary/15",
     icon: CheckCircle2Icon,
     description: "Chamado finalizado e arquivado",
   },
@@ -143,26 +143,26 @@ interface PriorityConfig {
 const PRIORITY_CONFIG: Record<TicketPriority, PriorityConfig> = {
   LOW: {
     label: "Baixa",
-    badgeClass: "bg-slate-50 text-slate-700 border-slate-200",
-    dotClass: "bg-slate-400",
+    badgeClass: "border-primary/20 bg-primary/10 text-primary",
+    dotClass: "bg-primary",
     description: "Dúvidas gerais, melhorias ou pequenos ajustes",
   },
   NORMAL: {
     label: "Média",
-    badgeClass: "bg-blue-50 text-blue-700 border-blue-200",
-    dotClass: "bg-blue-500",
+    badgeClass: "border-primary/20 bg-primary/10 text-primary",
+    dotClass: "bg-primary",
     description: "Impacto moderado que não impede a operação",
   },
   HIGH: {
     label: "Alta",
-    badgeClass: "bg-orange-50 text-orange-800 border-orange-200",
-    dotClass: "bg-orange-500",
+    badgeClass: "border-primary/20 bg-primary/10 text-primary",
+    dotClass: "bg-primary",
     description: "Dificulta pedidos, entregas ou rotinas fiscais",
   },
   URGENT: {
     label: "Urgente",
-    badgeClass: "bg-rose-50 text-rose-800 border-rose-200",
-    dotClass: "bg-rose-600",
+    badgeClass: "border-primary/20 bg-primary/10 text-primary",
+    dotClass: "bg-primary",
     description: "Operação parada, caixa travado ou PDV fora do ar",
   },
 };
@@ -577,7 +577,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
               target="_blank"
               rel="noopener noreferrer"
             >
-              <PhoneIcon size={14} className="text-emerald-600" />
+              <PhoneIcon size={14} className="text-primary" />
               <span>Plantão WhatsApp</span>
               <ExternalLinkIcon size={12} className="text-slate-400" />
             </a>
@@ -622,11 +622,11 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Em Atendimento
               </span>
-              <div className="rounded-lg bg-amber-100 p-1.5 text-amber-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <ClockIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-amber-700">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {inProgressCount}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -857,7 +857,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
               <Button
                 size="sm"
                 onClick={handleOpenCreate}
-                className="mt-4 gap-1.5 rounded-full bg-slate-900 text-xs font-semibold text-white hover:bg-slate-800"
+                className="mt-4 gap-1.5 rounded-full bg-primary text-xs font-semibold text-primary-foreground hover:bg-primary/90"
               >
                 <PlusIcon size={14} />
                 Cadastrar primeiro chamado
@@ -931,7 +931,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                         {/* Solicitante (Avatar & Info matching usuarios-client) */}
                         <TableCell className="py-3.5">
                           <div className="flex items-center gap-3">
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 font-display text-xs font-bold text-slate-700">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10 font-display text-xs font-bold text-primary">
                               {getInitials(t.userName)}
                             </div>
                             <div className="min-w-0">
@@ -939,7 +939,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                                 {t.userName}
                               </p>
                               <p className="flex items-center gap-1 truncate text-xs text-slate-500">
-                                <MailIcon size={12} className="shrink-0 text-slate-400" />
+                                <MailIcon size={12} className="shrink-0 text-primary" />
                                 {t.userEmail}
                               </p>
                             </div>
@@ -949,10 +949,10 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                         {/* Módulo / Categoria */}
                         <TableCell className="py-3.5">
                           <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
-                            <div className="rounded-lg bg-slate-100 p-1.5 text-slate-600">
+                            <div className="rounded-lg border border-primary/20 bg-primary/10 p-1.5 text-primary">
                               <CategoryIcon size={14} />
                             </div>
-                            <span>{categoryInfo.shortLabel}</span>
+                            <span className="font-semibold text-primary">{categoryInfo.shortLabel}</span>
                           </div>
                         </TableCell>
 
@@ -1155,8 +1155,10 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
 
                     <div className="flex items-center justify-between pt-1">
                       <div className="flex items-center gap-1.5 text-xs text-slate-600">
-                        <CategoryIcon size={13} className="text-slate-500" />
-                        <span>{categoryInfo.shortLabel}</span>
+                        <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-primary/20 bg-primary/10 text-primary">
+                          <CategoryIcon size={12} />
+                        </div>
+                        <span className="font-medium text-primary">{categoryInfo.shortLabel}</span>
                       </div>
 
                       <div className="flex items-center gap-2">
@@ -1697,7 +1699,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                           handleUpdateStatus(selectedTicket.id, "RESOLVED")
                         }
                         disabled={isPending}
-                        className="gap-1.5 rounded-full border-emerald-200 bg-emerald-50 text-xs font-semibold text-emerald-800 hover:bg-emerald-100"
+                        className="gap-1.5 rounded-full border-primary/20 bg-primary/10 text-xs font-semibold text-primary hover:bg-primary/20"
                       >
                         <CheckCircle2Icon size={14} />
                         <span>Marcar Resolvido</span>
@@ -1710,7 +1712,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                           handleUpdateStatus(selectedTicket.id, "IN_PROGRESS")
                         }
                         disabled={isPending}
-                        className="gap-1.5 rounded-full border-amber-200 bg-amber-50 text-xs font-semibold text-amber-800 hover:bg-amber-100"
+                        className="gap-1.5 rounded-full border-primary/20 bg-primary/10 text-xs font-semibold text-primary hover:bg-primary/20"
                       >
                         <ClockIcon size={14} />
                         <span>Reabrir</span>
@@ -1840,14 +1842,14 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                 <Button
                   asChild
                   variant="ghost"
-                  className="gap-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+                  className="gap-1.5 text-xs font-medium text-primary hover:bg-primary/10 hover:text-primary"
                 >
                   <a
                     href={`https://wa.me/5511999999999?text=Ol%C3%A1!%20Gostaria%20de%20falar%20sobre%20o%20chamado%20${encodeURIComponent(selectedTicket.protocol)}%20(${encodeURIComponent(selectedTicket.title)})`}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    <PhoneIcon size={13} />
+                    <PhoneIcon size={13} className="text-primary" />
                     <span>Falar no WhatsApp sobre este protocolo</span>
                   </a>
                 </Button>
