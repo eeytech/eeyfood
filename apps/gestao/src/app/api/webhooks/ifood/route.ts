@@ -75,7 +75,19 @@ export async function POST(request: Request) {
     const events: IFoodWebhookPayload[] = Array.isArray(rawBody) ? rawBody : [rawBody];
 
     for (const event of events) {
-      const merchantId = event.merchantId ?? event.restaurantId;
+      const eventCode = (event.fullCode || event.code || event.orderStatus || "").toUpperCase();
+
+      // Keepalive de verificação do iFood (não possui merchantId nem dados de pedido)
+      if (eventCode === "KEEPALIVE" || eventCode === "KEEP_ALIVE") {
+        console.log("[iFood Webhook] Keepalive recebido e confirmado.");
+        continue;
+      }
+
+      const merchantId =
+        event.merchantId ??
+        event.restaurantId ??
+        (event as any).merchant?.id;
+
       if (!merchantId) {
         console.warn("[iFood Webhook] Evento ignorado: sem merchantId", event);
         continue;
@@ -110,7 +122,6 @@ export async function POST(request: Request) {
         continue;
       }
 
-      const eventCode = (event.fullCode || event.code || event.orderStatus || "").toUpperCase();
       const isPlacedEvent =
         eventCode.includes("PLACED") ||
         eventCode.includes("CONFIRMED") ||

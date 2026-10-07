@@ -135,7 +135,7 @@ export function AiProviderSelector({
                 )}
               </div>
               <p className="font-display text-sm font-bold text-slate-900">
-                Groq (Llama 3.3)
+                Groq (Llama 3.1 / 3.3)
               </p>
               <p className="text-[11px] text-slate-500 leading-snug">
                 Respostas ultrarrápidas em menos de 1 segundo.

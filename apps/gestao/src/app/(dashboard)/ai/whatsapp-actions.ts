@@ -85,6 +85,77 @@ function getEvolutionConfig(
 }
 
 /**
+ * Configura o webhook na Evolution API com compatibilidade entre versões v1 e v2
+ */
+export async function configurarWebhookEvolution(
+  evolutionUrl: string,
+  instanceName: string,
+  apiKey: string,
+  webhookUrl: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const events = ["MESSAGES_UPSERT", "SEND_MESSAGE", "CONNECTION_UPDATE"];
+
+  // Tentativa 1: Formato oficial aninhado da Evolution API (v2 / padrão)
+  try {
+    await axios.post(
+      `${evolutionUrl}/webhook/set/${encodeURIComponent(instanceName)}`,
+      {
+        webhook: {
+          enabled: true,
+          url: webhookUrl,
+          webhookByEvents: false,
+          events,
+        },
+      },
+      {
+        headers: { apikey: apiKey, "Content-Type": "application/json" },
+        timeout: 8000,
+      },
+    );
+    return { ok: true };
+  } catch (err: unknown) {
+    const errorData = axios.isAxiosError(err) ? err.response?.data : null;
+    const status = axios.isAxiosError(err) ? err.response?.status : null;
+    console.warn(
+      `[Webhook Sync] Formato aninhado falhou (${status}):`,
+      JSON.stringify(errorData || (err instanceof Error ? err.message : err)),
+    );
+
+    // Tentativa 2: Formato plano (Evolution API v1 ou distribuições sem wrapping)
+    try {
+      await axios.post(
+        `${evolutionUrl}/webhook/set/${encodeURIComponent(instanceName)}`,
+        {
+          enabled: true,
+          url: webhookUrl,
+          webhookByEvents: false,
+          events,
+        },
+        {
+          headers: { apikey: apiKey, "Content-Type": "application/json" },
+          timeout: 8000,
+        },
+      );
+      return { ok: true };
+    } catch (fallbackErr: unknown) {
+      const fbData = axios.isAxiosError(fallbackErr) ? fallbackErr.response?.data : null;
+      const fbStatus = axios.isAxiosError(fallbackErr) ? fallbackErr.response?.status : null;
+      const msg =
+        fbData?.message ||
+        (Array.isArray(fbData?.response?.message) ? fbData.response.message.join(", ") : null) ||
+        JSON.stringify(fbData) ||
+        (fallbackErr instanceof Error ? fallbackErr.message : "Falha ao registrar webhook");
+      console.error(
+        `[Webhook Sync] Falha ao configurar webhook na Evolution API (${fbStatus}):`,
+        msg,
+      );
+      return { ok: false, error: msg };
+    }
+  }
+}
+
+
+/**
  * Consulta o status atual da conexão do WhatsApp na Evolution API e assegura webhook ativo
  */
 export async function buscarStatusWhatsAppAction(
@@ -174,62 +245,16 @@ export async function buscarStatusWhatsAppAction(
             console.log(
               `[WhatsApp Status] Webhook precisa de sincronização (${currentUrl} -> ${webhookUrl}). Atualizando...`,
             );
-            await axios.post(
-              `${evolutionUrl}/webhook/set/${encodeURIComponent(instanceName)}`,
-              {
-                webhook: {
-                  enabled: true,
-                  url: webhookUrl,
-                  byEvents: false,
-                  base64: false,
-                  events: ["MESSAGES_UPSERT", "messages.upsert", "SEND_MESSAGE"],
-                },
-                enabled: true,
-                url: webhookUrl,
-                byEvents: false,
-                base64: false,
-                events: ["MESSAGES_UPSERT", "messages.upsert", "SEND_MESSAGE"],
-              },
-              {
-                headers: { apikey: apiKey, "Content-Type": "application/json" },
-                timeout: 5000,
-              },
-            );
+            await configurarWebhookEvolution(evolutionUrl, instanceName, apiKey, webhookUrl);
             webhookEnabled = true;
           }
         } catch {
           // Se find falhou ou não existe, dispara setWebhook preventivo
-          axios
-            .post(
-              `${evolutionUrl}/webhook/set/${encodeURIComponent(instanceName)}`,
-              {
-                webhook: {
-                  enabled: true,
-                  url: webhookUrl,
-                  byEvents: false,
-                  base64: false,
-                  events: ["MESSAGES_UPSERT", "messages.upsert", "SEND_MESSAGE"],
-                },
-                enabled: true,
-                url: webhookUrl,
-                byEvents: false,
-                base64: false,
-                events: ["MESSAGES_UPSERT", "messages.upsert", "SEND_MESSAGE"],
-              },
-              {
-                headers: { apikey: apiKey, "Content-Type": "application/json" },
-                timeout: 5000,
-              },
-            )
-            .then(() => {
-              webhookEnabled = true;
+          configurarWebhookEvolution(evolutionUrl, instanceName, apiKey, webhookUrl)
+            .then((res) => {
+              if (res.ok) webhookEnabled = true;
             })
-            .catch((whErr) => {
-              console.warn(
-                "[WhatsApp Status] Aviso ao verificar/sincronizar webhook:",
-                whErr?.message,
-              );
-            });
+            .catch(() => {});
         }
 
         // 2. Busca informações do perfil conectado
@@ -389,30 +414,14 @@ export async function gerarQrCodeWhatsAppAction(
     }
 
     // 3. Configura o Webhook com a URL correta
-    try {
-      await axios.post(
-        `${evolutionUrl}/webhook/set/${encodeURIComponent(instanceName)}`,
-        {
-          webhook: {
-            enabled: true,
-            url: webhookUrl,
-            byEvents: false,
-            base64: false,
-            events: ["MESSAGES_UPSERT", "messages.upsert", "SEND_MESSAGE"],
-          },
-          enabled: true,
-          url: webhookUrl,
-          byEvents: false,
-          base64: false,
-          events: ["MESSAGES_UPSERT", "messages.upsert", "SEND_MESSAGE"],
-        },
-        {
-          headers: { apikey: apiKey, "Content-Type": "application/json" },
-          timeout: 6000,
-        },
-      );
-    } catch (err) {
-      console.warn("Aviso ao configurar webhook automático no QR code:", err);
+    const whResult = await configurarWebhookEvolution(
+      evolutionUrl,
+      instanceName,
+      apiKey,
+      webhookUrl,
+    );
+    if (!whResult.ok) {
+      console.warn("Aviso ao configurar webhook automático no QR code:", whResult.error);
     }
 
     // 4. Salva a instância e chave no banco de dados para o restaurante
@@ -573,27 +582,16 @@ export async function sincronizarWebhookAction(
       `[Webhook Sync] Sincronizando webhook: instância="${instanceName}", url="${webhookUrl}"`,
     );
 
-    await axios.post(
-      `${evolutionUrl}/webhook/set/${encodeURIComponent(instanceName)}`,
-      {
-        webhook: {
-          enabled: true,
-          url: webhookUrl,
-          byEvents: false,
-          base64: false,
-          events: ["MESSAGES_UPSERT", "messages.upsert", "SEND_MESSAGE"],
-        },
-        enabled: true,
-        url: webhookUrl,
-        byEvents: false,
-        base64: false,
-        events: ["MESSAGES_UPSERT", "messages.upsert", "SEND_MESSAGE"],
-      },
-      {
-        headers: { apikey: apiKey, "Content-Type": "application/json" },
-        timeout: 10000,
-      },
+    const whResult = await configurarWebhookEvolution(
+      evolutionUrl,
+      instanceName,
+      apiKey,
+      webhookUrl,
     );
+
+    if (!whResult.ok) {
+      return { ok: false, error: whResult.error };
+    }
 
     return { ok: true, webhookUrl };
   } catch (error) {

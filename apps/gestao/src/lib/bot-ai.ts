@@ -82,66 +82,81 @@ export const processarMensagemBot = async ({
     return HANDOFF_SIGNAL;
   }
 
-  // Configuração dinâmica do provedor (Google Gemini, Groq ou OpenAI)
-  const provider = (aiSettings.aiProvider || "GOOGLE_GEMINI").toUpperCase();
-  let apiKey = "";
-  let baseURL: string | undefined = undefined;
-  let model = "gemini-2.0-flash";
+  // Configuração dinâmica do provedor com fallback de modelos e provedores
+  const selectedProvider = (aiSettings.aiProvider || "GOOGLE_GEMINI").toUpperCase();
 
-  if (provider === "GOOGLE_GEMINI") {
-    apiKey =
-      aiSettings.geminiApiKey ||
-      process.env.GEMINI_API_KEY ||
-      process.env.GOOGLE_API_KEY ||
-      "";
-    baseURL = "https://generativelanguage.googleapis.com/v1beta/openai/";
-    model = "gemini-2.0-flash";
-  } else if (provider === "GROQ") {
-    apiKey = aiSettings.groqApiKey || process.env.GROQ_API_KEY || "";
-    baseURL = "https://api.groq.com/openai/v1";
-    model = "llama-3.3-70b-versatile";
-  } else {
-    // OPENAI
-    apiKey = aiSettings.openaiApiKey || process.env.OPENAI_API_KEY || "";
-    model = "gpt-4o";
+  interface ProviderConfig {
+    name: string;
+    apiKey: string;
+    baseURL?: string;
+    models: string[];
   }
 
-  // Fallback caso a chave do provedor escolhido não esteja preenchida mas outra chave exista
-  if (!apiKey) {
-    if (
-      aiSettings.geminiApiKey ||
-      process.env.GEMINI_API_KEY ||
-      process.env.GOOGLE_API_KEY
-    ) {
-      apiKey =
+  const getProviderConfig = (p: string): ProviderConfig | null => {
+    if (p === "GOOGLE_GEMINI") {
+      const key =
         aiSettings.geminiApiKey ||
         process.env.GEMINI_API_KEY ||
         process.env.GOOGLE_API_KEY ||
         "";
-      baseURL = "https://generativelanguage.googleapis.com/v1beta/openai/";
-      model = "gemini-2.0-flash";
-    } else if (aiSettings.groqApiKey || process.env.GROQ_API_KEY) {
-      apiKey = aiSettings.groqApiKey || process.env.GROQ_API_KEY || "";
-      baseURL = "https://api.groq.com/openai/v1";
-      model = "llama-3.3-70b-versatile";
-    } else if (aiSettings.openaiApiKey || process.env.OPENAI_API_KEY) {
-      apiKey = aiSettings.openaiApiKey || process.env.OPENAI_API_KEY || "";
-      baseURL = undefined;
-      model = "gpt-4o";
+      if (!key) return null;
+      return {
+        name: "GOOGLE_GEMINI",
+        apiKey: key,
+        baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+        models: ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"],
+      };
+    }
+    if (p === "GROQ") {
+      const key = aiSettings.groqApiKey || process.env.GROQ_API_KEY || "";
+      if (!key) return null;
+      return {
+        name: "GROQ",
+        apiKey: key,
+        baseURL: "https://api.groq.com/openai/v1",
+        models: [
+          "llama-3.1-8b-instant",       // Mais estável, gratuito e com suporte garantido a tools
+          "llama-3.3-70b-versatile",    // 70B se liberado na conta Groq
+          "llama-3.2-3b-preview",
+          "llama-3.2-1b-preview",
+          "llama3-70b-8192",
+          "llama3-8b-8192",
+        ],
+      };
+    }
+    if (p === "OPENAI") {
+      const key = aiSettings.openaiApiKey || process.env.OPENAI_API_KEY || "";
+      if (!key) return null;
+      return {
+        name: "OPENAI",
+        apiKey: key,
+        models: ["gpt-4o", "gpt-4o-mini"],
+      };
+    }
+    return null;
+  };
+
+  // Monta lista de provedores ordenando o escolhido pelo usuário em primeiro lugar
+  const providerList: ProviderConfig[] = [];
+  const primaryProvider = getProviderConfig(selectedProvider);
+  if (primaryProvider) {
+    providerList.push(primaryProvider);
+  }
+
+  // Adiciona outros provedores configurados como reserva
+  for (const alt of ["GOOGLE_GEMINI", "GROQ", "OPENAI"]) {
+    if (alt !== selectedProvider) {
+      const altConfig = getProviderConfig(alt);
+      if (altConfig) providerList.push(altConfig);
     }
   }
 
-  if (!apiKey) {
+  if (providerList.length === 0) {
     console.warn(
       `[Bot AI] Nenhuma chave de API configurada para o bot no restaurante "${slug}". Acesse a aba /ai e insira sua chave gratuita do Google Gemini, Groq ou OpenAI.`,
     );
     return null;
   }
-
-  const openai = new OpenAI({
-    apiKey,
-    baseURL,
-  });
 
   const textToProcess = messageText || "";
   if (!textToProcess) return null;
@@ -218,40 +233,59 @@ export const processarMensagemBot = async ({
   const MAX_ITERATIONS = 5;
 
   for (let i = 0; i < MAX_ITERATIONS; i++) {
-    let response;
-    try {
-      response = await openai.chat.completions.create({
-        model,
-        messages,
-        tools,
-      });
-    } catch (err: unknown) {
-      console.warn(
-        `[Bot AI] Tentativa com tools falhou (${provider}/${model}):`,
-        err instanceof Error ? err.message : err,
-      );
+    let response: OpenAI.Chat.ChatCompletion | null = null;
 
-      // Fallback 1: se for Gemini 2.0 e falhou, tenta direto sem tools ou com gemini-1.5-flash
-      try {
-        const fallbackModel = model === "gemini-2.0-flash" ? "gemini-1.5-flash" : model;
-        console.log(`[Bot AI] Tentando fallback direto sem tools com modelo "${fallbackModel}"...`);
-        response = await openai.chat.completions.create({
-          model: fallbackModel,
-          messages,
-        });
-      } catch (fallbackErr: unknown) {
-        console.error(
-          `[Bot AI] Erro definitivo ao chamar LLM (${provider}/${model}):`,
-          fallbackErr instanceof Error ? fallbackErr.message : fallbackErr,
-        );
-        const failures = (consecutiveFailuresMap.get(conversationKey) ?? 0) + 1;
-        consecutiveFailuresMap.set(conversationKey, failures);
-        if (failures >= 3) {
-          consecutiveFailuresMap.delete(conversationKey);
-          return HANDOFF_SIGNAL;
+    // 1. Tenta com tools nos provedores e modelos em ordem de prioridade
+    for (const prov of providerList) {
+      const client = new OpenAI({ apiKey: prov.apiKey, baseURL: prov.baseURL });
+      for (const m of prov.models) {
+        try {
+          response = await client.chat.completions.create({
+            model: m,
+            messages,
+            tools,
+          });
+          // Prioriza este modelo nas iterações seguintes desta chamada
+          prov.models = [m, ...prov.models.filter((item) => item !== m)];
+          break;
+        } catch (err: unknown) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          console.warn(`[Bot AI] Tentativa com tools falhou (${prov.name}/${m}): ${errMsg}`);
         }
-        return null;
       }
+      if (response) break;
+    }
+
+    // 2. Se falhar com tools, tenta sem tools como fallback conversacional
+    if (!response) {
+      console.log(`[Bot AI] Tentando fallback direto sem tools...`);
+      for (const prov of providerList) {
+        const client = new OpenAI({ apiKey: prov.apiKey, baseURL: prov.baseURL });
+        for (const m of prov.models) {
+          try {
+            response = await client.chat.completions.create({
+              model: m,
+              messages,
+            });
+            break;
+          } catch (err: unknown) {
+            const errMsg = err instanceof Error ? err.message : String(err);
+            console.warn(`[Bot AI] Fallback sem tools falhou (${prov.name}/${m}): ${errMsg}`);
+          }
+        }
+        if (response) break;
+      }
+    }
+
+    if (!response) {
+      console.error(`[Bot AI] Erro definitivo ao chamar LLM: nenhum modelo/provedor respondeu.`);
+      const failures = (consecutiveFailuresMap.get(conversationKey) ?? 0) + 1;
+      consecutiveFailuresMap.set(conversationKey, failures);
+      if (failures >= 3) {
+        consecutiveFailuresMap.delete(conversationKey);
+        return HANDOFF_SIGNAL;
+      }
+      return null;
     }
 
     const assistantMessage = response.choices[0]?.message;
