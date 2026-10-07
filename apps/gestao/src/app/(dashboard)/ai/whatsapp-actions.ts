@@ -10,7 +10,7 @@ import {
 import axios from "axios";
 import { revalidatePath } from "next/cache";
 
-interface WhatsAppStatusResult {
+export interface WhatsAppStatusResult {
   isConnected: boolean;
   state: "open" | "close" | "connecting" | "unknown";
   instanceName?: string;
@@ -18,9 +18,14 @@ interface WhatsAppStatusResult {
   profileName?: string;
   profilePicUrl?: string;
   error?: string;
+  isBotActive?: boolean;
+  hasAiApiKey?: boolean;
+  aiProvider?: string;
+  webhookUrl?: string;
+  webhookEnabled?: boolean;
 }
 
-interface QrCodeResult {
+export interface QrCodeResult {
   ok: boolean;
   base64?: string;
   code?: string;
@@ -33,26 +38,63 @@ function cleanKey(val?: string | null): string {
   return val.trim().replace(/^["']|["']$/g, "");
 }
 
-function getEvolutionConfig(storedInstanceName?: string | null, storedApiKey?: string | null, restaurantSlug?: string) {
-  const evolutionUrl = cleanKey(process.env.EVOLUTION_API_URL || "http://localhost:8080").replace(/\/$/, "");
-  
-  // A chave mestra do servidor (EVOLUTION_API_KEY) tem prioridade absoluta para criação e gestão de instâncias
-  const envKey = cleanKey(process.env.EVOLUTION_API_KEY || process.env.AUTHENTICATION_API_KEY);
+async function getAppUrl(): Promise<string> {
+  try {
+    const { headers } = await import("next/headers");
+    const headersList = await headers();
+    const host = headersList.get("x-forwarded-host") || headersList.get("host");
+    const proto = headersList.get("x-forwarded-proto") || "https";
+    if (host && !host.includes("localhost") && !host.includes("127.0.0.1")) {
+      return `${proto}://${host}`.replace(/\/$/, "");
+    }
+  } catch {
+    // Fora do contexto de request HTTP
+  }
+
+  const raw =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.APP_URL ||
+    "https://gestao.fswdonalds.eeytech.com";
+  return cleanKey(raw).replace(/\/$/, "");
+}
+
+function getEvolutionConfig(
+  storedInstanceName?: string | null,
+  storedApiKey?: string | null,
+  restaurantSlug?: string,
+) {
+  const rawUrl =
+    process.env.EVOLUTION_API_URL ||
+    process.env.EVOLUTION_URL ||
+    "http://localhost:8080";
+  const evolutionUrl = cleanKey(rawUrl).replace(/\/+$/, "");
+
+  // A chave mestra do servidor tem prioridade
+  const envKey = cleanKey(
+    process.env.EVOLUTION_API_KEY || process.env.AUTHENTICATION_API_KEY,
+  );
   const apiKey = envKey || cleanKey(storedApiKey);
-  
-  const cleanSlug = restaurantSlug ? restaurantSlug.toLowerCase().replace(/[^a-z0-9]/g, "_") : "loja";
-  const instanceName = cleanKey(storedInstanceName) || `restaurante_${cleanSlug}`;
+
+  const cleanSlug = restaurantSlug
+    ? restaurantSlug.toLowerCase().replace(/[^a-z0-9]/g, "_")
+    : "loja";
+  const instanceName =
+    cleanKey(storedInstanceName) || `restaurante_${cleanSlug}`;
 
   return { evolutionUrl, apiKey, instanceName };
 }
 
 /**
- * Consulta o status atual da conexão do WhatsApp na Evolution API
+ * Consulta o status atual da conexão do WhatsApp na Evolution API e assegura webhook ativo
  */
-export async function buscarStatusWhatsAppAction(slug: string): Promise<WhatsAppStatusResult> {
+export async function buscarStatusWhatsAppAction(
+  slug: string,
+): Promise<WhatsAppStatusResult> {
   try {
     const restaurant = await buscarRestaurantePorSlug(slug);
-    if (!restaurant) return { isConnected: false, state: "unknown", error: "Restaurante não encontrado." };
+    if (!restaurant) {
+      return { isConnected: false, state: "unknown", error: "Restaurante não encontrado." };
+    }
 
     const aiSettings = await db.query.aiSettingsTable.findFirst({
       where: eq(aiSettingsTable.restaurantId, restaurant.id),
@@ -61,7 +103,20 @@ export async function buscarStatusWhatsAppAction(slug: string): Promise<WhatsApp
     const { evolutionUrl, apiKey, instanceName } = getEvolutionConfig(
       aiSettings?.evolutionInstanceName,
       aiSettings?.evolutionApiKey,
-      slug
+      slug,
+    );
+
+    const isBotActive = aiSettings?.isBotActive ?? false;
+    const aiProvider = (aiSettings?.aiProvider || "GOOGLE_GEMINI").toUpperCase();
+    const hasAiApiKey = Boolean(
+      (aiProvider === "GOOGLE_GEMINI" && (aiSettings?.geminiApiKey || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY)) ||
+      (aiProvider === "GROQ" && (aiSettings?.groqApiKey || process.env.GROQ_API_KEY)) ||
+      (aiProvider === "OPENAI" && (aiSettings?.openaiApiKey || process.env.OPENAI_API_KEY)) ||
+      aiSettings?.geminiApiKey ||
+      aiSettings?.groqApiKey ||
+      aiSettings?.openaiApiKey ||
+      process.env.GEMINI_API_KEY ||
+      process.env.GOOGLE_API_KEY,
     );
 
     if (!apiKey) {
@@ -69,36 +124,133 @@ export async function buscarStatusWhatsAppAction(slug: string): Promise<WhatsApp
         isConnected: false,
         state: "unknown",
         instanceName,
-        error: "Chave da Evolution API (EVOLUTION_API_KEY) não configurada no ambiente do servidor.",
+        isBotActive,
+        hasAiApiKey,
+        aiProvider,
+        error: "Chave da Evolution API não configurada no servidor.",
       };
     }
 
     try {
-      const response = await axios.get(`${evolutionUrl}/instance/connectionState/${instanceName}`, {
-        headers: { apikey: apiKey },
-        timeout: 5000,
-      });
+      const response = await axios.get(
+        `${evolutionUrl}/instance/connectionState/${encodeURIComponent(instanceName)}`,
+        {
+          headers: { apikey: apiKey },
+          timeout: 5000,
+        },
+      );
 
-      const state = response.data?.instance?.state as "open" | "close" | "connecting" | undefined;
+      const state = response.data?.instance?.state as
+        | "open"
+        | "close"
+        | "connecting"
+        | undefined;
       const isConnected = state === "open";
 
       let phone: string | undefined;
       let profileName: string | undefined;
       let profilePicUrl: string | undefined;
+      let webhookUrl: string | undefined;
+      let webhookEnabled = false;
 
       if (isConnected) {
+        const appUrl = await getAppUrl();
+        webhookUrl = `${appUrl}/api/webhooks/evolution`;
+
+        // 1. Verifica se o webhook já está configurado na Evolution API
         try {
-          const fetchRes = await axios.get(`${evolutionUrl}/instance/fetchInstances?instanceName=${instanceName}`, {
-            headers: { apikey: apiKey },
-            timeout: 5000,
-          });
+          const findRes = await axios.get(
+            `${evolutionUrl}/webhook/find/${encodeURIComponent(instanceName)}`,
+            {
+              headers: { apikey: apiKey },
+              timeout: 4000,
+            },
+          );
+          const currentUrl = findRes.data?.url || findRes.data?.webhook?.url;
+          webhookEnabled = Boolean(findRes.data?.enabled ?? findRes.data?.webhook?.enabled);
+
+          // Se não estiver habilitado ou apontando para URL antiga/incorreta, atualiza
+          if (!webhookEnabled || currentUrl !== webhookUrl) {
+            console.log(
+              `[WhatsApp Status] Webhook precisa de sincronização (${currentUrl} -> ${webhookUrl}). Atualizando...`,
+            );
+            await axios.post(
+              `${evolutionUrl}/webhook/set/${encodeURIComponent(instanceName)}`,
+              {
+                webhook: {
+                  enabled: true,
+                  url: webhookUrl,
+                  byEvents: false,
+                  base64: false,
+                  events: ["MESSAGES_UPSERT", "messages.upsert", "SEND_MESSAGE"],
+                },
+                enabled: true,
+                url: webhookUrl,
+                byEvents: false,
+                base64: false,
+                events: ["MESSAGES_UPSERT", "messages.upsert", "SEND_MESSAGE"],
+              },
+              {
+                headers: { apikey: apiKey, "Content-Type": "application/json" },
+                timeout: 5000,
+              },
+            );
+            webhookEnabled = true;
+          }
+        } catch {
+          // Se find falhou ou não existe, dispara setWebhook preventivo
+          axios
+            .post(
+              `${evolutionUrl}/webhook/set/${encodeURIComponent(instanceName)}`,
+              {
+                webhook: {
+                  enabled: true,
+                  url: webhookUrl,
+                  byEvents: false,
+                  base64: false,
+                  events: ["MESSAGES_UPSERT", "messages.upsert", "SEND_MESSAGE"],
+                },
+                enabled: true,
+                url: webhookUrl,
+                byEvents: false,
+                base64: false,
+                events: ["MESSAGES_UPSERT", "messages.upsert", "SEND_MESSAGE"],
+              },
+              {
+                headers: { apikey: apiKey, "Content-Type": "application/json" },
+                timeout: 5000,
+              },
+            )
+            .then(() => {
+              webhookEnabled = true;
+            })
+            .catch((whErr) => {
+              console.warn(
+                "[WhatsApp Status] Aviso ao verificar/sincronizar webhook:",
+                whErr?.message,
+              );
+            });
+        }
+
+        // 2. Busca informações do perfil conectado
+        try {
+          const fetchRes = await axios.get(
+            `${evolutionUrl}/instance/fetchInstances?instanceName=${encodeURIComponent(instanceName)}`,
+            {
+              headers: { apikey: apiKey },
+              timeout: 5000,
+            },
+          );
 
           const instData = Array.isArray(fetchRes.data)
-            ? fetchRes.data.find((i: { name?: string }) => i.name === instanceName) || fetchRes.data[0]
+            ? fetchRes.data.find((i: { name?: string }) => i.name === instanceName) ||
+              fetchRes.data[0]
             : fetchRes.data;
 
           if (instData) {
-            phone = instData.ownerJid ? instData.ownerJid.replace("@s.whatsapp.net", "") : instData.number;
+            phone = instData.ownerJid
+              ? instData.ownerJid.replace("@s.whatsapp.net", "")
+              : instData.number;
             profileName = instData.profileName;
             profilePicUrl = instData.profilePicUrl;
           }
@@ -114,24 +266,41 @@ export async function buscarStatusWhatsAppAction(slug: string): Promise<WhatsApp
         phone,
         profileName,
         profilePicUrl,
+        isBotActive,
+        hasAiApiKey,
+        aiProvider,
+        webhookUrl,
+        webhookEnabled,
       };
     } catch (err: unknown) {
       const status = axios.isAxiosError(err) ? err.response?.status : null;
       if (status === 404) {
-        return { isConnected: false, state: "close", instanceName };
+        return {
+          isConnected: false,
+          state: "close",
+          instanceName,
+          isBotActive,
+          hasAiApiKey,
+          aiProvider,
+        };
       }
       return {
         isConnected: false,
         state: "unknown",
         instanceName,
-        error: err instanceof Error ? err.message : "Falha ao consultar Evolution API.",
+        isBotActive,
+        hasAiApiKey,
+        aiProvider,
+        error:
+          err instanceof Error ? err.message : "Falha ao consultar Evolution API.",
       };
     }
   } catch (error) {
     return {
       isConnected: false,
       state: "unknown",
-      error: error instanceof Error ? error.message : "Erro interno ao buscar status.",
+      error:
+        error instanceof Error ? error.message : "Erro interno ao buscar status.",
     };
   }
 }
@@ -139,7 +308,9 @@ export async function buscarStatusWhatsAppAction(slug: string): Promise<WhatsApp
 /**
  * Cria a instância (se necessário), configura o webhook automaticamente e gera o QR Code
  */
-export async function gerarQrCodeWhatsAppAction(slug: string): Promise<QrCodeResult> {
+export async function gerarQrCodeWhatsAppAction(
+  slug: string,
+): Promise<QrCodeResult> {
   try {
     const restaurant = await buscarRestaurantePorSlug(slug);
     if (!restaurant) return { ok: false, error: "Restaurante não encontrado." };
@@ -151,7 +322,7 @@ export async function gerarQrCodeWhatsAppAction(slug: string): Promise<QrCodeRes
     const { evolutionUrl, apiKey, instanceName } = getEvolutionConfig(
       aiSettings?.evolutionInstanceName,
       aiSettings?.evolutionApiKey,
-      slug
+      slug,
     );
 
     if (!apiKey) {
@@ -161,24 +332,24 @@ export async function gerarQrCodeWhatsAppAction(slug: string): Promise<QrCodeRes
       };
     }
 
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://gestao.eeyfood.eeytech.com").replace(/\/$/, "");
+    const appUrl = await getAppUrl();
+    const webhookUrl = `${appUrl}/api/webhooks/evolution`;
 
     // 1. Tenta verificar se a instância já existe
     let instanceExists = false;
     try {
-      const checkRes = await axios.get(`${evolutionUrl}/instance/connectionState/${instanceName}`, {
-        headers: { apikey: apiKey },
-        timeout: 5000,
-      });
+      const checkRes = await axios.get(
+        `${evolutionUrl}/instance/connectionState/${encodeURIComponent(instanceName)}`,
+        {
+          headers: { apikey: apiKey },
+          timeout: 5000,
+        },
+      );
       if (checkRes.status === 200) {
         instanceExists = true;
       }
-    } catch (err) {
-      if (axios.isAxiosError(err) && err.response?.status === 404) {
-        instanceExists = false;
-      } else {
-        instanceExists = false;
-      }
+    } catch {
+      instanceExists = false;
     }
 
     // 2. Se não existir, cria a instância na Evolution API
@@ -195,17 +366,19 @@ export async function gerarQrCodeWhatsAppAction(slug: string): Promise<QrCodeRes
           {
             headers: { apikey: apiKey, "Content-Type": "application/json" },
             timeout: 10000,
-          }
+          },
         );
       } catch (err: unknown) {
         if (axios.isAxiosError(err) && err.response?.status === 401) {
           return {
             ok: false,
-            error: "Chave não autorizada (401). Certifique-se de que a variável EVOLUTION_API_KEY no eeyFood é idêntica à AUTHENTICATION_API_KEY da Evolution API no Coolify.",
+            error:
+              "Chave não autorizada (401). Certifique-se de que a variável EVOLUTION_API_KEY no eeyFood é idêntica à AUTHENTICATION_API_KEY da Evolution API.",
           };
         }
-        // Se já existir, ignora erro 403 / "already in use"
-        const msg = axios.isAxiosError(err) ? JSON.stringify(err.response?.data) : "";
+        const msg = axios.isAxiosError(err)
+          ? JSON.stringify(err.response?.data)
+          : "";
         if (!msg.includes("already in use") && !msg.includes("already exists")) {
           return {
             ok: false,
@@ -215,26 +388,31 @@ export async function gerarQrCodeWhatsAppAction(slug: string): Promise<QrCodeRes
       }
     }
 
-    // 3. Configura o Webhook automaticamente
+    // 3. Configura o Webhook com a URL correta
     try {
       await axios.post(
-        `${evolutionUrl}/webhook/set/${instanceName}`,
+        `${evolutionUrl}/webhook/set/${encodeURIComponent(instanceName)}`,
         {
           webhook: {
             enabled: true,
-            url: `${appUrl}/api/webhooks/evolution`,
+            url: webhookUrl,
             byEvents: false,
             base64: false,
-            events: ["MESSAGES_UPSERT"],
+            events: ["MESSAGES_UPSERT", "messages.upsert", "SEND_MESSAGE"],
           },
+          enabled: true,
+          url: webhookUrl,
+          byEvents: false,
+          base64: false,
+          events: ["MESSAGES_UPSERT", "messages.upsert", "SEND_MESSAGE"],
         },
         {
           headers: { apikey: apiKey, "Content-Type": "application/json" },
           timeout: 6000,
-        }
+        },
       );
     } catch (err) {
-      console.warn("Aviso ao configurar webhook automático:", err);
+      console.warn("Aviso ao configurar webhook automático no QR code:", err);
     }
 
     // 4. Salva a instância e chave no banco de dados para o restaurante
@@ -261,10 +439,13 @@ export async function gerarQrCodeWhatsAppAction(slug: string): Promise<QrCodeRes
     // 5. Solicita o QR Code de conexão
     let connectRes;
     try {
-      connectRes = await axios.get(`${evolutionUrl}/instance/connect/${instanceName}`, {
-        headers: { apikey: apiKey },
-        timeout: 10000,
-      });
+      connectRes = await axios.get(
+        `${evolutionUrl}/instance/connect/${encodeURIComponent(instanceName)}`,
+        {
+          headers: { apikey: apiKey },
+          timeout: 10000,
+        },
+      );
     } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response?.status === 401) {
         return {
@@ -308,7 +489,8 @@ export async function gerarQrCodeWhatsAppAction(slug: string): Promise<QrCodeRes
     console.error("Erro ao gerar QR code:", error);
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Erro ao gerar QR code na Evolution API.",
+      error:
+        error instanceof Error ? error.message : "Erro ao gerar QR code na Evolution API.",
     };
   }
 }
@@ -316,7 +498,9 @@ export async function gerarQrCodeWhatsAppAction(slug: string): Promise<QrCodeRes
 /**
  * Desconecta o WhatsApp da instância
  */
-export async function desconectarWhatsAppAction(slug: string): Promise<{ ok: boolean; error?: string }> {
+export async function desconectarWhatsAppAction(
+  slug: string,
+): Promise<{ ok: boolean; error?: string }> {
   try {
     const restaurant = await buscarRestaurantePorSlug(slug);
     if (!restaurant) return { ok: false, error: "Restaurante não encontrado." };
@@ -328,15 +512,18 @@ export async function desconectarWhatsAppAction(slug: string): Promise<{ ok: boo
     const { evolutionUrl, apiKey, instanceName } = getEvolutionConfig(
       aiSettings?.evolutionInstanceName,
       aiSettings?.evolutionApiKey,
-      slug
+      slug,
     );
 
     if (instanceName && apiKey) {
       try {
-        await axios.delete(`${evolutionUrl}/instance/logout/${instanceName}`, {
-          headers: { apikey: apiKey },
-          timeout: 6000,
-        });
+        await axios.delete(
+          `${evolutionUrl}/instance/logout/${encodeURIComponent(instanceName)}`,
+          {
+            headers: { apikey: apiKey },
+            timeout: 6000,
+          },
+        );
       } catch (err) {
         console.warn("Erro ao fazer logout na Evolution API:", err);
       }
@@ -351,6 +538,126 @@ export async function desconectarWhatsAppAction(slug: string): Promise<{ ok: boo
     return {
       ok: false,
       error: error instanceof Error ? error.message : "Erro ao desconectar.",
+    };
+  }
+}
+
+/**
+ * Reconfigura e força a sincronização do Webhook na Evolution API
+ */
+export async function sincronizarWebhookAction(
+  slug: string,
+): Promise<{ ok: boolean; webhookUrl?: string; error?: string }> {
+  try {
+    const restaurant = await buscarRestaurantePorSlug(slug);
+    if (!restaurant) return { ok: false, error: "Restaurante não encontrado." };
+
+    const aiSettings = await db.query.aiSettingsTable.findFirst({
+      where: eq(aiSettingsTable.restaurantId, restaurant.id),
+    });
+
+    const { evolutionUrl, apiKey, instanceName } = getEvolutionConfig(
+      aiSettings?.evolutionInstanceName,
+      aiSettings?.evolutionApiKey,
+      slug,
+    );
+
+    if (!apiKey) {
+      return { ok: false, error: "Chave da Evolution API não configurada." };
+    }
+
+    const appUrl = await getAppUrl();
+    const webhookUrl = `${appUrl}/api/webhooks/evolution`;
+
+    console.log(
+      `[Webhook Sync] Sincronizando webhook: instância="${instanceName}", url="${webhookUrl}"`,
+    );
+
+    await axios.post(
+      `${evolutionUrl}/webhook/set/${encodeURIComponent(instanceName)}`,
+      {
+        webhook: {
+          enabled: true,
+          url: webhookUrl,
+          byEvents: false,
+          base64: false,
+          events: ["MESSAGES_UPSERT", "messages.upsert", "SEND_MESSAGE"],
+        },
+        enabled: true,
+        url: webhookUrl,
+        byEvents: false,
+        base64: false,
+        events: ["MESSAGES_UPSERT", "messages.upsert", "SEND_MESSAGE"],
+      },
+      {
+        headers: { apikey: apiKey, "Content-Type": "application/json" },
+        timeout: 10000,
+      },
+    );
+
+    return { ok: true, webhookUrl };
+  } catch (error) {
+    console.error("Erro ao sincronizar webhook:", error);
+    let errMsg = "Falha ao sincronizar webhook na Evolution API.";
+    if (axios.isAxiosError(error)) {
+      errMsg =
+        error.response?.data?.message ||
+        JSON.stringify(error.response?.data) ||
+        error.message;
+    } else if (error instanceof Error) {
+      errMsg = error.message;
+    }
+    return { ok: false, error: errMsg };
+  }
+}
+
+/**
+ * Alterna rapidamente o status do robô de IA (Ativo / Inativo)
+ */
+export async function alternarStatusBotAction(
+  slug: string,
+  ativar: boolean,
+): Promise<{ ok: boolean; isBotActive: boolean; error?: string }> {
+  try {
+    const restaurant = await buscarRestaurantePorSlug(slug);
+    if (!restaurant) throw new Error("Restaurante não encontrado.");
+
+    await db
+      .insert(aiSettingsTable)
+      .values({
+        restaurantId: restaurant.id,
+        isBotActive: ativar,
+        botName: "EeyFood Bot",
+        systemPrompt: DEFAULT_AI_SYSTEM_PROMPT,
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: [aiSettingsTable.restaurantId],
+        set: {
+          isBotActive: ativar,
+          updatedAt: new Date(),
+        },
+      });
+
+    // Se estiver ativando, garante a sincronização do webhook na Evolution API
+    if (ativar) {
+      sincronizarWebhookAction(slug).catch((err) =>
+        console.warn("Aviso ao auto-sincronizar webhook:", err),
+      );
+    }
+
+    revalidatePath(`/${slug}/whatsapp`);
+    revalidatePath("/whatsapp");
+    revalidatePath(`/${slug}/ai`);
+    revalidatePath("/ai");
+
+    return { ok: true, isBotActive: ativar };
+  } catch (error) {
+    console.error("Erro ao alternar status do bot:", error);
+    return {
+      ok: false,
+      isBotActive: !ativar,
+      error: error instanceof Error ? error.message : "Erro ao alterar status.",
     };
   }
 }

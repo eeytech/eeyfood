@@ -13,6 +13,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getBooleanValue, getStringValue } from "@/lib/admin-form-utils";
+import { sincronizarWebhookAction } from "./ai/whatsapp-actions";
 
 const aiSettingsSchema = z.object({
   aiProvider: z.string().default("GOOGLE_GEMINI"),
@@ -85,6 +86,14 @@ export const updateAiSettingsAction = async (
       target: [aiSettingsTable.restaurantId],
       set: values,
     });
+
+  if (values.isBotActive) {
+    try {
+      await sincronizarWebhookAction(slug);
+    } catch (whErr) {
+      console.warn("Aviso ao auto-sincronizar webhook após salvar IA:", whErr);
+    }
+  }
 
   revalidatePath(`/${slug}/ai`);
   revalidatePath("/ai");
