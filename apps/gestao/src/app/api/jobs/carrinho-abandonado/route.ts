@@ -15,9 +15,10 @@ import {
 } from "@fsw/db";
 import axios from "axios";
 import { NextResponse } from "next/server";
+import { cleanKey, normalizeWhatsAppNumber } from "@/lib/whatsapp-utils";
 
 const VENDAS_URL = process.env.VENDAS_URL || "http://localhost:3001";
-const EVOLUTION_URL = process.env.EVOLUTION_API_URL || "http://localhost:8080";
+const EVOLUTION_URL = (process.env.EVOLUTION_API_URL || process.env.EVOLUTION_URL || "http://localhost:8080").replace(/\/+$/, "");
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
@@ -119,11 +120,23 @@ export async function GET(request: Request) {
         }
         message += `Clique aqui para continuar: ${checkoutLink}`;
 
+        const targetPhone = normalizeWhatsAppNumber(cart.customerPhone);
+        if (!targetPhone) {
+          console.warn(`[Carrinho Abandonado] Telefone inválido ignorado: ${cart.customerPhone}`);
+          continue;
+        }
+
         try {
           await axios.post(
-            `${EVOLUTION_URL}/message/sendText/${setting.evolutionInstance}`,
-            { number: cart.customerPhone, text: message },
-            { headers: { apikey: setting.evolutionApiKey } },
+            `${EVOLUTION_URL}/message/sendText/${encodeURIComponent(cleanKey(setting.evolutionInstance))}`,
+            { number: targetPhone, text: message },
+            {
+              headers: {
+                apikey: cleanKey(setting.evolutionApiKey),
+                "Content-Type": "application/json",
+              },
+              timeout: 10000,
+            },
           );
 
           if (customer) {
@@ -138,8 +151,23 @@ export async function GET(request: Request) {
           }
 
           totalSent++;
-        } catch (err) {
-          console.error(`Falha ao enviar mensagem para ${cart.customerPhone}:`, err);
+        } catch (err: unknown) {
+          let errorMsg = "";
+          if (axios.isAxiosError(err)) {
+            const data = err.response?.data;
+            errorMsg =
+              data?.response?.message ||
+              data?.message ||
+              data?.error ||
+              JSON.stringify(data) ||
+              err.message;
+          } else if (err instanceof Error) {
+            errorMsg = err.message;
+          }
+          console.error(
+            `Falha ao enviar mensagem para ${cart.customerPhone} (${targetPhone}):`,
+            errorMsg,
+          );
         }
       }
     }

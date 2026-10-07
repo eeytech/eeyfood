@@ -21,6 +21,7 @@ import {
   getOptionalStringValue,
   getStringValue,
 } from "@/lib/admin-form-utils";
+import { cleanKey, normalizeWhatsAppNumber } from "@/lib/whatsapp-utils";
 
 const marketingSettingsSchema = z.object({
   metaPixelId: z.string().nullable().optional(),
@@ -119,11 +120,61 @@ export async function dispararCampanhaAction(
     where: eq(aiSettingsTable.restaurantId, restaurant.id),
   });
 
-  if (!aiSettings?.evolutionInstanceName || !aiSettings.evolutionApiKey) {
-    throw new Error("Configure a integração WhatsApp (Evolution API) primeiro.");
+  const rawUrl =
+    process.env.EVOLUTION_API_URL ||
+    process.env.EVOLUTION_URL ||
+    "http://localhost:8080";
+  const evolutionUrl = cleanKey(rawUrl).replace(/\/+$/, "");
+
+  const envKey = cleanKey(
+    process.env.EVOLUTION_API_KEY || process.env.AUTHENTICATION_API_KEY,
+  );
+  const apiKey = envKey || cleanKey(aiSettings?.evolutionApiKey);
+  const instanceName = cleanKey(aiSettings?.evolutionInstanceName);
+
+  if (!instanceName || !apiKey) {
+    throw new Error(
+      "Integração do WhatsApp não configurada. Por favor, acesse o menu 'WhatsApp' e conecte sua instância via QR Code.",
+    );
   }
 
-  const EVOLUTION_URL = process.env.EVOLUTION_API_URL || "http://localhost:8080";
+  // Validação prévia de prontidão da conexão na Evolution API
+  try {
+    const statusRes = await axios.get(
+      `${evolutionUrl}/instance/connectionState/${encodeURIComponent(instanceName)}`,
+      {
+        headers: { apikey: apiKey },
+        timeout: 5000,
+      },
+    );
+
+    const state = statusRes.data?.instance?.state as string | undefined;
+    if (state && state !== "open") {
+      throw new Error(
+        `O WhatsApp do restaurante não está conectado (status atual: "${state}"). Conecte seu aparelho no menu 'WhatsApp' antes de disparar.`,
+      );
+    }
+  } catch (stateErr: unknown) {
+    if (
+      stateErr instanceof Error &&
+      stateErr.message.includes("O WhatsApp do restaurante não está conectado")
+    ) {
+      throw stateErr;
+    }
+    if (axios.isAxiosError(stateErr)) {
+      if (stateErr.response?.status === 404) {
+        throw new Error(
+          `A instância "${instanceName}" não existe na Evolution API. Acesse a tela 'WhatsApp' e reconecte seu aparelho.`,
+        );
+      }
+      if (stateErr.response?.status === 401 || stateErr.response?.status === 403) {
+        throw new Error(
+          "Chave de autenticação da Evolution API inválida. Verifique as credenciais do servidor.",
+        );
+      }
+    }
+    console.warn("Aviso ao verificar connectionState pré-disparo:", stateErr);
+  }
 
   let customers: Array<{ id: string; name: string; phone: string }> = [];
 
@@ -182,15 +233,40 @@ export async function dispararCampanhaAction(
   }
 
   let sent = 0;
+  let failed = 0;
+  const errorDetails: string[] = [];
 
   for (const customer of customers) {
-    const personalizedMessage = message.replace("{nome}", customer.name.split(" ")[0]);
+    const targetPhone = normalizeWhatsAppNumber(customer.phone);
+
+    if (!targetPhone) {
+      failed++;
+      console.warn(
+        `[Campanha] Telefone inválido ignorado para ${customer.name}: "${customer.phone}"`,
+      );
+      if (errorDetails.length < 5) {
+        errorDetails.push(`${customer.name}: número inválido (${customer.phone})`);
+      }
+      continue;
+    }
+
+    const firstName = customer.name.trim().split(" ")[0] || "Cliente";
+    const personalizedMessage = message.replace(/{nome}/gi, firstName);
 
     try {
       await axios.post(
-        `${EVOLUTION_URL}/message/sendText/${aiSettings.evolutionInstanceName}`,
-        { number: customer.phone, text: personalizedMessage },
-        { headers: { apikey: aiSettings.evolutionApiKey } },
+        `${evolutionUrl}/message/sendText/${encodeURIComponent(instanceName)}`,
+        {
+          number: targetPhone,
+          text: personalizedMessage,
+        },
+        {
+          headers: {
+            apikey: apiKey,
+            "Content-Type": "application/json",
+          },
+          timeout: 10000,
+        },
       );
 
       await db.insert(customerInteractionsTable).values({
@@ -204,15 +280,48 @@ export async function dispararCampanhaAction(
 
       sent++;
 
-      // Throttle: 1 message per 500ms to avoid WhatsApp bans
-      await new Promise((r) => setTimeout(r, 500));
-    } catch (err) {
-      console.error(`Falha ao enviar para ${customer.phone}:`, err);
+      // Throttle: 600ms para evitar rate-limit e ban do WhatsApp
+      await new Promise((r) => setTimeout(r, 600));
+    } catch (err: unknown) {
+      failed++;
+      let errorMsg = "";
+      if (axios.isAxiosError(err)) {
+        const respData = err.response?.data;
+        errorMsg =
+          respData?.response?.message ||
+          respData?.message ||
+          respData?.error ||
+          (typeof respData === "string" ? respData : JSON.stringify(respData)) ||
+          err.message;
+      } else if (err instanceof Error) {
+        errorMsg = err.message;
+      }
+
+      console.error(
+        `Falha ao enviar campanha para ${customer.phone} (${targetPhone}):`,
+        errorMsg,
+      );
+
+      if (errorDetails.length < 5) {
+        errorDetails.push(`${customer.name} (${customer.phone}): ${errorMsg}`);
+      }
     }
   }
 
+  if (sent === 0 && customers.length > 0) {
+    const detailMsg = errorDetails.length > 0 ? ` Detalhe: ${errorDetails.join("; ")}` : "";
+    throw new Error(
+      `Falha no disparo: nenhuma mensagem pôde ser entregue via WhatsApp.${detailMsg}`,
+    );
+  }
+
   revalidatePath(`/${slug}/campanhas`);
-  return { sent, total: customers.length };
+  return {
+    sent,
+    total: customers.length,
+    failed,
+    errorDetails,
+  };
 }
 
 export async function buscarMarketingSettingsAction(slug: string) {

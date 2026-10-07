@@ -14,11 +14,13 @@ import {
   UsersIcon,
   UserXIcon,
 } from "lucide-react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { buscarRestauranteParaGestao } from "@/lib/admin-queries";
 import { cn } from "@/lib/utils";
+import { buscarStatusWhatsAppAction } from "../ai/whatsapp-actions";
 import { dispararCampanhaAction } from "../marketing-actions";
 import { CampanhaForm } from "./campanha-form";
 
@@ -107,6 +109,11 @@ export default async function CampanhasPage({ params }: PageProps) {
 
   const restaurantSlug = restaurant.slug;
   const counts = await getSegmentCounts(restaurant.id);
+  const whatsAppStatus = await buscarStatusWhatsAppAction(restaurantSlug).catch(() => ({
+    isConnected: false,
+    state: "unknown" as const,
+    phone: undefined as string | undefined,
+  }));
 
   const customers = await db
     .select({
@@ -144,10 +151,22 @@ export default async function CampanhasPage({ params }: PageProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3.5 py-1.5 text-xs font-semibold text-primary shadow-xs">
-            <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-            <span>Disparador WhatsApp Ativo</span>
-          </div>
+          {whatsAppStatus.isConnected ? (
+            <div className="flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3.5 py-1.5 text-xs font-semibold text-emerald-700 shadow-2xs">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>
+                WhatsApp Conectado{whatsAppStatus.phone ? ` (${whatsAppStatus.phone})` : ""}
+              </span>
+            </div>
+          ) : (
+            <Link
+              href={`/${restaurantSlug}/whatsapp`}
+              className="flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1.5 text-xs font-semibold text-amber-800 transition-colors hover:bg-amber-500/20 shadow-2xs"
+            >
+              <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+              <span>WhatsApp Desconectado • Conectar agora →</span>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -194,6 +213,8 @@ export default async function CampanhasPage({ params }: PageProps) {
         counts={counts}
         customers={customers}
         dispatchAction={dispatch}
+        whatsAppStatus={whatsAppStatus}
+        restaurantSlug={restaurantSlug}
       />
     </div>
   );

@@ -2,6 +2,8 @@
 
 import {
   AlertCircleIcon,
+  AlertTriangleIcon,
+  ArrowRightIcon,
   CheckCheckIcon,
   CheckSquareIcon,
   FlameIcon,
@@ -20,8 +22,10 @@ import {
   UsersIcon,
   XIcon,
 } from "lucide-react";
+import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
+import { formatWhatsAppPhoneDisplay } from "@/lib/whatsapp-utils";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -69,7 +73,20 @@ interface CampanhaFormProps {
   segments: Segment[];
   counts: Record<string, number>;
   customers?: CampanhaCustomer[];
-  dispatchAction: (formData: FormData) => Promise<{ sent: number; total: number }>;
+  dispatchAction: (formData: FormData) => Promise<{
+    sent: number;
+    total: number;
+    failed?: number;
+    errorDetails?: string[];
+  }>;
+  whatsAppStatus?: {
+    isConnected: boolean;
+    state?: "open" | "close" | "connecting" | "unknown";
+    instanceName?: string;
+    phone?: string;
+    error?: string;
+  };
+  restaurantSlug?: string;
 }
 
 const TEMPLATES = [
@@ -105,14 +122,7 @@ const SEGMENT_BADGES: Record<string, { label: string; className: string }> = {
 };
 
 function formatPhone(phone: string) {
-  const digits = phone.replace(/\D/g, "");
-  if (digits.length === 13) {
-    return `+${digits.slice(0, 2)} (${digits.slice(2, 4)}) ${digits.slice(4, 9)}-${digits.slice(9)}`;
-  }
-  if (digits.length === 11) {
-    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
-  }
-  return phone;
+  return formatWhatsAppPhoneDisplay(phone);
 }
 
 export function CampanhaForm({
@@ -120,6 +130,8 @@ export function CampanhaForm({
   counts,
   customers = [],
   dispatchAction,
+  whatsAppStatus,
+  restaurantSlug,
 }: CampanhaFormProps) {
   const [targetType, setTargetType] = useState<"SEGMENT" | "SPECIFIC">("SEGMENT");
   const [segment, setSegment] = useState("ALL");
@@ -130,6 +142,8 @@ export function CampanhaForm({
   const [message, setMessage] = useState("");
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  const isWhatsAppConnected = whatsAppStatus?.isConnected ?? true;
 
   // Filtered contacts in "SPECIFIC" mode
   const filteredContacts = useMemo(() => {
@@ -197,6 +211,12 @@ export function CampanhaForm({
 
   const handleOpenConfirm = (e: React.FormEvent) => {
     e.preventDefault();
+    if (whatsAppStatus && !whatsAppStatus.isConnected) {
+      toast.error(
+        "O WhatsApp do restaurante não está conectado. Acesse o menu 'WhatsApp' e conecte seu aparelho via QR Code antes de disparar.",
+      );
+      return;
+    }
     if (totalRecipients === 0) {
       if (targetType === "SPECIFIC") {
         toast.error("Por favor, selecione pelo menos um contato para o envio.");
@@ -228,9 +248,15 @@ export function CampanhaForm({
         }
 
         const result = await dispatchAction(fd);
-        toast.success(
-          `Campanha enviada com sucesso para ${result.sent} de ${result.total} clientes!`,
-        );
+        if (result.failed && result.failed > 0 && result.sent > 0) {
+          toast.warning(
+            `Campanha enviada para ${result.sent} de ${result.total} clientes (${result.failed} falharam).`,
+          );
+        } else {
+          toast.success(
+            `Campanha enviada com sucesso para ${result.sent} de ${result.total} clientes!`,
+          );
+        }
         setMessage("");
       } catch (err) {
         toast.error(
@@ -242,6 +268,33 @@ export function CampanhaForm({
 
   return (
     <>
+      {!isWhatsAppConnected && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/90 p-4 text-amber-900 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
+          <div className="flex items-start gap-3">
+            <div className="rounded-xl bg-amber-100 p-2 text-amber-700 shrink-0">
+              <AlertTriangleIcon size={18} />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-amber-950">
+                WhatsApp Desconectado ou Não Configurado
+              </p>
+              <p className="text-xs text-amber-800 mt-0.5">
+                Para que suas mensagens cheguem até os clientes, você precisa conectar o WhatsApp do seu restaurante via QR Code.
+              </p>
+            </div>
+          </div>
+          {restaurantSlug && (
+            <Link
+              href={`/${restaurantSlug}/whatsapp`}
+              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl bg-amber-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-amber-700 transition-colors"
+            >
+              <span>Conectar WhatsApp</span>
+              <ArrowRightIcon size={14} />
+            </Link>
+          )}
+        </div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-12">
         {/* Left Column: Dispatch Form (7 cols on desktop) */}
         <div className="lg:col-span-7">
