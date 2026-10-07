@@ -3,7 +3,6 @@
 import {
   AlertCircleIcon,
   AlertTriangleIcon,
-  ArrowRightIcon,
   CheckCheckIcon,
   CheckSquareIcon,
   FlameIcon,
@@ -22,7 +21,6 @@ import {
   UsersIcon,
   XIcon,
 } from "lucide-react";
-import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { formatWhatsAppPhoneDisplay } from "@/lib/whatsapp-utils";
@@ -269,29 +267,18 @@ export function CampanhaForm({
   return (
     <>
       {!isWhatsAppConnected && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50/90 p-4 text-amber-900 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
-          <div className="flex items-start gap-3">
-            <div className="rounded-xl bg-amber-100 p-2 text-amber-700 shrink-0">
-              <AlertTriangleIcon size={18} />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-amber-950">
-                WhatsApp Desconectado ou Não Configurado
-              </p>
-              <p className="text-xs text-amber-800 mt-0.5">
-                Para que suas mensagens cheguem até os clientes, você precisa conectar o WhatsApp do seu restaurante via QR Code.
-              </p>
-            </div>
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/90 p-4 text-amber-900 shadow-2xs flex items-start gap-3 mb-6">
+          <div className="rounded-xl bg-amber-100 p-2 text-amber-700 shrink-0">
+            <AlertTriangleIcon size={18} />
           </div>
-          {restaurantSlug && (
-            <Link
-              href={`/${restaurantSlug}/whatsapp`}
-              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl bg-amber-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-amber-700 transition-colors"
-            >
-              <span>Conectar WhatsApp</span>
-              <ArrowRightIcon size={14} />
-            </Link>
-          )}
+          <div>
+            <p className="text-xs font-bold text-amber-950">
+              WhatsApp Desconectado ou Não Configurado
+            </p>
+            <p className="text-xs text-amber-800 mt-0.5">
+              Para que suas mensagens cheguem até os clientes, você precisa conectar o WhatsApp do seu restaurante via QR Code.
+            </p>
+          </div>
         </div>
       )}
 

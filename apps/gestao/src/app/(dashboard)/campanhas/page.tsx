@@ -14,7 +14,6 @@ import {
   UsersIcon,
   UserXIcon,
 } from "lucide-react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -159,13 +158,10 @@ export default async function CampanhasPage({ params }: PageProps) {
               </span>
             </div>
           ) : (
-            <Link
-              href={`/${restaurantSlug}/whatsapp`}
-              className="flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1.5 text-xs font-semibold text-amber-800 transition-colors hover:bg-amber-500/20 shadow-2xs"
-            >
+            <div className="flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1.5 text-xs font-semibold text-amber-800 shadow-2xs">
               <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-              <span>WhatsApp Desconectado • Conectar agora →</span>
-            </Link>
+              <span>WhatsApp Desconectado</span>
+            </div>
           )}
         </div>
       </div>

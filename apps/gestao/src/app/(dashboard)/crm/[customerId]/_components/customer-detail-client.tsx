@@ -152,7 +152,7 @@ const INTERACTION_CONFIG: Record<
   },
   CAMPAIGN: {
     label: "Campanha Promocional",
-    badgeClass: "border-indigo-200 bg-indigo-50 text-indigo-700",
+    badgeClass: "border-primary/20 bg-primary/10 text-primary",
     icon: MegaphoneIcon,
   },
   BIRTHDAY: {
@@ -1060,9 +1060,14 @@ export function CustomerDetailClient({
                     </span>
                   </div>
                   {latestInteraction && (
-                    <Badge variant="secondary" className="text-[10px]">
+                    <span
+                      className={cn(
+                        "rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                        getInteractionInfo(latestInteraction.type).badgeClass,
+                      )}
+                    >
                       {getInteractionInfo(latestInteraction.type).label}
-                    </Badge>
+                    </span>
                   )}
                 </div>
                 <p className="line-clamp-2 text-xs text-slate-500">
@@ -2001,8 +2006,8 @@ export function CustomerDetailClient({
 
                       {/* Footer do Card */}
                       <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5">
-                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
                           <span>Canal: {interaction.channel || "WhatsApp"}</span>
                         </span>
 

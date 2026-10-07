@@ -228,6 +228,20 @@ const getInitials = (name: string): string => {
   return `${first}${last}`.toUpperCase();
 };
 
+const formatPhone = (v: string): string => {
+  let d = v.replace(/\D/g, "");
+  if (d.startsWith("55") && d.length > 11) d = d.slice(2);
+  d = d.slice(0, 11);
+  if (d.length <= 10) {
+    return d
+      .replace(/(\d{2})(\d)/, "($1) $2")
+      .replace(/(\d{4})(\d{1,4})$/, "$1-$2");
+  }
+  return d
+    .replace(/(\d{2})(\d)/, "($1) $2")
+    .replace(/(\d{5})(\d{1,4})$/, "$1-$2");
+};
+
 const formatDate = (dateStr: string): string => {
   try {
     const d = new Date(dateStr);
@@ -671,7 +685,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
               </div>
             </div>
             <p className="mt-2 font-display text-2xl font-bold text-primary">
-              ~15 min
+              15 min
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
               Atendimento priorizado
@@ -1346,7 +1360,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                       <MailIcon size={18} />
                     </div>
                     <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-medium text-slate-600">
-                      SLA ~15 min
+                      SLA 15 min
                     </span>
                   </div>
                   <h3 className="font-display text-base font-bold text-slate-900">
@@ -1461,9 +1475,6 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
         <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-xl">
           <DialogHeader>
             <div className="flex items-center gap-2">
-              <div className="rounded-xl bg-slate-100 p-2 text-slate-900">
-                <HeadphonesIcon size={20} />
-              </div>
               <div>
                 <DialogTitle className="font-display text-lg font-bold text-slate-900">
                   Cadastrar Novo Chamado
@@ -1485,7 +1496,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
 
             <div className="space-y-1.5">
               <Label htmlFor="create-title" className="text-xs font-semibold text-slate-700">
-                Título ou Resumo do Chamado *
+                Título ou Resumo do Chamado
               </Label>
               <Input
                 id="create-title"
@@ -1502,7 +1513,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
               {/* Rich Select for Category (matching Role Select pattern in usuarios-client) */}
               <div className="space-y-1.5">
                 <Label htmlFor="create-category" className="text-xs font-semibold text-slate-700">
-                  Módulo / Categoria *
+                  Módulo / Categoria
                 </Label>
                 <Select
                   value={createCategory}
@@ -1544,7 +1555,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
               {/* Rich Select for Priority */}
               <div className="space-y-1.5">
                 <Label htmlFor="create-priority" className="text-xs font-semibold text-slate-700">
-                  Nível de Prioridade *
+                  Nível de Prioridade
                 </Label>
                 <Select
                   value={createPriority}
@@ -1595,7 +1606,8 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
               <Input
                 id="create-phone"
                 value={createUserPhone}
-                onChange={(e) => setCreateUserPhone(e.target.value)}
+                onChange={(e) => setCreateUserPhone(formatPhone(e.target.value))}
+                maxLength={15}
                 placeholder="Ex.: (11) 98765-4321"
                 className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400"
               />
@@ -1606,7 +1618,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
 
             <div className="space-y-1.5">
               <Label htmlFor="create-desc" className="text-xs font-semibold text-slate-700">
-                Descrição Detalhada do Ocorrido *
+                Descrição Detalhada do Ocorrido
               </Label>
               <Textarea
                 id="create-desc"
@@ -1737,7 +1749,9 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                     Telefone / Whats
                   </span>
                   <p className="mt-0.5 text-xs font-semibold text-slate-800">
-                    {selectedTicket.userPhone || "Não informado"}
+                    {selectedTicket.userPhone
+                      ? formatPhone(selectedTicket.userPhone)
+                      : "Não informado"}
                   </p>
                 </div>
                 <div>

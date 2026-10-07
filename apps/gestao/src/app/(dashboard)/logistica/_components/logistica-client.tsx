@@ -798,10 +798,10 @@ export function LogisticaClient({
                                     </p>
                                     {courier.latitude !== null && courier.longitude !== null ? (
                                       <span
-                                        className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700 border border-sky-200"
+                                        className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary border border-primary/20"
                                         title={`GPS Ativo (${courier.latitude.toFixed(4)}, ${courier.longitude.toFixed(4)})`}
                                       >
-                                        <span className="h-1.5 w-1.5 rounded-full bg-sky-500 animate-pulse" />
+                                        <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
                                         GPS Ativo
                                       </span>
                                     ) : (
@@ -1005,8 +1005,8 @@ export function LogisticaClient({
                               <div className="flex items-center gap-1.5">
                                 <p className="text-sm font-semibold text-slate-900">{courier.name}</p>
                                 {courier.latitude !== null && courier.longitude !== null ? (
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-1.5 py-0.2 text-[9px] font-semibold text-sky-700 border border-sky-200">
-                                    <span className="h-1 w-1 rounded-full bg-sky-500 animate-pulse" />
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold text-primary border border-primary/20">
+                                    <span className="h-1 w-1 rounded-full bg-primary animate-pulse" />
                                     GPS
                                   </span>
                                 ) : null}
