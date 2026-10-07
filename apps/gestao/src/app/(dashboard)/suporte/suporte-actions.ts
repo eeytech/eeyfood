@@ -1,10 +1,12 @@
 "use server";
 
 import {
+  and,
   buscarRestaurantePorSlug,
   db,
   desc,
   eq,
+  ilike,
   supportTicketMessagesTable,
   supportTicketsTable,
 } from "@fsw/db";
@@ -32,7 +34,7 @@ const initialFallbackTickets: SupportTicket[] = [
     status: "RESOLVED",
     userName: "Matheus Silva",
     userEmail: "matheus@restaurante.com",
-    userPhone: "(11) 98765-4321",
+    userPhone: "(16) 98806-3477",
     restaurantSlug: "",
     createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
@@ -73,7 +75,7 @@ const initialFallbackTickets: SupportTicket[] = [
     status: "IN_PROGRESS",
     userName: "Gerência Operacional",
     userEmail: "gerencia@restaurante.com",
-    userPhone: "(11) 99888-7766",
+    userPhone: "(16) 98806-3477",
     restaurantSlug: "",
     createdAt: new Date(Date.now() - 18 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
@@ -89,7 +91,7 @@ const initialFallbackTickets: SupportTicket[] = [
       {
         id: "msg-5",
         sender: "SUPPORT",
-        senderName: "Especialista Fiscal",
+        senderName: "Equipe de Suporte Técnico",
         content:
           "Olá! Nosso time fiscal já verificou seus parâmetros da SEFAZ. O módulo de contingência foi ativado para o seu CNPJ. Por favor, reinicie o PDV e realize uma venda de teste.",
         createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
@@ -105,14 +107,42 @@ export async function listarChamadosAction(
 ): Promise<SupportTicket[]> {
   const session = await getSession();
   const slug = restaurantSlug || "";
+  const userRole = session?.role || "";
+  const userEmail = (session?.email || "").trim().toLowerCase();
+
+  // Somente Super Administrador, Administrador de Restaurante e Gerente Operacional veem todos os chamados.
+  // Todos os demais perfis veem apenas os chamados que eles mesmos abriram.
+  const canViewAllTickets = ["SUPER_ADMIN", "ADMIN", "MANAGER"].includes(userRole);
 
   try {
     const restaurant = slug ? await buscarRestaurantePorSlug(slug) : null;
 
+    const conditions = [];
+
+    // Escopo de restaurante (se houver restaurante filtrado e não for SUPER_ADMIN sem filtro)
+    if (restaurant?.id) {
+      conditions.push(eq(supportTicketsTable.restaurantId, restaurant.id));
+    }
+
+    // Se o usuário não faz parte do grupo gestor, filtra obrigatoriamente pelo email dele
+    if (!canViewAllTickets) {
+      if (userEmail) {
+        conditions.push(ilike(supportTicketsTable.userEmail, userEmail));
+      } else {
+        // Se a sessão não tiver e-mail, não exibe chamados alheios
+        conditions.push(eq(supportTicketsTable.id, "00000000-0000-0000-0000-000000000000"));
+      }
+    }
+
+    const whereClause =
+      conditions.length === 0
+        ? undefined
+        : conditions.length === 1
+          ? conditions[0]
+          : and(...conditions);
+
     const ticketsFromDb = await db.query.supportTicketsTable.findMany({
-      where: restaurant?.id
-        ? eq(supportTicketsTable.restaurantId, restaurant.id)
-        : undefined,
+      where: whereClause,
       orderBy: [desc(supportTicketsTable.createdAt)],
       with: {
         messages: true,
@@ -149,8 +179,15 @@ export async function listarChamadosAction(
     console.warn("Aviso ao buscar tickets de suporte no DB, usando fallback:", error);
   }
 
-  // Fallback em memória
-  return inMemoryFallbackTickets.map((t) => ({
+  // Fallback em memória aplicando mesma regra de visibilidade
+  let fallbackList = inMemoryFallbackTickets;
+  if (!canViewAllTickets) {
+    fallbackList = fallbackList.filter(
+      (t) => t.userEmail.toLowerCase().trim() === userEmail,
+    );
+  }
+
+  return fallbackList.map((t) => ({
     ...t,
     restaurantSlug: t.restaurantSlug || slug,
     userName: t.userName || session?.name || "Administrador",
@@ -261,6 +298,17 @@ export async function atualizarStatusChamadoAction(
   ticketId: string,
   newStatus: TicketStatus,
 ): Promise<{ success: boolean; error?: string }> {
+  const session = await getSession();
+
+  // Somente o usuário Super Administrador (Equipe de Suporte Técnico) pode alterar o status ou marcar como resolvido
+  if (session?.role !== "SUPER_ADMIN") {
+    return {
+      success: false,
+      error:
+        "Apenas o Super Administrador (Equipe de Suporte Técnico) possui permissão para marcar chamados como resolvidos ou alterar seu status.",
+    };
+  }
+
   const now = new Date();
 
   try {
@@ -296,12 +344,18 @@ export async function adicionarMensagemChamadoAction(
   }
 
   const now = new Date();
-  const senderName = session?.name || "Administrador";
+  const isSuperAdmin = session?.role === "SUPER_ADMIN";
+
+  // Respostas a nível da empresa que disponibiliza o sistema pertencem exclusivamente ao Super Administrador (Equipe de Suporte Técnico)
+  const sender: TicketSender = isSuperAdmin ? "SUPPORT" : "USER";
+  const senderName = isSuperAdmin
+    ? "Equipe de Suporte Técnico"
+    : session?.name || "Restaurante";
 
   try {
     await db.insert(supportTicketMessagesTable).values({
       ticketId,
-      sender: "USER",
+      sender,
       senderName,
       content: trimmed,
       createdAt: now,
@@ -310,7 +364,7 @@ export async function adicionarMensagemChamadoAction(
     await db
       .update(supportTicketsTable)
       .set({
-        status: "IN_PROGRESS",
+        status: isSuperAdmin ? "WAITING_CUSTOMER" : "IN_PROGRESS",
         updatedAt: now,
       })
       .where(eq(supportTicketsTable.id, ticketId));
@@ -320,7 +374,7 @@ export async function adicionarMensagemChamadoAction(
     if (fallbackTicket) {
       fallbackTicket.messages.push({
         id: `msg-${Date.now()}`,
-        sender: "USER",
+        sender,
         senderName,
         content: trimmed,
         createdAt: now.toISOString(),
@@ -330,7 +384,7 @@ export async function adicionarMensagemChamadoAction(
         fallbackTicket.status === "RESOLVED" ||
         fallbackTicket.status === "CLOSED"
       ) {
-        fallbackTicket.status = "IN_PROGRESS";
+        fallbackTicket.status = isSuperAdmin ? "WAITING_CUSTOMER" : "IN_PROGRESS";
       }
     }
   }
@@ -343,6 +397,19 @@ export async function excluirChamadoAction(
   ticketId: string,
   restaurantSlug?: string,
 ): Promise<{ success: boolean; error?: string }> {
+  const session = await getSession();
+  const canDelete =
+    session?.role === "SUPER_ADMIN" ||
+    session?.role === "ADMIN" ||
+    session?.role === "MANAGER";
+
+  if (!canDelete) {
+    return {
+      success: false,
+      error: "Você não tem permissão para excluir chamados de suporte.",
+    };
+  }
+
   try {
     await db
       .delete(supportTicketsTable)
@@ -361,3 +428,4 @@ export async function excluirChamadoAction(
 
   return { success: true };
 }
+

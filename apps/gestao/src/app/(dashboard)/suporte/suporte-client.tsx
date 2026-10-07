@@ -82,15 +82,18 @@ import {
   excluirChamadoAction,
 } from "./suporte-actions";
 import type {
+  CurrentUser,
   SupportTicket,
   TicketCategory,
   TicketPriority,
+  TicketSender,
   TicketStatus,
 } from "./suporte-types";
 
 interface SuporteClientProps {
   slug: string;
   initialTickets: SupportTicket[];
+  currentUser: CurrentUser;
 }
 
 interface StatusConfig {
@@ -272,9 +275,18 @@ const FAQS = [
   },
 ];
 
-export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
+export function SuporteClient({
+  slug,
+  initialTickets,
+  currentUser,
+}: SuporteClientProps) {
   const [tickets, setTickets] = useState<SupportTicket[]>(initialTickets);
   const [isPending, startTransition] = useTransition();
+
+  const userRole = currentUser?.role || "";
+  const userEmail = (currentUser?.email || "").trim().toLowerCase();
+  const isSuperAdmin = userRole === "SUPER_ADMIN";
+  const canViewAllTickets = ["SUPER_ADMIN", "ADMIN", "MANAGER"].includes(userRole);
 
   // Dialogs
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -300,9 +312,19 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
+  // Chamados acessíveis com base nas permissões de perfil:
+  // Somente Super Administrador, Administrador de Restaurante e Gerente Operacional veem todos os chamados.
+  // Demais perfis veem exclusivamente os chamados que abriram.
+  const accessibleTickets = useMemo(() => {
+    if (canViewAllTickets) return tickets;
+    return tickets.filter(
+      (t) => t.userEmail.toLowerCase().trim() === userEmail,
+    );
+  }, [tickets, canViewAllTickets, userEmail]);
+
   // Filtered tickets
   const filteredTickets = useMemo(() => {
-    return tickets.filter((t) => {
+    return accessibleTickets.filter((t) => {
       // Search term
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase().trim();
@@ -343,20 +365,20 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
 
       return true;
     });
-  }, [tickets, searchQuery, categoryFilter, statusFilter, priorityFilter]);
+  }, [accessibleTickets, searchQuery, categoryFilter, statusFilter, priorityFilter]);
 
   // Metric stats
-  const totalCount = tickets.length;
-  const inProgressCount = tickets.filter(
+  const totalCount = accessibleTickets.length;
+  const inProgressCount = accessibleTickets.filter(
     (t) =>
       t.status === "OPEN" ||
       t.status === "IN_PROGRESS" ||
       t.status === "WAITING_CUSTOMER",
   ).length;
-  const resolvedCount = tickets.filter(
+  const resolvedCount = accessibleTickets.filter(
     (t) => t.status === "RESOLVED" || t.status === "CLOSED",
   ).length;
-  const urgentCount = tickets.filter(
+  const urgentCount = accessibleTickets.filter(
     (t) =>
       t.priority === "URGENT" &&
       t.status !== "RESOLVED" &&
@@ -431,8 +453,8 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
         category: createCategory,
         priority: createPriority,
         status: "OPEN",
-        userName: "Administrador",
-        userEmail: "contato@restaurante.com",
+        userName: currentUser?.name || "Administrador",
+        userEmail: currentUser?.email || "contato@restaurante.com",
         userPhone: createUserPhone.trim() || undefined,
         restaurantSlug: slug,
         createdAt: now,
@@ -441,7 +463,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
           {
             id: `msg-${Date.now()}`,
             sender: "USER",
-            senderName: "Administrador",
+            senderName: currentUser?.name || "Administrador",
             content: createDescription,
             createdAt: now,
           },
@@ -493,13 +515,22 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
       }
 
       const now = new Date().toISOString();
+      const isSupport = isSuperAdmin;
       const newMessage = {
         id: `msg-${Date.now()}`,
-        sender: "USER" as const,
-        senderName: selectedTicket.userName || "Administrador",
+        sender: (isSupport ? "SUPPORT" : "USER") as TicketSender,
+        senderName: isSupport
+          ? "Equipe de Suporte Técnico"
+          : currentUser?.name || selectedTicket.userName || "Restaurante",
         content,
         createdAt: now,
       };
+
+      const newStatusAfterReply = isSupport
+        ? "WAITING_CUSTOMER"
+        : selectedTicket.status === "RESOLVED" || selectedTicket.status === "CLOSED"
+          ? "IN_PROGRESS"
+          : selectedTicket.status;
 
       setTickets((prev) =>
         prev.map((t) => {
@@ -507,10 +538,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
             return {
               ...t,
               updatedAt: now,
-              status:
-                t.status === "RESOLVED" || t.status === "CLOSED"
-                  ? "IN_PROGRESS"
-                  : t.status,
+              status: newStatusAfterReply,
               messages: [...t.messages, newMessage],
             };
           }
@@ -523,17 +551,18 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
           ? {
               ...prev,
               updatedAt: now,
-              status:
-                prev.status === "RESOLVED" || prev.status === "CLOSED"
-                  ? "IN_PROGRESS"
-                  : prev.status,
+              status: newStatusAfterReply,
               messages: [...prev.messages, newMessage],
             }
           : null,
       );
 
       setReplyMessage("");
-      toast.success("Mensagem enviada com sucesso!");
+      toast.success(
+        isSupport
+          ? "Resposta enviada como Equipe de Suporte Técnico!"
+          : "Mensagem enviada com sucesso!",
+      );
     });
   };
 
@@ -587,7 +616,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
             className="h-10 gap-2 rounded-full border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
           >
             <a
-              href="https://wa.me/5511999999999?text=Ol%C3%A1!%20Preciso%20de%20ajuda%20com%20o%20sistema%20EeyFood"
+              href="https://wa.me/5516988063477?text=Ol%C3%A1!%20Preciso%20de%20ajuda%20com%20o%20plant%C3%A3o%20do%20sistema%20EeyFood"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -606,6 +635,33 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
           </Button>
         </div>
       </div>
+
+      {/* ── Status do Perfil / Regra de Visibilidade ─────── */}
+      {!canViewAllTickets ? (
+        <div className="flex items-center gap-3 rounded-2xl border border-amber-200/90 bg-amber-50/70 p-3.5 text-xs text-amber-900 shadow-xs">
+          <div className="rounded-xl bg-amber-100 p-2 text-amber-700 shrink-0">
+            <AlertCircleIcon size={16} />
+          </div>
+          <div>
+            <p className="font-semibold">Visualização Individual de Chamados</p>
+            <p className="text-amber-800">
+              Você está visualizando exclusivamente os chamados abertos por você ({currentUser?.email || currentUser?.name || "seu usuário"}). O acesso a todos os chamados da empresa é restrito aos perfis Super Administrador, Administrador de Restaurante e Gerente Operacional.
+            </p>
+          </div>
+        </div>
+      ) : isSuperAdmin ? (
+        <div className="flex items-center gap-3 rounded-2xl border border-blue-200/90 bg-blue-50/70 p-3.5 text-xs text-blue-900 shadow-xs">
+          <div className="rounded-xl bg-blue-100 p-2 text-blue-700 shrink-0">
+            <SparklesIcon size={16} />
+          </div>
+          <div>
+            <p className="font-semibold">Painel Oficial: Equipe de Suporte Técnico (Super Administrador)</p>
+            <p className="text-blue-800">
+              Você possui acesso administrativo geral: visualização de todos os chamados, permissão exclusiva para marcar chamados como resolvidos e respostas oficiais em nome da empresa desenvolvedora do sistema.
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       {/* ── Metric Cards ────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
@@ -1049,35 +1105,41 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                                 Copiar protocolo
                               </DropdownMenuItem>
 
-                              <DropdownMenuSeparator className="bg-slate-100" />
-
-                              {t.status !== "RESOLVED" && t.status !== "CLOSED" ? (
-                                <DropdownMenuItem
-                                  onClick={() => handleUpdateStatus(t.id, "RESOLVED")}
-                                  className="gap-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
-                                >
-                                  <CheckCircle2Icon size={14} className="text-primary" />
-                                  Marcar como Resolvido
-                                </DropdownMenuItem>
-                              ) : (
-                                <DropdownMenuItem
-                                  onClick={() => handleUpdateStatus(t.id, "IN_PROGRESS")}
-                                  className="gap-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
-                                >
-                                  <ClockIcon size={14} className="text-primary" />
-                                  Reabrir Chamado
-                                </DropdownMenuItem>
+                              {isSuperAdmin && (
+                                <>
+                                  <DropdownMenuSeparator className="bg-slate-100" />
+                                  {t.status !== "RESOLVED" && t.status !== "CLOSED" ? (
+                                    <DropdownMenuItem
+                                      onClick={() => handleUpdateStatus(t.id, "RESOLVED")}
+                                      className="gap-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
+                                    >
+                                      <CheckCircle2Icon size={14} className="text-primary" />
+                                      Marcar como Resolvido
+                                    </DropdownMenuItem>
+                                  ) : (
+                                    <DropdownMenuItem
+                                      onClick={() => handleUpdateStatus(t.id, "IN_PROGRESS")}
+                                      className="gap-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
+                                    >
+                                      <ClockIcon size={14} className="text-primary" />
+                                      Reabrir Chamado
+                                    </DropdownMenuItem>
+                                  )}
+                                </>
                               )}
 
-                              <DropdownMenuSeparator className="bg-slate-100" />
-
-                              <DropdownMenuItem
-                                onClick={() => setDeletingTicket(t)}
-                                className="gap-2 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-700"
-                              >
-                                <Trash2Icon size={14} />
-                                Excluir chamado
-                              </DropdownMenuItem>
+                              {canViewAllTickets && (
+                                <>
+                                  <DropdownMenuSeparator className="bg-slate-100" />
+                                  <DropdownMenuItem
+                                    onClick={() => setDeletingTicket(t)}
+                                    className="gap-2 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-700"
+                                  >
+                                    <Trash2Icon size={14} />
+                                    Excluir chamado
+                                  </DropdownMenuItem>
+                                </>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -1151,14 +1213,42 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                             <CopyIcon size={14} className="text-primary" />
                             Copiar protocolo
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator className="bg-slate-100" />
-                          <DropdownMenuItem
-                            onClick={() => setDeletingTicket(t)}
-                            className="gap-2 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-700"
-                          >
-                            <Trash2Icon size={14} />
-                            Excluir chamado
-                          </DropdownMenuItem>
+
+                          {isSuperAdmin && (
+                            <>
+                              <DropdownMenuSeparator className="bg-slate-100" />
+                              {t.status !== "RESOLVED" && t.status !== "CLOSED" ? (
+                                <DropdownMenuItem
+                                  onClick={() => handleUpdateStatus(t.id, "RESOLVED")}
+                                  className="gap-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
+                                >
+                                  <CheckCircle2Icon size={14} className="text-primary" />
+                                  Marcar como Resolvido
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem
+                                  onClick={() => handleUpdateStatus(t.id, "IN_PROGRESS")}
+                                  className="gap-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
+                                >
+                                  <ClockIcon size={14} className="text-primary" />
+                                  Reabrir Chamado
+                                </DropdownMenuItem>
+                              )}
+                            </>
+                          )}
+
+                          {canViewAllTickets && (
+                            <>
+                              <DropdownMenuSeparator className="bg-slate-100" />
+                              <DropdownMenuItem
+                                onClick={() => setDeletingTicket(t)}
+                                className="gap-2 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-700"
+                              >
+                                <Trash2Icon size={14} />
+                                Excluir chamado
+                              </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -1332,18 +1422,23 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                     Canal prioritário para intercorrências operacionais em tempo real: problemas no PDV, fechamento de caixa ou falha na emissão para a cozinha.
                   </p>
                 </div>
-                <div className="pt-2">
+                <div className="space-y-2 pt-2">
+                  <div className="rounded-xl border border-slate-200/80 bg-slate-50 p-2.5 text-center">
+                    <p className="font-display text-sm font-bold text-primary">
+                      (16) 98806-3477
+                    </p>
+                  </div>
                   <Button
                     asChild
                     className="w-full gap-2 rounded-xl bg-primary text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90"
                   >
                     <a
-                      href="https://wa.me/5511999999999?text=Ol%C3%A1!%20Preciso%20de%20ajuda%20com%20o%20sistema%20EeyFood"
+                      href="https://wa.me/5516988063477?text=Ol%C3%A1!%20Preciso%20de%20ajuda%20com%20o%20plant%C3%A3o%20do%20sistema%20EeyFood"
                       target="_blank"
                       rel="noopener noreferrer"
                     >
                       <PhoneIcon size={14} />
-                      <span>Falar com o Plantão Agora</span>
+                      <span>Falar com o Plantão no WhatsApp</span>
                       <ExternalLinkIcon size={12} className="opacity-70" />
                     </a>
                   </Button>
@@ -1364,7 +1459,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                     </span>
                   </div>
                   <h3 className="font-display text-base font-bold text-slate-900">
-                    E-mail e Suporte Fiscal
+                    E-mail e Suporte Técnico
                   </h3>
                   <p className="text-xs text-slate-500 leading-relaxed">
                     Envio de certificados digitais, homologação de NFC-e/SAT, dúvidas contábeis ou relatórios detalhados com anexos.
@@ -1373,7 +1468,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                 <div className="space-y-2 pt-2">
                   <div className="rounded-xl border border-slate-200/80 bg-slate-50 p-2.5 text-center">
                     <p className="font-mono text-xs font-semibold text-slate-800">
-                      suporte@eeyfood.com.br
+                      suporte@eeytech.com
                     </p>
                   </div>
                   <Button
@@ -1381,16 +1476,16 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                     variant="outline"
                     className="w-full gap-2 rounded-xl border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                   >
-                    <a href="mailto:suporte@eeyfood.com.br">
+                    <a href="mailto:suporte@eeytech.com">
                       <MailIcon size={14} />
-                      <span>Enviar E-mail</span>
+                      <span>Enviar E-mail para Suporte</span>
                     </a>
                   </Button>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Canal 3: Central Telefônica */}
+            {/* Canal 3: Central Telefônica & Plantão de Voz */}
             <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
               <CardContent className="p-5 flex flex-col justify-between h-full space-y-4">
                 <div className="space-y-2.5">
@@ -1398,34 +1493,47 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
                       <HeadphonesIcon size={18} />
                     </div>
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-medium text-slate-600">
-                      08h às 23h
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                      Plantão Ativo
                     </span>
                   </div>
                   <h3 className="font-display text-base font-bold text-slate-900">
-                    Central Telefônica & Ouvidoria
+                    Plantão Telefônico / Voz
                   </h3>
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    Atendimento por voz com nossos especialistas técnicos. Disponível de segunda a domingo durante o horário de expediente da loja.
+                    Atendimento emergencial por voz com nossos especialistas técnicos para situações críticas na operação.
                   </p>
                 </div>
                 <div className="space-y-2 pt-2">
                   <div className="rounded-xl border border-slate-200/80 bg-slate-50 p-2.5 text-center">
                     <p className="font-display text-sm font-bold text-primary">
-                      (11) 4004-9876
+                      (16) 98806-3477
                     </p>
                   </div>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      navigator.clipboard.writeText("(11) 4004-9876");
-                      toast.success("Telefone copiado para a área de transferência!");
-                    }}
-                    className="w-full gap-2 rounded-xl border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                  >
-                    <CopyIcon size={14} />
-                    <span>Copiar Número</span>
-                  </Button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="gap-1.5 rounded-xl border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      <a href="tel:+5516988063477">
+                        <PhoneIcon size={13} className="text-primary" />
+                        <span>Ligar</span>
+                      </a>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        navigator.clipboard.writeText("16988063477");
+                        toast.success("Telefone de plantão (16) 98806-3477 copiado com sucesso!");
+                      }}
+                      className="gap-1.5 rounded-xl border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      <CopyIcon size={13} />
+                      <span>Copiar</span>
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -1509,94 +1617,92 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
               />
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {/* Rich Select for Category (matching Role Select pattern in usuarios-client) */}
-              <div className="space-y-1.5">
-                <Label htmlFor="create-category" className="text-xs font-semibold text-slate-700">
-                  Módulo / Categoria
-                </Label>
-                <Select
-                  value={createCategory}
-                  onValueChange={(val) => setCreateCategory(val as TicketCategory)}
+            {/* Select 1: Módulo / Categoria (linha individual) */}
+            <div className="space-y-1.5">
+              <Label htmlFor="create-category" className="text-xs font-semibold text-slate-700">
+                Módulo / Categoria
+              </Label>
+              <Select
+                value={createCategory}
+                onValueChange={(val) => setCreateCategory(val as TicketCategory)}
+              >
+                <SelectTrigger
+                  id="create-category"
+                  className="h-11 w-full rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-slate-400"
                 >
-                  <SelectTrigger
-                    id="create-category"
-                    className="h-11 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-slate-400"
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-80 rounded-xl border-slate-200 bg-white shadow-xl">
-                    {Object.entries(CATEGORY_CONFIG).map(([catKey, config]) => {
-                      const CatIcon = config.icon;
-                      return (
-                        <SelectItem
-                          key={catKey}
-                          value={catKey}
-                          className="cursor-pointer py-2.5 focus:bg-slate-50"
-                        >
-                          <div className="flex items-start gap-2.5">
-                            <CatIcon size={16} className="mt-0.5 text-slate-600" />
-                            <div>
-                              <p className="font-semibold leading-tight text-slate-900">
-                                {config.label}
-                              </p>
-                              <p className="mt-0.5 text-[11px] leading-tight text-slate-500">
-                                {config.description}
-                              </p>
-                            </div>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="max-h-80 rounded-xl border-slate-200 bg-white shadow-xl">
+                  {Object.entries(CATEGORY_CONFIG).map(([catKey, config]) => {
+                    const CatIcon = config.icon;
+                    return (
+                      <SelectItem
+                        key={catKey}
+                        value={catKey}
+                        className="cursor-pointer py-2.5 focus:bg-slate-50"
+                      >
+                        <div className="flex items-start gap-2.5">
+                          <CatIcon size={16} className="mt-0.5 text-slate-600 shrink-0" />
+                          <div>
+                            <p className="font-semibold leading-tight text-slate-900">
+                              {config.label}
+                            </p>
+                            <p className="mt-0.5 text-[11px] leading-tight text-slate-500">
+                              {config.description}
+                            </p>
                           </div>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
 
-              {/* Rich Select for Priority */}
-              <div className="space-y-1.5">
-                <Label htmlFor="create-priority" className="text-xs font-semibold text-slate-700">
-                  Nível de Prioridade
-                </Label>
-                <Select
-                  value={createPriority}
-                  onValueChange={(val) => setCreatePriority(val as TicketPriority)}
+            {/* Select 2: Nível de Prioridade (linha individual) */}
+            <div className="space-y-1.5">
+              <Label htmlFor="create-priority" className="text-xs font-semibold text-slate-700">
+                Nível de Prioridade
+              </Label>
+              <Select
+                value={createPriority}
+                onValueChange={(val) => setCreatePriority(val as TicketPriority)}
+              >
+                <SelectTrigger
+                  id="create-priority"
+                  className="h-11 w-full rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-slate-400"
                 >
-                  <SelectTrigger
-                    id="create-priority"
-                    className="h-11 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-slate-400"
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-80 rounded-xl border-slate-200 bg-white shadow-xl">
-                    {Object.entries(PRIORITY_CONFIG).map(([prioKey, config]) => {
-                      return (
-                        <SelectItem
-                          key={prioKey}
-                          value={prioKey}
-                          className="cursor-pointer py-2.5 focus:bg-slate-50"
-                        >
-                          <div className="flex items-start gap-2.5">
-                            <span
-                              className={cn(
-                                "mt-1.5 h-2 w-2 rounded-full shrink-0",
-                                config.dotClass,
-                              )}
-                            />
-                            <div>
-                              <p className="font-semibold leading-tight text-slate-900">
-                                {config.label}
-                              </p>
-                              <p className="mt-0.5 text-[11px] leading-tight text-slate-500">
-                                {config.description}
-                              </p>
-                            </div>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="max-h-80 rounded-xl border-slate-200 bg-white shadow-xl">
+                  {Object.entries(PRIORITY_CONFIG).map(([prioKey, config]) => {
+                    return (
+                      <SelectItem
+                        key={prioKey}
+                        value={prioKey}
+                        className="cursor-pointer py-2.5 focus:bg-slate-50"
+                      >
+                        <div className="flex items-start gap-2.5">
+                          <span
+                            className={cn(
+                              "mt-1.5 h-2 w-2 rounded-full shrink-0",
+                              config.dotClass,
+                            )}
+                          />
+                          <div>
+                            <p className="font-semibold leading-tight text-slate-900">
+                              {config.label}
+                            </p>
+                            <p className="mt-0.5 text-[11px] leading-tight text-slate-500">
+                              {config.description}
+                            </p>
                           </div>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-1.5">
@@ -1701,36 +1807,38 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                     </p>
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-2">
-                    {selectedTicket.status !== "RESOLVED" &&
-                    selectedTicket.status !== "CLOSED" ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          handleUpdateStatus(selectedTicket.id, "RESOLVED")
-                        }
-                        disabled={isPending}
-                        className="gap-1.5 rounded-full border-primary/20 bg-primary/10 text-xs font-semibold text-primary hover:bg-primary/20"
-                      >
-                        <CheckCircle2Icon size={14} />
-                        <span>Marcar Resolvido</span>
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          handleUpdateStatus(selectedTicket.id, "IN_PROGRESS")
-                        }
-                        disabled={isPending}
-                        className="gap-1.5 rounded-full border-primary/20 bg-primary/10 text-xs font-semibold text-primary hover:bg-primary/20"
-                      >
-                        <ClockIcon size={14} />
-                        <span>Reabrir</span>
-                      </Button>
-                    )}
-                  </div>
+                  {isSuperAdmin && (
+                    <div className="flex shrink-0 items-center gap-2">
+                      {selectedTicket.status !== "RESOLVED" &&
+                      selectedTicket.status !== "CLOSED" ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            handleUpdateStatus(selectedTicket.id, "RESOLVED")
+                          }
+                          disabled={isPending}
+                          className="gap-1.5 rounded-full border-primary/20 bg-primary/10 text-xs font-semibold text-primary hover:bg-primary/20"
+                        >
+                          <CheckCircle2Icon size={14} />
+                          <span>Marcar Resolvido</span>
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            handleUpdateStatus(selectedTicket.id, "IN_PROGRESS")
+                          }
+                          disabled={isPending}
+                          className="gap-1.5 rounded-full border-primary/20 bg-primary/10 text-xs font-semibold text-primary hover:bg-primary/20"
+                        >
+                          <ClockIcon size={14} />
+                          <span>Reabrir</span>
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </DialogHeader>
 
@@ -1826,10 +1934,29 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                 </div>
 
                 {/* Reply box */}
-                <div className="pt-2">
+                <div className="space-y-2 pt-2">
+                  <div className="flex items-center justify-between text-[11px]">
+                    {isSuperAdmin ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 font-semibold text-blue-700">
+                        <HeadphonesIcon size={12} />
+                        Respondendo como: <strong>Equipe de Suporte Técnico</strong>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 font-medium text-slate-700">
+                        <UserIcon size={12} />
+                        Respondendo como: <strong>{currentUser?.name || selectedTicket.userName || "Restaurante"}</strong> (Cliente)
+                      </span>
+                    )}
+                    <span className="text-[10px] text-slate-400">Pressione Enter para enviar</span>
+                  </div>
+
                   <div className="flex items-center gap-2">
                     <Input
-                      placeholder="Adicione um complemento ou mensagem adicional..."
+                      placeholder={
+                        isSuperAdmin
+                          ? "Digite a resposta técnica oficial para o restaurante..."
+                          : "Adicione um complemento ou mensagem adicional para o suporte..."
+                      }
                       value={replyMessage}
                       onChange={(e) => setReplyMessage(e.target.value)}
                       onKeyDown={(e) => {
@@ -1846,7 +1973,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                       className="h-10 shrink-0 gap-1.5 rounded-xl bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90"
                     >
                       <SendIcon size={13} />
-                      <span>Responder</span>
+                      <span>{isSuperAdmin ? "Responder como Suporte" : "Responder"}</span>
                     </Button>
                   </div>
                 </div>
@@ -1859,7 +1986,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                   className="gap-1.5 text-xs font-medium text-primary hover:bg-primary/10 hover:text-primary"
                 >
                   <a
-                    href={`https://wa.me/5511999999999?text=Ol%C3%A1!%20Gostaria%20de%20falar%20sobre%20o%20chamado%20${encodeURIComponent(selectedTicket.protocol)}%20(${encodeURIComponent(selectedTicket.title)})`}
+                    href={`https://wa.me/5516988063477?text=Ol%C3%A1!%20Gostaria%20de%20falar%20no%20plant%C3%A3o%20sobre%20o%20chamado%20${encodeURIComponent(selectedTicket.protocol)}%20(${encodeURIComponent(selectedTicket.title)})`}
                     target="_blank"
                     rel="noopener noreferrer"
                   >

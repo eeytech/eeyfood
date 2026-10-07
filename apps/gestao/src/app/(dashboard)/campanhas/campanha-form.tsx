@@ -266,22 +266,6 @@ export function CampanhaForm({
 
   return (
     <>
-      {!isWhatsAppConnected && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50/90 p-4 text-amber-900 shadow-2xs flex items-start gap-3 mb-6">
-          <div className="rounded-xl bg-amber-100 p-2 text-amber-700 shrink-0">
-            <AlertTriangleIcon size={18} />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-amber-950">
-              WhatsApp Desconectado ou Não Configurado
-            </p>
-            <p className="text-xs text-amber-800 mt-0.5">
-              Para que suas mensagens cheguem até os clientes, você precisa conectar o WhatsApp do seu restaurante via QR Code.
-            </p>
-          </div>
-        </div>
-      )}
-
       <div className="grid gap-6 lg:grid-cols-12">
         {/* Left Column: Dispatch Form (7 cols on desktop) */}
         <div className="lg:col-span-7">

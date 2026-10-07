@@ -13,7 +13,16 @@ export const metadata: Metadata = {
   description: "Acompanhe e abra chamados de suporte técnico, consulte a base de conhecimento e tire dúvidas.",
 };
 
-const ALLOWED_ROLES = ["SUPER_ADMIN", "ADMIN", "MANAGER", "ATTENDANT"];
+const ALLOWED_ROLES = [
+  "SUPER_ADMIN",
+  "ADMIN",
+  "MANAGER",
+  "ATTENDANT",
+  "WAITER",
+  "COURIER",
+  "KITCHEN",
+  "PANEL",
+];
 
 interface SuportePageProps {
   params?: Promise<{ slug?: string }>;
@@ -22,7 +31,11 @@ interface SuportePageProps {
 export default async function SuportePage({ params }: SuportePageProps) {
   const session = await getSession();
 
-  if (!session || !ALLOWED_ROLES.includes(session.role || "")) {
+  if (!session) {
+    redirect("/login");
+  }
+
+  if (session.role && !ALLOWED_ROLES.includes(session.role)) {
     redirect("/unauthorized");
   }
 
@@ -32,7 +45,18 @@ export default async function SuportePage({ params }: SuportePageProps) {
 
   const initialTickets = await listarChamadosAction(slug);
 
-  return <SuporteClient slug={slug} initialTickets={initialTickets} />;
+  return (
+    <SuporteClient
+      slug={slug}
+      initialTickets={initialTickets}
+      currentUser={{
+        id: session.sub,
+        name: session.name || "Usuário",
+        email: session.email || "",
+        role: session.role || "",
+      }}
+    />
+  );
 }
 
 

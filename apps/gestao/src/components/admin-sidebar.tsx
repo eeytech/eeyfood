@@ -326,7 +326,7 @@ const AdminSidebar = ({
           )}
 
           <div className="flex flex-col gap-1">
-            {["SUPER_ADMIN", "ADMIN", "MANAGER", "ATTENDANT"].includes(userRole || "") && (
+            {["SUPER_ADMIN", "ADMIN", "MANAGER", "ATTENDANT", "WAITER", "COURIER", "KITCHEN", "PANEL"].includes(userRole || "") && (
               <Link
                 href="/suporte"
                 className={cn(

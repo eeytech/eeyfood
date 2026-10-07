@@ -158,8 +158,8 @@ export default async function CampanhasPage({ params }: PageProps) {
               </span>
             </div>
           ) : (
-            <div className="flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1.5 text-xs font-semibold text-amber-800 shadow-2xs">
-              <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+            <div className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1.5 text-xs font-semibold text-primary shadow-2xs">
+              <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
               <span>WhatsApp Desconectado</span>
             </div>
           )}
