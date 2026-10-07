@@ -9,7 +9,6 @@ import {
   CompassIcon,
   FilterXIcon,
   LayersIcon,
-  Loader2Icon,
   MapPinIcon,
   MoreHorizontalIcon,
   PencilIcon,
@@ -18,13 +17,11 @@ import {
   Trash2Icon,
   XIcon,
 } from "lucide-react";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import {
   alternarStatusRegraFreteAction,
-  atualizarRegraFreteAction,
-  criarRegraFreteAction,
   excluirRegraFreteAction,
 } from "@/app/(dashboard)/logistica-actions";
 import { Badge } from "@/components/ui/badge";
@@ -35,7 +32,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -47,7 +43,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { DeliveryFeeRuleForm } from "./delivery-fee-rule-form";
 import {
   Select,
   SelectContent,
@@ -102,34 +98,6 @@ const formatCurrency = (value: number | string | null | undefined) => {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(num);
 };
 
-interface RuleFormData {
-  name: string;
-  type: "RADIUS_KM" | "NEIGHBORHOOD" | "CEP_RANGE";
-  fee: string;
-  minimumOrderValue: string;
-  freeDeliveryThreshold: string;
-  maxDistanceKm: string;
-  neighborhood: string;
-  cepFrom: string;
-  cepTo: string;
-  displayOrder: string;
-  isActive: boolean;
-}
-
-const defaultFormData: RuleFormData = {
-  name: "",
-  type: "NEIGHBORHOOD",
-  fee: "5.00",
-  minimumOrderValue: "0",
-  freeDeliveryThreshold: "",
-  maxDistanceKm: "",
-  neighborhood: "",
-  cepFrom: "",
-  cepTo: "",
-  displayOrder: "0",
-  isActive: true,
-};
-
 export function DeliveryFeeRulesTab({
   slug,
   rules: initialRules,
@@ -139,17 +107,20 @@ export function DeliveryFeeRulesTab({
   const [rules, setRules] = useState<DeliveryFeeRule[]>(initialRules);
   const [isPending, startTransition] = useTransition();
 
+  useEffect(() => {
+    setRules(initialRules);
+  }, [initialRules]);
+
   // Dialogs
-  const [internalDialogOpen, setInternalDialogOpen] = useState(false);
-  const isDialogOpen = isCreateOpen !== undefined ? isCreateOpen : internalDialogOpen;
-  const setIsDialogOpen = (open: boolean) => {
-    setInternalDialogOpen(open);
+  const [internalCreateOpen, setInternalCreateOpen] = useState(false);
+  const createOpen = isCreateOpen !== undefined ? isCreateOpen : internalCreateOpen;
+  const setCreateOpen = (open: boolean) => {
+    setInternalCreateOpen(open);
     onOpenCreateChange?.(open);
   };
 
   const [editingRule, setEditingRule] = useState<DeliveryFeeRule | null>(null);
   const [deletingRule, setDeletingRule] = useState<DeliveryFeeRule | null>(null);
-  const [formData, setFormData] = useState<RuleFormData>(defaultFormData);
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState("");
@@ -207,76 +178,11 @@ export function DeliveryFeeRulesTab({
 
   const handleOpenCreate = () => {
     setEditingRule(null);
-    setFormData(defaultFormData);
-    setIsDialogOpen(true);
+    setCreateOpen(true);
   };
 
   const handleOpenEdit = (rule: DeliveryFeeRule) => {
     setEditingRule(rule);
-    setFormData({
-      name: rule.name,
-      type: rule.type,
-      fee: String(rule.fee),
-      minimumOrderValue: String(rule.minimumOrderValue ?? 0),
-      freeDeliveryThreshold:
-        rule.freeDeliveryThreshold != null ? String(rule.freeDeliveryThreshold) : "",
-      maxDistanceKm: rule.maxDistanceKm != null ? String(rule.maxDistanceKm) : "",
-      neighborhood: rule.neighborhood ?? "",
-      cepFrom: rule.cepFrom ?? "",
-      cepTo: rule.cepTo ?? "",
-      displayOrder: String(rule.displayOrder ?? 0),
-      isActive: rule.isActive ?? true,
-    });
-    setIsDialogOpen(true);
-  };
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    fd.set("isActive", formData.isActive ? "true" : "false");
-    fd.set("type", formData.type);
-
-    startTransition(async () => {
-      try {
-        if (editingRule) {
-          fd.set("ruleId", editingRule.id);
-          await atualizarRegraFreteAction(slug, fd);
-          setRules((prev) =>
-            prev.map((r) =>
-              r.id === editingRule.id
-                ? {
-                    ...r,
-                    name: fd.get("name") as string,
-                    type: formData.type,
-                    fee: parseFloat(fd.get("fee") as string) || 0,
-                    minimumOrderValue:
-                      parseFloat(fd.get("minimumOrderValue") as string) || 0,
-                    freeDeliveryThreshold: fd.get("freeDeliveryThreshold")
-                      ? parseFloat(fd.get("freeDeliveryThreshold") as string) || null
-                      : null,
-                    maxDistanceKm: fd.get("maxDistanceKm")
-                      ? parseFloat(fd.get("maxDistanceKm") as string) || null
-                      : null,
-                    neighborhood: (fd.get("neighborhood") as string) || null,
-                    cepFrom: (fd.get("cepFrom") as string) || null,
-                    cepTo: (fd.get("cepTo") as string) || null,
-                    isActive: formData.isActive,
-                  }
-                : r,
-            ),
-          );
-          toast.success("Zona de frete atualizada com sucesso!");
-        } else {
-          await criarRegraFreteAction(slug, fd);
-          toast.success("Nova zona de frete criada com sucesso!");
-          // Recarrega lista ou adiciona otimisticamente
-          window.location.reload();
-        }
-        setIsDialogOpen(false);
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Erro ao salvar zona.");
-      }
-    });
   };
 
   const handleToggleStatus = (rule: DeliveryFeeRule) => {
@@ -739,236 +645,73 @@ export function DeliveryFeeRulesTab({
         )}
       </Card>
 
-      {/* ── Dialog Criar / Editar (Padrão Usuários) ───────── */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      {/* ── Dialog Cadastrar Nova Zona de Frete ─────────── */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-lg">
           <DialogHeader>
             <div className="flex items-center gap-2.5">
               <div>
                 <DialogTitle className="font-display text-lg font-bold text-slate-900">
-                  {editingRule ? "Editar Zona de Frete" : "Cadastrar Nova Zona de Frete"}
+                  Cadastrar Nova Zona de Frete
                 </DialogTitle>
                 <DialogDescription className="text-xs text-slate-500">
-                  {editingRule
-                    ? "Atualize o critério geográfico e o valor de entrega da zona."
-                    : "Defina o critério geográfico e o valor de entrega que será cobrado dos clientes."}
+                  Defina o critério geográfico e o valor de entrega que será cobrado dos clientes.
                 </DialogDescription>
               </div>
             </div>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-0 pt-1">
-            <div className="max-h-[65vh] space-y-4 overflow-y-auto pr-1">
-              {/* Nome da Zona */}
-              <div className="space-y-1.5">
-                <Label htmlFor="name" className="text-xs font-semibold text-slate-700">
-                  Nome de identificação
-                </Label>
-                <Input
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData((f) => ({ ...f, name: e.target.value }))}
-                  placeholder="Ex: Centro, Zona Sul, Até 5km..."
-                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
-                  required
-                />
+          {createOpen && (
+            <DeliveryFeeRuleForm
+              slug={slug}
+              onSuccess={(created) => {
+                setRules((prev) => [created, ...prev]);
+                setCreateOpen(false);
+              }}
+              onCancel={() => setCreateOpen(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog Editar Zona de Frete ───────────────────── */}
+      <Dialog
+        open={editingRule !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditingRule(null);
+        }}
+      >
+        <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-lg">
+          <DialogHeader>
+            <div className="flex items-center gap-2.5">
+              <div className="rounded-xl bg-primary/10 p-2 text-primary">
+                <PencilIcon size={20} />
               </div>
-
-              {/* Tipo de Regra */}
-              <div className="space-y-1.5">
-                <Label htmlFor="type" className="text-xs font-semibold text-slate-700">
-                  Critério de aplicação
-                </Label>
-                <Select
-                  value={formData.type}
-                  onValueChange={(val: "RADIUS_KM" | "NEIGHBORHOOD" | "CEP_RANGE") =>
-                    setFormData((f) => ({ ...f, type: val }))
-                  }
-                >
-                  <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-primary">
-                    <SelectValue placeholder="Selecione o critério" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl border-slate-200 bg-white shadow-xl">
-                    <SelectItem value="NEIGHBORHOOD" className="text-xs font-medium">Bairro (Identificação por nome)</SelectItem>
-                    <SelectItem value="RADIUS_KM" className="text-xs font-medium">Raio em KM (Linha reta da loja)</SelectItem>
-                    <SelectItem value="CEP_RANGE" className="text-xs font-medium">Faixa de CEP (Faixa numérica)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Campos condicionais por Tipo */}
-              {formData.type === "NEIGHBORHOOD" && (
-                <div className="space-y-1.5">
-                  <Label htmlFor="neighborhood" className="text-xs font-semibold text-slate-700">
-                    Nome do Bairro
-                  </Label>
-                  <Input
-                    id="neighborhood"
-                    name="neighborhood"
-                    value={formData.neighborhood}
-                    onChange={(e) => setFormData((f) => ({ ...f, neighborhood: e.target.value }))}
-                    placeholder="Ex: Centro, Vila Nova, Jardim das Flores..."
-                    className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
-                    required
-                  />
-                  <p className="text-[11px] text-slate-500">
-                    A comparação ignora acentuação e maiúsculas/minúsculas automaticamente.
-                  </p>
-                </div>
-              )}
-
-              {formData.type === "RADIUS_KM" && (
-                <div className="space-y-1.5">
-                  <Label htmlFor="maxDistanceKm" className="text-xs font-semibold text-slate-700">
-                    Distância Máxima (km)
-                  </Label>
-                  <Input
-                    id="maxDistanceKm"
-                    name="maxDistanceKm"
-                    type="number"
-                    step="0.1"
-                    min="0.1"
-                    value={formData.maxDistanceKm}
-                    onChange={(e) => setFormData((f) => ({ ...f, maxDistanceKm: e.target.value }))}
-                    placeholder="Ex: 5"
-                    className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
-                    required
-                  />
-                  <p className="text-[11px] text-slate-500">
-                    A distância é calculada das coordenadas cadastradas da loja até o endereço do cliente.
-                  </p>
-                </div>
-              )}
-
-              {formData.type === "CEP_RANGE" && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="cepFrom" className="text-xs font-semibold text-slate-700">
-                      CEP Inicial
-                    </Label>
-                    <Input
-                      id="cepFrom"
-                      name="cepFrom"
-                      value={formData.cepFrom}
-                      onChange={(e) => setFormData((f) => ({ ...f, cepFrom: e.target.value }))}
-                      placeholder="00000-000"
-                      className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="cepTo" className="text-xs font-semibold text-slate-700">
-                      CEP Final
-                    </Label>
-                    <Input
-                      id="cepTo"
-                      name="cepTo"
-                      value={formData.cepTo}
-                      onChange={(e) => setFormData((f) => ({ ...f, cepTo: e.target.value }))}
-                      placeholder="99999-999"
-                      className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
-                      required
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Valores financeiros */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="fee" className="text-xs font-semibold text-slate-700">
-                    Taxa de Entrega (R$)
-                  </Label>
-                  <Input
-                    id="fee"
-                    name="fee"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.fee}
-                    onChange={(e) => setFormData((f) => ({ ...f, fee: e.target.value }))}
-                    placeholder="0.00"
-                    className="h-10 rounded-xl border-slate-200 bg-white text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:border-primary"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="minimumOrderValue" className="text-xs font-semibold text-slate-700">
-                    Pedido Mínimo (R$)
-                  </Label>
-                  <Input
-                    id="minimumOrderValue"
-                    name="minimumOrderValue"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.minimumOrderValue}
-                    onChange={(e) =>
-                      setFormData((f) => ({ ...f, minimumOrderValue: e.target.value }))
-                    }
-                    placeholder="0.00"
-                    className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
-                  />
-                </div>
-              </div>
-
-              {/* Frete Grátis Acima de */}
-              <div className="space-y-1.5">
-                <Label htmlFor="freeDeliveryThreshold" className="text-xs font-semibold text-slate-700">
-                  Frete Grátis a partir de (R$) <span className="font-normal text-slate-400">(opcional)</span>
-                </Label>
-                <Input
-                  id="freeDeliveryThreshold"
-                  name="freeDeliveryThreshold"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.freeDeliveryThreshold}
-                  onChange={(e) =>
-                    setFormData((f) => ({ ...f, freeDeliveryThreshold: e.target.value }))
-                  }
-                  placeholder="Ex: 50.00 (deixe em branco se não houver)"
-                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
-                />
-              </div>
-
-              {/* Status e Prioridade */}
-              <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/50 p-3">
-                <div>
-                  <Label className="text-xs font-semibold text-slate-900">Zona Ativa no Sistema</Label>
-                  <p className="text-[11px] text-slate-500">
-                    Desative temporariamente sem perder as configurações.
-                  </p>
-                </div>
-                <Switch
-                  checked={formData.isActive}
-                  onCheckedChange={(checked) => setFormData((f) => ({ ...f, isActive: checked }))}
-                  className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
-                />
+              <div>
+                <DialogTitle className="font-display text-lg font-bold text-slate-900">
+                  Editar Zona de Frete
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500">
+                  Atualize o critério geográfico e o valor de entrega da zona.
+                </DialogDescription>
               </div>
             </div>
+          </DialogHeader>
 
-            <DialogFooter className="gap-2 pt-4 border-t border-slate-100">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsDialogOpen(false)}
-                className="rounded-full border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-100"
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                disabled={isPending}
-                className="rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 disabled:opacity-50"
-              >
-                {isPending && <Loader2Icon size={14} className="mr-1.5 animate-spin" />}
-                {editingRule ? "Salvar Alterações" : "Cadastrar Zona de Frete"}
-              </Button>
-            </DialogFooter>
-          </form>
+          {editingRule && (
+            <DeliveryFeeRuleForm
+              key={editingRule.id}
+              slug={slug}
+              defaultValues={editingRule}
+              onSuccess={(updated) => {
+                setRules((prev) =>
+                  prev.map((r) => (r.id === updated.id ? updated : r)),
+                );
+                setEditingRule(null);
+              }}
+              onCancel={() => setEditingRule(null)}
+            />
+          )}
         </DialogContent>
       </Dialog>
 

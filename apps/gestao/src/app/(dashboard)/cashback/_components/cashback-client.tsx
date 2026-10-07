@@ -862,7 +862,7 @@ export function CashbackClient({
                                 className="gap-2 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-700"
                               >
                                 <Trash2Icon size={14} />
-                                Excluir regra
+                                Excluir regra de cashback
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -945,7 +945,7 @@ export function CashbackClient({
                             className="gap-2 rounded-lg text-xs font-semibold text-red-600"
                           >
                             <Trash2Icon size={14} />
-                            Excluir regra
+                            Excluir regra de cashback
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

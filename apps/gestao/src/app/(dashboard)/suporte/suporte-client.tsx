@@ -71,6 +71,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
@@ -643,11 +644,11 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Resolvidos
               </span>
-              <div className="rounded-lg bg-emerald-100 p-1.5 text-emerald-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <CheckCircle2Icon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-emerald-700">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {resolvedCount}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -665,11 +666,11 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Tempo Médio (SLA)
               </span>
-              <div className="rounded-lg bg-blue-100 p-1.5 text-blue-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <SparklesIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-blue-700">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               ~15 min
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -679,8 +680,43 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
         </Card>
       </div>
 
-      {/* ── Table & List Container ───────────────────────── */}
-      <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+      {/* ── Tabs Navigation ──────────────────────────────── */}
+      <Tabs defaultValue="chamados" className="space-y-4">
+        <TabsList className="h-auto flex-wrap gap-1.5 rounded-2xl border border-slate-200/80 bg-slate-100/90 p-1.5 shadow-xs">
+          <TabsTrigger
+            value="chamados"
+            className="group gap-2 rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 transition data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs"
+          >
+            <LifeBuoyIcon size={15} />
+            <span>Chamados de Suporte</span>
+            <span className="rounded-full bg-slate-200/80 px-2 py-0.5 text-[10px] font-bold text-slate-700 transition-colors group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground">
+              {totalCount}
+            </span>
+          </TabsTrigger>
+
+          <TabsTrigger
+            value="canais"
+            className="group gap-2 rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 transition data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs"
+          >
+            <HeadphonesIcon size={15} />
+            <span>Canais e Plantão</span>
+          </TabsTrigger>
+
+          <TabsTrigger
+            value="faq"
+            className="group gap-2 rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 transition data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs"
+          >
+            <HelpCircleIcon size={15} />
+            <span>Perguntas Frequentes (FAQ)</span>
+            <span className="rounded-full bg-slate-200/80 px-2 py-0.5 text-[10px] font-bold text-slate-700 transition-colors group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground">
+              {FAQS.length}
+            </span>
+          </TabsTrigger>
+        </TabsList>
+
+        {/* ── Tab 1: Chamados ───────────────────────────────── */}
+        <TabsContent value="chamados" className="space-y-4">
+          <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
         {/* Filtros da Tabela de Suporte */}
         <div className="border-b border-slate-100 bg-slate-50/50 p-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -1254,42 +1290,169 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
             </div>
           </>
         )}
-      </Card>
+          </Card>
+        </TabsContent>
 
-      {/* ── FAQ & Knowledge Base Card ────────────────────── */}
-      <Card className="border-slate-200/80 bg-white shadow-sm">
-        <CardContent className="p-5">
-          <div className="mb-4 flex items-center gap-2">
-            <div className="rounded-lg bg-blue-50 p-2 text-blue-700">
-              <HelpCircleIcon size={18} />
-            </div>
-            <div>
-              <h3 className="font-display text-base font-semibold text-slate-900">
-                Perguntas Frequentes e Autoatendimento
-              </h3>
-              <p className="text-xs text-slate-500">
-                Respostas rápidas e orientações passo a passo para as dúvidas mais comuns do restaurante.
-              </p>
-            </div>
+        {/* ── Tab 2: Canais e Plantão ───────────────────────── */}
+        <TabsContent value="canais" className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {/* Canal 1: WhatsApp */}
+            <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+              <CardContent className="p-5 flex flex-col justify-between h-full space-y-4">
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <PhoneIcon size={18} />
+                    </div>
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                      Plantão Ativo
+                    </span>
+                  </div>
+                  <h3 className="font-display text-base font-bold text-slate-900">
+                    Plantão Emergencial WhatsApp
+                  </h3>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    Canal prioritário para intercorrências operacionais em tempo real: problemas no PDV, fechamento de caixa ou falha na emissão para a cozinha.
+                  </p>
+                </div>
+                <div className="pt-2">
+                  <Button
+                    asChild
+                    className="w-full gap-2 rounded-xl bg-primary text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90"
+                  >
+                    <a
+                      href="https://wa.me/5511999999999?text=Ol%C3%A1!%20Preciso%20de%20ajuda%20com%20o%20sistema%20EeyFood"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <PhoneIcon size={14} />
+                      <span>Falar com o Plantão Agora</span>
+                      <ExternalLinkIcon size={12} className="opacity-70" />
+                    </a>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Canal 2: Suporte Técnico e Fiscal */}
+            <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+              <CardContent className="p-5 flex flex-col justify-between h-full space-y-4">
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <MailIcon size={18} />
+                    </div>
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+                      SLA ~15 min
+                    </span>
+                  </div>
+                  <h3 className="font-display text-base font-bold text-slate-900">
+                    E-mail e Suporte Fiscal
+                  </h3>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    Envio de certificados digitais, homologação de NFC-e/SAT, dúvidas contábeis ou relatórios detalhados com anexos.
+                  </p>
+                </div>
+                <div className="space-y-2 pt-2">
+                  <div className="rounded-xl border border-slate-200/80 bg-slate-50 p-2.5 text-center">
+                    <p className="font-mono text-xs font-semibold text-slate-800">
+                      suporte@eeyfood.com.br
+                    </p>
+                  </div>
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="w-full gap-2 rounded-xl border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    <a href="mailto:suporte@eeyfood.com.br">
+                      <MailIcon size={14} />
+                      <span>Enviar E-mail</span>
+                    </a>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Canal 3: Central Telefônica */}
+            <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+              <CardContent className="p-5 flex flex-col justify-between h-full space-y-4">
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <HeadphonesIcon size={18} />
+                    </div>
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+                      08h às 23h
+                    </span>
+                  </div>
+                  <h3 className="font-display text-base font-bold text-slate-900">
+                    Central Telefônica & Ouvidoria
+                  </h3>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    Atendimento por voz com nossos especialistas técnicos. Disponível de segunda a domingo durante o horário de expediente da loja.
+                  </p>
+                </div>
+                <div className="space-y-2 pt-2">
+                  <div className="rounded-xl border border-slate-200/80 bg-slate-50 p-2.5 text-center">
+                    <p className="font-display text-sm font-bold text-primary">
+                      (11) 4004-9876
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      navigator.clipboard.writeText("(11) 4004-9876");
+                      toast.success("Telefone copiado para a área de transferência!");
+                    }}
+                    className="w-full gap-2 rounded-xl border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    <CopyIcon size={14} />
+                    <span>Copiar Número</span>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
+        </TabsContent>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            {FAQS.map((faq, index) => (
-              <div
-                key={index}
-                className="rounded-xl border border-slate-100 bg-slate-50/60 p-4 transition-colors hover:bg-slate-50"
-              >
-                <h4 className="text-xs font-semibold leading-snug text-slate-900">
-                  {faq.q}
-                </h4>
-                <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
-                  {faq.a}
-                </p>
+        {/* ── Tab 3: FAQ ────────────────────────────────────── */}
+        <TabsContent value="faq" className="space-y-4">
+          <Card className="border-slate-200/80 bg-white shadow-sm">
+            <CardContent className="p-5">
+              <div className="mb-4 flex items-center gap-2">
+                <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                  <HelpCircleIcon size={18} />
+                </div>
+                <div>
+                  <h3 className="font-display text-base font-semibold text-slate-900">
+                    Perguntas Frequentes e Autoatendimento
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Respostas rápidas e orientações passo a passo para as dúvidas mais comuns do restaurante.
+                  </p>
+                </div>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                {FAQS.map((faq, index) => (
+                  <div
+                    key={index}
+                    className="rounded-xl border border-slate-100 bg-slate-50/60 p-4 transition-colors hover:bg-slate-50"
+                  >
+                    <h4 className="text-xs font-semibold leading-snug text-slate-900">
+                      {faq.q}
+                    </h4>
+                    <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
+                      {faq.a}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* ── Dialog: Cadastrar Novo Chamado (matching usuarios-client) ─────────────── */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
@@ -1466,7 +1629,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
               <Button
                 type="submit"
                 disabled={isPending}
-                className="rounded-full bg-slate-900 px-5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
+                className="rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 disabled:opacity-50"
               >
                 {isPending && (
                   <LoaderCircleIcon size={14} className="mr-1.5 animate-spin" />
@@ -1664,7 +1827,7 @@ export function SuporteClient({ slug, initialTickets }: SuporteClientProps) {
                     <Button
                       onClick={handleSendReply}
                       disabled={isPending || !replyMessage.trim()}
-                      className="h-10 shrink-0 gap-1.5 rounded-xl bg-slate-900 px-4 text-xs font-semibold text-white hover:bg-slate-800"
+                      className="h-10 shrink-0 gap-1.5 rounded-xl bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90"
                     >
                       <SendIcon size={13} />
                       <span>Responder</span>

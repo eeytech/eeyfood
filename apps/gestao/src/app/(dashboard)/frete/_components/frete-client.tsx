@@ -161,7 +161,7 @@ const toDatetimeString = (date: Date | string | null | undefined) => {
 const EMPTY_FORM = {
   name: "",
   criterion: "MIN_ORDER_VALUE" as FreeDeliveryCriterion,
-  minOrderValue: "50,00",
+  minOrderValue: "",
   menuCategoryId: "",
   productId: "",
   startsAt: "",
@@ -220,7 +220,7 @@ export function FreteClient({
   const handleCurrencyChange = (valueStr: string) => {
     const digits = valueStr.replace(/\D/g, "");
     if (!digits) {
-      setForm((prev) => ({ ...prev, minOrderValue: "0,00" }));
+      setForm((prev) => ({ ...prev, minOrderValue: "" }));
       return;
     }
     const numeric = parseInt(digits, 10) / 100;
@@ -280,7 +280,7 @@ export function FreteClient({
     const formData = new FormData();
     formData.set("name", form.name.trim());
     formData.set("criterion", form.criterion);
-    formData.set("minOrderValue", form.minOrderValue);
+    formData.set("minOrderValue", form.minOrderValue || "0,00");
     formData.set("menuCategoryId", form.menuCategoryId || "");
     formData.set("productId", form.productId || "");
     formData.set("isActive", form.isActive ? "true" : "false");
@@ -1034,7 +1034,7 @@ export function FreteClient({
                   setForm((f) => ({
                     ...f,
                     criterion: val,
-                    minOrderValue: val === "MIN_ORDER_VALUE" ? (f.minOrderValue === "0,00" ? "50,00" : f.minOrderValue) : "0,00",
+                    minOrderValue: f.minOrderValue,
                   }));
                 }}
               >
@@ -1146,6 +1146,7 @@ export function FreteClient({
                 </span>
                 <Input
                   id="rule-min-value"
+                  placeholder="0,00"
                   value={form.minOrderValue}
                   onChange={(e) => handleCurrencyChange(e.target.value)}
                   className="h-10 pl-9 rounded-xl border-slate-200 bg-white text-sm"

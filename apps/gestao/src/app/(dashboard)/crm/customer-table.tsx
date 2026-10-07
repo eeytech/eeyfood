@@ -209,19 +209,14 @@ export function CustomerTable({
                       <TableCell className="py-3.5">
                         <Link
                           href={`/crm/${c.id}`}
-                          className="flex items-center gap-3 group-hover:text-primary transition-colors"
+                          className="flex flex-col min-w-0 group-hover:text-primary transition-colors"
                         >
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10 font-display text-xs font-bold text-primary group-hover:scale-105 transition-transform">
-                            {getInitials(c.name)}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-slate-900 group-hover:text-primary group-hover:underline transition-colors">
-                              {c.name}
-                            </p>
-                            <p className="truncate text-xs text-slate-500">
-                              {formatPhone(c.phone)}
-                            </p>
-                          </div>
+                          <p className="truncate text-sm font-semibold text-slate-900 group-hover:text-primary group-hover:underline transition-colors">
+                            {c.name}
+                          </p>
+                          <p className="truncate text-xs text-slate-500">
+                            {formatPhone(c.phone)}
+                          </p>
                         </Link>
                       </TableCell>
 
@@ -314,19 +309,14 @@ export function CustomerTable({
               return (
                 <div key={c.id} className="space-y-2.5 p-4 transition-colors hover:bg-primary/[0.01]">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10 font-display text-xs font-bold text-primary">
-                        {getInitials(c.name)}
-                      </div>
-                      <div className="min-w-0">
-                        <Link
-                          href={`/crm/${c.id}`}
-                          className="text-sm font-semibold text-slate-900 hover:text-primary hover:underline block truncate transition-colors"
-                        >
-                          {c.name}
-                        </Link>
-                        <p className="text-xs text-slate-500">{formatPhone(c.phone)}</p>
-                      </div>
+                    <div className="min-w-0">
+                      <Link
+                        href={`/crm/${c.id}`}
+                        className="text-sm font-semibold text-slate-900 hover:text-primary hover:underline block truncate transition-colors"
+                      >
+                        {c.name}
+                      </Link>
+                      <p className="text-xs text-slate-500">{formatPhone(c.phone)}</p>
                     </div>
 
                     <span

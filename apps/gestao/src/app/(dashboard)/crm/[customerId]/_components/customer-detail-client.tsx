@@ -155,7 +155,15 @@ const STATUS_CONFIG: Record<
   },
   FINISHED: {
     label: "Finalizado",
-    badgeClass: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    badgeClass: "border-primary/20 bg-primary/10 text-primary font-semibold",
+  },
+  COMPLETED: {
+    label: "Concluído",
+    badgeClass: "border-primary/20 bg-primary/10 text-primary font-semibold",
+  },
+  DELIVERED: {
+    label: "Entregue",
+    badgeClass: "border-primary/20 bg-primary/10 text-primary font-semibold",
   },
   CANCELLED: {
     label: "Cancelado",
@@ -263,8 +271,8 @@ export function CustomerDetailClient({
   // ─── Endereços Filter & Pagination ───────────────────────────
   const [addressSearch, setAddressSearch] = React.useState("");
   const [addressPage, setAddressPage] = React.useState(1);
+  const [addressPageSize, setAddressPageSize] = React.useState(6);
   const [copiedAddressId, setCopiedAddressId] = React.useState<string | null>(null);
-  const ADDRESS_PAGE_SIZE = 6;
 
   const filteredAddresses = React.useMemo(() => {
     if (!addressSearch.trim()) return parsedAddresses;
@@ -277,13 +285,13 @@ export function CustomerDetailClient({
     );
   }, [parsedAddresses, addressSearch]);
 
-  const totalAddressPages = Math.max(1, Math.ceil(filteredAddresses.length / ADDRESS_PAGE_SIZE));
+  const totalAddressPages = Math.max(1, Math.ceil(filteredAddresses.length / addressPageSize));
   const validAddressPage = Math.min(addressPage, totalAddressPages);
 
   const paginatedAddresses = React.useMemo(() => {
-    const start = (validAddressPage - 1) * ADDRESS_PAGE_SIZE;
-    return filteredAddresses.slice(start, start + ADDRESS_PAGE_SIZE);
-  }, [filteredAddresses, validAddressPage]);
+    const start = (validAddressPage - 1) * addressPageSize;
+    return filteredAddresses.slice(start, start + addressPageSize);
+  }, [filteredAddresses, validAddressPage, addressPageSize]);
 
   const handleCopyAddress = (id: string, text: string) => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
@@ -1241,7 +1249,7 @@ export function CustomerDetailClient({
                         className={cn(
                           "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold",
                           addr.isSaved
-                            ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+                            ? "border border-primary/20 bg-primary/10 text-primary"
                             : "border border-slate-200 bg-slate-100 text-slate-500",
                         )}
                       >
@@ -1260,33 +1268,96 @@ export function CustomerDetailClient({
           )}
 
           {/* Paginação de Endereços */}
-          {filteredAddresses.length > ADDRESS_PAGE_SIZE && (
-            <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500">
-              <span>
-                Exibindo {paginatedAddresses.length} de {filteredAddresses.length} endereços
-              </span>
-              <div className="flex items-center gap-2">
+          {filteredAddresses.length > 0 && (
+            <div className="mt-4 flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 -mx-4 sm:-mx-5 -mb-4 sm:-mb-5 p-4 sm:px-5 sm:py-3 sm:flex-row sm:items-center sm:justify-between rounded-b-2xl">
+              {/* Itens por página e contador */}
+              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
                 <span>
-                  Página {validAddressPage} de {totalAddressPages}
+                  Exibindo{" "}
+                  <strong className="font-semibold text-slate-900">
+                    {paginatedAddresses.length}
+                  </strong>{" "}
+                  de {filteredAddresses.length} endereço{filteredAddresses.length !== 1 ? "s" : ""}
                 </span>
+
+                <span className="hidden text-slate-300 sm:inline">|</span>
+
+                <div className="flex items-center gap-1.5">
+                  <span>Exibir</span>
+                  <Select
+                    value={String(addressPageSize)}
+                    onValueChange={(val) => {
+                      setAddressPageSize(Number(val));
+                      setAddressPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="h-8 w-16 rounded-lg border-slate-200 bg-white text-xs font-semibold text-slate-700">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-lg border-slate-200 bg-white">
+                      <SelectItem value="3">3</SelectItem>
+                      <SelectItem value="6">6</SelectItem>
+                      <SelectItem value="12">12</SelectItem>
+                      <SelectItem value="24">24</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span>por página</span>
+                </div>
+              </div>
+
+              {/* Controles de navegação de página */}
+              <div className="flex items-center justify-between gap-2 sm:justify-end">
+                <span className="text-xs text-slate-500">
+                  Página{" "}
+                  <strong className="font-semibold text-slate-900">
+                    {validAddressPage}
+                  </strong>{" "}
+                  de{" "}
+                  <strong className="font-semibold text-slate-900">
+                    {totalAddressPages}
+                  </strong>
+                </span>
+
                 <div className="flex items-center gap-1">
                   <Button
                     variant="outline"
                     size="icon"
                     disabled={validAddressPage <= 1}
-                    onClick={() => setAddressPage((p) => Math.max(1, p - 1))}
-                    className="h-7 w-7 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+                    onClick={() => setAddressPage(1)}
+                    className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                    title="Primeira página"
                   >
-                    <ChevronLeftIcon size={13} />
+                    <ChevronsLeftIcon size={14} />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    disabled={validAddressPage <= 1}
+                    onClick={() => setAddressPage((p) => Math.max(1, p - 1))}
+                    className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                    title="Página anterior"
+                  >
+                    <ChevronLeftIcon size={14} />
                   </Button>
                   <Button
                     variant="outline"
                     size="icon"
                     disabled={validAddressPage >= totalAddressPages}
                     onClick={() => setAddressPage((p) => Math.min(totalAddressPages, p + 1))}
-                    className="h-7 w-7 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+                    className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                    title="Próxima página"
                   >
-                    <ChevronRightIcon size={13} />
+                    <ChevronRightIcon size={14} />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    disabled={validAddressPage >= totalAddressPages}
+                    onClick={() => setAddressPage(totalAddressPages)}
+                    className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                    title="Última página"
+                  >
+                    <ChevronsRightIcon size={14} />
                   </Button>
                 </div>
               </div>

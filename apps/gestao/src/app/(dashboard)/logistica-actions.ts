@@ -32,6 +32,8 @@ import { z } from "zod";
 
 import {
   getBooleanValue,
+  getNumberValue,
+  getOptionalNumberValue,
   getOptionalStringValue,
   getStringValue,
 } from "@/lib/admin-form-utils";
@@ -406,13 +408,13 @@ export const criarRegraFreteAction = async (slug: string, formData: FormData) =>
   const parsed = regraFreteSchema.safeParse({
     name: getStringValue(formData.get("name")),
     type: getStringValue(formData.get("type")),
-    fee: parseFloat(getStringValue(formData.get("fee"))) || 0,
-    minimumOrderValue: parseFloat(getStringValue(formData.get("minimumOrderValue"))) || 0,
+    fee: getNumberValue(formData.get("fee")),
+    minimumOrderValue: getNumberValue(formData.get("minimumOrderValue")),
     freeDeliveryThreshold: formData.get("freeDeliveryThreshold")
-      ? parseFloat(getStringValue(formData.get("freeDeliveryThreshold"))) || null
+      ? getOptionalNumberValue(formData.get("freeDeliveryThreshold")) ?? null
       : null,
     maxDistanceKm: formData.get("maxDistanceKm")
-      ? parseFloat(getStringValue(formData.get("maxDistanceKm"))) || null
+      ? getOptionalNumberValue(formData.get("maxDistanceKm")) ?? null
       : null,
     neighborhood: getOptionalStringValue(formData.get("neighborhood")),
     cepFrom: getOptionalStringValue(formData.get("cepFrom")),
@@ -423,8 +425,9 @@ export const criarRegraFreteAction = async (slug: string, formData: FormData) =>
 
   if (!parsed.success) throw new Error("Dados inválidos.");
 
-  await criarRegraFrete({ ...parsed.data, restaurantId: restaurant.id } as CriarRegraFreteInput);
+  const rule = await criarRegraFrete({ ...parsed.data, restaurantId: restaurant.id } as CriarRegraFreteInput);
   revalidatePath(`/${slug}/logistica`);
+  return rule;
 };
 
 export const atualizarRegraFreteAction = async (slug: string, formData: FormData) => {
@@ -434,13 +437,13 @@ export const atualizarRegraFreteAction = async (slug: string, formData: FormData
   const parsed = regraFreteSchema.safeParse({
     name: getStringValue(formData.get("name")),
     type: getStringValue(formData.get("type")),
-    fee: parseFloat(getStringValue(formData.get("fee"))) || 0,
-    minimumOrderValue: parseFloat(getStringValue(formData.get("minimumOrderValue"))) || 0,
+    fee: getNumberValue(formData.get("fee")),
+    minimumOrderValue: getNumberValue(formData.get("minimumOrderValue")),
     freeDeliveryThreshold: formData.get("freeDeliveryThreshold")
-      ? parseFloat(getStringValue(formData.get("freeDeliveryThreshold"))) || null
+      ? getOptionalNumberValue(formData.get("freeDeliveryThreshold")) ?? null
       : null,
     maxDistanceKm: formData.get("maxDistanceKm")
-      ? parseFloat(getStringValue(formData.get("maxDistanceKm"))) || null
+      ? getOptionalNumberValue(formData.get("maxDistanceKm")) ?? null
       : null,
     neighborhood: getOptionalStringValue(formData.get("neighborhood")),
     cepFrom: getOptionalStringValue(formData.get("cepFrom")),
@@ -451,8 +454,9 @@ export const atualizarRegraFreteAction = async (slug: string, formData: FormData
 
   if (!parsed.success) throw new Error("Dados inválidos.");
 
-  await atualizarRegraFrete(ruleId, parsed.data);
+  const updated = await atualizarRegraFrete(ruleId, parsed.data);
   revalidatePath(`/${slug}/logistica`);
+  return updated;
 };
 
 export const alternarStatusRegraFreteAction = async (

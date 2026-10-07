@@ -391,11 +391,11 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Disponíveis
               </span>
-              <div className="rounded-lg bg-emerald-100 p-1.5 text-emerald-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <CheckCircle2Icon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-emerald-700">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {activeProducts}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -416,7 +416,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                   "rounded-lg p-1.5",
                   lowStockProducts > 0
                     ? "bg-amber-100 text-amber-700"
-                    : "bg-emerald-100 text-emerald-700",
+                    : "bg-primary/10 text-primary",
                 )}
               >
                 <AlertTriangleIcon size={16} />
@@ -425,7 +425,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
             <p
               className={cn(
                 "mt-2 font-display text-2xl font-bold",
-                lowStockProducts > 0 ? "text-amber-700" : "text-emerald-700",
+                lowStockProducts > 0 ? "text-amber-700" : "text-primary",
               )}
             >
               {lowStockProducts}
@@ -444,29 +444,29 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
         <TabsList className="h-auto flex-wrap gap-1.5 rounded-2xl border border-slate-200/80 bg-slate-100/90 p-1.5 shadow-xs">
           <TabsTrigger
             value="products"
-            className="gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
+            className="group gap-2 rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 transition data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs"
           >
             <PackageIcon size={14} />
             <span>Produtos</span>
-            <span className="rounded-full bg-slate-200/80 px-2 py-0.5 text-[10px] font-bold text-slate-700">
+            <span className="rounded-full bg-slate-200/80 px-2 py-0.5 text-[10px] font-bold text-slate-700 transition-colors group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground">
               {cardapio.products.length}
             </span>
           </TabsTrigger>
 
           <TabsTrigger
             value="categories"
-            className="gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
+            className="group gap-2 rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 transition data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs"
           >
             <Layers3Icon size={14} />
             <span>Categorias</span>
-            <span className="rounded-full bg-slate-200/80 px-2 py-0.5 text-[10px] font-bold text-slate-700">
+            <span className="rounded-full bg-slate-200/80 px-2 py-0.5 text-[10px] font-bold text-slate-700 transition-colors group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground">
               {cardapio.categories.length}
             </span>
           </TabsTrigger>
 
           <TabsTrigger
             value="additionals"
-            className="gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
+            className="group gap-2 rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 transition data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs"
           >
             <ListPlusIcon size={14} />
             <span>Grupos de Adicionais</span>
