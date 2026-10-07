@@ -224,7 +224,7 @@ export async function buscarClienteDetalheAction(slug: string, customerId: strin
       eq(customersTable.id, customerId),
       eq(customersTable.restaurantId, restaurant.id),
     ),
-    with: { interactions: { orderBy: [desc(customerInteractionsTable.sentAt)], limit: 20 } },
+    with: { interactions: { orderBy: [desc(customerInteractionsTable.sentAt)], limit: 100 } },
   });
 
   if (!customer) throw new Error("Cliente não encontrado.");

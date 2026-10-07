@@ -270,12 +270,21 @@ export async function POST(request: Request) {
               apiKey: aiSettings.groqApiKey || process.env.GROQ_API_KEY,
               baseURL: "https://api.groq.com/openai/v1",
             });
-            const transcription = await groq.audio.transcriptions.create({
-              file: audioFile,
-              model: "whisper-large-v3",
-              language: "pt",
-            });
-            messageText = transcription.text;
+            try {
+              const transcription = await groq.audio.transcriptions.create({
+                file: audioFile,
+                model: "whisper-large-v3",
+                language: "pt",
+              });
+              messageText = transcription.text;
+            } catch {
+              const transcription = await groq.audio.transcriptions.create({
+                file: audioFile,
+                model: "whisper-large-v3-turbo",
+                language: "pt",
+              });
+              messageText = transcription.text;
+            }
           } catch (groqErr) {
             console.warn("[Webhook Evolution] Aviso ao transcrever com Groq:", groqErr);
           }

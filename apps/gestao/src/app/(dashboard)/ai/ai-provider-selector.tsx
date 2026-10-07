@@ -135,10 +135,10 @@ export function AiProviderSelector({
                 )}
               </div>
               <p className="font-display text-sm font-bold text-slate-900">
-                Groq (Llama 3.1 / 3.3)
+                Groq (Super Rápido)
               </p>
               <p className="text-[11px] text-slate-500 leading-snug">
-                Respostas ultrarrápidas em menos de 1 segundo.
+                Respostas ultrarrápidas em menos de 1 segundo (GPT-OSS / Llama).
               </p>
             </div>
             <div
@@ -280,7 +280,7 @@ export function AiProviderSelector({
               </div>
 
               <p className="text-[11px] text-slate-500 leading-relaxed">
-                Gratuita e ultraveloz. Utiliza o modelo Llama 3.3 da Meta para texto e Whisper Large v3 para transcrição de áudios sem custo.
+                Gratuita e ultraveloz. Utiliza modelos avançados de alta velocidade da Groq para texto e Whisper Large v3 para transcrição de áudios sem custo.
               </p>
             </div>
           )}

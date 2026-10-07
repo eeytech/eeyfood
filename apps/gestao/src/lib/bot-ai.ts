@@ -34,6 +34,77 @@ const detectaHandoff = (text: string): boolean => {
 
 export const HANDOFF_SIGNAL = "__HANDOFF_REQUIRED__";
 
+// Cache simples em memória para modelos descobertos dinamicamente na Groq
+let cachedGroqModels: { models: string[]; timestamp: number } | null = null;
+const GROQ_CACHE_TTL = 1000 * 60 * 30; // 30 minutos
+
+// Modelos oficiais de produção ativos da Groq (atualizados para 2026)
+const DEFAULT_GROQ_MODELS = [
+  "openai/gpt-oss-20b",
+  "openai/gpt-oss-120b",
+  "qwen/qwen3.8-27b",
+  "meta-llama/llama-4-scout-17b-16e-instruct",
+  "meta-llama/llama-4-maverick-17b-128e-instruct",
+  "llama-3.3-70b-versatile",
+  "llama-3.1-8b-instant",
+];
+
+async function getAvailableGroqModels(apiKey: string): Promise<string[]> {
+  const now = Date.now();
+  if (cachedGroqModels && now - cachedGroqModels.timestamp < GROQ_CACHE_TTL) {
+    return cachedGroqModels.models;
+  }
+
+  try {
+    const client = new OpenAI({
+      apiKey,
+      baseURL: "https://api.groq.com/openai/v1",
+      timeout: 5000,
+    });
+    const res = await client.models.list();
+    const available = res.data
+      .map((m) => m.id)
+      .filter((id) => {
+        const lower = id.toLowerCase();
+        return (
+          !lower.includes("whisper") &&
+          !lower.includes("bge") &&
+          !lower.includes("guard") &&
+          !lower.includes("safeguard") &&
+          !lower.includes("orpheus") &&
+          !lower.includes("tts") &&
+          !lower.includes("clip") &&
+          !lower.includes("vision")
+        );
+      });
+
+    if (available.length > 0) {
+      const preferred = [
+        "openai/gpt-oss-20b",
+        "openai/gpt-oss-120b",
+        "qwen/qwen3.8-27b",
+        "meta-llama/llama-4-scout-17b-16e-instruct",
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
+      ];
+      const sorted = [
+        ...preferred.filter((p) => available.includes(p)),
+        ...available.filter((a) => !preferred.includes(a)),
+      ];
+      console.log(`[Bot AI] Modelos ativos detectados na Groq: ${sorted.join(", ")}`);
+      cachedGroqModels = { models: sorted, timestamp: now };
+      return sorted;
+    }
+  } catch (err) {
+    console.warn(
+      "[Bot AI] Aviso ao listar modelos dinâmicos da Groq:",
+      err instanceof Error ? err.message : err,
+    );
+  }
+
+  return DEFAULT_GROQ_MODELS;
+}
+
 interface ProcessarMensagemBotInput {
   slug: string;
   customerPhone: string;
@@ -85,6 +156,7 @@ export const processarMensagemBot = async ({
   // Configuração dinâmica do provedor com fallback de modelos e provedores
   const selectedProvider = (aiSettings.aiProvider || "GOOGLE_GEMINI").toUpperCase();
 
+  // Cache simples em memória para modelos descobertos dinamicamente na Groq
   interface ProviderConfig {
     name: string;
     apiKey: string;
@@ -92,7 +164,7 @@ export const processarMensagemBot = async ({
     models: string[];
   }
 
-  const getProviderConfig = (p: string): ProviderConfig | null => {
+  const getProviderConfig = async (p: string): Promise<ProviderConfig | null> => {
     if (p === "GOOGLE_GEMINI") {
       const key =
         aiSettings.geminiApiKey ||
@@ -104,24 +176,18 @@ export const processarMensagemBot = async ({
         name: "GOOGLE_GEMINI",
         apiKey: key,
         baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
-        models: ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"],
+        models: ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash", "gemini-1.5-pro"],
       };
     }
     if (p === "GROQ") {
       const key = aiSettings.groqApiKey || process.env.GROQ_API_KEY || "";
       if (!key) return null;
+      const models = await getAvailableGroqModels(key);
       return {
         name: "GROQ",
         apiKey: key,
         baseURL: "https://api.groq.com/openai/v1",
-        models: [
-          "llama-3.1-8b-instant",       // Mais estável, gratuito e com suporte garantido a tools
-          "llama-3.3-70b-versatile",    // 70B se liberado na conta Groq
-          "llama-3.2-3b-preview",
-          "llama-3.2-1b-preview",
-          "llama3-70b-8192",
-          "llama3-8b-8192",
-        ],
+        models,
       };
     }
     if (p === "OPENAI") {
@@ -130,7 +196,7 @@ export const processarMensagemBot = async ({
       return {
         name: "OPENAI",
         apiKey: key,
-        models: ["gpt-4o", "gpt-4o-mini"],
+        models: ["gpt-4o-mini", "gpt-4o"],
       };
     }
     return null;
@@ -138,7 +204,7 @@ export const processarMensagemBot = async ({
 
   // Monta lista de provedores ordenando o escolhido pelo usuário em primeiro lugar
   const providerList: ProviderConfig[] = [];
-  const primaryProvider = getProviderConfig(selectedProvider);
+  const primaryProvider = await getProviderConfig(selectedProvider);
   if (primaryProvider) {
     providerList.push(primaryProvider);
   }
@@ -146,7 +212,7 @@ export const processarMensagemBot = async ({
   // Adiciona outros provedores configurados como reserva
   for (const alt of ["GOOGLE_GEMINI", "GROQ", "OPENAI"]) {
     if (alt !== selectedProvider) {
-      const altConfig = getProviderConfig(alt);
+      const altConfig = await getProviderConfig(alt);
       if (altConfig) providerList.push(altConfig);
     }
   }
