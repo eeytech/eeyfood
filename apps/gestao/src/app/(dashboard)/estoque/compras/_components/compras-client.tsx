@@ -880,7 +880,7 @@ export function ComprasClient({
       <ConfirmDeleteDialog
         open={deletingSupplier !== null}
         onOpenChange={(o) => !o && setDeletingSupplier(null)}
-        title="Remover fornecedor"
+        title="Excluir Fornecedor"
         description={
           <>
             Tem certeza que deseja remover{" "}
@@ -890,7 +890,7 @@ export function ComprasClient({
             ? As notas fiscais já vinculadas continuarão no histórico.
           </>
         }
-        confirmLabel="Sim, remover fornecedor"
+        confirmLabel="Sim, excluir fornecedor"
         loadingLabel="Removendo..."
         isPending={isSupplierPending}
         onConfirm={() => {

@@ -636,7 +636,7 @@ export function EstoqueClient({
       <ConfirmDeleteDialog
         open={deleteConfirmItem !== null}
         onOpenChange={(open) => !open && setDeleteConfirmItem(null)}
-        title="Excluir item de inventário"
+        title="Excluir Insumo"
         description={
           <>
             Tem certeza que deseja excluir{" "}
@@ -646,7 +646,7 @@ export function EstoqueClient({
             ? Esta ação removerá o insumo do controle de estoque.
           </>
         }
-        confirmLabel="Sim, excluir item"
+        confirmLabel="Sim, excluir insumo"
         isPending={isDeleting}
         onConfirm={handleDeleteConfirm}
       />
@@ -929,21 +929,6 @@ export function EstoqueClient({
             </p>
           </div>
         </div>
-
-        {activeTab === "cardapio" && (
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              onClick={() => {
-                setEditingItem(null);
-                setInvFormOpen(true);
-              }}
-              className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
-            >
-              <PlusIcon size={16} />
-              <span>Novo Insumo</span>
-            </Button>
-          </div>
-        )}
 
         {activeTab === "inventario" && (
           <div className="flex flex-wrap items-center gap-2">
@@ -1362,14 +1347,7 @@ export function EstoqueClient({
 
                             <TableCell className="py-3.5">
                               {product.trackInventory ? (
-                                <span
-                                  className={cn(
-                                    "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold",
-                                    isLow
-                                      ? "border-rose-200 bg-rose-50 text-rose-700"
-                                      : "border-emerald-200 bg-emerald-50 text-emerald-700",
-                                  )}
-                                >
+                                <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
                                   {isLow ? "Baixo Estoque" : "Saudável"}
                                 </span>
                               ) : (
@@ -1428,9 +1406,7 @@ export function EstoqueClient({
                             className={cn(
                               "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold border",
                               product.trackInventory
-                                ? isLow
-                                  ? "border-rose-200 bg-rose-50 text-rose-700"
-                                  : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                ? "border-primary/20 bg-primary/10 text-primary"
                                 : "border-slate-200 bg-slate-100 text-slate-600",
                             )}
                           >
@@ -1701,14 +1677,7 @@ export function EstoqueClient({
 
                             <TableCell className="py-3.5">
                               {item.lowStockThreshold > 0 ? (
-                                <span
-                                  className={cn(
-                                    "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
-                                    isLow
-                                      ? "border-rose-200 bg-rose-50 text-rose-700"
-                                      : "border-emerald-200 bg-emerald-50 text-emerald-700",
-                                  )}
-                                >
+                                <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
                                   {isLow ? "Estoque Baixo" : "Normal"}
                                 </span>
                               ) : (
@@ -1998,37 +1967,20 @@ export function EstoqueClient({
                                 : "—"}
                             </TableCell>
 
-                            <TableCell
-                              className={cn(
-                                "py-3.5 text-xs font-semibold",
-                                status === "expired"
-                                  ? "text-rose-600"
-                                  : status === "warning"
-                                    ? "text-amber-600"
-                                    : "text-slate-700",
-                              )}
-                            >
+                            <TableCell className="py-3.5 text-xs font-semibold text-primary">
                               {lote.expirationDate
                                 ? new Date(lote.expirationDate).toLocaleDateString("pt-BR")
                                 : "—"}
                             </TableCell>
 
                             <TableCell className="py-3.5">
-                              {status === "expired" && (
-                                <span className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2.5 py-0.5 text-xs font-semibold text-rose-700">
-                                  Vencido
-                                </span>
-                              )}
-                              {status === "warning" && (
-                                <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
-                                  Vence em breve
-                                </span>
-                              )}
-                              {status === "ok" && (
-                                <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
-                                  No prazo
-                                </span>
-                              )}
+                              <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
+                                {status === "expired"
+                                  ? "Vencido"
+                                  : status === "warning"
+                                    ? "Vence em breve"
+                                    : "No prazo"}
+                              </span>
                             </TableCell>
 
                             <TableCell className="pr-4 py-3.5 text-right font-display text-sm font-bold text-slate-900">
@@ -2052,23 +2004,14 @@ export function EstoqueClient({
                             <p className="font-semibold text-slate-900">{lote.inventoryItemName}</p>
                             <p className="font-mono text-xs text-slate-400">Lote: {lote.batchCode ?? "—"}</p>
                           </div>
-                          <span
-                            className={cn(
-                              "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold border",
-                              status === "expired"
-                                ? "border-rose-200 bg-rose-50 text-rose-700"
-                                : status === "warning"
-                                  ? "border-amber-200 bg-amber-50 text-amber-700"
-                                  : "border-emerald-200 bg-emerald-50 text-emerald-700",
-                            )}
-                          >
+                          <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
                             {status === "expired" ? "Vencido" : status === "warning" ? "Vence em breve" : "No prazo"}
                           </span>
                         </div>
 
                         <div className="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100">
                           <span>Qtd: <strong>{lote.quantity} {lote.inventoryItemUnit}</strong></span>
-                          <span>Validade: {lote.expirationDate ? new Date(lote.expirationDate).toLocaleDateString("pt-BR") : "—"}</span>
+                          <span>Validade: <strong className="text-primary">{lote.expirationDate ? new Date(lote.expirationDate).toLocaleDateString("pt-BR") : "—"}</strong></span>
                         </div>
                       </div>
                     );
@@ -2245,14 +2188,7 @@ export function EstoqueClient({
                           </TableCell>
 
                           <TableCell className="py-3.5">
-                            <span
-                              className={cn(
-                                "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
-                                perda.reason === "VENCIDO"
-                                  ? "border-rose-200 bg-rose-50 text-rose-700"
-                                  : "border-amber-200 bg-amber-50 text-amber-700",
-                              )}
-                            >
+                            <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
                               {LOSS_REASON_LABELS[perda.reason]}
                             </span>
                           </TableCell>
@@ -2293,14 +2229,7 @@ export function EstoqueClient({
                             {new Date(perda.occurredAt).toLocaleDateString("pt-BR")}
                           </p>
                         </div>
-                        <span
-                          className={cn(
-                            "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold border",
-                            perda.reason === "VENCIDO"
-                              ? "border-rose-200 bg-rose-50 text-rose-700"
-                              : "border-amber-200 bg-amber-50 text-amber-700",
-                          )}
-                        >
+                        <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
                           {LOSS_REASON_LABELS[perda.reason]}
                         </span>
                       </div>
