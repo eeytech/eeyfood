@@ -9,6 +9,7 @@ import {
   ChevronRightIcon,
   ChevronsLeftIcon,
   ChevronsRightIcon,
+  DollarSignIcon,
   FilterXIcon,
   MoreHorizontalIcon,
   PackageIcon,
@@ -769,9 +770,8 @@ export function EstoqueClient({
               </Button>
               <Button
                 type="submit"
-                variant="destructive"
                 disabled={isLossPending}
-                className="h-10 rounded-full px-5 text-xs font-semibold transition-all"
+                className="h-10 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
               >
                 {isLossPending ? "Registrando..." : "Registrar Desperdício"}
               </Button>
@@ -930,42 +930,68 @@ export function EstoqueClient({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setLossDialogOpen(true)}
-            className="h-10 gap-2 rounded-full border border-rose-200 bg-rose-50 px-4 text-xs font-semibold text-rose-700 shadow-xs hover:bg-rose-100 transition-all"
-          >
-            <AlertTriangleIcon size={14} />
-            <span>Registrar Perda</span>
-          </Button>
+        {activeTab === "cardapio" && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              onClick={() => {
+                setEditingItem(null);
+                setInvFormOpen(true);
+              }}
+              className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
+            >
+              <PlusIcon size={16} />
+              <span>Novo Insumo</span>
+            </Button>
+          </div>
+        )}
 
-          <Button
-            variant="outline"
-            onClick={() => setBatchDialogOpen(true)}
-            className="h-10 gap-2 rounded-full border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition-all"
-          >
-            <PlusIcon size={14} />
-            <span>Novo Lote</span>
-          </Button>
+        {activeTab === "inventario" && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              onClick={() => {
+                setEditingItem(null);
+                setInvFormOpen(true);
+              }}
+              className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
+            >
+              <PlusIcon size={16} />
+              <span>Novo Insumo</span>
+            </Button>
+          </div>
+        )}
 
-          <Button
-            onClick={() => {
-              setEditingItem(null);
-              setInvFormOpen(true);
-            }}
-            className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
-          >
-            <PlusIcon size={16} />
-            <span>Novo Insumo</span>
-          </Button>
-        </div>
+        {activeTab === "lotes" && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              onClick={() => setBatchDialogOpen(true)}
+              className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
+            >
+              <PlusIcon size={16} />
+              <span>Novo Lote</span>
+            </Button>
+          </div>
+        )}
+
+        {activeTab === "perdas" && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              onClick={() => setLossDialogOpen(true)}
+              className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
+            >
+              <AlertTriangleIcon size={16} />
+              <span>Registrar Perda</span>
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* ── Metric Cards ────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         {/* Card 1: Itens no Inventário */}
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300 hover:shadow-md">
+        <Card
+          onClick={() => setActiveTab("inventario")}
+          className="cursor-pointer border-slate-200/80 bg-white shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
+        >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -985,85 +1011,82 @@ export function EstoqueClient({
         </Card>
 
         {/* Card 2: Alertas de Baixo Estoque */}
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300 hover:shadow-md">
+        <Card
+          onClick={() => {
+            setActiveTab("inventario");
+            setInvStatusFilter("low");
+            setInvPage(1);
+          }}
+          className="cursor-pointer border-slate-200/80 bg-white shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
+        >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Estoque Baixo
               </span>
-              <div
-                className={cn(
-                  "rounded-lg p-1.5",
-                  totalLowStockAlerts > 0
-                    ? "bg-amber-100 text-amber-700"
-                    : "bg-emerald-100 text-emerald-700",
-                )}
-              >
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <AlertTriangleIcon size={16} />
               </div>
             </div>
-            <p
-              className={cn(
-                "mt-2 font-display text-2xl font-bold",
-                totalLowStockAlerts > 0 ? "text-amber-700" : "text-emerald-700",
-              )}
-            >
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {totalLowStockAlerts}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
-              {totalLowStockAlerts === 0 ? "Nenhum item em falta" : "Abaixo da quantidade mínima"}
+              {totalLowStockAlerts === 0
+                ? "Nenhum item em falta"
+                : `${totalLowStockAlerts} ${totalLowStockAlerts === 1 ? "item abaixo do mínimo" : "itens abaixo do mínimo"}`}
             </p>
           </CardContent>
         </Card>
 
         {/* Card 3: Validades & Lotes em Risco */}
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300 hover:shadow-md">
+        <Card
+          onClick={() => {
+            setActiveTab("lotes");
+            setBatchStatusFilter("warning");
+            setBatchPage(1);
+          }}
+          className="cursor-pointer border-slate-200/80 bg-white shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
+        >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Alerta de Validade
               </span>
-              <div
-                className={cn(
-                  "rounded-lg p-1.5",
-                  expiringBatches.length > 0
-                    ? "bg-rose-100 text-rose-700"
-                    : "bg-emerald-100 text-emerald-700",
-                )}
-              >
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <CalendarIcon size={16} />
               </div>
             </div>
-            <p
-              className={cn(
-                "mt-2 font-display text-2xl font-bold",
-                expiringBatches.length > 0 ? "text-rose-700" : "text-emerald-700",
-              )}
-            >
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {expiringBatches.length}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
-              {expiringBatches.length === 0 ? "Lotes dentro do prazo" : "Vencidos ou vencendo em 7 dias"}
+              {expiringBatches.length === 0
+                ? "Lotes dentro do prazo"
+                : `${expiringBatches.length} ${expiringBatches.length === 1 ? "lote em risco" : "lotes em risco"}`}
             </p>
           </CardContent>
         </Card>
 
         {/* Card 4: Prejuízo Acumulado */}
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300 hover:shadow-md">
+        <Card
+          onClick={() => setActiveTab("perdas")}
+          className="cursor-pointer border-slate-200/80 bg-white shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
+        >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Perdas Acumuladas
               </span>
               <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
-                <CheckCircle2Icon size={16} />
+                <DollarSignIcon size={16} />
               </div>
             </div>
             <p className="mt-2 font-display text-2xl font-bold text-primary">
               {formatCurrency(totalFinancialLoss)}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
-              {perdas.length} registros de desperdício
+              {perdas.length === 1 ? "1 registro de desperdício" : `${perdas.length} registros de desperdício`}
             </p>
           </CardContent>
         </Card>
@@ -1089,14 +1112,7 @@ export function EstoqueClient({
           >
             <WarehouseIcon size={14} />
             <span>Inventário e Bastidores</span>
-            <span
-              className={cn(
-                "rounded-full px-2 py-0.5 text-[10px] font-bold transition-colors group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground",
-                lowStockInv.length > 0
-                  ? "bg-amber-100 text-amber-800"
-                  : "bg-slate-200/80 text-slate-700",
-              )}
-            >
+            <span className="rounded-full bg-slate-200/80 px-2 py-0.5 text-[10px] font-bold text-slate-700 transition-colors group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground">
               {inventoryItems.length}
             </span>
           </TabsTrigger>
@@ -1107,14 +1123,7 @@ export function EstoqueClient({
           >
             <CalendarIcon size={14} />
             <span>Lotes e Validade</span>
-            <span
-              className={cn(
-                "rounded-full px-2 py-0.5 text-[10px] font-bold transition-colors group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground",
-                expiringBatches.length > 0
-                  ? "bg-rose-100 text-rose-800"
-                  : "bg-slate-200/80 text-slate-700",
-              )}
-            >
+            <span className="rounded-full bg-slate-200/80 px-2 py-0.5 text-[10px] font-bold text-slate-700 transition-colors group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground">
               {lotes.length}
             </span>
           </TabsTrigger>
@@ -1253,7 +1262,7 @@ export function EstoqueClient({
                     ? "Tente ajustar os filtros de busca para visualizar os produtos."
                     : "Nenhum produto cadastrado no cardápio deste restaurante."}
                 </p>
-                {isFilteringProducts && (
+                {isFilteringProducts ? (
                   <Button
                     variant="outline"
                     size="sm"
@@ -1262,6 +1271,18 @@ export function EstoqueClient({
                   >
                     <FilterXIcon size={14} />
                     Limpar filtros
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setEditingItem(null);
+                      setInvFormOpen(true);
+                    }}
+                    className="mt-4 gap-1.5 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
+                  >
+                    <PlusIcon size={14} />
+                    Cadastrar insumo
                   </Button>
                 )}
               </div>
@@ -1279,7 +1300,7 @@ export function EstoqueClient({
                         <TableHead className="text-right text-xs font-semibold text-slate-700">Alerta Mínimo</TableHead>
                         <TableHead className="text-xs font-semibold text-slate-700">Rastreio</TableHead>
                         <TableHead className="text-xs font-semibold text-slate-700">Status</TableHead>
-                        <TableHead className="w-24 pr-4 text-right text-xs font-semibold text-slate-700">Ações</TableHead>
+                        <TableHead className="w-20 pr-4 text-right text-xs font-semibold text-slate-700">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody className="divide-y divide-slate-100">
@@ -1357,15 +1378,30 @@ export function EstoqueClient({
                             </TableCell>
 
                             <TableCell className="pr-4 py-3.5 text-right">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 gap-1.5 rounded-xl px-2.5 text-xs font-medium text-slate-700 hover:bg-primary/10 hover:text-primary transition-colors"
-                                onClick={() => setAdjustProduct(product)}
-                              >
-                                <PencilIcon size={14} className="text-primary" />
-                                <span>Ajustar</span>
-                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                                  >
+                                    <MoreHorizontalIcon size={16} />
+                                    <span className="sr-only">Opções</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                  align="end"
+                                  className="w-44 rounded-xl border-slate-200 bg-white p-1 text-slate-900 shadow-xl"
+                                >
+                                  <DropdownMenuItem
+                                    onClick={() => setAdjustProduct(product)}
+                                    className="gap-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 focus:bg-slate-50 focus:text-slate-900"
+                                  >
+                                    <PencilIcon size={14} className="text-primary" />
+                                    Ajustar saldo
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </TableCell>
                           </TableRow>
                         );
@@ -1605,7 +1641,7 @@ export function EstoqueClient({
                         <TableHead className="text-right text-xs font-semibold text-slate-700">Alerta Mínimo</TableHead>
                         <TableHead className="text-xs font-semibold text-slate-700">Unidade</TableHead>
                         <TableHead className="text-xs font-semibold text-slate-700">Status</TableHead>
-                        <TableHead className="w-24 pr-4 text-right text-xs font-semibold text-slate-700">Ações</TableHead>
+                        <TableHead className="w-20 pr-4 text-right text-xs font-semibold text-slate-700">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody className="divide-y divide-slate-100">
@@ -1701,7 +1737,7 @@ export function EstoqueClient({
                                       setEditingItem(item);
                                       setInvFormOpen(true);
                                     }}
-                                    className="gap-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
+                                    className="gap-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 focus:bg-slate-50 focus:text-slate-900"
                                   >
                                     <PencilIcon size={14} className="text-primary" />
                                     Editar dados
@@ -1932,10 +1968,7 @@ export function EstoqueClient({
                         return (
                           <TableRow
                             key={lote.id}
-                            className={cn(
-                              "transition-colors hover:bg-slate-50/70",
-                              status === "expired" ? "bg-rose-50/30" : status === "warning" ? "bg-amber-50/30" : "",
-                            )}
+                            className="transition-colors hover:bg-slate-50/70"
                           >
                             <TableCell className="pl-4 py-3.5 font-semibold text-slate-900">
                               {lote.inventoryItemName}
@@ -1998,7 +2031,7 @@ export function EstoqueClient({
                               )}
                             </TableCell>
 
-                            <TableCell className="pr-4 py-3.5 text-right font-display text-xs font-semibold text-slate-700">
+                            <TableCell className="pr-4 py-3.5 text-right font-display text-sm font-bold text-slate-900">
                               {lote.unitCost != null ? formatCurrency(lote.unitCost) : "—"}
                             </TableCell>
                           </TableRow>
@@ -2153,7 +2186,7 @@ export function EstoqueClient({
 
             {filteredLosses.length === 0 ? (
               <div className="flex min-h-[260px] flex-col items-center justify-center p-8 text-center">
-                <div className="rounded-2xl bg-emerald-50 p-4 text-emerald-600 border border-emerald-200">
+                <div className="rounded-2xl bg-primary/10 p-4 text-primary border border-primary/20">
                   <CheckCircle2Icon size={32} />
                 </div>
                 <h3 className="mt-3 font-display text-base font-semibold text-slate-900">
@@ -2164,7 +2197,7 @@ export function EstoqueClient({
                     ? "Tente ajustar os filtros de busca para visualizar os registros."
                     : "Excelente! Nenhuma ocorrência de perda ou descarte de estoque."}
                 </p>
-                {isFilteringLosses && (
+                {isFilteringLosses ? (
                   <Button
                     variant="outline"
                     size="sm"
@@ -2173,6 +2206,15 @@ export function EstoqueClient({
                   >
                     <FilterXIcon size={14} />
                     Limpar filtros
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={() => setLossDialogOpen(true)}
+                    className="mt-4 gap-1.5 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
+                  >
+                    <AlertTriangleIcon size={14} />
+                    Registrar perda
                   </Button>
                 )}
               </div>
@@ -2215,7 +2257,7 @@ export function EstoqueClient({
                             </span>
                           </TableCell>
 
-                          <TableCell className="py-3.5 text-right font-display text-sm font-bold text-rose-600">
+                          <TableCell className="py-3.5 text-right font-display text-sm font-bold text-slate-900">
                             {perda.quantity}
                           </TableCell>
 
@@ -2223,7 +2265,7 @@ export function EstoqueClient({
                             {perda.inventoryItemUnit}
                           </TableCell>
 
-                          <TableCell className="py-3.5 text-right font-display text-sm font-bold text-rose-600">
+                          <TableCell className="py-3.5 text-right font-display text-sm font-bold text-slate-900">
                             {formatCurrency(perda.financialLoss)}
                           </TableCell>
 
@@ -2267,7 +2309,7 @@ export function EstoqueClient({
                         <span className="text-slate-500">
                           Qtd: {perda.quantity} {perda.inventoryItemUnit}
                         </span>
-                        <span className="font-display font-bold text-rose-600">
+                        <span className="font-display font-bold text-slate-900">
                           Prejuízo: {formatCurrency(perda.financialLoss)}
                         </span>
                       </div>

@@ -644,7 +644,7 @@ export function ComprasClient({
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <Label htmlFor="companyName" className="text-xs font-semibold text-slate-700">
-                  Razão Social / Nome Fantasia <span className="text-rose-500">*</span>
+                  Razão Social / Nome Fantasia
                 </Label>
                 <Input
                   id="companyName"
@@ -708,7 +708,6 @@ export function ComprasClient({
             {/* ── Endereço Desmembrado ── */}
             <div className="border-t border-slate-100 pt-3">
               <div className="mb-3 flex items-center gap-2">
-                <MapPinIcon size={15} className="text-primary" />
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">
                   Endereço do Fornecedor
                 </h4>
