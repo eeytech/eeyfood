@@ -6,9 +6,12 @@ import {
   CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  ChevronsLeftIcon,
+  ChevronsRightIcon,
   DollarSignIcon,
   FileTextIcon,
   FilterXIcon,
+  MoreHorizontalIcon,
   PackageCheckIcon,
   PlusIcon,
   ReceiptIcon,
@@ -38,6 +41,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -57,6 +66,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { NotaCompraComFornecedor } from "@/lib/admin-queries";
+import { cn } from "@/lib/utils";
 import type { InventoryItem, Supplier } from "@fsw/db";
 
 interface ComprasClientProps {
@@ -88,6 +98,126 @@ function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
 
+// ── Shared Table Pagination ──────────────────────────────────────────────────
+function TablePagination({
+  filteredCount,
+  totalCount,
+  isFiltering,
+  currentPage,
+  totalPages,
+  pageSize,
+  onPageSizeChange,
+  onPageChange,
+  itemLabelSingular,
+  itemLabelPlural,
+}: {
+  filteredCount: number;
+  totalCount: number;
+  isFiltering: boolean;
+  currentPage: number;
+  totalPages: number;
+  pageSize: number;
+  onPageSizeChange: (size: number) => void;
+  onPageChange: (page: number) => void;
+  itemLabelSingular: string;
+  itemLabelPlural: string;
+}) {
+  const startIndex = filteredCount > 0 ? (currentPage - 1) * pageSize + 1 : 0;
+  const endIndex = Math.min(currentPage * pageSize, filteredCount);
+
+  return (
+    <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+        <span>
+          Exibindo <strong className="font-semibold text-slate-900">{startIndex}</strong> a{" "}
+          <strong className="font-semibold text-slate-900">{endIndex}</strong> de{" "}
+          <strong className="font-semibold text-slate-900">{filteredCount}</strong>{" "}
+          {filteredCount === 1 ? itemLabelSingular : itemLabelPlural}
+          {filteredCount !== totalCount && (
+            <span className="ml-1 text-slate-400">
+              (total: {totalCount})
+            </span>
+          )}
+        </span>
+        {isFiltering && (
+          <span className="text-[11px] font-medium text-amber-600">
+            (Filtros aplicados)
+          </span>
+        )}
+        <span className="hidden sm:inline text-slate-300">|</span>
+        <div className="flex items-center gap-1.5">
+          <span>Exibir</span>
+          <Select
+            value={String(pageSize)}
+            onValueChange={(val) => onPageSizeChange(Number(val))}
+          >
+            <SelectTrigger className="h-8 w-16 rounded-lg border-slate-200 bg-white text-xs font-medium text-slate-700">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+              <SelectItem value="5">5</SelectItem>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+            </SelectContent>
+          </Select>
+          <span>por página</span>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-2 sm:justify-end">
+        <span className="text-xs text-slate-500 mr-1">
+          Página <strong className="font-semibold text-primary">{currentPage}</strong> de{" "}
+          <strong className="font-semibold text-slate-900">{totalPages}</strong>
+        </span>
+
+        <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="icon"
+            disabled={currentPage <= 1}
+            onClick={() => onPageChange(1)}
+            className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-primary/10 hover:text-primary hover:border-primary/30 disabled:opacity-40 transition-all"
+            title="Primeira página"
+          >
+            <ChevronsLeftIcon size={14} />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            disabled={currentPage <= 1}
+            onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+            className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-primary/10 hover:text-primary hover:border-primary/30 disabled:opacity-40 transition-all"
+            title="Página anterior"
+          >
+            <ChevronLeftIcon size={14} />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            disabled={currentPage >= totalPages}
+            onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+            className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-primary/10 hover:text-primary hover:border-primary/30 disabled:opacity-40 transition-all"
+            title="Próxima página"
+          >
+            <ChevronRightIcon size={14} />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            disabled={currentPage >= totalPages}
+            onClick={() => onPageChange(totalPages)}
+            className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-primary/10 hover:text-primary hover:border-primary/30 disabled:opacity-40 transition-all"
+            title="Última página"
+          >
+            <ChevronsRightIcon size={14} />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ComprasClient({
   slug,
   inventoryItems,
@@ -113,13 +243,15 @@ export function ComprasClient({
 
   // ── Histórico filters & pagination ──────────────────────────────────────────
   const [historySearch, setHistorySearch] = useState("");
+  const [historySort, setHistorySort] = useState("DATE_DESC");
   const [historyPage, setHistoryPage] = useState(1);
-  const historyPageSize = 10;
+  const [historyPageSize, setHistoryPageSize] = useState(10);
 
   // ── Fornecedores filters & pagination ───────────────────────────────────────
   const [supplierSearch, setSupplierSearch] = useState("");
+  const [supplierSort, setSupplierSort] = useState("NAME_ASC");
   const [supplierPage, setSupplierPage] = useState(1);
-  const supplierPageSize = 10;
+  const [supplierPageSize, setSupplierPageSize] = useState(10);
 
   // ── Metrics Calculation ────────────────────────────────────────────────────
   const totalInvoices = notasCompra.length;
@@ -129,16 +261,26 @@ export function ComprasClient({
 
   // ── Histórico Filtered & Paginated ──────────────────────────────────────────
   const filteredHistory = useMemo(() => {
-    return notasCompra.filter((nota) => {
-      const q = historySearch.toLowerCase().trim();
-      if (!q) return true;
-      return (
-        (nota.invoiceNumber?.toLowerCase().includes(q) ?? false) ||
-        (nota.supplierName?.toLowerCase().includes(q) ?? false) ||
-        (nota.accessKey?.toLowerCase().includes(q) ?? false)
-      );
-    });
-  }, [notasCompra, historySearch]);
+    return notasCompra
+      .filter((nota) => {
+        const q = historySearch.toLowerCase().trim();
+        if (!q) return true;
+        return (
+          (nota.invoiceNumber?.toLowerCase().includes(q) ?? false) ||
+          (nota.supplierName?.toLowerCase().includes(q) ?? false) ||
+          (nota.accessKey?.toLowerCase().includes(q) ?? false)
+        );
+      })
+      .sort((a, b) => {
+        if (historySort === "DATE_DESC") {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        }
+        if (historySort === "AMOUNT_DESC") {
+          return b.totalAmount - a.totalAmount;
+        }
+        return 0;
+      });
+  }, [notasCompra, historySearch, historySort]);
 
   const totalHistoryPages = Math.max(1, Math.ceil(filteredHistory.length / historyPageSize));
   const validHistoryPage = Math.min(historyPage, totalHistoryPages);
@@ -147,19 +289,31 @@ export function ComprasClient({
     return filteredHistory.slice(start, start + historyPageSize);
   }, [filteredHistory, validHistoryPage, historyPageSize]);
 
+  const isFilteringHistory = historySearch.trim() !== "" || historySort !== "DATE_DESC";
+
   // ── Fornecedores Filtered & Paginated ───────────────────────────────────────
   const filteredSuppliers = useMemo(() => {
-    return fornecedores.filter((f) => {
-      const q = supplierSearch.toLowerCase().trim();
-      if (!q) return true;
-      return (
-        f.companyName.toLowerCase().includes(q) ||
-        (f.cnpj?.toLowerCase().includes(q) ?? false) ||
-        (f.email?.toLowerCase().includes(q) ?? false) ||
-        (f.phone?.toLowerCase().includes(q) ?? false)
-      );
-    });
-  }, [fornecedores, supplierSearch]);
+    return fornecedores
+      .filter((f) => {
+        const q = supplierSearch.toLowerCase().trim();
+        if (!q) return true;
+        return (
+          f.companyName.toLowerCase().includes(q) ||
+          (f.cnpj?.toLowerCase().includes(q) ?? false) ||
+          (f.email?.toLowerCase().includes(q) ?? false) ||
+          (f.phone?.toLowerCase().includes(q) ?? false)
+        );
+      })
+      .sort((a, b) => {
+        if (supplierSort === "NAME_ASC") {
+          return a.companyName.localeCompare(b.companyName);
+        }
+        if (supplierSort === "DATE_DESC") {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        }
+        return 0;
+      });
+  }, [fornecedores, supplierSearch, supplierSort]);
 
   const totalSupplierPages = Math.max(1, Math.ceil(filteredSuppliers.length / supplierPageSize));
   const validSupplierPage = Math.min(supplierPage, totalSupplierPages);
@@ -167,6 +321,8 @@ export function ComprasClient({
     const start = (validSupplierPage - 1) * supplierPageSize;
     return filteredSuppliers.slice(start, start + supplierPageSize);
   }, [filteredSuppliers, validSupplierPage, supplierPageSize]);
+
+  const isFilteringSuppliers = supplierSearch.trim() !== "" || supplierSort !== "NAME_ASC";
 
   // ── XML Handlers ────────────────────────────────────────────────────────────
   const handleXmlUpload = (file: File) => {
@@ -179,36 +335,56 @@ export function ComprasClient({
       startTransition(async () => {
         const result = await parseXmlNFeAction(slug, content);
         if (!result.success || !result.parsed) {
-          setImportError(result.error ?? "Erro ao processar XML.");
+          setImportError(result.error ?? "Erro ao processar o arquivo XML.");
           return;
         }
-        setParsedNFe(result.parsed as NFeParsed);
-        setMapeamentos(
-          (result.parsed.items as NFeItem[]).map((item) => ({
+
+        const data = result.parsed;
+        setParsedNFe({
+          ...data,
+          issuedAt: data.issuedAt ? new Date(data.issuedAt) : null,
+        });
+
+        const initialMappings: MapeamentoItem[] = data.items.map((item: NFeItem) => {
+          const matchedItem = inventoryItems.find(
+            (inv) =>
+              inv.name.toLowerCase().includes(item.nfeName.toLowerCase()) ||
+              item.nfeName.toLowerCase().includes(inv.name.toLowerCase()),
+          );
+          return {
             nfeCode: item.nfeCode,
             nfeName: item.nfeName,
             quantity: item.quantity,
             unitCost: item.unitCost,
             unitOfMeasure: item.unitOfMeasure,
-            inventoryItemId: null,
+            inventoryItemId: matchedItem?.id ?? null,
             conversionFactor: 1,
-          })),
-        );
+          };
+        });
+
+        setMapeamentos(initialMappings);
         setStep("mapping");
       });
     };
-    reader.readAsText(file, "ISO-8859-1");
+    reader.readAsText(file);
   };
 
   const handleConfirmImport = () => {
+    if (!parsedNFe) return;
+
     startTransition(async () => {
-      const result = await confirmarImportacaoNFeAction(slug, xmlContent, mapeamentos);
-      if (!result.success) {
-        toast.error(result.error ?? "Erro ao importar nota.");
-        return;
+      const result = await confirmarImportacaoNFeAction(
+        slug,
+        xmlContent,
+        mapeamentos,
+      );
+
+      if (result.success) {
+        toast.success("NF-e importada e estoque atualizado com sucesso!");
+        setStep("done");
+      } else {
+        toast.error(result.error ?? "Erro ao confirmar importação.");
       }
-      toast.success("NF-e importada com sucesso! Estoque atualizado.");
-      setStep("done");
     });
   };
 
@@ -227,10 +403,10 @@ export function ComprasClient({
     startSupplierTransition(async () => {
       const result = await criarFornecedorAction(slug, formData);
       if (result.success) {
-        toast.success("Fornecedor cadastrado com sucesso.");
+        toast.success("Fornecedor cadastrado com sucesso!");
         setFornecedorFormOpen(false);
       } else {
-        toast.error(result.error ?? "Erro ao salvar fornecedor.");
+        toast.error(result.error ?? "Erro ao cadastrar fornecedor.");
       }
     });
   };
@@ -255,7 +431,7 @@ export function ComprasClient({
               Novo Fornecedor
             </DialogTitle>
             <DialogDescription className="text-slate-500">
-              Cadastre um fornecedor para vincular às notas de compra e insumos.
+              Cadastre um fornecedor parceiro para vincular às notas de compra e insumos.
             </DialogDescription>
           </DialogHeader>
 
@@ -269,7 +445,7 @@ export function ComprasClient({
                 name="companyName"
                 placeholder="Ex.: Distribuidora de Alimentos Silva"
                 required
-                className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm focus:bg-white"
+                className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
               />
             </div>
 
@@ -282,7 +458,7 @@ export function ComprasClient({
                   id="cnpj"
                   name="cnpj"
                   placeholder="00.000.000/0001-00"
-                  className="h-10 rounded-xl border-slate-200 bg-slate-50/70 font-mono text-sm focus:bg-white"
+                  className="h-10 rounded-xl border-slate-200 bg-white font-mono text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
                 />
               </div>
 
@@ -294,7 +470,7 @@ export function ComprasClient({
                   id="phone"
                   name="phone"
                   placeholder="(00) 00000-0000"
-                  className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm focus:bg-white"
+                  className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
                 />
               </div>
             </div>
@@ -308,7 +484,7 @@ export function ComprasClient({
                 name="email"
                 type="email"
                 placeholder="contato@fornecedor.com.br"
-                className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm focus:bg-white"
+                className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
               />
             </div>
 
@@ -320,7 +496,7 @@ export function ComprasClient({
                 id="address"
                 name="address"
                 placeholder="Rua, número, bairro, cidade/UF"
-                className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm focus:bg-white"
+                className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
               />
             </div>
 
@@ -329,14 +505,14 @@ export function ComprasClient({
                 type="button"
                 variant="outline"
                 onClick={() => setFornecedorFormOpen(false)}
-                className="h-10 rounded-full border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                className="h-10 rounded-full border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-all"
               >
                 Cancelar
               </Button>
               <Button
                 type="submit"
                 disabled={isSupplierPending}
-                className="h-10 rounded-full bg-slate-900 px-5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800"
+                className="h-10 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
               >
                 {isSupplierPending ? "Salvando..." : "Cadastrar Fornecedor"}
               </Button>
@@ -387,7 +563,7 @@ export function ComprasClient({
           <Button
             variant="outline"
             onClick={() => setFornecedorFormOpen(true)}
-            className="h-10 gap-2 rounded-full border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+            className="h-10 gap-2 rounded-full border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition-all"
           >
             <PlusIcon size={14} />
             <span>Novo Fornecedor</span>
@@ -409,7 +585,7 @@ export function ComprasClient({
       {/* ── Metric Cards ────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         {/* Card 1: Total Notas */}
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300 hover:shadow-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -429,17 +605,17 @@ export function ComprasClient({
         </Card>
 
         {/* Card 2: Total Investido */}
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300 hover:shadow-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Total em Compras
               </span>
-              <div className="rounded-lg bg-emerald-100 p-1.5 text-emerald-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <DollarSignIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-emerald-700">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {formatCurrency(totalAmountSpent)}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -449,17 +625,17 @@ export function ComprasClient({
         </Card>
 
         {/* Card 3: Fornecedores */}
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300 hover:shadow-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Fornecedores
               </span>
-              <div className="rounded-lg bg-indigo-100 p-1.5 text-indigo-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <Building2Icon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-indigo-700">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {totalSuppliers}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -469,17 +645,17 @@ export function ComprasClient({
         </Card>
 
         {/* Card 4: Ticket Médio */}
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300 hover:shadow-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Média por Nota
               </span>
-              <div className="rounded-lg bg-slate-100 p-1.5 text-slate-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <ReceiptIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-slate-900">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {formatCurrency(avgInvoiceAmount)}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -494,7 +670,7 @@ export function ComprasClient({
         <TabsList className="h-auto flex-wrap gap-1.5 rounded-2xl border border-slate-200/80 bg-slate-100/90 p-1.5 shadow-xs">
           <TabsTrigger
             value="importar"
-            className="gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
+            className="group gap-2 rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 transition data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs"
           >
             <UploadIcon size={14} />
             <span>Importar NF-e</span>
@@ -502,22 +678,22 @@ export function ComprasClient({
 
           <TabsTrigger
             value="historico"
-            className="gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
+            className="group gap-2 rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 transition data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs"
           >
             <ReceiptIcon size={14} />
             <span>Histórico de Compras</span>
-            <span className="rounded-full bg-slate-200/80 px-2 py-0.5 text-[10px] font-bold text-slate-700">
+            <span className="rounded-full bg-slate-200/80 px-2 py-0.5 text-[10px] font-bold text-slate-700 transition-colors group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground">
               {notasCompra.length}
             </span>
           </TabsTrigger>
 
           <TabsTrigger
             value="fornecedores"
-            className="gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
+            className="group gap-2 rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 transition data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs"
           >
             <PackageCheckIcon size={14} />
             <span>Fornecedores</span>
-            <span className="rounded-full bg-slate-200/80 px-2 py-0.5 text-[10px] font-bold text-slate-700">
+            <span className="rounded-full bg-slate-200/80 px-2 py-0.5 text-[10px] font-bold text-slate-700 transition-colors group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground">
               {fornecedores.length}
             </span>
           </TabsTrigger>
@@ -526,9 +702,9 @@ export function ComprasClient({
         {/* ── Tab 1: Importar NF-e ────────────────────────── */}
         <TabsContent value="importar" className="space-y-4">
           {step === "upload" && (
-            <Card className="border-2 border-dashed border-slate-300 bg-white transition-colors hover:border-slate-400">
+            <Card className="border-2 border-dashed border-slate-200 bg-white transition-all hover:border-primary/50 hover:bg-primary/[0.01]">
               <CardContent className="flex flex-col items-center gap-4 py-16 text-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm shadow-primary/25">
                   <UploadIcon size={28} />
                 </div>
                 <div>
@@ -554,7 +730,7 @@ export function ComprasClient({
                 <Button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isPending}
-                  className="h-10 gap-2 rounded-full bg-slate-900 px-6 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+                  className="h-10 gap-2 rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
                 >
                   <UploadIcon size={16} />
                   <span>{isPending ? "Processando XML..." : "Selecionar Arquivo XML"}</span>
@@ -597,7 +773,7 @@ export function ComprasClient({
                     <p className="text-xs uppercase font-medium tracking-wide text-slate-400">
                       Valor Total
                     </p>
-                    <p className="mt-1 font-display text-lg font-bold text-emerald-700">
+                    <p className="mt-1 font-display text-lg font-bold text-primary">
                       {formatCurrency(parsedNFe.totalAmount)}
                     </p>
                   </div>
@@ -625,39 +801,39 @@ export function ComprasClient({
 
                 <div className="overflow-x-auto">
                   <Table>
-                    <TableHeader className="bg-slate-50/50">
-                      <TableRow className="border-slate-200/80">
-                        <TableHead className="pl-4 font-semibold text-slate-700">Código NF-e</TableHead>
-                        <TableHead className="font-semibold text-slate-700">Descrição na Nota</TableHead>
-                        <TableHead className="text-right font-semibold text-slate-700">Qtd.</TableHead>
-                        <TableHead className="text-right font-semibold text-slate-700">Valor Unit.</TableHead>
-                        <TableHead className="font-semibold text-slate-700">Insumo Local</TableHead>
-                        <TableHead className="w-28 pr-4 text-right font-semibold text-slate-700">Fator Conv.</TableHead>
+                    <TableHeader className="bg-slate-50/80">
+                      <TableRow className="border-b border-slate-200">
+                        <TableHead className="pl-4 text-xs font-semibold text-slate-700">Código NF-e</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-700">Descrição na Nota</TableHead>
+                        <TableHead className="text-right text-xs font-semibold text-slate-700">Qtd.</TableHead>
+                        <TableHead className="text-right text-xs font-semibold text-slate-700">Valor Unit.</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-700">Insumo Local</TableHead>
+                        <TableHead className="w-28 pr-4 text-right text-xs font-semibold text-slate-700">Fator Conv.</TableHead>
                       </TableRow>
                     </TableHeader>
-                    <TableBody>
+                    <TableBody className="divide-y divide-slate-100">
                       {mapeamentos.map((map, idx) => (
-                        <TableRow key={idx} className="border-slate-100">
-                          <TableCell className="pl-4 py-3 font-mono text-xs text-slate-500">
+                        <TableRow key={idx} className="transition-colors hover:bg-slate-50/70">
+                          <TableCell className="pl-4 py-3.5 font-mono text-xs text-slate-500">
                             {map.nfeCode}
                           </TableCell>
 
-                          <TableCell className="py-3">
+                          <TableCell className="py-3.5">
                             <span className="font-semibold text-slate-900">{map.nfeName}</span>
                             <span className="ml-1.5 font-mono text-xs text-slate-400">
                               ({map.unitOfMeasure})
                             </span>
                           </TableCell>
 
-                          <TableCell className="py-3 text-right font-semibold text-slate-900">
+                          <TableCell className="py-3.5 text-right font-semibold text-slate-900">
                             {map.quantity}
                           </TableCell>
 
-                          <TableCell className="py-3 text-right font-display text-sm font-semibold text-slate-900">
+                          <TableCell className="py-3.5 text-right font-display text-sm font-semibold text-slate-900">
                             {formatCurrency(map.unitCost)}
                           </TableCell>
 
-                          <TableCell className="py-3">
+                          <TableCell className="py-3.5">
                             <Select
                               value={map.inventoryItemId ?? "none"}
                               onValueChange={(v) => {
@@ -669,10 +845,10 @@ export function ComprasClient({
                                 setMapeamentos(updated);
                               }}
                             >
-                              <SelectTrigger className="h-9 w-60 rounded-xl border-slate-200 bg-slate-50/70 text-xs">
+                              <SelectTrigger className="h-9 w-60 rounded-xl border-slate-200 bg-white text-xs">
                                 <SelectValue placeholder="Selecionar insumo..." />
                               </SelectTrigger>
-                              <SelectContent className="rounded-xl border-slate-200 bg-white">
+                              <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
                                 <SelectItem value="none">— Ignorar este item —</SelectItem>
                                 {inventoryItems.map((inv) => (
                                   <SelectItem key={inv.id} value={inv.id}>
@@ -683,12 +859,12 @@ export function ComprasClient({
                             </Select>
                           </TableCell>
 
-                          <TableCell className="pr-4 py-3 text-right">
+                          <TableCell className="pr-4 py-3.5 text-right">
                             <Input
                               type="number"
                               min="0.001"
                               step="0.001"
-                              className="h-9 w-24 rounded-xl border-slate-200 bg-slate-50/70 text-right text-xs"
+                              className="h-9 w-24 rounded-xl border-slate-200 bg-white text-right text-xs focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
                               value={map.conversionFactor}
                               onChange={(e) => {
                                 const updated = [...mapeamentos];
@@ -712,7 +888,7 @@ export function ComprasClient({
                   variant="outline"
                   onClick={handleReset}
                   disabled={isPending}
-                  className="h-10 rounded-full border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  className="h-10 rounded-full border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-all"
                 >
                   <XIcon size={14} className="mr-1.5" />
                   <span>Cancelar</span>
@@ -720,7 +896,7 @@ export function ComprasClient({
                 <Button
                   onClick={handleConfirmImport}
                   disabled={isPending || mappedCount === 0}
-                  className="h-10 rounded-full bg-slate-900 px-6 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
+                  className="h-10 rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 disabled:opacity-50 transition-all"
                 >
                   {isPending ? (
                     "Importando..."
@@ -738,7 +914,7 @@ export function ComprasClient({
           {step === "done" && (
             <Card className="border-slate-200/80 bg-white shadow-sm">
               <CardContent className="flex flex-col items-center gap-4 py-16 text-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 shadow-sm">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 shadow-sm border border-emerald-200">
                   <CheckCircle2Icon size={32} />
                 </div>
                 <div>
@@ -751,7 +927,7 @@ export function ComprasClient({
                 </div>
                 <Button
                   onClick={handleReset}
-                  className="h-10 gap-2 rounded-full bg-slate-900 px-6 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+                  className="h-10 gap-2 rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
                 >
                   <PlusIcon size={16} />
                   <span>Importar Outra NF-e</span>
@@ -766,31 +942,65 @@ export function ComprasClient({
           <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
             {/* Filtros de Histórico */}
             <div className="border-b border-slate-100 bg-slate-50/50 p-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="relative max-w-sm flex-1">
-                  <SearchIcon
-                    size={15}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
-                  <Input
-                    placeholder="Buscar por nº da nota ou fornecedor..."
-                    value={historySearch}
-                    onChange={(e) => {
-                      setHistorySearch(e.target.value);
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="grid flex-1 grid-cols-1 gap-2.5 sm:grid-cols-3">
+                  {/* Busca */}
+                  <div className="relative">
+                    <SearchIcon
+                      size={15}
+                      className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                    />
+                    <Input
+                      placeholder="Buscar por nº da nota, fornecedor ou chave..."
+                      value={historySearch}
+                      onChange={(e) => {
+                        setHistorySearch(e.target.value);
+                        setHistoryPage(1);
+                      }}
+                      className="h-10 rounded-xl border-slate-200 bg-white pl-9 pr-8 text-xs text-slate-900 placeholder:text-slate-400 transition-colors focus:border-primary/50 focus:ring-2 focus:ring-primary/20 sm:text-sm"
+                    />
+                    {historySearch && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setHistorySearch("");
+                          setHistoryPage(1);
+                        }}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        <XIcon size={14} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Ordenação */}
+                  <Select
+                    value={historySort}
+                    onValueChange={(val) => {
+                      setHistorySort(val);
                       setHistoryPage(1);
                     }}
-                    className="h-10 rounded-xl border-slate-200 bg-white pl-9 text-xs transition-colors focus:bg-white sm:text-sm"
-                  />
+                  >
+                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs font-medium text-slate-700">
+                      <SelectValue placeholder="Ordenar..." />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+                      <SelectItem value="DATE_DESC">Mais recentes</SelectItem>
+                      <SelectItem value="AMOUNT_DESC">Maior valor total</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                {historySearch.trim() && (
+                {isFilteringHistory && (
                   <Button
                     variant="ghost"
+                    size="sm"
                     onClick={() => {
                       setHistorySearch("");
+                      setHistorySort("DATE_DESC");
                       setHistoryPage(1);
                     }}
-                    className="h-10 gap-1.5 rounded-xl px-3 text-xs text-slate-500 hover:text-slate-900"
+                    className="h-10 gap-1.5 rounded-xl px-3 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                   >
                     <FilterXIcon size={14} />
                     <span>Limpar</span>
@@ -799,145 +1009,141 @@ export function ComprasClient({
               </div>
             </div>
 
-            <div className="hidden md:block">
-              <Table>
-                <TableHeader className="bg-slate-50/80">
-                  <TableRow className="border-slate-200/80 hover:bg-transparent">
-                    <TableHead className="pl-4 font-semibold text-slate-700">Nº da Nota</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Fornecedor</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Chave de Acesso</TableHead>
-                    <TableHead className="text-right font-semibold text-slate-700">Valor Total</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Data de Emissão</TableHead>
-                    <TableHead className="w-36 pr-4 font-semibold text-slate-700">Importado em</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedHistory.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="h-40 text-center">
-                        <div className="flex flex-col items-center justify-center gap-2 text-slate-500">
-                          <ReceiptIcon size={32} className="text-slate-400" />
-                          <p className="text-sm font-medium">Nenhuma nota encontrada</p>
-                          <p className="text-xs text-slate-400">
-                            Faça o upload do seu primeiro arquivo XML para registrar compras.
-                          </p>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    paginatedHistory.map((nota) => (
-                      <TableRow
-                        key={nota.id}
-                        className="border-slate-100 transition-colors hover:bg-slate-50/70"
-                      >
-                        <TableCell className="pl-4 py-3 font-semibold text-slate-900">
-                          #{nota.invoiceNumber ?? "—"}
-                        </TableCell>
-
-                        <TableCell className="py-3 font-medium text-slate-800">
-                          {nota.supplierName ?? "—"}
-                        </TableCell>
-
-                        <TableCell className="py-3 font-mono text-xs text-slate-400">
-                          {nota.accessKey ? `${nota.accessKey.slice(0, 16)}...` : "—"}
-                        </TableCell>
-
-                        <TableCell className="py-3 text-right font-display text-sm font-bold text-slate-900">
-                          {formatCurrency(nota.totalAmount)}
-                        </TableCell>
-
-                        <TableCell className="py-3 text-xs text-slate-500">
-                          {nota.issuedAt ? new Date(nota.issuedAt).toLocaleDateString("pt-BR") : "—"}
-                        </TableCell>
-
-                        <TableCell className="pr-4 py-3 text-xs text-slate-500">
-                          {new Date(nota.createdAt).toLocaleDateString("pt-BR")}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-
-            {/* Mobile View */}
-            <div className="divide-y divide-slate-100 md:hidden">
-              {paginatedHistory.map((nota) => (
-                <div key={nota.id} className="p-4 space-y-1.5">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="font-semibold text-slate-900">
-                        Nota #{nota.invoiceNumber ?? "—"}
-                      </p>
-                      <p className="text-xs text-slate-500">{nota.supplierName ?? "—"}</p>
-                    </div>
-                    <span className="font-display font-bold text-slate-900">
-                      {formatCurrency(nota.totalAmount)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
-                    <span>
-                      Emissão: {nota.issuedAt ? new Date(nota.issuedAt).toLocaleDateString("pt-BR") : "—"}
-                    </span>
-                    <span>Importado em: {new Date(nota.createdAt).toLocaleDateString("pt-BR")}</span>
-                  </div>
+            {filteredHistory.length === 0 ? (
+              <div className="flex min-h-[260px] flex-col items-center justify-center p-8 text-center">
+                <div className="rounded-2xl bg-primary/10 p-4 text-primary border border-primary/20">
+                  <ReceiptIcon size={32} />
                 </div>
-              ))}
-            </div>
-
-            {/* Rodapé / Paginação do Histórico de Compras */}
-            <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                <span>
-                  Exibindo <strong className="font-semibold text-slate-900">{filteredHistory.length > 0 ? (validHistoryPage - 1) * historyPageSize + 1 : 0}</strong> a{" "}
-                  <strong className="font-semibold text-slate-900">{Math.min(validHistoryPage * historyPageSize, filteredHistory.length)}</strong> de{" "}
-                  <strong className="font-semibold text-slate-900">{filteredHistory.length}</strong> {filteredHistory.length === 1 ? "nota" : "notas"}
-                  {filteredHistory.length !== notasCompra.length && (
-                    <span className="ml-1 text-slate-400">
-                      (total: {notasCompra.length})
-                    </span>
-                  )}
-                </span>
-                {historySearch.trim() && (
-                  <span className="text-[11px] font-medium text-amber-600">
-                    (Filtro aplicado)
-                  </span>
+                <h3 className="mt-3 font-display text-base font-semibold text-slate-900">
+                  Nenhuma nota fiscal encontrada
+                </h3>
+                <p className="mt-1 max-w-sm text-xs text-slate-500">
+                  {isFilteringHistory
+                    ? "Tente ajustar os termos da busca para localizar a nota desejada."
+                    : "Faça o upload do seu primeiro arquivo XML para registrar compras."}
+                </p>
+                {isFilteringHistory ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setHistorySearch("");
+                      setHistorySort("DATE_DESC");
+                      setHistoryPage(1);
+                    }}
+                    className="mt-4 gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition-all"
+                  >
+                    <FilterXIcon size={14} />
+                    Limpar filtros
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setActiveTab("importar");
+                      fileInputRef.current?.click();
+                    }}
+                    className="mt-4 gap-1.5 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
+                  >
+                    <UploadIcon size={14} />
+                    Importar primeiro XML
+                  </Button>
                 )}
               </div>
+            ) : (
+              <>
+                {/* Desktop Table View */}
+                <div className="hidden overflow-x-auto md:block">
+                  <Table>
+                    <TableHeader className="bg-slate-50/80">
+                      <TableRow className="border-b border-slate-200">
+                        <TableHead className="pl-4 text-xs font-semibold text-slate-700">Nº da Nota</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-700">Fornecedor</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-700">Chave de Acesso</TableHead>
+                        <TableHead className="text-right text-xs font-semibold text-slate-700">Valor Total</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-700">Data de Emissão</TableHead>
+                        <TableHead className="w-36 pr-4 text-right text-xs font-semibold text-slate-700">Importado em</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody className="divide-y divide-slate-100">
+                      {paginatedHistory.map((nota) => (
+                        <TableRow
+                          key={nota.id}
+                          className="transition-colors hover:bg-slate-50/70"
+                        >
+                          <TableCell className="pl-4 py-3.5 font-semibold text-slate-900">
+                            <span className="inline-block rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-xs font-bold text-slate-900">
+                              #{nota.invoiceNumber ?? "—"}
+                            </span>
+                          </TableCell>
 
-              {totalHistoryPages > 1 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-500">
-                    Página <strong>{validHistoryPage}</strong> de{" "}
-                    <strong>{totalHistoryPages}</strong>
-                  </span>
+                          <TableCell className="py-3.5 font-medium text-slate-800">
+                            {nota.supplierName ?? "—"}
+                          </TableCell>
 
-                  <div className="flex items-center gap-1.5">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
-                      disabled={validHistoryPage <= 1}
-                      className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
-                    >
-                      <ChevronLeftIcon size={14} />
-                      <span>Anterior</span>
-                    </Button>
+                          <TableCell className="py-3.5 font-mono text-xs text-slate-400">
+                            {nota.accessKey ? `${nota.accessKey.slice(0, 16)}...` : "—"}
+                          </TableCell>
 
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setHistoryPage((p) => Math.min(totalHistoryPages, p + 1))}
-                      disabled={validHistoryPage >= totalHistoryPages}
-                      className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
-                    >
-                      <span>Próxima</span>
-                      <ChevronRightIcon size={14} />
-                    </Button>
-                  </div>
+                          <TableCell className="py-3.5 text-right font-display text-sm font-bold text-slate-900">
+                            {formatCurrency(nota.totalAmount)}
+                          </TableCell>
+
+                          <TableCell className="py-3.5 text-xs text-slate-500">
+                            {nota.issuedAt ? new Date(nota.issuedAt).toLocaleDateString("pt-BR") : "—"}
+                          </TableCell>
+
+                          <TableCell className="pr-4 py-3.5 text-right text-xs text-slate-500">
+                            {new Date(nota.createdAt).toLocaleDateString("pt-BR")}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
-              )}
-            </div>
+
+                {/* Mobile View */}
+                <div className="divide-y divide-slate-100 md:hidden">
+                  {paginatedHistory.map((nota) => (
+                    <div key={nota.id} className="p-4 space-y-2">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-semibold text-slate-900">
+                            Nota #{nota.invoiceNumber ?? "—"}
+                          </p>
+                          <p className="text-xs text-slate-500">{nota.supplierName ?? "—"}</p>
+                        </div>
+                        <span className="font-display font-bold text-slate-900">
+                          {formatCurrency(nota.totalAmount)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-slate-400 pt-1 border-t border-slate-100">
+                        <span>
+                          Emissão: {nota.issuedAt ? new Date(nota.issuedAt).toLocaleDateString("pt-BR") : "—"}
+                        </span>
+                        <span>Importado: {new Date(nota.createdAt).toLocaleDateString("pt-BR")}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <TablePagination
+                  filteredCount={filteredHistory.length}
+                  totalCount={notasCompra.length}
+                  isFiltering={isFilteringHistory}
+                  currentPage={validHistoryPage}
+                  totalPages={totalHistoryPages}
+                  pageSize={historyPageSize}
+                  onPageSizeChange={(sz) => {
+                    setHistoryPageSize(sz);
+                    setHistoryPage(1);
+                  }}
+                  onPageChange={setHistoryPage}
+                  itemLabelSingular="nota"
+                  itemLabelPlural="notas"
+                />
+              </>
+            )}
           </Card>
         </TabsContent>
 
@@ -946,31 +1152,65 @@ export function ComprasClient({
           <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
             {/* Filtros de Fornecedores */}
             <div className="border-b border-slate-100 bg-slate-50/50 p-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="relative max-w-sm flex-1">
-                  <SearchIcon
-                    size={15}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
-                  <Input
-                    placeholder="Buscar por razão social, CNPJ ou telefone..."
-                    value={supplierSearch}
-                    onChange={(e) => {
-                      setSupplierSearch(e.target.value);
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="grid flex-1 grid-cols-1 gap-2.5 sm:grid-cols-3">
+                  {/* Busca */}
+                  <div className="relative">
+                    <SearchIcon
+                      size={15}
+                      className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                    />
+                    <Input
+                      placeholder="Buscar por razão social, CNPJ ou telefone..."
+                      value={supplierSearch}
+                      onChange={(e) => {
+                        setSupplierSearch(e.target.value);
+                        setSupplierPage(1);
+                      }}
+                      className="h-10 rounded-xl border-slate-200 bg-white pl-9 pr-8 text-xs text-slate-900 placeholder:text-slate-400 transition-colors focus:border-primary/50 focus:ring-2 focus:ring-primary/20 sm:text-sm"
+                    />
+                    {supplierSearch && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSupplierSearch("");
+                          setSupplierPage(1);
+                        }}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        <XIcon size={14} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Ordenação */}
+                  <Select
+                    value={supplierSort}
+                    onValueChange={(val) => {
+                      setSupplierSort(val);
                       setSupplierPage(1);
                     }}
-                    className="h-10 rounded-xl border-slate-200 bg-white pl-9 text-xs transition-colors focus:bg-white sm:text-sm"
-                  />
+                  >
+                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs font-medium text-slate-700">
+                      <SelectValue placeholder="Ordenar..." />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+                      <SelectItem value="NAME_ASC">Razão Social (A-Z)</SelectItem>
+                      <SelectItem value="DATE_DESC">Mais recentes</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                {supplierSearch.trim() && (
+                {isFilteringSuppliers && (
                   <Button
                     variant="ghost"
+                    size="sm"
                     onClick={() => {
                       setSupplierSearch("");
+                      setSupplierSort("NAME_ASC");
                       setSupplierPage(1);
                     }}
-                    className="h-10 gap-1.5 rounded-xl px-3 text-xs text-slate-500 hover:text-slate-900"
+                    className="h-10 gap-1.5 rounded-xl px-3 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                   >
                     <FilterXIcon size={14} />
                     <span>Limpar</span>
@@ -979,148 +1219,162 @@ export function ComprasClient({
               </div>
             </div>
 
-            <div className="hidden md:block">
-              <Table>
-                <TableHeader className="bg-slate-50/80">
-                  <TableRow className="border-slate-200/80 hover:bg-transparent">
-                    <TableHead className="pl-4 font-semibold text-slate-700">Razão Social</TableHead>
-                    <TableHead className="font-semibold text-slate-700">CNPJ</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Telefone</TableHead>
-                    <TableHead className="font-semibold text-slate-700">E-mail</TableHead>
-                    <TableHead className="w-16 pr-4 text-right font-semibold text-slate-700">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedSuppliers.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="h-40 text-center">
-                        <div className="flex flex-col items-center justify-center gap-2 text-slate-500">
-                          <PackageCheckIcon size={32} className="text-slate-400" />
-                          <p className="text-sm font-medium">Nenhum fornecedor encontrado</p>
-                          <p className="text-xs text-slate-400">
-                            Cadastre fornecedores parceiros para registrar entradas de notas fiscais.
-                          </p>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    paginatedSuppliers.map((f) => (
-                      <TableRow
-                        key={f.id}
-                        className="border-slate-100 transition-colors hover:bg-slate-50/70"
-                      >
-                        <TableCell className="pl-4 py-3 font-semibold text-slate-900">
-                          {f.companyName}
-                        </TableCell>
-
-                        <TableCell className="py-3 font-mono text-xs text-slate-500">
-                          {f.cnpj ?? "—"}
-                        </TableCell>
-
-                        <TableCell className="py-3 text-xs text-slate-600">
-                          {f.phone ?? "—"}
-                        </TableCell>
-
-                        <TableCell className="py-3 text-xs text-slate-600">
-                          {f.email ?? "—"}
-                        </TableCell>
-
-                        <TableCell className="pr-4 py-3 text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-lg text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-                            onClick={() => setDeletingSupplier(f)}
-                          >
-                            <Trash2Icon size={14} />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-
-            {/* Mobile View */}
-            <div className="divide-y divide-slate-100 md:hidden">
-              {paginatedSuppliers.map((f) => (
-                <div key={f.id} className="p-4 space-y-1.5">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="font-semibold text-slate-900">{f.companyName}</p>
-                      <p className="font-mono text-xs text-slate-400">{f.cnpj ?? "—"}</p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-xs text-rose-600 hover:bg-rose-50"
-                      onClick={() => setDeletingSupplier(f)}
-                    >
-                      Remover
-                    </Button>
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
-                    <span>{f.phone ?? "Sem telefone"}</span>
-                    <span>{f.email ?? "Sem e-mail"}</span>
-                  </div>
+            {filteredSuppliers.length === 0 ? (
+              <div className="flex min-h-[260px] flex-col items-center justify-center p-8 text-center">
+                <div className="rounded-2xl bg-primary/10 p-4 text-primary border border-primary/20">
+                  <PackageCheckIcon size={32} />
                 </div>
-              ))}
-            </div>
-
-            {/* Rodapé / Paginação de Fornecedores */}
-            <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                <span>
-                  Exibindo <strong className="font-semibold text-slate-900">{filteredSuppliers.length > 0 ? (validSupplierPage - 1) * supplierPageSize + 1 : 0}</strong> a{" "}
-                  <strong className="font-semibold text-slate-900">{Math.min(validSupplierPage * supplierPageSize, filteredSuppliers.length)}</strong> de{" "}
-                  <strong className="font-semibold text-slate-900">{filteredSuppliers.length}</strong> {filteredSuppliers.length === 1 ? "fornecedor" : "fornecedores"}
-                  {filteredSuppliers.length !== fornecedores.length && (
-                    <span className="ml-1 text-slate-400">
-                      (total: {fornecedores.length})
-                    </span>
-                  )}
-                </span>
-                {supplierSearch.trim() && (
-                  <span className="text-[11px] font-medium text-amber-600">
-                    (Filtro aplicado)
-                  </span>
+                <h3 className="mt-3 font-display text-base font-semibold text-slate-900">
+                  Nenhum fornecedor encontrado
+                </h3>
+                <p className="mt-1 max-w-sm text-xs text-slate-500">
+                  {isFilteringSuppliers
+                    ? "Tente ajustar os filtros de busca para encontrar o fornecedor."
+                    : "Cadastre fornecedores parceiros para registrar entradas de notas fiscais."}
+                </p>
+                {isFilteringSuppliers ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSupplierSearch("");
+                      setSupplierSort("NAME_ASC");
+                      setSupplierPage(1);
+                    }}
+                    className="mt-4 gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition-all"
+                  >
+                    <FilterXIcon size={14} />
+                    Limpar filtros
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={() => setFornecedorFormOpen(true)}
+                    className="mt-4 gap-1.5 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
+                  >
+                    <PlusIcon size={14} />
+                    Cadastrar primeiro fornecedor
+                  </Button>
                 )}
               </div>
+            ) : (
+              <>
+                {/* Desktop Table View */}
+                <div className="hidden overflow-x-auto md:block">
+                  <Table>
+                    <TableHeader className="bg-slate-50/80">
+                      <TableRow className="border-b border-slate-200">
+                        <TableHead className="pl-4 text-xs font-semibold text-slate-700">Razão Social</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-700">CNPJ</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-700">Telefone</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-700">E-mail</TableHead>
+                        <TableHead className="w-20 pr-4 text-right text-xs font-semibold text-slate-700">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody className="divide-y divide-slate-100">
+                      {paginatedSuppliers.map((f) => (
+                        <TableRow
+                          key={f.id}
+                          className="transition-colors hover:bg-slate-50/70"
+                        >
+                          <TableCell className="pl-4 py-3.5 font-semibold text-slate-900">
+                            {f.companyName}
+                          </TableCell>
 
-              {totalSupplierPages > 1 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-500">
-                    Página <strong>{validSupplierPage}</strong> de{" "}
-                    <strong>{totalSupplierPages}</strong>
-                  </span>
+                          <TableCell className="py-3.5 font-mono text-xs text-slate-500">
+                            {f.cnpj ? (
+                              <span className="inline-block rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-xs font-bold text-slate-900">
+                                {f.cnpj}
+                              </span>
+                            ) : (
+                              "—"
+                            )}
+                          </TableCell>
 
-                  <div className="flex items-center gap-1.5">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSupplierPage((p) => Math.max(1, p - 1))}
-                      disabled={validSupplierPage <= 1}
-                      className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
-                    >
-                      <ChevronLeftIcon size={14} />
-                      <span>Anterior</span>
-                    </Button>
+                          <TableCell className="py-3.5 text-xs text-slate-600">
+                            {f.phone ?? "—"}
+                          </TableCell>
 
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSupplierPage((p) => Math.min(totalSupplierPages, p + 1))}
-                      disabled={validSupplierPage >= totalSupplierPages}
-                      className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
-                    >
-                      <span>Próxima</span>
-                      <ChevronRightIcon size={14} />
-                    </Button>
-                  </div>
+                          <TableCell className="py-3.5 text-xs text-slate-600">
+                            {f.email ?? "—"}
+                          </TableCell>
+
+                          <TableCell className="pr-4 py-3.5 text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                                >
+                                  <MoreHorizontalIcon size={16} />
+                                  <span className="sr-only">Opções</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent
+                                align="end"
+                                className="w-44 rounded-xl border-slate-200 bg-white p-1 text-slate-900 shadow-xl"
+                              >
+                                <DropdownMenuItem
+                                  onClick={() => setDeletingSupplier(f)}
+                                  className="gap-2 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 focus:bg-rose-50 focus:text-rose-700"
+                                >
+                                  <Trash2Icon size={14} />
+                                  Excluir fornecedor
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
-              )}
-            </div>
+
+                {/* Mobile View */}
+                <div className="divide-y divide-slate-100 md:hidden">
+                  {paginatedSuppliers.map((f) => (
+                    <div key={f.id} className="p-4 space-y-2">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-semibold text-slate-900">{f.companyName}</p>
+                          <p className="font-mono text-xs text-slate-400">{f.cnpj ?? "—"}</p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 text-xs font-semibold text-rose-600 hover:bg-rose-50"
+                          onClick={() => setDeletingSupplier(f)}
+                        >
+                          <Trash2Icon size={13} className="mr-1" />
+                          Remover
+                        </Button>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100">
+                        <span>{f.phone ?? "Sem telefone"}</span>
+                        <span>{f.email ?? "Sem e-mail"}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <TablePagination
+                  filteredCount={filteredSuppliers.length}
+                  totalCount={fornecedores.length}
+                  isFiltering={isFilteringSuppliers}
+                  currentPage={validSupplierPage}
+                  totalPages={totalSupplierPages}
+                  pageSize={supplierPageSize}
+                  onPageSizeChange={(sz) => {
+                    setSupplierPageSize(sz);
+                    setSupplierPage(1);
+                  }}
+                  onPageChange={setSupplierPage}
+                  itemLabelSingular="fornecedor"
+                  itemLabelPlural="fornecedores"
+                />
+              </>
+            )}
           </Card>
         </TabsContent>
       </Tabs>

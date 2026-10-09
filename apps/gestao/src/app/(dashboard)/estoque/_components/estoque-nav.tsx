@@ -29,15 +29,15 @@ export function EstoqueNav() {
               key={item.href}
               href={fullPath}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all",
+                "inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all",
                 isActive
-                  ? "bg-white text-slate-900 shadow-sm"
+                  ? "bg-white text-primary shadow-xs ring-1 ring-primary/20 font-bold"
                   : "text-slate-600 hover:bg-white/60 hover:text-slate-900",
               )}
             >
               <Icon
-                size={14}
-                className={cn(isActive ? "text-slate-900" : "text-slate-500")}
+                size={15}
+                className={cn(isActive ? "text-primary" : "text-slate-500")}
               />
               <span>{item.label}</span>
             </Link>
@@ -47,3 +47,4 @@ export function EstoqueNav() {
     </div>
   );
 }
+

@@ -7,13 +7,17 @@ import {
   CheckCircle2Icon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  ChevronsLeftIcon,
+  ChevronsRightIcon,
   FilterXIcon,
+  MoreHorizontalIcon,
   PackageIcon,
   PencilIcon,
   PlusIcon,
   SearchIcon,
   Trash2Icon,
   WarehouseIcon,
+  XIcon,
 } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -37,7 +41,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -91,6 +101,126 @@ function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
 
+// ── Shared Table Pagination ──────────────────────────────────────────────────
+function TablePagination({
+  filteredCount,
+  totalCount,
+  isFiltering,
+  currentPage,
+  totalPages,
+  pageSize,
+  onPageSizeChange,
+  onPageChange,
+  itemLabelSingular,
+  itemLabelPlural,
+}: {
+  filteredCount: number;
+  totalCount: number;
+  isFiltering: boolean;
+  currentPage: number;
+  totalPages: number;
+  pageSize: number;
+  onPageSizeChange: (size: number) => void;
+  onPageChange: (page: number) => void;
+  itemLabelSingular: string;
+  itemLabelPlural: string;
+}) {
+  const startIndex = filteredCount > 0 ? (currentPage - 1) * pageSize + 1 : 0;
+  const endIndex = Math.min(currentPage * pageSize, filteredCount);
+
+  return (
+    <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+        <span>
+          Exibindo <strong className="font-semibold text-slate-900">{startIndex}</strong> a{" "}
+          <strong className="font-semibold text-slate-900">{endIndex}</strong> de{" "}
+          <strong className="font-semibold text-slate-900">{filteredCount}</strong>{" "}
+          {filteredCount === 1 ? itemLabelSingular : itemLabelPlural}
+          {filteredCount !== totalCount && (
+            <span className="ml-1 text-slate-400">
+              (total: {totalCount})
+            </span>
+          )}
+        </span>
+        {isFiltering && (
+          <span className="text-[11px] font-medium text-amber-600">
+            (Filtros aplicados)
+          </span>
+        )}
+        <span className="hidden sm:inline text-slate-300">|</span>
+        <div className="flex items-center gap-1.5">
+          <span>Exibir</span>
+          <Select
+            value={String(pageSize)}
+            onValueChange={(val) => onPageSizeChange(Number(val))}
+          >
+            <SelectTrigger className="h-8 w-16 rounded-lg border-slate-200 bg-white text-xs font-medium text-slate-700">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+              <SelectItem value="5">5</SelectItem>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+            </SelectContent>
+          </Select>
+          <span>por página</span>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-2 sm:justify-end">
+        <span className="text-xs text-slate-500 mr-1">
+          Página <strong className="font-semibold text-primary">{currentPage}</strong> de{" "}
+          <strong className="font-semibold text-slate-900">{totalPages}</strong>
+        </span>
+
+        <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="icon"
+            disabled={currentPage <= 1}
+            onClick={() => onPageChange(1)}
+            className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-primary/10 hover:text-primary hover:border-primary/30 disabled:opacity-40 transition-all"
+            title="Primeira página"
+          >
+            <ChevronsLeftIcon size={14} />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            disabled={currentPage <= 1}
+            onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+            className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-primary/10 hover:text-primary hover:border-primary/30 disabled:opacity-40 transition-all"
+            title="Página anterior"
+          >
+            <ChevronLeftIcon size={14} />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            disabled={currentPage >= totalPages}
+            onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+            className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-primary/10 hover:text-primary hover:border-primary/30 disabled:opacity-40 transition-all"
+            title="Próxima página"
+          >
+            <ChevronRightIcon size={14} />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            disabled={currentPage >= totalPages}
+            onClick={() => onPageChange(totalPages)}
+            className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-primary/10 hover:text-primary hover:border-primary/30 disabled:opacity-40 transition-all"
+            title="Última página"
+          >
+            <ChevronsRightIcon size={14} />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function EstoqueClient({
   slug,
   products,
@@ -104,32 +234,41 @@ export function EstoqueClient({
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [productTrackFilter, setProductTrackFilter] = useState("all");
+  const [productSort, setProductSort] = useState("NAME_ASC");
   const [productPage, setProductPage] = useState(1);
-  const productPageSize = 10;
+  const [productPageSize, setProductPageSize] = useState(10);
   const [adjustProduct, setAdjustProduct] = useState<ProductWithCategory | null>(null);
   const [isPending, startTransition] = useTransition();
 
   // ── Inventário state ───────────────────────────────────────────────────────
   const [invSearch, setInvSearch] = useState("");
   const [invTypeFilter, setInvTypeFilter] = useState("all");
+  const [invStatusFilter, setInvStatusFilter] = useState("all");
+  const [invSort, setInvSort] = useState("NAME_ASC");
   const [invPage, setInvPage] = useState(1);
-  const invPageSize = 10;
+  const [invPageSize, setInvPageSize] = useState(10);
   const [invFormOpen, setInvFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [deleteConfirmItem, setDeleteConfirmItem] = useState<InventoryItem | null>(null);
   const [isDeleting, startDeleteTransition] = useTransition();
 
-  // ── Perdas state ───────────────────────────────────────────────────────────
-  const [lossDialogOpen, setLossDialogOpen] = useState(false);
-  const [isLossPending, startLossTransition] = useTransition();
-  const [lossPage, setLossPage] = useState(1);
-  const lossPageSize = 10;
-
   // ── Lotes state ────────────────────────────────────────────────────────────
+  const [batchSearch, setBatchSearch] = useState("");
+  const [batchStatusFilter, setBatchStatusFilter] = useState("all");
+  const [batchSort, setBatchSort] = useState("EXP_ASC");
   const [batchDialogOpen, setBatchDialogOpen] = useState(false);
   const [isBatchPending, startBatchTransition] = useTransition();
   const [batchPage, setBatchPage] = useState(1);
-  const batchPageSize = 10;
+  const [batchPageSize, setBatchPageSize] = useState(10);
+
+  // ── Perdas state ───────────────────────────────────────────────────────────
+  const [lossSearch, setLossSearch] = useState("");
+  const [lossReasonFilter, setLossReasonFilter] = useState("all");
+  const [lossSort, setLossSort] = useState("DATE_DESC");
+  const [lossDialogOpen, setLossDialogOpen] = useState(false);
+  const [isLossPending, startLossTransition] = useTransition();
+  const [lossPage, setLossPage] = useState(1);
+  const [lossPageSize, setLossPageSize] = useState(10);
 
   // ── Batch/expiry helpers ───────────────────────────────────────────────────
   const today = new Date();
@@ -163,24 +302,31 @@ export function EstoqueClient({
 
   // ── Cardápio Products Filtering & Pagination ───────────────────────────────
   const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
-      const matchesSearch =
-        search.trim() === "" ||
-        p.name.toLowerCase().includes(search.toLowerCase().trim()) ||
-        (p.sku?.toLowerCase().includes(search.toLowerCase().trim()) ?? false);
+    return products
+      .filter((p) => {
+        const matchesSearch =
+          search.trim() === "" ||
+          p.name.toLowerCase().includes(search.toLowerCase().trim()) ||
+          (p.sku?.toLowerCase().includes(search.toLowerCase().trim()) ?? false);
 
-      const matchesCategory =
-        categoryFilter === "all" || p.categoryId === categoryFilter;
+        const matchesCategory =
+          categoryFilter === "all" || p.categoryId === categoryFilter;
 
-      const matchesTrack =
-        productTrackFilter === "all" ||
-        (productTrackFilter === "tracked" && p.trackInventory) ||
-        (productTrackFilter === "low" && p.trackInventory && p.stockQuantity <= p.lowStockThreshold) ||
-        (productTrackFilter === "untracked" && !p.trackInventory);
+        const matchesTrack =
+          productTrackFilter === "all" ||
+          (productTrackFilter === "tracked" && p.trackInventory) ||
+          (productTrackFilter === "low" && p.trackInventory && p.stockQuantity <= p.lowStockThreshold) ||
+          (productTrackFilter === "untracked" && !p.trackInventory);
 
-      return matchesSearch && matchesCategory && matchesTrack;
-    });
-  }, [products, search, categoryFilter, productTrackFilter]);
+        return matchesSearch && matchesCategory && matchesTrack;
+      })
+      .sort((a, b) => {
+        if (productSort === "NAME_ASC") return a.name.localeCompare(b.name);
+        if (productSort === "STOCK_ASC") return a.stockQuantity - b.stockQuantity;
+        if (productSort === "STOCK_DESC") return b.stockQuantity - a.stockQuantity;
+        return 0;
+      });
+  }, [products, search, categoryFilter, productTrackFilter, productSort]);
 
   const totalProductPages = Math.max(1, Math.ceil(filteredProducts.length / productPageSize));
   const validProductPage = Math.min(productPage, totalProductPages);
@@ -190,28 +336,47 @@ export function EstoqueClient({
   }, [filteredProducts, validProductPage, productPageSize]);
 
   const isFilteringProducts =
-    search.trim() !== "" || categoryFilter !== "all" || productTrackFilter !== "all";
+    search.trim() !== "" ||
+    categoryFilter !== "all" ||
+    productTrackFilter !== "all" ||
+    productSort !== "NAME_ASC";
 
   const handleClearProductFilters = () => {
     setSearch("");
     setCategoryFilter("all");
     setProductTrackFilter("all");
+    setProductSort("NAME_ASC");
     setProductPage(1);
   };
 
   // ── Inventário Filtering & Pagination ──────────────────────────────────────
   const filteredInv = useMemo(() => {
-    return inventoryItems.filter((item) => {
-      const matchesSearch =
-        invSearch.trim() === "" ||
-        item.name.toLowerCase().includes(invSearch.toLowerCase().trim()) ||
-        (item.sku?.toLowerCase().includes(invSearch.toLowerCase().trim()) ?? false);
+    return inventoryItems
+      .filter((item) => {
+        const matchesSearch =
+          invSearch.trim() === "" ||
+          item.name.toLowerCase().includes(invSearch.toLowerCase().trim()) ||
+          (item.description?.toLowerCase().includes(invSearch.toLowerCase().trim()) ?? false) ||
+          (item.sku?.toLowerCase().includes(invSearch.toLowerCase().trim()) ?? false);
 
-      const matchesType = invTypeFilter === "all" || item.type === invTypeFilter;
+        const matchesType = invTypeFilter === "all" || item.type === invTypeFilter;
 
-      return matchesSearch && matchesType;
-    });
-  }, [inventoryItems, invSearch, invTypeFilter]);
+        const isLow =
+          item.lowStockThreshold > 0 && item.currentQuantity <= item.lowStockThreshold;
+        const matchesStatus =
+          invStatusFilter === "all" ||
+          (invStatusFilter === "low" && isLow) ||
+          (invStatusFilter === "normal" && !isLow);
+
+        return matchesSearch && matchesType && matchesStatus;
+      })
+      .sort((a, b) => {
+        if (invSort === "NAME_ASC") return a.name.localeCompare(b.name);
+        if (invSort === "STOCK_ASC") return a.currentQuantity - b.currentQuantity;
+        if (invSort === "STOCK_DESC") return b.currentQuantity - a.currentQuantity;
+        return 0;
+      });
+  }, [inventoryItems, invSearch, invTypeFilter, invStatusFilter, invSort]);
 
   const totalInvPages = Math.max(1, Math.ceil(filteredInv.length / invPageSize));
   const validInvPage = Math.min(invPage, totalInvPages);
@@ -220,29 +385,116 @@ export function EstoqueClient({
     return filteredInv.slice(start, start + invPageSize);
   }, [filteredInv, validInvPage, invPageSize]);
 
-  const isFilteringInv = invSearch.trim() !== "" || invTypeFilter !== "all";
+  const isFilteringInv =
+    invSearch.trim() !== "" ||
+    invTypeFilter !== "all" ||
+    invStatusFilter !== "all" ||
+    invSort !== "NAME_ASC";
 
   const handleClearInvFilters = () => {
     setInvSearch("");
     setInvTypeFilter("all");
+    setInvStatusFilter("all");
+    setInvSort("NAME_ASC");
     setInvPage(1);
   };
 
-  // ── Lotes Pagination ───────────────────────────────────────────────────────
-  const totalBatchPages = Math.max(1, Math.ceil(lotes.length / batchPageSize));
+  // ── Lotes Filtering & Pagination ───────────────────────────────────────────
+  const filteredBatches = useMemo(() => {
+    return lotes
+      .filter((lote) => {
+        const matchesSearch =
+          batchSearch.trim() === "" ||
+          lote.inventoryItemName.toLowerCase().includes(batchSearch.toLowerCase().trim()) ||
+          (lote.batchCode?.toLowerCase().includes(batchSearch.toLowerCase().trim()) ?? false);
+
+        const status = getBatchStatus(lote.expirationDate);
+        const matchesStatus =
+          batchStatusFilter === "all" ||
+          (batchStatusFilter === "expired" && status === "expired") ||
+          (batchStatusFilter === "warning" && status === "warning") ||
+          (batchStatusFilter === "ok" && status === "ok");
+
+        return matchesSearch && matchesStatus;
+      })
+      .sort((a, b) => {
+        if (batchSort === "EXP_ASC") {
+          if (!a.expirationDate) return 1;
+          if (!b.expirationDate) return -1;
+          return new Date(a.expirationDate).getTime() - new Date(b.expirationDate).getTime();
+        }
+        if (batchSort === "EXP_DESC") {
+          if (!a.expirationDate) return 1;
+          if (!b.expirationDate) return -1;
+          return new Date(b.expirationDate).getTime() - new Date(a.expirationDate).getTime();
+        }
+        if (batchSort === "QTY_DESC") return b.quantity - a.quantity;
+        return 0;
+      });
+  }, [lotes, batchSearch, batchStatusFilter, batchSort]);
+
+  const totalBatchPages = Math.max(1, Math.ceil(filteredBatches.length / batchPageSize));
   const validBatchPage = Math.min(batchPage, totalBatchPages);
   const paginatedBatches = useMemo(() => {
     const start = (validBatchPage - 1) * batchPageSize;
-    return lotes.slice(start, start + batchPageSize);
-  }, [lotes, validBatchPage, batchPageSize]);
+    return filteredBatches.slice(start, start + batchPageSize);
+  }, [filteredBatches, validBatchPage, batchPageSize]);
 
-  // ── Perdas Pagination ──────────────────────────────────────────────────────
-  const totalLossPages = Math.max(1, Math.ceil(perdas.length / lossPageSize));
+  const isFilteringBatches =
+    batchSearch.trim() !== "" ||
+    batchStatusFilter !== "all" ||
+    batchSort !== "EXP_ASC";
+
+  const handleClearBatchFilters = () => {
+    setBatchSearch("");
+    setBatchStatusFilter("all");
+    setBatchSort("EXP_ASC");
+    setBatchPage(1);
+  };
+
+  // ── Perdas Filtering & Pagination ──────────────────────────────────────────
+  const filteredLosses = useMemo(() => {
+    return perdas
+      .filter((perda) => {
+        const matchesSearch =
+          lossSearch.trim() === "" ||
+          perda.inventoryItemName.toLowerCase().includes(lossSearch.toLowerCase().trim()) ||
+          (perda.notes?.toLowerCase().includes(lossSearch.toLowerCase().trim()) ?? false);
+
+        const matchesReason =
+          lossReasonFilter === "all" || perda.reason === lossReasonFilter;
+
+        return matchesSearch && matchesReason;
+      })
+      .sort((a, b) => {
+        if (lossSort === "DATE_DESC") {
+          return new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime();
+        }
+        if (lossSort === "LOSS_DESC") {
+          return b.financialLoss - a.financialLoss;
+        }
+        return 0;
+      });
+  }, [perdas, lossSearch, lossReasonFilter, lossSort]);
+
+  const totalLossPages = Math.max(1, Math.ceil(filteredLosses.length / lossPageSize));
   const validLossPage = Math.min(lossPage, totalLossPages);
   const paginatedLosses = useMemo(() => {
     const start = (validLossPage - 1) * lossPageSize;
-    return perdas.slice(start, start + lossPageSize);
-  }, [perdas, validLossPage, lossPageSize]);
+    return filteredLosses.slice(start, start + lossPageSize);
+  }, [filteredLosses, validLossPage, lossPageSize]);
+
+  const isFilteringLosses =
+    lossSearch.trim() !== "" ||
+    lossReasonFilter !== "all" ||
+    lossSort !== "DATE_DESC";
+
+  const handleClearLossFilters = () => {
+    setLossSearch("");
+    setLossReasonFilter("all");
+    setLossSort("DATE_DESC");
+    setLossPage(1);
+  };
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handleAdjust = (e: React.FormEvent<HTMLFormElement>) => {
@@ -325,7 +577,7 @@ export function EstoqueClient({
                     min="0"
                     defaultValue={String(adjustProduct.stockQuantity)}
                     required
-                    className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm focus:bg-white"
+                    className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -339,7 +591,7 @@ export function EstoqueClient({
                     min="0"
                     defaultValue={String(adjustProduct.lowStockThreshold)}
                     required
-                    className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm focus:bg-white"
+                    className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
               </div>
@@ -353,7 +605,7 @@ export function EstoqueClient({
                   name="reason"
                   placeholder="Ex.: Reposição de mercadorias, contagem física..."
                   required
-                  className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm focus:bg-white"
+                  className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
                 />
               </div>
 
@@ -362,14 +614,14 @@ export function EstoqueClient({
                   type="button"
                   variant="outline"
                   onClick={() => setAdjustProduct(null)}
-                  className="h-10 rounded-full border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  className="h-10 rounded-full border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-all"
                 >
                   Cancelar
                 </Button>
                 <Button
                   type="submit"
                   disabled={isPending}
-                  className="h-10 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90"
+                  className="h-10 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
                 >
                   {isPending ? "Atualizando..." : "Salvar Saldo"}
                 </Button>
@@ -433,7 +685,7 @@ export function EstoqueClient({
                 id="loss-item"
                 name="inventoryItemId"
                 required
-                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs sm:text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900"
+                className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs sm:text-sm text-slate-900 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
                 <option value="">Selecione o insumo...</option>
                 {inventoryItems.map((i) => (
@@ -453,7 +705,7 @@ export function EstoqueClient({
                   id="loss-reason"
                   name="reason"
                   required
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs sm:text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs sm:text-sm text-slate-900 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
                 >
                   <option value="VENCIDO">Vencido</option>
                   <option value="DANIFICADO">Danificado</option>
@@ -474,7 +726,7 @@ export function EstoqueClient({
                   step="0.001"
                   required
                   placeholder="Ex.: 2.5"
-                  className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm focus:bg-white"
+                  className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
                 />
               </div>
             </div>
@@ -490,7 +742,7 @@ export function EstoqueClient({
                 min="0"
                 step="0.01"
                 placeholder="Ex.: 35.00"
-                className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm focus:bg-white"
+                className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
               />
             </div>
 
@@ -502,7 +754,7 @@ export function EstoqueClient({
                 id="loss-notes"
                 name="notes"
                 placeholder="Ex.: Embalagem rasgada no descarregamento..."
-                className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm focus:bg-white"
+                className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
               />
             </div>
 
@@ -511,7 +763,7 @@ export function EstoqueClient({
                 type="button"
                 variant="outline"
                 onClick={() => setLossDialogOpen(false)}
-                className="h-10 rounded-full border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                className="h-10 rounded-full border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-all"
               >
                 Cancelar
               </Button>
@@ -519,7 +771,7 @@ export function EstoqueClient({
                 type="submit"
                 variant="destructive"
                 disabled={isLossPending}
-                className="h-10 rounded-full px-5 text-xs font-semibold"
+                className="h-10 rounded-full px-5 text-xs font-semibold transition-all"
               >
                 {isLossPending ? "Registrando..." : "Registrar Desperdício"}
               </Button>
@@ -563,7 +815,7 @@ export function EstoqueClient({
                 id="batch-item"
                 name="inventoryItemId"
                 required
-                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs sm:text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900"
+                className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs sm:text-sm text-slate-900 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
                 <option value="">Selecione o insumo...</option>
                 {inventoryItems.map((i) => (
@@ -587,7 +839,7 @@ export function EstoqueClient({
                   step="0.001"
                   required
                   placeholder="Ex.: 10"
-                  className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm focus:bg-white"
+                  className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
                 />
               </div>
               <div className="space-y-1.5">
@@ -601,7 +853,7 @@ export function EstoqueClient({
                   min="0"
                   step="0.01"
                   placeholder="Ex.: 4.50"
-                  className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm focus:bg-white"
+                  className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
                 />
               </div>
             </div>
@@ -629,7 +881,7 @@ export function EstoqueClient({
                 id="batch-code"
                 name="batchCode"
                 placeholder="Ex.: LOT-2024-001"
-                className="h-10 rounded-xl border-slate-200 bg-slate-50/70 font-mono text-sm focus:bg-white"
+                className="h-10 rounded-xl border-slate-200 bg-white font-mono text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
               />
             </div>
 
@@ -638,14 +890,14 @@ export function EstoqueClient({
                 type="button"
                 variant="outline"
                 onClick={() => setBatchDialogOpen(false)}
-                className="h-10 rounded-full border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                className="h-10 rounded-full border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-all"
               >
                 Cancelar
               </Button>
               <Button
                 type="submit"
                 disabled={isBatchPending}
-                className="h-10 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90"
+                className="h-10 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
               >
                 {isBatchPending ? "Registrando..." : "Registrar Lote"}
               </Button>
@@ -682,7 +934,7 @@ export function EstoqueClient({
           <Button
             variant="outline"
             onClick={() => setLossDialogOpen(true)}
-            className="h-10 gap-2 rounded-full border-rose-200 bg-rose-50 px-4 text-xs font-semibold text-rose-700 shadow-sm hover:bg-rose-100"
+            className="h-10 gap-2 rounded-full border border-rose-200 bg-rose-50 px-4 text-xs font-semibold text-rose-700 shadow-xs hover:bg-rose-100 transition-all"
           >
             <AlertTriangleIcon size={14} />
             <span>Registrar Perda</span>
@@ -691,7 +943,7 @@ export function EstoqueClient({
           <Button
             variant="outline"
             onClick={() => setBatchDialogOpen(true)}
-            className="h-10 gap-2 rounded-full border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+            className="h-10 gap-2 rounded-full border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition-all"
           >
             <PlusIcon size={14} />
             <span>Novo Lote</span>
@@ -712,8 +964,8 @@ export function EstoqueClient({
 
       {/* ── Metric Cards ────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-        {/* Card 1: Insumos & Produtos */}
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+        {/* Card 1: Itens no Inventário */}
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300 hover:shadow-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -733,7 +985,7 @@ export function EstoqueClient({
         </Card>
 
         {/* Card 2: Alertas de Baixo Estoque */}
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300 hover:shadow-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -765,7 +1017,7 @@ export function EstoqueClient({
         </Card>
 
         {/* Card 3: Validades & Lotes em Risco */}
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300 hover:shadow-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -797,7 +1049,7 @@ export function EstoqueClient({
         </Card>
 
         {/* Card 4: Prejuízo Acumulado */}
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300 hover:shadow-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -881,16 +1133,16 @@ export function EstoqueClient({
 
         {/* ── Tab 1: Produtos do Cardápio ─────────────────── */}
         <TabsContent value="cardapio" className="space-y-4">
-          {/* Tabela de Produtos com Filtros Integrados */}
           <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
             {/* Filtros de Produtos */}
             <div className="border-b border-slate-100 bg-slate-50/50 p-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div className="grid flex-1 grid-cols-1 gap-2.5 sm:grid-cols-3">
+                <div className="grid flex-1 grid-cols-1 gap-2.5 sm:grid-cols-4">
+                  {/* Busca */}
                   <div className="relative">
                     <SearchIcon
                       size={15}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                      className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
                     />
                     <Input
                       placeholder="Buscar por nome ou SKU..."
@@ -899,10 +1151,23 @@ export function EstoqueClient({
                         setSearch(e.target.value);
                         setProductPage(1);
                       }}
-                      className="h-10 rounded-xl border-slate-200 bg-white pl-9 text-xs transition-colors focus:bg-white sm:text-sm"
+                      className="h-10 rounded-xl border-slate-200 bg-white pl-9 pr-8 text-xs text-slate-900 placeholder:text-slate-400 transition-colors focus:border-primary/50 focus:ring-2 focus:ring-primary/20 sm:text-sm"
                     />
+                    {search && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearch("");
+                          setProductPage(1);
+                        }}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        <XIcon size={14} />
+                      </button>
+                    )}
                   </div>
 
+                  {/* Categoria */}
                   <Select
                     value={categoryFilter}
                     onValueChange={(val) => {
@@ -910,10 +1175,10 @@ export function EstoqueClient({
                       setProductPage(1);
                     }}
                   >
-                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs sm:text-sm">
+                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs font-medium text-slate-700">
                       <SelectValue placeholder="Todas as categorias" />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl border-slate-200 bg-white">
+                    <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
                       <SelectItem value="all">Todas as categorias</SelectItem>
                       {categories.map(([id, name]) => (
                         <SelectItem key={id} value={id}>
@@ -923,6 +1188,7 @@ export function EstoqueClient({
                     </SelectContent>
                   </Select>
 
+                  {/* Controle de estoque */}
                   <Select
                     value={productTrackFilter}
                     onValueChange={(val) => {
@@ -930,14 +1196,32 @@ export function EstoqueClient({
                       setProductPage(1);
                     }}
                   >
-                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs sm:text-sm">
+                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs font-medium text-slate-700">
                       <SelectValue placeholder="Controle de estoque" />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl border-slate-200 bg-white">
+                    <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
                       <SelectItem value="all">Todos os produtos</SelectItem>
-                      <SelectItem value="tracked">Rastreados</SelectItem>
+                      <SelectItem value="tracked">Monitorados</SelectItem>
                       <SelectItem value="low">Baixo Estoque</SelectItem>
                       <SelectItem value="untracked">Sem Controle</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {/* Ordenação */}
+                  <Select
+                    value={productSort}
+                    onValueChange={(val) => {
+                      setProductSort(val);
+                      setProductPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs font-medium text-slate-700">
+                      <SelectValue placeholder="Ordenar..." />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+                      <SelectItem value="NAME_ASC">Nome (A-Z)</SelectItem>
+                      <SelectItem value="STOCK_ASC">Menor Saldo</SelectItem>
+                      <SelectItem value="STOCK_DESC">Maior Saldo</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -945,8 +1229,9 @@ export function EstoqueClient({
                 {isFilteringProducts && (
                   <Button
                     variant="ghost"
+                    size="sm"
                     onClick={handleClearProductFilters}
-                    className="h-10 gap-1.5 rounded-xl px-3 text-xs text-slate-500 hover:text-slate-900"
+                    className="h-10 gap-1.5 rounded-xl px-3 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                   >
                     <FilterXIcon size={14} />
                     <span>Limpar</span>
@@ -955,221 +1240,209 @@ export function EstoqueClient({
               </div>
             </div>
 
-            <div className="hidden md:block">
-              <Table>
-                <TableHeader className="bg-slate-50/80">
-                  <TableRow className="border-slate-200/80 hover:bg-transparent">
-                    <TableHead className="pl-4 font-semibold text-slate-700">Produto</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Categoria</TableHead>
-                    <TableHead className="font-semibold text-slate-700">SKU</TableHead>
-                    <TableHead className="text-right font-semibold text-slate-700">Saldo Atual</TableHead>
-                    <TableHead className="text-right font-semibold text-slate-700">Alerta Mínimo</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Rastreio</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Status</TableHead>
-                    <TableHead className="w-20 pr-4 text-right font-semibold text-slate-700">Ajustar</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedProducts.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="h-40 text-center">
-                        <div className="flex flex-col items-center justify-center gap-2 text-slate-500">
-                          <PackageIcon size={32} className="text-slate-400" />
-                          <p className="text-sm font-medium">Nenhum produto encontrado</p>
-                          <p className="text-xs text-slate-400">
-                            Tente ajustar os filtros de busca aplicados.
-                          </p>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    paginatedProducts.map((product) => {
-                      const isLow =
-                        product.trackInventory &&
-                        product.stockQuantity <= product.lowStockThreshold;
-
-                      return (
-                        <TableRow
-                          key={product.id}
-                          className="border-slate-100 transition-colors hover:bg-slate-50/70"
-                        >
-                          <TableCell className="pl-4 py-3 font-semibold text-slate-900">
-                            {product.name}
-                          </TableCell>
-
-                          <TableCell className="py-3 text-slate-600">
-                            <span className="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
-                              {product.categoryName}
-                            </span>
-                          </TableCell>
-
-                          <TableCell className="py-3 font-mono text-xs text-slate-500">
-                            {product.sku ?? "—"}
-                          </TableCell>
-
-                          <TableCell
-                            className={cn(
-                              "py-3 text-right font-display text-sm font-bold",
-                              isLow ? "text-rose-600" : "text-slate-900",
-                            )}
-                          >
-                            {product.stockQuantity} un
-                          </TableCell>
-
-                          <TableCell className="py-3 text-right text-xs text-slate-500">
-                            {product.lowStockThreshold} un
-                          </TableCell>
-
-                          <TableCell className="py-3">
-                            <Badge
-                              variant={product.trackInventory ? "secondary" : "warning"}
-                              className="rounded-full px-2.5 py-0.5 text-xs font-medium"
-                            >
-                              {product.trackInventory ? "Monitorado" : "Sem controle"}
-                            </Badge>
-                          </TableCell>
-
-                          <TableCell className="py-3">
-                            {product.trackInventory ? (
-                              <Badge
-                                variant={isLow ? "danger" : "success"}
-                                className="rounded-full px-2.5 py-0.5 text-xs font-medium"
-                              >
-                                {isLow ? "Baixo Estoque" : "Saudável"}
-                              </Badge>
-                            ) : (
-                              <span className="text-xs text-slate-400">—</span>
-                            )}
-                          </TableCell>
-
-                          <TableCell className="pr-4 py-3 text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 gap-1.5 rounded-lg px-2 text-xs font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900"
-                              onClick={() => setAdjustProduct(product)}
-                            >
-                              <PencilIcon size={14} />
-                              <span>Ajustar</span>
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-
-            {/* Mobile View */}
-            <div className="divide-y divide-slate-100 md:hidden">
-              {paginatedProducts.length === 0 ? (
-                <div className="p-8 text-center text-slate-500">Nenhum produto encontrado.</div>
-              ) : (
-                paginatedProducts.map((product) => {
-                  const isLow =
-                    product.trackInventory &&
-                    product.stockQuantity <= product.lowStockThreshold;
-
-                  return (
-                    <div key={product.id} className="p-4 space-y-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <p className="font-semibold text-slate-900">{product.name}</p>
-                          <p className="text-xs text-slate-500">{product.categoryName}</p>
-                        </div>
-                        <Badge
-                          variant={
-                            product.trackInventory
-                              ? isLow
-                                ? "danger"
-                                : "success"
-                              : "secondary"
-                          }
-                          className="rounded-full text-[10px]"
-                        >
-                          {product.trackInventory
-                            ? isLow
-                              ? "Baixo"
-                              : "Saudável"
-                            : "Sem controle"}
-                        </Badge>
-                      </div>
-
-                      <div className="flex items-center justify-between text-xs pt-1">
-                        <span className="text-slate-500">
-                          Saldo: <strong>{product.stockQuantity} un</strong> (Alerta: {product.lowStockThreshold} un)
-                        </span>
-
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-xs"
-                          onClick={() => setAdjustProduct(product)}
-                        >
-                          <PencilIcon size={13} className="mr-1" />
-                          Ajustar
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-
-            {/* Rodapé / Paginação de Produtos do Cardápio */}
-            <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                <span>
-                  Exibindo <strong className="font-semibold text-slate-900">{filteredProducts.length > 0 ? (validProductPage - 1) * productPageSize + 1 : 0}</strong> a{" "}
-                  <strong className="font-semibold text-slate-900">{Math.min(validProductPage * productPageSize, filteredProducts.length)}</strong> de{" "}
-                  <strong className="font-semibold text-slate-900">{filteredProducts.length}</strong> {filteredProducts.length === 1 ? "produto" : "produtos"}
-                  {filteredProducts.length !== products.length && (
-                    <span className="ml-1 text-slate-400">
-                      (total: {products.length})
-                    </span>
-                  )}
-                </span>
+            {filteredProducts.length === 0 ? (
+              <div className="flex min-h-[260px] flex-col items-center justify-center p-8 text-center">
+                <div className="rounded-2xl bg-primary/10 p-4 text-primary border border-primary/20">
+                  <PackageIcon size={32} />
+                </div>
+                <h3 className="mt-3 font-display text-base font-semibold text-slate-900">
+                  Nenhum produto encontrado
+                </h3>
+                <p className="mt-1 max-w-sm text-xs text-slate-500">
+                  {isFilteringProducts
+                    ? "Tente ajustar os filtros de busca para visualizar os produtos."
+                    : "Nenhum produto cadastrado no cardápio deste restaurante."}
+                </p>
                 {isFilteringProducts && (
-                  <span className="text-[11px] font-medium text-amber-600">
-                    (Filtros aplicados)
-                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleClearProductFilters}
+                    className="mt-4 gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition-all"
+                  >
+                    <FilterXIcon size={14} />
+                    Limpar filtros
+                  </Button>
                 )}
               </div>
+            ) : (
+              <>
+                {/* Desktop Table View */}
+                <div className="hidden overflow-x-auto md:block">
+                  <Table>
+                    <TableHeader className="bg-slate-50/80">
+                      <TableRow className="border-b border-slate-200">
+                        <TableHead className="pl-4 text-xs font-semibold text-slate-700">Produto</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-700">Categoria</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-700">SKU</TableHead>
+                        <TableHead className="text-right text-xs font-semibold text-slate-700">Saldo Atual</TableHead>
+                        <TableHead className="text-right text-xs font-semibold text-slate-700">Alerta Mínimo</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-700">Rastreio</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-700">Status</TableHead>
+                        <TableHead className="w-24 pr-4 text-right text-xs font-semibold text-slate-700">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody className="divide-y divide-slate-100">
+                      {paginatedProducts.map((product) => {
+                        const isLow =
+                          product.trackInventory &&
+                          product.stockQuantity <= product.lowStockThreshold;
 
-              {totalProductPages > 1 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-500">
-                    Página <strong>{validProductPage}</strong> de{" "}
-                    <strong>{totalProductPages}</strong>
-                  </span>
+                        return (
+                          <TableRow
+                            key={product.id}
+                            className="transition-colors hover:bg-slate-50/70"
+                          >
+                            <TableCell className="pl-4 py-3.5 font-semibold text-slate-900">
+                              {product.name}
+                            </TableCell>
 
-                  <div className="flex items-center gap-1.5">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setProductPage((p) => Math.max(1, p - 1))}
-                      disabled={validProductPage <= 1}
-                      className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
-                    >
-                      <ChevronLeftIcon size={14} />
-                      <span>Anterior</span>
-                    </Button>
+                            <TableCell className="py-3.5 text-slate-600">
+                              <span className="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                                {product.categoryName}
+                              </span>
+                            </TableCell>
 
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setProductPage((p) => Math.min(totalProductPages, p + 1))}
-                      disabled={validProductPage >= totalProductPages}
-                      className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
-                    >
-                      <span>Próxima</span>
-                      <ChevronRightIcon size={14} />
-                    </Button>
-                  </div>
+                            <TableCell className="py-3.5 font-mono text-xs text-slate-500">
+                              {product.sku ? (
+                                <span className="inline-block rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-xs font-bold text-slate-900">
+                                  {product.sku}
+                                </span>
+                              ) : (
+                                "—"
+                              )}
+                            </TableCell>
+
+                            <TableCell
+                              className={cn(
+                                "py-3.5 text-right font-display text-sm font-bold",
+                                isLow ? "text-rose-600" : "text-slate-900",
+                              )}
+                            >
+                              {product.stockQuantity} un
+                            </TableCell>
+
+                            <TableCell className="py-3.5 text-right text-xs text-slate-500">
+                              {product.lowStockThreshold} un
+                            </TableCell>
+
+                            <TableCell className="py-3.5">
+                              <span
+                                className={cn(
+                                  "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
+                                  product.trackInventory
+                                    ? "bg-primary/10 text-primary border border-primary/20"
+                                    : "bg-slate-100 text-slate-600 border border-slate-200",
+                                )}
+                              >
+                                {product.trackInventory ? "Monitorado" : "Sem controle"}
+                              </span>
+                            </TableCell>
+
+                            <TableCell className="py-3.5">
+                              {product.trackInventory ? (
+                                <span
+                                  className={cn(
+                                    "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+                                    isLow
+                                      ? "border-rose-200 bg-rose-50 text-rose-700"
+                                      : "border-emerald-200 bg-emerald-50 text-emerald-700",
+                                  )}
+                                >
+                                  {isLow ? "Baixo Estoque" : "Saudável"}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-slate-400">—</span>
+                              )}
+                            </TableCell>
+
+                            <TableCell className="pr-4 py-3.5 text-right">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 gap-1.5 rounded-xl px-2.5 text-xs font-medium text-slate-700 hover:bg-primary/10 hover:text-primary transition-colors"
+                                onClick={() => setAdjustProduct(product)}
+                              >
+                                <PencilIcon size={14} className="text-primary" />
+                                <span>Ajustar</span>
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
                 </div>
-              )}
-            </div>
+
+                {/* Mobile View */}
+                <div className="divide-y divide-slate-100 md:hidden">
+                  {paginatedProducts.map((product) => {
+                    const isLow =
+                      product.trackInventory &&
+                      product.stockQuantity <= product.lowStockThreshold;
+
+                    return (
+                      <div key={product.id} className="p-4 space-y-2.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="font-semibold text-slate-900">{product.name}</p>
+                            <p className="text-xs text-slate-500">{product.categoryName}</p>
+                          </div>
+                          <span
+                            className={cn(
+                              "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold border",
+                              product.trackInventory
+                                ? isLow
+                                  ? "border-rose-200 bg-rose-50 text-rose-700"
+                                  : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                : "border-slate-200 bg-slate-100 text-slate-600",
+                            )}
+                          >
+                            {product.trackInventory
+                              ? isLow
+                                ? "Baixo"
+                                : "Saudável"
+                              : "Sem controle"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
+                          <span className="text-slate-500">
+                            Saldo: <strong className={isLow ? "text-rose-600" : "text-slate-900"}>{product.stockQuantity} un</strong> (Alerta: {product.lowStockThreshold} un)
+                          </span>
+
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 gap-1 rounded-lg px-2 text-xs font-semibold text-primary hover:bg-primary/10"
+                            onClick={() => setAdjustProduct(product)}
+                          >
+                            <PencilIcon size={13} />
+                            Ajustar
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <TablePagination
+                  filteredCount={filteredProducts.length}
+                  totalCount={products.length}
+                  isFiltering={isFilteringProducts}
+                  currentPage={validProductPage}
+                  totalPages={totalProductPages}
+                  pageSize={productPageSize}
+                  onPageSizeChange={(sz) => {
+                    setProductPageSize(sz);
+                    setProductPage(1);
+                  }}
+                  onPageChange={setProductPage}
+                  itemLabelSingular="produto"
+                  itemLabelPlural="produtos"
+                />
+              </>
+            )}
           </Card>
         </TabsContent>
 
@@ -1178,12 +1451,13 @@ export function EstoqueClient({
           <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
             {/* Filtros de Inventário */}
             <div className="border-b border-slate-100 bg-slate-50/50 p-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="grid flex-1 grid-cols-1 gap-2.5 sm:grid-cols-2">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="grid flex-1 grid-cols-1 gap-2.5 sm:grid-cols-4">
+                  {/* Busca */}
                   <div className="relative">
                     <SearchIcon
                       size={15}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                      className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
                     />
                     <Input
                       placeholder="Buscar item ou SKU..."
@@ -1192,10 +1466,23 @@ export function EstoqueClient({
                         setInvSearch(e.target.value);
                         setInvPage(1);
                       }}
-                      className="h-10 rounded-xl border-slate-200 bg-white pl-9 text-xs transition-colors focus:bg-white sm:text-sm"
+                      className="h-10 rounded-xl border-slate-200 bg-white pl-9 pr-8 text-xs text-slate-900 placeholder:text-slate-400 transition-colors focus:border-primary/50 focus:ring-2 focus:ring-primary/20 sm:text-sm"
                     />
+                    {invSearch && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setInvSearch("");
+                          setInvPage(1);
+                        }}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        <XIcon size={14} />
+                      </button>
+                    )}
                   </div>
 
+                  {/* Tipo */}
                   <Select
                     value={invTypeFilter}
                     onValueChange={(val) => {
@@ -1203,10 +1490,10 @@ export function EstoqueClient({
                       setInvPage(1);
                     }}
                   >
-                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs sm:text-sm">
+                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs font-medium text-slate-700">
                       <SelectValue placeholder="Todos os tipos" />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl border-slate-200 bg-white">
+                    <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
                       <SelectItem value="all">Todos os tipos</SelectItem>
                       {(Object.keys(TYPE_LABELS) as InventoryItemType[]).map((t) => (
                         <SelectItem key={t} value={t}>
@@ -1215,13 +1502,50 @@ export function EstoqueClient({
                       ))}
                     </SelectContent>
                   </Select>
+
+                  {/* Status */}
+                  <Select
+                    value={invStatusFilter}
+                    onValueChange={(val) => {
+                      setInvStatusFilter(val);
+                      setInvPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs font-medium text-slate-700">
+                      <SelectValue placeholder="Status de estoque" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+                      <SelectItem value="all">Todos os status</SelectItem>
+                      <SelectItem value="low">Estoque Baixo</SelectItem>
+                      <SelectItem value="normal">Normal</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {/* Ordenação */}
+                  <Select
+                    value={invSort}
+                    onValueChange={(val) => {
+                      setInvSort(val);
+                      setInvPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs font-medium text-slate-700">
+                      <SelectValue placeholder="Ordenar..." />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+                      <SelectItem value="NAME_ASC">Nome (A-Z)</SelectItem>
+                      <SelectItem value="STOCK_ASC">Menor Saldo</SelectItem>
+                      <SelectItem value="STOCK_DESC">Maior Saldo</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {isFilteringInv && (
                   <Button
                     variant="ghost"
+                    size="sm"
                     onClick={handleClearInvFilters}
-                    className="h-10 gap-1.5 rounded-xl px-3 text-xs text-slate-500 hover:text-slate-900"
+                    className="h-10 gap-1.5 rounded-xl px-3 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                   >
                     <FilterXIcon size={14} />
                     <span>Limpar</span>
@@ -1230,548 +1554,744 @@ export function EstoqueClient({
               </div>
             </div>
 
-            <div className="hidden md:block">
-              <Table>
-                <TableHeader className="bg-slate-50/80">
-                  <TableRow className="border-slate-200/80 hover:bg-transparent">
-                    <TableHead className="pl-4 font-semibold text-slate-700">Nome</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Tipo</TableHead>
-                    <TableHead className="font-semibold text-slate-700">SKU</TableHead>
-                    <TableHead className="text-right font-semibold text-slate-700">Qtd. Atual</TableHead>
-                    <TableHead className="text-right font-semibold text-slate-700">Alerta Mínimo</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Unidade</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Status</TableHead>
-                    <TableHead className="w-24 pr-4 text-right font-semibold text-slate-700">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedInv.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="h-40 text-center">
-                        <div className="flex flex-col items-center justify-center gap-2 text-slate-500">
-                          <WarehouseIcon size={32} className="text-slate-400" />
-                          <p className="text-sm font-medium">Nenhum item encontrado</p>
-                          <p className="text-xs text-slate-400">
-                            Cadastre insumos e embalagens para controlar o consumo interno.
-                          </p>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    paginatedInv.map((item) => {
-                      const isLow =
-                        item.lowStockThreshold > 0 &&
-                        item.currentQuantity <= item.lowStockThreshold;
-
-                      return (
-                        <TableRow
-                          key={item.id}
-                          className="border-slate-100 transition-colors hover:bg-slate-50/70"
-                        >
-                          <TableCell className="pl-4 py-3 font-semibold text-slate-900">
-                            {item.name}
-                            {item.description && (
-                              <p className="text-xs font-normal text-slate-400 truncate max-w-xs">
-                                {item.description}
-                              </p>
-                            )}
-                          </TableCell>
-
-                          <TableCell className="py-3">
-                            <span className="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
-                              {TYPE_LABELS[item.type]}
-                            </span>
-                          </TableCell>
-
-                          <TableCell className="py-3 font-mono text-xs text-slate-500">
-                            {item.sku ?? "—"}
-                          </TableCell>
-
-                          <TableCell
-                            className={cn(
-                              "py-3 text-right font-display text-sm font-bold",
-                              isLow ? "text-rose-600" : "text-slate-900",
-                            )}
-                          >
-                            {item.currentQuantity}
-                          </TableCell>
-
-                          <TableCell className="py-3 text-right text-xs text-slate-500">
-                            {item.lowStockThreshold > 0 ? item.lowStockThreshold : "—"}
-                          </TableCell>
-
-                          <TableCell className="py-3 font-mono text-xs font-semibold text-slate-600">
-                            {item.unitOfMeasure}
-                          </TableCell>
-
-                          <TableCell className="py-3">
-                            {item.lowStockThreshold > 0 ? (
-                              <Badge
-                                variant={isLow ? "danger" : "success"}
-                                className="rounded-full px-2.5 py-0.5 text-xs font-medium"
-                              >
-                                {isLow ? "Estoque Baixo" : "Normal"}
-                              </Badge>
-                            ) : (
-                              <span className="text-xs text-slate-400">—</span>
-                            )}
-                          </TableCell>
-
-                          <TableCell className="pr-4 py-3 text-right">
-                            <div className="flex justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-                                onClick={() => {
-                                  setEditingItem(item);
-                                  setInvFormOpen(true);
-                                }}
-                              >
-                                <PencilIcon size={14} />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 rounded-lg text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-                                onClick={() => setDeleteConfirmItem(item)}
-                              >
-                                <Trash2Icon size={14} />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-
-            {/* Mobile View */}
-            <div className="divide-y divide-slate-100 md:hidden">
-              {paginatedInv.map((item) => (
-                <div key={item.id} className="p-4 space-y-2">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="font-semibold text-slate-900">{item.name}</p>
-                      <p className="text-xs text-slate-500">{TYPE_LABELS[item.type]}</p>
-                    </div>
-                    <span className="font-display font-bold text-slate-900">
-                      {item.currentQuantity} {item.unitOfMeasure}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-100">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={() => {
-                        setEditingItem(item);
-                        setInvFormOpen(true);
-                      }}
-                    >
-                      Editar
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-xs text-rose-600 hover:bg-rose-50"
-                      onClick={() => setDeleteConfirmItem(item)}
-                    >
-                      Excluir
-                    </Button>
-                  </div>
+            {filteredInv.length === 0 ? (
+              <div className="flex min-h-[260px] flex-col items-center justify-center p-8 text-center">
+                <div className="rounded-2xl bg-primary/10 p-4 text-primary border border-primary/20">
+                  <WarehouseIcon size={32} />
                 </div>
-              ))}
-            </div>
-
-            {/* Rodapé / Paginação do Inventário */}
-            <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                <span>
-                  Exibindo <strong className="font-semibold text-slate-900">{filteredInv.length > 0 ? (validInvPage - 1) * invPageSize + 1 : 0}</strong> a{" "}
-                  <strong className="font-semibold text-slate-900">{Math.min(validInvPage * invPageSize, filteredInv.length)}</strong> de{" "}
-                  <strong className="font-semibold text-slate-900">{filteredInv.length}</strong> {filteredInv.length === 1 ? "item" : "itens"}
-                  {filteredInv.length !== inventoryItems.length && (
-                    <span className="ml-1 text-slate-400">
-                      (total: {inventoryItems.length})
-                    </span>
-                  )}
-                </span>
-                {isFilteringInv && (
-                  <span className="text-[11px] font-medium text-amber-600">
-                    (Filtros aplicados)
-                  </span>
+                <h3 className="mt-3 font-display text-base font-semibold text-slate-900">
+                  Nenhum item encontrado
+                </h3>
+                <p className="mt-1 max-w-sm text-xs text-slate-500">
+                  {isFilteringInv
+                    ? "Tente ajustar os filtros de busca para visualizar os insumos."
+                    : "Cadastre insumos, embalagens e equipamentos para controlar o consumo interno."}
+                </p>
+                {isFilteringInv ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleClearInvFilters}
+                    className="mt-4 gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition-all"
+                  >
+                    <FilterXIcon size={14} />
+                    Limpar filtros
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setEditingItem(null);
+                      setInvFormOpen(true);
+                    }}
+                    className="mt-4 gap-1.5 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
+                  >
+                    <PlusIcon size={14} />
+                    Cadastrar primeiro insumo
+                  </Button>
                 )}
               </div>
+            ) : (
+              <>
+                {/* Desktop Table View */}
+                <div className="hidden overflow-x-auto md:block">
+                  <Table>
+                    <TableHeader className="bg-slate-50/80">
+                      <TableRow className="border-b border-slate-200">
+                        <TableHead className="pl-4 text-xs font-semibold text-slate-700">Insumo</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-700">Tipo</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-700">SKU</TableHead>
+                        <TableHead className="text-right text-xs font-semibold text-slate-700">Qtd. Atual</TableHead>
+                        <TableHead className="text-right text-xs font-semibold text-slate-700">Alerta Mínimo</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-700">Unidade</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-700">Status</TableHead>
+                        <TableHead className="w-24 pr-4 text-right text-xs font-semibold text-slate-700">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody className="divide-y divide-slate-100">
+                      {paginatedInv.map((item) => {
+                        const isLow =
+                          item.lowStockThreshold > 0 &&
+                          item.currentQuantity <= item.lowStockThreshold;
 
-              {totalInvPages > 1 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-500">
-                    Página <strong>{validInvPage}</strong> de{" "}
-                    <strong>{totalInvPages}</strong>
-                  </span>
+                        return (
+                          <TableRow
+                            key={item.id}
+                            className="transition-colors hover:bg-slate-50/70"
+                          >
+                            <TableCell className="pl-4 py-3.5 font-semibold text-slate-900">
+                              <div>
+                                <p className="font-semibold text-slate-900">{item.name}</p>
+                                {item.description && (
+                                  <p className="truncate max-w-xs text-xs text-slate-400 mt-0.5">
+                                    {item.description}
+                                  </p>
+                                )}
+                              </div>
+                            </TableCell>
 
-                  <div className="flex items-center gap-1.5">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setInvPage((p) => Math.max(1, p - 1))}
-                      disabled={validInvPage <= 1}
-                      className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
-                    >
-                      <ChevronLeftIcon size={14} />
-                      <span>Anterior</span>
-                    </Button>
+                            <TableCell className="py-3.5">
+                              <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
+                                {TYPE_LABELS[item.type]}
+                              </span>
+                            </TableCell>
 
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setInvPage((p) => Math.min(totalInvPages, p + 1))}
-                      disabled={validInvPage >= totalInvPages}
-                      className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
-                    >
-                      <span>Próxima</span>
-                      <ChevronRightIcon size={14} />
-                    </Button>
-                  </div>
+                            <TableCell className="py-3.5 font-mono text-xs text-slate-500">
+                              {item.sku ? (
+                                <span className="inline-block rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-xs font-bold text-slate-900">
+                                  {item.sku}
+                                </span>
+                              ) : (
+                                "—"
+                              )}
+                            </TableCell>
+
+                            <TableCell
+                              className={cn(
+                                "py-3.5 text-right font-display text-sm font-bold",
+                                isLow ? "text-rose-600" : "text-slate-900",
+                              )}
+                            >
+                              {item.currentQuantity}
+                            </TableCell>
+
+                            <TableCell className="py-3.5 text-right text-xs text-slate-500">
+                              {item.lowStockThreshold > 0 ? item.lowStockThreshold : "—"}
+                            </TableCell>
+
+                            <TableCell className="py-3.5 font-mono text-xs font-semibold text-slate-600">
+                              {item.unitOfMeasure}
+                            </TableCell>
+
+                            <TableCell className="py-3.5">
+                              {item.lowStockThreshold > 0 ? (
+                                <span
+                                  className={cn(
+                                    "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+                                    isLow
+                                      ? "border-rose-200 bg-rose-50 text-rose-700"
+                                      : "border-emerald-200 bg-emerald-50 text-emerald-700",
+                                  )}
+                                >
+                                  {isLow ? "Estoque Baixo" : "Normal"}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-slate-400">—</span>
+                              )}
+                            </TableCell>
+
+                            <TableCell className="pr-4 py-3.5 text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                                  >
+                                    <MoreHorizontalIcon size={16} />
+                                    <span className="sr-only">Opções</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                  align="end"
+                                  className="w-44 rounded-xl border-slate-200 bg-white p-1 text-slate-900 shadow-xl"
+                                >
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setEditingItem(item);
+                                      setInvFormOpen(true);
+                                    }}
+                                    className="gap-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
+                                  >
+                                    <PencilIcon size={14} className="text-primary" />
+                                    Editar dados
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator className="bg-slate-100" />
+                                  <DropdownMenuItem
+                                    onClick={() => setDeleteConfirmItem(item)}
+                                    className="gap-2 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 focus:bg-rose-50 focus:text-rose-700"
+                                  >
+                                    <Trash2Icon size={14} />
+                                    Excluir insumo
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
                 </div>
-              )}
-            </div>
+
+                {/* Mobile View */}
+                <div className="divide-y divide-slate-100 md:hidden">
+                  {paginatedInv.map((item) => (
+                    <div key={item.id} className="p-4 space-y-2.5">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-semibold text-slate-900">{item.name}</p>
+                          <span className="inline-block mt-0.5 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                            {TYPE_LABELS[item.type]}
+                          </span>
+                        </div>
+                        <span className="font-display font-bold text-slate-900">
+                          {item.currentQuantity} {item.unitOfMeasure}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-100">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 text-xs font-semibold text-primary hover:bg-primary/10"
+                          onClick={() => {
+                            setEditingItem(item);
+                            setInvFormOpen(true);
+                          }}
+                        >
+                          <PencilIcon size={13} className="mr-1" />
+                          Editar
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 text-xs font-semibold text-rose-600 hover:bg-rose-50"
+                          onClick={() => setDeleteConfirmItem(item)}
+                        >
+                          <Trash2Icon size={13} className="mr-1" />
+                          Excluir
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <TablePagination
+                  filteredCount={filteredInv.length}
+                  totalCount={inventoryItems.length}
+                  isFiltering={isFilteringInv}
+                  currentPage={validInvPage}
+                  totalPages={totalInvPages}
+                  pageSize={invPageSize}
+                  onPageSizeChange={(sz) => {
+                    setInvPageSize(sz);
+                    setInvPage(1);
+                  }}
+                  onPageChange={setInvPage}
+                  itemLabelSingular="item"
+                  itemLabelPlural="itens"
+                />
+              </>
+            )}
           </Card>
         </TabsContent>
 
         {/* ── Tab 3: Lotes e Validade ─────────────────────── */}
         <TabsContent value="lotes" className="space-y-4">
           <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
-            <div className="hidden md:block">
-              <Table>
-                <TableHeader className="bg-slate-50/80">
-                  <TableRow className="border-slate-200/80 hover:bg-transparent">
-                    <TableHead className="pl-4 font-semibold text-slate-700">Insumo</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Cód. Lote</TableHead>
-                    <TableHead className="text-right font-semibold text-slate-700">Quantidade</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Unidade</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Fabricação</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Validade</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Status</TableHead>
-                    <TableHead className="w-24 pr-4 text-right font-semibold text-slate-700">Custo Unit.</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedBatches.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="h-40 text-center">
-                        <div className="flex flex-col items-center justify-center gap-2 text-slate-500">
-                          <CalendarIcon size={32} className="text-slate-400" />
-                          <p className="text-sm font-medium">Nenhum lote registrado</p>
-                          <p className="text-xs text-slate-400">
-                            Cadastre novos lotes ou dê entrada importando XML de notas fiscais.
-                          </p>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    paginatedBatches.map((lote) => {
-                      const status = getBatchStatus(lote.expirationDate);
+            {/* Filtros de Lotes */}
+            <div className="border-b border-slate-100 bg-slate-50/50 p-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="grid flex-1 grid-cols-1 gap-2.5 sm:grid-cols-3">
+                  {/* Busca */}
+                  <div className="relative">
+                    <SearchIcon
+                      size={15}
+                      className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                    />
+                    <Input
+                      placeholder="Buscar por insumo ou lote..."
+                      value={batchSearch}
+                      onChange={(e) => {
+                        setBatchSearch(e.target.value);
+                        setBatchPage(1);
+                      }}
+                      className="h-10 rounded-xl border-slate-200 bg-white pl-9 pr-8 text-xs text-slate-900 placeholder:text-slate-400 transition-colors focus:border-primary/50 focus:ring-2 focus:ring-primary/20 sm:text-sm"
+                    />
+                    {batchSearch && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBatchSearch("");
+                          setBatchPage(1);
+                        }}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        <XIcon size={14} />
+                      </button>
+                    )}
+                  </div>
 
-                      return (
-                        <TableRow
-                          key={lote.id}
-                          className={cn(
-                            "border-slate-100 transition-colors hover:bg-slate-50/70",
-                            status === "expired" ? "bg-rose-50/40" : status === "warning" ? "bg-amber-50/40" : "",
-                          )}
-                        >
-                          <TableCell className="pl-4 py-3 font-semibold text-slate-900">
-                            {lote.inventoryItemName}
-                          </TableCell>
+                  {/* Status de Validade */}
+                  <Select
+                    value={batchStatusFilter}
+                    onValueChange={(val) => {
+                      setBatchStatusFilter(val);
+                      setBatchPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs font-medium text-slate-700">
+                      <SelectValue placeholder="Status de validade" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+                      <SelectItem value="all">Todos os lotes</SelectItem>
+                      <SelectItem value="expired">Vencidos</SelectItem>
+                      <SelectItem value="warning">Vence em breve (&le; 7 dias)</SelectItem>
+                      <SelectItem value="ok">No prazo</SelectItem>
+                    </SelectContent>
+                  </Select>
 
-                          <TableCell className="py-3 font-mono text-xs text-slate-500">
-                            {lote.batchCode ?? "—"}
-                          </TableCell>
+                  {/* Ordenação */}
+                  <Select
+                    value={batchSort}
+                    onValueChange={(val) => {
+                      setBatchSort(val);
+                      setBatchPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs font-medium text-slate-700">
+                      <SelectValue placeholder="Ordenar..." />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+                      <SelectItem value="EXP_ASC">Validade mais próxima</SelectItem>
+                      <SelectItem value="EXP_DESC">Validade mais distante</SelectItem>
+                      <SelectItem value="QTY_DESC">Maior Quantidade</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                          <TableCell className="py-3 text-right font-display text-sm font-bold text-slate-900">
-                            {lote.quantity}
-                          </TableCell>
+                {isFilteringBatches && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearBatchFilters}
+                    className="h-10 gap-1.5 rounded-xl px-3 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                  >
+                    <FilterXIcon size={14} />
+                    <span>Limpar</span>
+                  </Button>
+                )}
+              </div>
+            </div>
 
-                          <TableCell className="py-3 font-mono text-xs text-slate-600">
-                            {lote.inventoryItemUnit}
-                          </TableCell>
+            {filteredBatches.length === 0 ? (
+              <div className="flex min-h-[260px] flex-col items-center justify-center p-8 text-center">
+                <div className="rounded-2xl bg-primary/10 p-4 text-primary border border-primary/20">
+                  <CalendarIcon size={32} />
+                </div>
+                <h3 className="mt-3 font-display text-base font-semibold text-slate-900">
+                  Nenhum lote registrado
+                </h3>
+                <p className="mt-1 max-w-sm text-xs text-slate-500">
+                  {isFilteringBatches
+                    ? "Tente ajustar os filtros de busca para visualizar os lotes."
+                    : "Cadastre novos lotes ou dê entrada importando XML de notas fiscais eletrônicas."}
+                </p>
+                {isFilteringBatches ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleClearBatchFilters}
+                    className="mt-4 gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition-all"
+                  >
+                    <FilterXIcon size={14} />
+                    Limpar filtros
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={() => setBatchDialogOpen(true)}
+                    className="mt-4 gap-1.5 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
+                  >
+                    <PlusIcon size={14} />
+                    Registrar primeiro lote
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <>
+                {/* Desktop Table View */}
+                <div className="hidden overflow-x-auto md:block">
+                  <Table>
+                    <TableHeader className="bg-slate-50/80">
+                      <TableRow className="border-b border-slate-200">
+                        <TableHead className="pl-4 text-xs font-semibold text-slate-700">Insumo</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-700">Cód. Lote</TableHead>
+                        <TableHead className="text-right text-xs font-semibold text-slate-700">Quantidade</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-700">Unidade</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-700">Fabricação</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-700">Validade</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-700">Status</TableHead>
+                        <TableHead className="w-28 pr-4 text-right text-xs font-semibold text-slate-700">Custo Unit.</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody className="divide-y divide-slate-100">
+                      {paginatedBatches.map((lote) => {
+                        const status = getBatchStatus(lote.expirationDate);
 
-                          <TableCell className="py-3 text-xs text-slate-500">
-                            {lote.manufacturingDate
-                              ? new Date(lote.manufacturingDate).toLocaleDateString("pt-BR")
-                              : "—"}
-                          </TableCell>
-
-                          <TableCell
+                        return (
+                          <TableRow
+                            key={lote.id}
                             className={cn(
-                              "py-3 text-xs font-semibold",
-                              status === "expired"
-                                ? "text-rose-600"
-                                : status === "warning"
-                                  ? "text-amber-600"
-                                  : "text-slate-700",
+                              "transition-colors hover:bg-slate-50/70",
+                              status === "expired" ? "bg-rose-50/30" : status === "warning" ? "bg-amber-50/30" : "",
                             )}
                           >
-                            {lote.expirationDate
-                              ? new Date(lote.expirationDate).toLocaleDateString("pt-BR")
-                              : "—"}
-                          </TableCell>
+                            <TableCell className="pl-4 py-3.5 font-semibold text-slate-900">
+                              {lote.inventoryItemName}
+                            </TableCell>
 
-                          <TableCell className="py-3">
-                            {status === "expired" && (
-                              <Badge variant="danger" className="rounded-full px-2.5 py-0.5 text-xs font-medium">
-                                Vencido
-                              </Badge>
-                            )}
-                            {status === "warning" && (
-                              <Badge variant="warning" className="rounded-full px-2.5 py-0.5 text-xs font-medium">
-                                Vence em breve
-                              </Badge>
-                            )}
-                            {status === "ok" && (
-                              <Badge variant="success" className="rounded-full px-2.5 py-0.5 text-xs font-medium">
-                                No prazo
-                              </Badge>
-                            )}
-                          </TableCell>
+                            <TableCell className="py-3.5 font-mono text-xs text-slate-500">
+                              {lote.batchCode ? (
+                                <span className="inline-block rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-xs font-bold text-slate-900">
+                                  {lote.batchCode}
+                                </span>
+                              ) : (
+                                "—"
+                              )}
+                            </TableCell>
 
-                          <TableCell className="pr-4 py-3 text-right font-display text-xs font-semibold text-slate-700">
-                            {lote.unitCost != null ? formatCurrency(lote.unitCost) : "—"}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                            <TableCell className="py-3.5 text-right font-display text-sm font-bold text-slate-900">
+                              {lote.quantity}
+                            </TableCell>
 
-            {/* Mobile View */}
-            <div className="divide-y divide-slate-100 md:hidden">
-              {paginatedBatches.map((lote) => {
-                const status = getBatchStatus(lote.expirationDate);
-                return (
-                  <div key={lote.id} className="p-4 space-y-2">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="font-semibold text-slate-900">{lote.inventoryItemName}</p>
-                        <p className="font-mono text-xs text-slate-400">Lote: {lote.batchCode ?? "—"}</p>
-                      </div>
-                      <Badge
-                        variant={status === "expired" ? "danger" : status === "warning" ? "warning" : "success"}
-                        className="rounded-full text-[10px]"
-                      >
-                        {status === "expired" ? "Vencido" : status === "warning" ? "Vence em breve" : "OK"}
-                      </Badge>
-                    </div>
+                            <TableCell className="py-3.5 font-mono text-xs text-slate-600">
+                              {lote.inventoryItemUnit}
+                            </TableCell>
 
-                    <div className="flex items-center justify-between text-xs text-slate-500">
-                      <span>Qtd: <strong>{lote.quantity} {lote.inventoryItemUnit}</strong></span>
-                      <span>Validade: {lote.expirationDate ? new Date(lote.expirationDate).toLocaleDateString("pt-BR") : "—"}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                            <TableCell className="py-3.5 text-xs text-slate-500">
+                              {lote.manufacturingDate
+                                ? new Date(lote.manufacturingDate).toLocaleDateString("pt-BR")
+                                : "—"}
+                            </TableCell>
 
-            {/* Rodapé / Paginação de Lotes */}
-            <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="text-xs text-slate-500">
-                <span>
-                  Exibindo <strong className="font-semibold text-slate-900">{lotes.length > 0 ? (validBatchPage - 1) * batchPageSize + 1 : 0}</strong> a{" "}
-                  <strong className="font-semibold text-slate-900">{Math.min(validBatchPage * batchPageSize, lotes.length)}</strong> de{" "}
-                  <strong className="font-semibold text-slate-900">{lotes.length}</strong> {lotes.length === 1 ? "lote" : "lotes"}
-                </span>
-              </div>
+                            <TableCell
+                              className={cn(
+                                "py-3.5 text-xs font-semibold",
+                                status === "expired"
+                                  ? "text-rose-600"
+                                  : status === "warning"
+                                    ? "text-amber-600"
+                                    : "text-slate-700",
+                              )}
+                            >
+                              {lote.expirationDate
+                                ? new Date(lote.expirationDate).toLocaleDateString("pt-BR")
+                                : "—"}
+                            </TableCell>
 
-              {totalBatchPages > 1 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-500">
-                    Página <strong>{validBatchPage}</strong> de{" "}
-                    <strong>{totalBatchPages}</strong>
-                  </span>
+                            <TableCell className="py-3.5">
+                              {status === "expired" && (
+                                <span className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2.5 py-0.5 text-xs font-semibold text-rose-700">
+                                  Vencido
+                                </span>
+                              )}
+                              {status === "warning" && (
+                                <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+                                  Vence em breve
+                                </span>
+                              )}
+                              {status === "ok" && (
+                                <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                                  No prazo
+                                </span>
+                              )}
+                            </TableCell>
 
-                  <div className="flex items-center gap-1.5">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setBatchPage((p) => Math.max(1, p - 1))}
-                      disabled={validBatchPage <= 1}
-                      className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
-                    >
-                      <ChevronLeftIcon size={14} />
-                      <span>Anterior</span>
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setBatchPage((p) => Math.min(totalBatchPages, p + 1))}
-                      disabled={validBatchPage >= totalBatchPages}
-                      className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
-                    >
-                      <span>Próxima</span>
-                      <ChevronRightIcon size={14} />
-                    </Button>
-                  </div>
+                            <TableCell className="pr-4 py-3.5 text-right font-display text-xs font-semibold text-slate-700">
+                              {lote.unitCost != null ? formatCurrency(lote.unitCost) : "—"}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
                 </div>
-              )}
-            </div>
+
+                {/* Mobile View */}
+                <div className="divide-y divide-slate-100 md:hidden">
+                  {paginatedBatches.map((lote) => {
+                    const status = getBatchStatus(lote.expirationDate);
+                    return (
+                      <div key={lote.id} className="p-4 space-y-2">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-semibold text-slate-900">{lote.inventoryItemName}</p>
+                            <p className="font-mono text-xs text-slate-400">Lote: {lote.batchCode ?? "—"}</p>
+                          </div>
+                          <span
+                            className={cn(
+                              "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold border",
+                              status === "expired"
+                                ? "border-rose-200 bg-rose-50 text-rose-700"
+                                : status === "warning"
+                                  ? "border-amber-200 bg-amber-50 text-amber-700"
+                                  : "border-emerald-200 bg-emerald-50 text-emerald-700",
+                            )}
+                          >
+                            {status === "expired" ? "Vencido" : status === "warning" ? "Vence em breve" : "No prazo"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100">
+                          <span>Qtd: <strong>{lote.quantity} {lote.inventoryItemUnit}</strong></span>
+                          <span>Validade: {lote.expirationDate ? new Date(lote.expirationDate).toLocaleDateString("pt-BR") : "—"}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <TablePagination
+                  filteredCount={filteredBatches.length}
+                  totalCount={lotes.length}
+                  isFiltering={isFilteringBatches}
+                  currentPage={validBatchPage}
+                  totalPages={totalBatchPages}
+                  pageSize={batchPageSize}
+                  onPageSizeChange={(sz) => {
+                    setBatchPageSize(sz);
+                    setBatchPage(1);
+                  }}
+                  onPageChange={setBatchPage}
+                  itemLabelSingular="lote"
+                  itemLabelPlural="lotes"
+                />
+              </>
+            )}
           </Card>
         </TabsContent>
 
         {/* ── Tab 4: Perdas & Descartes ───────────────────── */}
         <TabsContent value="perdas" className="space-y-4">
           <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
-            <div className="hidden md:block">
-              <Table>
-                <TableHeader className="bg-slate-50/80">
-                  <TableRow className="border-slate-200/80 hover:bg-transparent">
-                    <TableHead className="pl-4 font-semibold text-slate-700">Insumo</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Motivo</TableHead>
-                    <TableHead className="text-right font-semibold text-slate-700">Qtd. Perdida</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Unidade</TableHead>
-                    <TableHead className="text-right font-semibold text-slate-700">Prejuízo Financeiro</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Observação</TableHead>
-                    <TableHead className="w-28 pr-4 font-semibold text-slate-700">Data</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedLosses.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="h-40 text-center">
-                        <div className="flex flex-col items-center justify-center gap-2 text-slate-500">
-                          <CheckCircle2Icon size={32} className="text-emerald-500" />
-                          <p className="text-sm font-medium">Nenhum desperdício registrado</p>
+            {/* Filtros de Perdas */}
+            <div className="border-b border-slate-100 bg-slate-50/50 p-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="grid flex-1 grid-cols-1 gap-2.5 sm:grid-cols-3">
+                  {/* Busca */}
+                  <div className="relative">
+                    <SearchIcon
+                      size={15}
+                      className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                    />
+                    <Input
+                      placeholder="Buscar por insumo ou observação..."
+                      value={lossSearch}
+                      onChange={(e) => {
+                        setLossSearch(e.target.value);
+                        setLossPage(1);
+                      }}
+                      className="h-10 rounded-xl border-slate-200 bg-white pl-9 pr-8 text-xs text-slate-900 placeholder:text-slate-400 transition-colors focus:border-primary/50 focus:ring-2 focus:ring-primary/20 sm:text-sm"
+                    />
+                    {lossSearch && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLossSearch("");
+                          setLossPage(1);
+                        }}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        <XIcon size={14} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Motivo */}
+                  <Select
+                    value={lossReasonFilter}
+                    onValueChange={(val) => {
+                      setLossReasonFilter(val);
+                      setLossPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs font-medium text-slate-700">
+                      <SelectValue placeholder="Motivo da perda" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+                      <SelectItem value="all">Todos os motivos</SelectItem>
+                      {(Object.keys(LOSS_REASON_LABELS) as InventoryLossReason[]).map((r) => (
+                        <SelectItem key={r} value={r}>
+                          {LOSS_REASON_LABELS[r]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {/* Ordenação */}
+                  <Select
+                    value={lossSort}
+                    onValueChange={(val) => {
+                      setLossSort(val);
+                      setLossPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs font-medium text-slate-700">
+                      <SelectValue placeholder="Ordenar..." />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+                      <SelectItem value="DATE_DESC">Mais recentes</SelectItem>
+                      <SelectItem value="LOSS_DESC">Maior prejuízo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {isFilteringLosses && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearLossFilters}
+                    className="h-10 gap-1.5 rounded-xl px-3 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                  >
+                    <FilterXIcon size={14} />
+                    <span>Limpar</span>
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {filteredLosses.length === 0 ? (
+              <div className="flex min-h-[260px] flex-col items-center justify-center p-8 text-center">
+                <div className="rounded-2xl bg-emerald-50 p-4 text-emerald-600 border border-emerald-200">
+                  <CheckCircle2Icon size={32} />
+                </div>
+                <h3 className="mt-3 font-display text-base font-semibold text-slate-900">
+                  Nenhum registro de perda
+                </h3>
+                <p className="mt-1 max-w-sm text-xs text-slate-500">
+                  {isFilteringLosses
+                    ? "Tente ajustar os filtros de busca para visualizar os registros."
+                    : "Excelente! Nenhuma ocorrência de perda ou descarte de estoque."}
+                </p>
+                {isFilteringLosses && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleClearLossFilters}
+                    className="mt-4 gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition-all"
+                  >
+                    <FilterXIcon size={14} />
+                    Limpar filtros
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <>
+                {/* Desktop Table View */}
+                <div className="hidden overflow-x-auto md:block">
+                  <Table>
+                    <TableHeader className="bg-slate-50/80">
+                      <TableRow className="border-b border-slate-200">
+                        <TableHead className="pl-4 text-xs font-semibold text-slate-700">Insumo</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-700">Motivo</TableHead>
+                        <TableHead className="text-right text-xs font-semibold text-slate-700">Qtd. Perdida</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-700">Unidade</TableHead>
+                        <TableHead className="text-right text-xs font-semibold text-slate-700">Prejuízo Financeiro</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-700">Observação</TableHead>
+                        <TableHead className="w-32 pr-4 text-right text-xs font-semibold text-slate-700">Data</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody className="divide-y divide-slate-100">
+                      {paginatedLosses.map((perda) => (
+                        <TableRow
+                          key={perda.id}
+                          className="transition-colors hover:bg-slate-50/70"
+                        >
+                          <TableCell className="pl-4 py-3.5 font-semibold text-slate-900">
+                            {perda.inventoryItemName}
+                          </TableCell>
+
+                          <TableCell className="py-3.5">
+                            <span
+                              className={cn(
+                                "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+                                perda.reason === "VENCIDO"
+                                  ? "border-rose-200 bg-rose-50 text-rose-700"
+                                  : "border-amber-200 bg-amber-50 text-amber-700",
+                              )}
+                            >
+                              {LOSS_REASON_LABELS[perda.reason]}
+                            </span>
+                          </TableCell>
+
+                          <TableCell className="py-3.5 text-right font-display text-sm font-bold text-rose-600">
+                            {perda.quantity}
+                          </TableCell>
+
+                          <TableCell className="py-3.5 font-mono text-xs text-slate-600">
+                            {perda.inventoryItemUnit}
+                          </TableCell>
+
+                          <TableCell className="py-3.5 text-right font-display text-sm font-bold text-rose-600">
+                            {formatCurrency(perda.financialLoss)}
+                          </TableCell>
+
+                          <TableCell className="py-3.5 text-xs text-slate-500 max-w-xs truncate">
+                            {perda.notes ?? "—"}
+                          </TableCell>
+
+                          <TableCell className="pr-4 py-3.5 text-right text-xs text-slate-500">
+                            {new Date(perda.occurredAt).toLocaleDateString("pt-BR")}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile View */}
+                <div className="divide-y divide-slate-100 md:hidden">
+                  {paginatedLosses.map((perda) => (
+                    <div key={perda.id} className="p-4 space-y-1.5">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-semibold text-slate-900">{perda.inventoryItemName}</p>
                           <p className="text-xs text-slate-400">
-                            Excelente! Nenhuma ocorrência de perda ou descarte de estoque.
+                            {new Date(perda.occurredAt).toLocaleDateString("pt-BR")}
                           </p>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    paginatedLosses.map((perda) => (
-                      <TableRow
-                        key={perda.id}
-                        className="border-slate-100 transition-colors hover:bg-slate-50/70"
-                      >
-                        <TableCell className="pl-4 py-3 font-semibold text-slate-900">
-                          {perda.inventoryItemName}
-                        </TableCell>
+                        <span
+                          className={cn(
+                            "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold border",
+                            perda.reason === "VENCIDO"
+                              ? "border-rose-200 bg-rose-50 text-rose-700"
+                              : "border-amber-200 bg-amber-50 text-amber-700",
+                          )}
+                        >
+                          {LOSS_REASON_LABELS[perda.reason]}
+                        </span>
+                      </div>
 
-                        <TableCell className="py-3">
-                          <Badge
-                            variant={perda.reason === "VENCIDO" ? "danger" : "warning"}
-                            className="rounded-full px-2.5 py-0.5 text-xs font-medium"
-                          >
-                            {LOSS_REASON_LABELS[perda.reason]}
-                          </Badge>
-                        </TableCell>
-
-                        <TableCell className="py-3 text-right font-display text-sm font-bold text-rose-600">
-                          {perda.quantity}
-                        </TableCell>
-
-                        <TableCell className="py-3 font-mono text-xs text-slate-600">
-                          {perda.inventoryItemUnit}
-                        </TableCell>
-
-                        <TableCell className="py-3 text-right font-display text-sm font-bold text-rose-600">
-                          {formatCurrency(perda.financialLoss)}
-                        </TableCell>
-
-                        <TableCell className="py-3 text-xs text-slate-500 max-w-xs truncate">
-                          {perda.notes ?? "—"}
-                        </TableCell>
-
-                        <TableCell className="pr-4 py-3 text-xs text-slate-500">
-                          {new Date(perda.occurredAt).toLocaleDateString("pt-BR")}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-
-            {/* Mobile View */}
-            <div className="divide-y divide-slate-100 md:hidden">
-              {paginatedLosses.map((perda) => (
-                <div key={perda.id} className="p-4 space-y-1.5">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="font-semibold text-slate-900">{perda.inventoryItemName}</p>
-                      <p className="text-xs text-slate-400">
-                        {new Date(perda.occurredAt).toLocaleDateString("pt-BR")}
-                      </p>
+                      <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
+                        <span className="text-slate-500">
+                          Qtd: {perda.quantity} {perda.inventoryItemUnit}
+                        </span>
+                        <span className="font-display font-bold text-rose-600">
+                          Prejuízo: {formatCurrency(perda.financialLoss)}
+                        </span>
+                      </div>
                     </div>
-                    <Badge
-                      variant={perda.reason === "VENCIDO" ? "danger" : "warning"}
-                      className="rounded-full text-[10px]"
-                    >
-                      {LOSS_REASON_LABELS[perda.reason]}
-                    </Badge>
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
-                    <span className="text-slate-500">
-                      Qtd: {perda.quantity} {perda.inventoryItemUnit}
-                    </span>
-                    <span className="font-display font-bold text-rose-600">
-                      Prejuízo: {formatCurrency(perda.financialLoss)}
-                    </span>
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
 
-            {/* Rodapé / Paginação de Perdas */}
-            <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="text-xs text-slate-500">
-                <span>
-                  Exibindo <strong className="font-semibold text-slate-900">{perdas.length > 0 ? (validLossPage - 1) * lossPageSize + 1 : 0}</strong> a{" "}
-                  <strong className="font-semibold text-slate-900">{Math.min(validLossPage * lossPageSize, perdas.length)}</strong> de{" "}
-                  <strong className="font-semibold text-slate-900">{perdas.length}</strong> {perdas.length === 1 ? "registro" : "registros"}
-                </span>
-              </div>
-
-              {totalLossPages > 1 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-500">
-                    Página <strong>{validLossPage}</strong> de{" "}
-                    <strong>{totalLossPages}</strong>
-                  </span>
-
-                  <div className="flex items-center gap-1.5">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setLossPage((p) => Math.max(1, p - 1))}
-                      disabled={validLossPage <= 1}
-                      className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
-                    >
-                      <ChevronLeftIcon size={14} />
-                      <span>Anterior</span>
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setLossPage((p) => Math.min(totalLossPages, p + 1))}
-                      disabled={validLossPage >= totalLossPages}
-                      className="h-8 gap-1 rounded-lg border-slate-200 bg-white px-2.5 text-xs text-slate-700 shadow-2xs hover:bg-slate-50"
-                    >
-                      <span>Próxima</span>
-                      <ChevronRightIcon size={14} />
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
+                <TablePagination
+                  filteredCount={filteredLosses.length}
+                  totalCount={perdas.length}
+                  isFiltering={isFilteringLosses}
+                  currentPage={validLossPage}
+                  totalPages={totalLossPages}
+                  pageSize={lossPageSize}
+                  onPageSizeChange={(sz) => {
+                    setLossPageSize(sz);
+                    setLossPage(1);
+                  }}
+                  onPageChange={setLossPage}
+                  itemLabelSingular="registro"
+                  itemLabelPlural="registros"
+                />
+              </>
+            )}
           </Card>
         </TabsContent>
       </Tabs>

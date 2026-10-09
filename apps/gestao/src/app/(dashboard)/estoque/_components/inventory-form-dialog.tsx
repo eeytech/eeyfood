@@ -109,7 +109,7 @@ export function InventoryFormDialog({
               placeholder="Ex.: Embalagem pizza G, Luva de borracha..."
               defaultValue={item?.name ?? ""}
               required
-              className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm focus:bg-white"
+              className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
             />
           </div>
 
@@ -123,7 +123,7 @@ export function InventoryFormDialog({
               name="description"
               placeholder="Detalhes adicionais, marca recomendada..."
               defaultValue={item?.description ?? ""}
-              className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm focus:bg-white"
+              className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
             />
           </div>
 
@@ -137,7 +137,7 @@ export function InventoryFormDialog({
                 id="inv-type"
                 name="type"
                 defaultValue={item?.type ?? "INSUMO"}
-                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs sm:text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900"
+                className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs sm:text-sm text-slate-900 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
                 required
               >
                 {TYPES.map((t) => (
@@ -157,7 +157,7 @@ export function InventoryFormDialog({
                 id="inv-unit"
                 name="unitOfMeasure"
                 defaultValue={item?.unitOfMeasure ?? "UN"}
-                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs sm:text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900"
+                className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs sm:text-sm text-slate-900 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
                 required
               >
                 {UNITS.map((u) => (
@@ -179,7 +179,7 @@ export function InventoryFormDialog({
               name="sku"
               placeholder="Ex.: EMB-PIZ-G"
               defaultValue={item?.sku ?? ""}
-              className="h-10 rounded-xl border-slate-200 bg-slate-50/70 font-mono text-sm focus:bg-white"
+              className="h-10 rounded-xl border-slate-200 bg-white font-mono text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
             />
           </div>
 
@@ -197,7 +197,7 @@ export function InventoryFormDialog({
                 step="any"
                 defaultValue={item?.currentQuantity ?? 0}
                 required
-                className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm focus:bg-white"
+                className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
               />
             </div>
 
@@ -214,7 +214,7 @@ export function InventoryFormDialog({
                 step="any"
                 defaultValue={item?.lowStockThreshold ?? 0}
                 required
-                className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm focus:bg-white"
+                className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
               />
             </div>
           </div>
@@ -224,14 +224,14 @@ export function InventoryFormDialog({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="h-10 rounded-full border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              className="h-10 rounded-full border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-all"
             >
               Cancelar
             </Button>
             <Button
               type="submit"
               disabled={isPending}
-              className="h-10 rounded-full bg-slate-900 px-5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800"
+              className="h-10 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
             >
               {isPending ? "Salvando..." : isEditing ? "Salvar Alterações" : "Cadastrar Item"}
             </Button>
@@ -241,3 +241,4 @@ export function InventoryFormDialog({
     </Dialog>
   );
 }
+

@@ -636,33 +636,6 @@ export function SuporteClient({
         </div>
       </div>
 
-      {/* ── Status do Perfil / Regra de Visibilidade ─────── */}
-      {!canViewAllTickets ? (
-        <div className="flex items-center gap-3 rounded-2xl border border-amber-200/90 bg-amber-50/70 p-3.5 text-xs text-amber-900 shadow-xs">
-          <div className="rounded-xl bg-amber-100 p-2 text-amber-700 shrink-0">
-            <AlertCircleIcon size={16} />
-          </div>
-          <div>
-            <p className="font-semibold">Visualização Individual de Chamados</p>
-            <p className="text-amber-800">
-              Você está visualizando exclusivamente os chamados abertos por você ({currentUser?.email || currentUser?.name || "seu usuário"}). O acesso a todos os chamados da empresa é restrito aos perfis Super Administrador, Administrador de Restaurante e Gerente Operacional.
-            </p>
-          </div>
-        </div>
-      ) : isSuperAdmin ? (
-        <div className="flex items-center gap-3 rounded-2xl border border-blue-200/90 bg-blue-50/70 p-3.5 text-xs text-blue-900 shadow-xs">
-          <div className="rounded-xl bg-blue-100 p-2 text-blue-700 shrink-0">
-            <SparklesIcon size={16} />
-          </div>
-          <div>
-            <p className="font-semibold">Painel Oficial: Equipe de Suporte Técnico (Super Administrador)</p>
-            <p className="text-blue-800">
-              Você possui acesso administrativo geral: visualização de todos os chamados, permissão exclusiva para marcar chamados como resolvidos e respostas oficiais em nome da empresa desenvolvedora do sistema.
-            </p>
-          </div>
-        </div>
-      ) : null}
-
       {/* ── Metric Cards ────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         {/* Card 1: Total */}
