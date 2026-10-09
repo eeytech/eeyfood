@@ -1591,7 +1591,14 @@ export const registrarPerdaAction = async (
 
   if (!item) return { success: false, error: "Insumo não encontrado." };
 
-  const financialLoss = (item.unitCost ?? 0) * quantity;
+  const unitCostInput = getOptionalNumberValue(formData.get("unitCost"));
+  const financialLoss = unitCostInput != null && unitCostInput >= 0
+    ? unitCostInput
+    : ((item.unitCost ?? 0) * quantity);
+
+  const occurredAtRaw = getOptionalStringValue(formData.get("occurredAt"));
+  const occurredAt = occurredAtRaw ? new Date(occurredAtRaw) : new Date();
+
   const prevQty = item.currentQuantity;
   const nextQty = Math.max(prevQty - quantity, 0);
 
@@ -1600,6 +1607,7 @@ export const registrarPerdaAction = async (
       restaurantId: restaurant.id,
       inventoryItemId,
       quantity,
+      occurredAt,
       reason,
       financialLoss,
       notes,
@@ -1637,6 +1645,223 @@ export const registrarPerdaAction = async (
         dueDate: new Date(),
         paidAt: new Date(),
         categoryId: lossCategory?.id ?? null,
+      });
+    }
+  });
+
+  revalidateRestaurantPaths(slug);
+  return { success: true };
+};
+
+export const atualizarPerdaAction = async (
+  slug: string,
+  lossId: string,
+  formData: FormData,
+): Promise<InventoryActionResult> => {
+  const restaurant = await getRestaurantOrThrow(slug);
+
+  const [existingLoss] = await db
+    .select()
+    .from(inventoryLossesTable)
+    .where(
+      and(
+        eq(inventoryLossesTable.id, lossId),
+        eq(inventoryLossesTable.restaurantId, restaurant.id),
+      ),
+    )
+    .limit(1);
+
+  if (!existingLoss) {
+    return { success: false, error: "Registro de perda não encontrado." };
+  }
+
+  const inventoryItemId = getStringValue(formData.get("inventoryItemId")) || existingLoss.inventoryItemId;
+  const quantity = getNumberValue(formData.get("quantity"));
+  const reason = (getStringValue(formData.get("reason")) || existingLoss.reason) as InventoryLossReason;
+  const notes = getOptionalStringValue(formData.get("notes"));
+  const unitCostInput = getOptionalNumberValue(formData.get("unitCost"));
+  const occurredAtRaw = getOptionalStringValue(formData.get("occurredAt"));
+
+  if (quantity <= 0) {
+    return { success: false, error: "Informe uma quantidade válida maior que zero." };
+  }
+
+  const [item] = await db
+    .select({
+      currentQuantity: inventoryItemsTable.currentQuantity,
+      unitCost: inventoryItemsTable.unitCost,
+      name: inventoryItemsTable.name,
+    })
+    .from(inventoryItemsTable)
+    .where(
+      and(
+        eq(inventoryItemsTable.id, inventoryItemId),
+        eq(inventoryItemsTable.restaurantId, restaurant.id),
+      ),
+    )
+    .limit(1);
+
+  if (!item) {
+    return { success: false, error: "Insumo não encontrado." };
+  }
+
+  const financialLoss = unitCostInput != null && unitCostInput >= 0
+    ? unitCostInput
+    : ((item.unitCost ?? 0) * quantity);
+
+  const occurredAt = occurredAtRaw ? new Date(occurredAtRaw) : existingLoss.occurredAt;
+
+  await db.transaction(async (tx) => {
+    if (inventoryItemId !== existingLoss.inventoryItemId) {
+      // Reverter no insumo antigo
+      const [oldItem] = await tx
+        .select({ currentQuantity: inventoryItemsTable.currentQuantity })
+        .from(inventoryItemsTable)
+        .where(
+          and(
+            eq(inventoryItemsTable.id, existingLoss.inventoryItemId),
+            eq(inventoryItemsTable.restaurantId, restaurant.id),
+          ),
+        )
+        .limit(1);
+
+      if (oldItem) {
+        const oldNextQty = oldItem.currentQuantity + existingLoss.quantity;
+        await tx
+          .update(inventoryItemsTable)
+          .set({ currentQuantity: oldNextQty, updatedAt: new Date() })
+          .where(eq(inventoryItemsTable.id, existingLoss.inventoryItemId));
+
+        await tx.insert(stockMovementsTable).values({
+          restaurantId: restaurant.id,
+          inventoryItemId: existingLoss.inventoryItemId,
+          type: "IN",
+          quantityDelta: existingLoss.quantity,
+          previousQuantity: oldItem.currentQuantity,
+          currentQuantity: oldNextQty,
+          reason: "Estorno de perda por troca de insumo",
+        });
+      }
+
+      // Aplicar perda no novo insumo
+      const newNextQty = Math.max(0, item.currentQuantity - quantity);
+      await tx
+        .update(inventoryItemsTable)
+        .set({ currentQuantity: newNextQty, updatedAt: new Date() })
+        .where(eq(inventoryItemsTable.id, inventoryItemId));
+
+      await tx.insert(stockMovementsTable).values({
+        restaurantId: restaurant.id,
+        inventoryItemId,
+        type: "OUT",
+        quantityDelta: -quantity,
+        previousQuantity: item.currentQuantity,
+        currentQuantity: newNextQty,
+        reason: `Perda/Desperdício — ${reason}${notes ? `: ${notes}` : ""}`,
+      });
+    } else {
+      // Mesmo insumo: ajuste de estoque pela diferença
+      const stockDelta = existingLoss.quantity - quantity;
+      if (stockDelta !== 0) {
+        const nextQty = Math.max(0, item.currentQuantity + stockDelta);
+        await tx
+          .update(inventoryItemsTable)
+          .set({ currentQuantity: nextQty, updatedAt: new Date() })
+          .where(eq(inventoryItemsTable.id, inventoryItemId));
+
+        await tx.insert(stockMovementsTable).values({
+          restaurantId: restaurant.id,
+          inventoryItemId,
+          type: stockDelta > 0 ? "IN" : "OUT",
+          quantityDelta: stockDelta,
+          previousQuantity: item.currentQuantity,
+          currentQuantity: nextQty,
+          reason: `Ajuste de registro de perda — ${reason}`,
+        });
+      }
+    }
+
+    await tx
+      .update(inventoryLossesTable)
+      .set({
+        inventoryItemId,
+        quantity,
+        reason,
+        financialLoss,
+        notes: notes ?? null,
+        occurredAt,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(inventoryLossesTable.id, lossId),
+          eq(inventoryLossesTable.restaurantId, restaurant.id),
+        ),
+      );
+  });
+
+  revalidateRestaurantPaths(slug);
+  return { success: true };
+};
+
+export const excluirPerdaAction = async (
+  slug: string,
+  lossId: string,
+): Promise<InventoryActionResult> => {
+  const restaurant = await getRestaurantOrThrow(slug);
+
+  const [loss] = await db
+    .select()
+    .from(inventoryLossesTable)
+    .where(
+      and(
+        eq(inventoryLossesTable.id, lossId),
+        eq(inventoryLossesTable.restaurantId, restaurant.id),
+      ),
+    )
+    .limit(1);
+
+  if (!loss) {
+    return { success: false, error: "Registro de perda não encontrado." };
+  }
+
+  const [item] = await db
+    .select({ currentQuantity: inventoryItemsTable.currentQuantity })
+    .from(inventoryItemsTable)
+    .where(
+      and(
+        eq(inventoryItemsTable.id, loss.inventoryItemId),
+        eq(inventoryItemsTable.restaurantId, restaurant.id),
+      ),
+    )
+    .limit(1);
+
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(inventoryLossesTable)
+      .where(
+        and(
+          eq(inventoryLossesTable.id, lossId),
+          eq(inventoryLossesTable.restaurantId, restaurant.id),
+        ),
+      );
+
+    if (item) {
+      const prevQty = item.currentQuantity;
+      const nextQty = prevQty + loss.quantity;
+      await tx
+        .update(inventoryItemsTable)
+        .set({ currentQuantity: nextQty, updatedAt: new Date() })
+        .where(eq(inventoryItemsTable.id, loss.inventoryItemId));
+
+      await tx.insert(stockMovementsTable).values({
+        restaurantId: restaurant.id,
+        inventoryItemId: loss.inventoryItemId,
+        type: "IN",
+        quantityDelta: loss.quantity,
+        previousQuantity: prevQty,
+        currentQuantity: nextQty,
+        reason: `Cancelamento de registro de perda — ${loss.reason}`,
       });
     }
   });
@@ -1706,6 +1931,232 @@ export const criarLoteAction = async (
       currentQuantity: nextQty,
       reason: batchCode ? `Entrada de lote ${batchCode}` : "Entrada de estoque",
     });
+  });
+
+  revalidateRestaurantPaths(slug);
+  return { success: true };
+};
+
+export const atualizarLoteAction = async (
+  slug: string,
+  batchId: string,
+  formData: FormData,
+): Promise<InventoryActionResult> => {
+  const restaurant = await getRestaurantOrThrow(slug);
+
+  const [existingBatch] = await db
+    .select()
+    .from(inventoryBatchesTable)
+    .where(
+      and(
+        eq(inventoryBatchesTable.id, batchId),
+        eq(inventoryBatchesTable.restaurantId, restaurant.id),
+      ),
+    )
+    .limit(1);
+
+  if (!existingBatch) {
+    return { success: false, error: "Lote não encontrado." };
+  }
+
+  const inventoryItemId = getStringValue(formData.get("inventoryItemId")) || existingBatch.inventoryItemId;
+  const quantity = getNumberValue(formData.get("quantity"));
+  const batchCode = getOptionalStringValue(formData.get("batchCode"));
+  const expirationDate = getOptionalStringValue(formData.get("expirationDate"));
+  const manufacturingDate = getOptionalStringValue(formData.get("manufacturingDate"));
+  const unitCost = getOptionalNumberValue(formData.get("unitCost"));
+
+  if (quantity <= 0) {
+    return { success: false, error: "Informe uma quantidade válida maior que zero." };
+  }
+
+  const effectiveUnitCost = unitCost ?? existingBatch.unitCost ?? 0;
+
+  await db.transaction(async (tx) => {
+    if (inventoryItemId !== existingBatch.inventoryItemId) {
+      // Reverter no insumo anterior
+      const [oldItem] = await tx
+        .select({ currentQuantity: inventoryItemsTable.currentQuantity })
+        .from(inventoryItemsTable)
+        .where(
+          and(
+            eq(inventoryItemsTable.id, existingBatch.inventoryItemId),
+            eq(inventoryItemsTable.restaurantId, restaurant.id),
+          ),
+        )
+        .limit(1);
+
+      if (oldItem) {
+        const oldNextQty = Math.max(0, oldItem.currentQuantity - existingBatch.quantity);
+        await tx
+          .update(inventoryItemsTable)
+          .set({ currentQuantity: oldNextQty, updatedAt: new Date() })
+          .where(eq(inventoryItemsTable.id, existingBatch.inventoryItemId));
+
+        await tx.insert(stockMovementsTable).values({
+          restaurantId: restaurant.id,
+          inventoryItemId: existingBatch.inventoryItemId,
+          type: "OUT",
+          quantityDelta: -existingBatch.quantity,
+          previousQuantity: oldItem.currentQuantity,
+          currentQuantity: oldNextQty,
+          reason: `Transferência de lote ${existingBatch.batchCode ?? ""}`,
+        });
+      }
+
+      // Adicionar no novo insumo
+      const [newItem] = await tx
+        .select({ currentQuantity: inventoryItemsTable.currentQuantity })
+        .from(inventoryItemsTable)
+        .where(
+          and(
+            eq(inventoryItemsTable.id, inventoryItemId),
+            eq(inventoryItemsTable.restaurantId, restaurant.id),
+          ),
+        )
+        .limit(1);
+
+      if (newItem) {
+        const newNextQty = newItem.currentQuantity + quantity;
+        await tx
+          .update(inventoryItemsTable)
+          .set({
+            currentQuantity: newNextQty,
+            unitCost: effectiveUnitCost,
+            updatedAt: new Date(),
+          })
+          .where(eq(inventoryItemsTable.id, inventoryItemId));
+
+        await tx.insert(stockMovementsTable).values({
+          restaurantId: restaurant.id,
+          inventoryItemId,
+          type: "IN",
+          quantityDelta: quantity,
+          previousQuantity: newItem.currentQuantity,
+          currentQuantity: newNextQty,
+          reason: `Entrada via edição de lote ${batchCode ?? ""}`,
+        });
+      }
+    } else {
+      // Mesmo insumo: ajuste pelo delta de quantidade
+      const delta = quantity - existingBatch.quantity;
+      if (delta !== 0) {
+        const [item] = await tx
+          .select({ currentQuantity: inventoryItemsTable.currentQuantity })
+          .from(inventoryItemsTable)
+          .where(
+            and(
+              eq(inventoryItemsTable.id, inventoryItemId),
+              eq(inventoryItemsTable.restaurantId, restaurant.id),
+            ),
+          )
+          .limit(1);
+
+        if (item) {
+          const nextQty = Math.max(0, item.currentQuantity + delta);
+          await tx
+            .update(inventoryItemsTable)
+            .set({ currentQuantity: nextQty, updatedAt: new Date() })
+            .where(eq(inventoryItemsTable.id, inventoryItemId));
+
+          await tx.insert(stockMovementsTable).values({
+            restaurantId: restaurant.id,
+            inventoryItemId,
+            type: delta > 0 ? "IN" : "OUT",
+            quantityDelta: delta,
+            previousQuantity: item.currentQuantity,
+            currentQuantity: nextQty,
+            reason: `Ajuste de quantidade do lote ${batchCode ?? ""}`,
+          });
+        }
+      }
+    }
+
+    await tx
+      .update(inventoryBatchesTable)
+      .set({
+        inventoryItemId,
+        batchCode: batchCode ?? null,
+        quantity,
+        expirationDate: expirationDate ?? null,
+        manufacturingDate: manufacturingDate ?? null,
+        unitCost: effectiveUnitCost,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(inventoryBatchesTable.id, batchId),
+          eq(inventoryBatchesTable.restaurantId, restaurant.id),
+        ),
+      );
+  });
+
+  revalidateRestaurantPaths(slug);
+  return { success: true };
+};
+
+export const excluirLoteAction = async (
+  slug: string,
+  batchId: string,
+): Promise<InventoryActionResult> => {
+  const restaurant = await getRestaurantOrThrow(slug);
+
+  const [batch] = await db
+    .select()
+    .from(inventoryBatchesTable)
+    .where(
+      and(
+        eq(inventoryBatchesTable.id, batchId),
+        eq(inventoryBatchesTable.restaurantId, restaurant.id),
+      ),
+    )
+    .limit(1);
+
+  if (!batch) {
+    return { success: false, error: "Lote não encontrado." };
+  }
+
+  const [item] = await db
+    .select({ currentQuantity: inventoryItemsTable.currentQuantity })
+    .from(inventoryItemsTable)
+    .where(
+      and(
+        eq(inventoryItemsTable.id, batch.inventoryItemId),
+        eq(inventoryItemsTable.restaurantId, restaurant.id),
+      ),
+    )
+    .limit(1);
+
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(inventoryBatchesTable)
+      .where(
+        and(
+          eq(inventoryBatchesTable.id, batchId),
+          eq(inventoryBatchesTable.restaurantId, restaurant.id),
+        ),
+      );
+
+    if (item) {
+      const prevQty = item.currentQuantity;
+      const nextQty = Math.max(0, prevQty - batch.quantity);
+      await tx
+        .update(inventoryItemsTable)
+        .set({ currentQuantity: nextQty, updatedAt: new Date() })
+        .where(eq(inventoryItemsTable.id, batch.inventoryItemId));
+
+      await tx.insert(stockMovementsTable).values({
+        restaurantId: restaurant.id,
+        inventoryItemId: batch.inventoryItemId,
+        type: "OUT",
+        quantityDelta: -batch.quantity,
+        previousQuantity: prevQty,
+        currentQuantity: nextQty,
+        reason: batch.batchCode
+          ? `Exclusão do lote ${batch.batchCode}`
+          : "Exclusão de lote de estoque",
+      });
+    }
   });
 
   revalidateRestaurantPaths(slug);

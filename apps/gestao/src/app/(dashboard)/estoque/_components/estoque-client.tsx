@@ -24,8 +24,12 @@ import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import {
+  atualizarLoteAction,
+  atualizarPerdaAction,
   criarLoteAction,
   deleteInventoryItemAction,
+  excluirLoteAction,
+  excluirPerdaAction,
   registrarPerdaAction,
   updateStockAction,
 } from "@/app/(dashboard)/actions";
@@ -258,7 +262,10 @@ export function EstoqueClient({
   const [batchStatusFilter, setBatchStatusFilter] = useState("all");
   const [batchSort, setBatchSort] = useState("EXP_ASC");
   const [batchDialogOpen, setBatchDialogOpen] = useState(false);
+  const [editingBatch, setEditingBatch] = useState<LoteComInsumo | null>(null);
+  const [deleteConfirmBatch, setDeleteConfirmBatch] = useState<LoteComInsumo | null>(null);
   const [isBatchPending, startBatchTransition] = useTransition();
+  const [isDeletingBatch, startDeleteBatchTransition] = useTransition();
   const [batchPage, setBatchPage] = useState(1);
   const [batchPageSize, setBatchPageSize] = useState(10);
 
@@ -267,7 +274,10 @@ export function EstoqueClient({
   const [lossReasonFilter, setLossReasonFilter] = useState("all");
   const [lossSort, setLossSort] = useState("DATE_DESC");
   const [lossDialogOpen, setLossDialogOpen] = useState(false);
+  const [editingLoss, setEditingLoss] = useState<PerdaComInsumo | null>(null);
+  const [deleteConfirmLoss, setDeleteConfirmLoss] = useState<PerdaComInsumo | null>(null);
   const [isLossPending, startLossTransition] = useTransition();
+  const [isDeletingLoss, startDeleteLossTransition] = useTransition();
   const [lossPage, setLossPage] = useState(1);
   const [lossPageSize, setLossPageSize] = useState(10);
 
@@ -520,6 +530,34 @@ export function EstoqueClient({
     });
   };
 
+  const handleDeleteBatchConfirm = () => {
+    if (!deleteConfirmBatch) return;
+    const id = deleteConfirmBatch.id;
+    startDeleteBatchTransition(async () => {
+      const res = await excluirLoteAction(slug, id);
+      if (res.success) {
+        toast.success("Lote excluído com sucesso.");
+        setDeleteConfirmBatch(null);
+      } else {
+        toast.error(res.error ?? "Erro ao excluir lote.");
+      }
+    });
+  };
+
+  const handleDeleteLossConfirm = () => {
+    if (!deleteConfirmLoss) return;
+    const id = deleteConfirmLoss.id;
+    startDeleteLossTransition(async () => {
+      const res = await excluirPerdaAction(slug, id);
+      if (res.success) {
+        toast.success("Registro de perda excluído com sucesso.");
+        setDeleteConfirmLoss(null);
+      } else {
+        toast.error(res.error ?? "Erro ao excluir registro de perda.");
+      }
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* ── Dialog: Ajustar Estoque de Produto ─────────────── */}
@@ -651,28 +689,86 @@ export function EstoqueClient({
         onConfirm={handleDeleteConfirm}
       />
 
-      {/* ── Dialog: Registrar Perda ──────────────────────── */}
-      <Dialog open={lossDialogOpen} onOpenChange={setLossDialogOpen}>
+      {/* ── Dialog: Confirmar Exclusão de Lote ────────── */}
+      <ConfirmDeleteDialog
+        open={deleteConfirmBatch !== null}
+        onOpenChange={(open) => !open && setDeleteConfirmBatch(null)}
+        title="Excluir Lote"
+        description={
+          <>
+            Tem certeza que deseja excluir o lote{" "}
+            <strong className="text-slate-900 font-semibold">
+              {deleteConfirmBatch?.batchCode ? `"${deleteConfirmBatch.batchCode}"` : ""} ({deleteConfirmBatch?.inventoryItemName})
+            </strong>
+            ? Esta ação removerá o lote e abaterá a quantidade correspondente do saldo de estoque.
+          </>
+        }
+        confirmLabel="Sim, excluir lote"
+        isPending={isDeletingBatch}
+        onConfirm={handleDeleteBatchConfirm}
+      />
+
+      {/* ── Dialog: Confirmar Exclusão de Perda ───────── */}
+      <ConfirmDeleteDialog
+        open={deleteConfirmLoss !== null}
+        onOpenChange={(open) => !open && setDeleteConfirmLoss(null)}
+        title="Excluir Registro de Perda"
+        description={
+          <>
+            Tem certeza que deseja excluir o registro de perda de{" "}
+            <strong className="text-slate-900 font-semibold">
+              {deleteConfirmLoss?.quantity} {deleteConfirmLoss?.inventoryItemUnit} de {deleteConfirmLoss?.inventoryItemName}
+            </strong>
+            ? Esta ação estornará a perda e devolverá a quantidade ao saldo de estoque.
+          </>
+        }
+        confirmLabel="Sim, excluir perda"
+        isPending={isDeletingLoss}
+        onConfirm={handleDeleteLossConfirm}
+      />
+
+      {/* ── Dialog: Registrar / Editar Perda ─────────────── */}
+      <Dialog
+        open={lossDialogOpen}
+        onOpenChange={(open) => {
+          setLossDialogOpen(open);
+          if (!open) setEditingLoss(null);
+        }}
+      >
         <DialogContent className="border-slate-200 bg-white shadow-2xl sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display text-lg font-bold text-slate-900">
-              Registrar Perda ou Desperdício
+              {editingLoss ? "Editar Registro de Perda" : "Registrar Perda ou Desperdício"}
             </DialogTitle>
             <DialogDescription className="text-slate-500">
-              O saldo do item será reduzido e o impacto financeiro registrado no relatório.
+              {editingLoss
+                ? `Editando perda do insumo ${editingLoss.inventoryItemName}`
+                : "O saldo do item será reduzido e o impacto financeiro registrado no relatório."}
             </DialogDescription>
           </DialogHeader>
           <form
+            key={editingLoss ? editingLoss.id : "new-loss"}
             onSubmit={(e) => {
               e.preventDefault();
               const formData = new FormData(e.currentTarget);
               startLossTransition(async () => {
-                const result = await registrarPerdaAction(slug, formData);
-                if (result.success) {
-                  toast.success("Desperdício registrado com sucesso.");
-                  setLossDialogOpen(false);
+                if (editingLoss) {
+                  const result = await atualizarPerdaAction(slug, editingLoss.id, formData);
+                  if (result.success) {
+                    toast.success("Registro de perda atualizado com sucesso.");
+                    setLossDialogOpen(false);
+                    setEditingLoss(null);
+                  } else {
+                    toast.error(result.error ?? "Erro ao atualizar perda.");
+                  }
                 } else {
-                  toast.error(result.error ?? "Erro ao registrar perda.");
+                  const result = await registrarPerdaAction(slug, formData);
+                  if (result.success) {
+                    toast.success("Desperdício registrado com sucesso.");
+                    setLossDialogOpen(false);
+                  } else {
+                    toast.error(result.error ?? "Erro ao registrar perda.");
+                  }
                 }
               });
             }}
@@ -685,6 +781,7 @@ export function EstoqueClient({
               <select
                 id="loss-item"
                 name="inventoryItemId"
+                defaultValue={editingLoss?.inventoryItemId ?? ""}
                 required
                 className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs sm:text-sm text-slate-900 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
@@ -705,6 +802,7 @@ export function EstoqueClient({
                 <select
                   id="loss-reason"
                   name="reason"
+                  defaultValue={editingLoss?.reason ?? "VENCIDO"}
                   required
                   className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs sm:text-sm text-slate-900 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
                 >
@@ -725,6 +823,7 @@ export function EstoqueClient({
                   type="number"
                   min="0.001"
                   step="0.001"
+                  defaultValue={editingLoss?.quantity ?? ""}
                   required
                   placeholder="Ex.: 2.5"
                   className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
@@ -732,19 +831,34 @@ export function EstoqueClient({
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="loss-cost" className="text-xs font-semibold text-slate-700">
-                Custo Total do Prejuízo (R$)
-              </Label>
-              <Input
-                id="loss-cost"
-                name="unitCost"
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="Ex.: 35.00"
-                className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
-              />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="loss-cost" className="text-xs font-semibold text-slate-700">
+                  Custo Total do Prejuízo (R$)
+                </Label>
+                <Input
+                  id="loss-cost"
+                  name="unitCost"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  defaultValue={editingLoss?.financialLoss ?? ""}
+                  placeholder="Ex.: 35.00"
+                  className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="loss-date" className="text-xs font-semibold text-slate-700">
+                  Data da Ocorrência
+                </Label>
+                <DatePicker
+                  id="loss-date"
+                  name="occurredAt"
+                  defaultValue={editingLoss?.occurredAt ?? undefined}
+                  placeholder="Selecione data"
+                />
+              </div>
             </div>
 
             <div className="space-y-1.5">
@@ -754,6 +868,7 @@ export function EstoqueClient({
               <Input
                 id="loss-notes"
                 name="notes"
+                defaultValue={editingLoss?.notes ?? ""}
                 placeholder="Ex.: Embalagem rasgada no descarregamento..."
                 className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
               />
@@ -763,7 +878,10 @@ export function EstoqueClient({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setLossDialogOpen(false)}
+                onClick={() => {
+                  setLossDialogOpen(false);
+                  setEditingLoss(null);
+                }}
                 className="h-10 rounded-full border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-all"
               >
                 Cancelar
@@ -773,35 +891,59 @@ export function EstoqueClient({
                 disabled={isLossPending}
                 className="h-10 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
               >
-                {isLossPending ? "Registrando..." : "Registrar Desperdício"}
+                {isLossPending
+                  ? "Salvando..."
+                  : editingLoss
+                    ? "Salvar Alterações"
+                    : "Registrar Desperdício"}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* ── Dialog: Registrar Lote ───────────────────────── */}
-      <Dialog open={batchDialogOpen} onOpenChange={setBatchDialogOpen}>
+      {/* ── Dialog: Registrar / Editar Lote ──────────────── */}
+      <Dialog
+        open={batchDialogOpen}
+        onOpenChange={(open) => {
+          setBatchDialogOpen(open);
+          if (!open) setEditingBatch(null);
+        }}
+      >
         <DialogContent className="border-slate-200 bg-white shadow-2xl sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="font-display text-lg font-bold text-slate-900">
-              Registrar Lote e Entrada
+              {editingBatch ? "Editar Lote de Estoque" : "Registrar Lote e Entrada"}
             </DialogTitle>
             <DialogDescription className="text-slate-500">
-              Dê entrada em um lote de insumos para acompanhar validade e custo unitário.
+              {editingBatch
+                ? `Editando lote do insumo ${editingBatch.inventoryItemName}`
+                : "Dê entrada em um lote de insumos para acompanhar validade e custo unitário."}
             </DialogDescription>
           </DialogHeader>
           <form
+            key={editingBatch ? editingBatch.id : "new-batch"}
             onSubmit={(e) => {
               e.preventDefault();
               const formData = new FormData(e.currentTarget);
               startBatchTransition(async () => {
-                const result = await criarLoteAction(slug, formData);
-                if (result.success) {
-                  toast.success("Lote registrado e estoque atualizado.");
-                  setBatchDialogOpen(false);
+                if (editingBatch) {
+                  const result = await atualizarLoteAction(slug, editingBatch.id, formData);
+                  if (result.success) {
+                    toast.success("Lote atualizado com sucesso.");
+                    setBatchDialogOpen(false);
+                    setEditingBatch(null);
+                  } else {
+                    toast.error(result.error ?? "Erro ao atualizar lote.");
+                  }
                 } else {
-                  toast.error(result.error ?? "Erro ao registrar lote.");
+                  const result = await criarLoteAction(slug, formData);
+                  if (result.success) {
+                    toast.success("Lote registrado e estoque atualizado.");
+                    setBatchDialogOpen(false);
+                  } else {
+                    toast.error(result.error ?? "Erro ao registrar lote.");
+                  }
                 }
               });
             }}
@@ -814,6 +956,7 @@ export function EstoqueClient({
               <select
                 id="batch-item"
                 name="inventoryItemId"
+                defaultValue={editingBatch?.inventoryItemId ?? ""}
                 required
                 className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs sm:text-sm text-slate-900 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
@@ -837,6 +980,7 @@ export function EstoqueClient({
                   type="number"
                   min="0.001"
                   step="0.001"
+                  defaultValue={editingBatch?.quantity ?? ""}
                   required
                   placeholder="Ex.: 10"
                   className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
@@ -852,6 +996,7 @@ export function EstoqueClient({
                   type="number"
                   min="0"
                   step="0.01"
+                  defaultValue={editingBatch?.unitCost ?? ""}
                   placeholder="Ex.: 4.50"
                   className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
                 />
@@ -863,13 +1008,23 @@ export function EstoqueClient({
                 <Label htmlFor="batch-mfg" className="text-xs font-semibold text-slate-700">
                   Data de Fabricação
                 </Label>
-                <DatePicker id="batch-mfg" name="manufacturingDate" placeholder="Selecione data" />
+                <DatePicker
+                  id="batch-mfg"
+                  name="manufacturingDate"
+                  defaultValue={editingBatch?.manufacturingDate ?? undefined}
+                  placeholder="Selecione data"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="batch-exp" className="text-xs font-semibold text-slate-700">
                   Data de Validade
                 </Label>
-                <DatePicker id="batch-exp" name="expirationDate" placeholder="Selecione validade" />
+                <DatePicker
+                  id="batch-exp"
+                  name="expirationDate"
+                  defaultValue={editingBatch?.expirationDate ?? undefined}
+                  placeholder="Selecione validade"
+                />
               </div>
             </div>
 
@@ -880,6 +1035,7 @@ export function EstoqueClient({
               <Input
                 id="batch-code"
                 name="batchCode"
+                defaultValue={editingBatch?.batchCode ?? ""}
                 placeholder="Ex.: LOT-2024-001"
                 className="h-10 rounded-xl border-slate-200 bg-white font-mono text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
               />
@@ -889,7 +1045,10 @@ export function EstoqueClient({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setBatchDialogOpen(false)}
+                onClick={() => {
+                  setBatchDialogOpen(false);
+                  setEditingBatch(null);
+                }}
                 className="h-10 rounded-full border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-all"
               >
                 Cancelar
@@ -899,7 +1058,11 @@ export function EstoqueClient({
                 disabled={isBatchPending}
                 className="h-10 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
               >
-                {isBatchPending ? "Registrando..." : "Registrar Lote"}
+                {isBatchPending
+                  ? "Salvando..."
+                  : editingBatch
+                    ? "Salvar Alterações"
+                    : "Registrar Lote"}
               </Button>
             </DialogFooter>
           </form>
@@ -948,7 +1111,10 @@ export function EstoqueClient({
         {activeTab === "lotes" && (
           <div className="flex flex-wrap items-center gap-2">
             <Button
-              onClick={() => setBatchDialogOpen(true)}
+              onClick={() => {
+                setEditingBatch(null);
+                setBatchDialogOpen(true);
+              }}
               className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
             >
               <PlusIcon size={16} />
@@ -960,7 +1126,10 @@ export function EstoqueClient({
         {activeTab === "perdas" && (
           <div className="flex flex-wrap items-center gap-2">
             <Button
-              onClick={() => setLossDialogOpen(true)}
+              onClick={() => {
+                setEditingLoss(null);
+                setLossDialogOpen(true);
+              }}
               className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
             >
               <AlertTriangleIcon size={16} />
@@ -973,10 +1142,7 @@ export function EstoqueClient({
       {/* ── Metric Cards ────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         {/* Card 1: Itens no Inventário */}
-        <Card
-          onClick={() => setActiveTab("inventario")}
-          className="cursor-pointer border-slate-200/80 bg-white shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
-        >
+        <Card className="border-slate-200/80 bg-white shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -996,14 +1162,7 @@ export function EstoqueClient({
         </Card>
 
         {/* Card 2: Alertas de Baixo Estoque */}
-        <Card
-          onClick={() => {
-            setActiveTab("inventario");
-            setInvStatusFilter("low");
-            setInvPage(1);
-          }}
-          className="cursor-pointer border-slate-200/80 bg-white shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
-        >
+        <Card className="border-slate-200/80 bg-white shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -1025,14 +1184,7 @@ export function EstoqueClient({
         </Card>
 
         {/* Card 3: Validades & Lotes em Risco */}
-        <Card
-          onClick={() => {
-            setActiveTab("lotes");
-            setBatchStatusFilter("warning");
-            setBatchPage(1);
-          }}
-          className="cursor-pointer border-slate-200/80 bg-white shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
-        >
+        <Card className="border-slate-200/80 bg-white shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -1054,10 +1206,7 @@ export function EstoqueClient({
         </Card>
 
         {/* Card 4: Prejuízo Acumulado */}
-        <Card
-          onClick={() => setActiveTab("perdas")}
-          className="cursor-pointer border-slate-200/80 bg-white shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
-        >
+        <Card className="border-slate-200/80 bg-white shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -1905,7 +2054,10 @@ export function EstoqueClient({
                 ) : (
                   <Button
                     size="sm"
-                    onClick={() => setBatchDialogOpen(true)}
+                    onClick={() => {
+                      setEditingBatch(null);
+                      setBatchDialogOpen(true);
+                    }}
                     className="mt-4 gap-1.5 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
                   >
                     <PlusIcon size={14} />
@@ -1927,7 +2079,8 @@ export function EstoqueClient({
                         <TableHead className="text-xs font-semibold text-slate-700">Fabricação</TableHead>
                         <TableHead className="text-xs font-semibold text-slate-700">Validade</TableHead>
                         <TableHead className="text-xs font-semibold text-slate-700">Status</TableHead>
-                        <TableHead className="w-28 pr-4 text-right text-xs font-semibold text-slate-700">Custo Unit.</TableHead>
+                        <TableHead className="w-28 text-right text-xs font-semibold text-slate-700">Custo Unit.</TableHead>
+                        <TableHead className="w-20 pr-4 text-right text-xs font-semibold text-slate-700">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody className="divide-y divide-slate-100">
@@ -1983,8 +2136,46 @@ export function EstoqueClient({
                               </span>
                             </TableCell>
 
-                            <TableCell className="pr-4 py-3.5 text-right font-display text-sm font-bold text-slate-900">
+                            <TableCell className="py-3.5 text-right font-display text-sm font-bold text-slate-900">
                               {lote.unitCost != null ? formatCurrency(lote.unitCost) : "—"}
+                            </TableCell>
+
+                            <TableCell className="pr-4 py-3.5 text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                                  >
+                                    <MoreHorizontalIcon size={16} />
+                                    <span className="sr-only">Opções</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                  align="end"
+                                  className="w-44 rounded-xl border-slate-200 bg-white p-1 text-slate-900 shadow-xl"
+                                >
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setEditingBatch(lote);
+                                      setBatchDialogOpen(true);
+                                    }}
+                                    className="gap-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 focus:bg-slate-50 focus:text-slate-900 cursor-pointer"
+                                  >
+                                    <PencilIcon size={14} className="text-primary" />
+                                    Editar lote
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator className="bg-slate-100" />
+                                  <DropdownMenuItem
+                                    onClick={() => setDeleteConfirmBatch(lote)}
+                                    className="gap-2 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 focus:bg-rose-50 focus:text-rose-700 cursor-pointer"
+                                  >
+                                    <Trash2Icon size={14} />
+                                    Excluir lote
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </TableCell>
                           </TableRow>
                         );
@@ -2012,6 +2203,30 @@ export function EstoqueClient({
                         <div className="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100">
                           <span>Qtd: <strong>{lote.quantity} {lote.inventoryItemUnit}</strong></span>
                           <span>Validade: <strong className="text-primary">{lote.expirationDate ? new Date(lote.expirationDate).toLocaleDateString("pt-BR") : "—"}</strong></span>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 text-xs font-semibold text-primary hover:bg-primary/10"
+                            onClick={() => {
+                              setEditingBatch(lote);
+                              setBatchDialogOpen(true);
+                            }}
+                          >
+                            <PencilIcon size={13} className="mr-1" />
+                            Editar
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 text-xs font-semibold text-rose-600 hover:bg-rose-50"
+                            onClick={() => setDeleteConfirmBatch(lote)}
+                          >
+                            <Trash2Icon size={13} className="mr-1" />
+                            Excluir
+                          </Button>
                         </div>
                       </div>
                     );
@@ -2153,7 +2368,10 @@ export function EstoqueClient({
                 ) : (
                   <Button
                     size="sm"
-                    onClick={() => setLossDialogOpen(true)}
+                    onClick={() => {
+                      setEditingLoss(null);
+                      setLossDialogOpen(true);
+                    }}
                     className="mt-4 gap-1.5 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
                   >
                     <AlertTriangleIcon size={14} />
@@ -2174,7 +2392,8 @@ export function EstoqueClient({
                         <TableHead className="text-xs font-semibold text-slate-700">Unidade</TableHead>
                         <TableHead className="text-right text-xs font-semibold text-slate-700">Prejuízo Financeiro</TableHead>
                         <TableHead className="text-xs font-semibold text-slate-700">Observação</TableHead>
-                        <TableHead className="w-32 pr-4 text-right text-xs font-semibold text-slate-700">Data</TableHead>
+                        <TableHead className="w-32 text-right text-xs font-semibold text-slate-700">Data</TableHead>
+                        <TableHead className="w-20 pr-4 text-right text-xs font-semibold text-slate-700">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody className="divide-y divide-slate-100">
@@ -2209,8 +2428,46 @@ export function EstoqueClient({
                             {perda.notes ?? "—"}
                           </TableCell>
 
-                          <TableCell className="pr-4 py-3.5 text-right text-xs text-slate-500">
+                          <TableCell className="py-3.5 text-right text-xs text-slate-500">
                             {new Date(perda.occurredAt).toLocaleDateString("pt-BR")}
+                          </TableCell>
+
+                          <TableCell className="pr-4 py-3.5 text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                                >
+                                  <MoreHorizontalIcon size={16} />
+                                  <span className="sr-only">Opções</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent
+                                align="end"
+                                className="w-44 rounded-xl border-slate-200 bg-white p-1 text-slate-900 shadow-xl"
+                              >
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setEditingLoss(perda);
+                                    setLossDialogOpen(true);
+                                  }}
+                                  className="gap-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 focus:bg-slate-50 focus:text-slate-900 cursor-pointer"
+                                >
+                                  <PencilIcon size={14} className="text-primary" />
+                                  Editar registro
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator className="bg-slate-100" />
+                                <DropdownMenuItem
+                                  onClick={() => setDeleteConfirmLoss(perda)}
+                                  className="gap-2 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 focus:bg-rose-50 focus:text-rose-700 cursor-pointer"
+                                >
+                                  <Trash2Icon size={14} />
+                                  Excluir registro
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -2241,6 +2498,30 @@ export function EstoqueClient({
                         <span className="font-display font-bold text-slate-900">
                           Prejuízo: {formatCurrency(perda.financialLoss)}
                         </span>
+                      </div>
+
+                      <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 text-xs font-semibold text-primary hover:bg-primary/10"
+                          onClick={() => {
+                            setEditingLoss(perda);
+                            setLossDialogOpen(true);
+                          }}
+                        >
+                          <PencilIcon size={13} className="mr-1" />
+                          Editar
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 text-xs font-semibold text-rose-600 hover:bg-rose-50"
+                          onClick={() => setDeleteConfirmLoss(perda)}
+                        >
+                          <Trash2Icon size={13} className="mr-1" />
+                          Excluir
+                        </Button>
                       </div>
                     </div>
                   ))}
