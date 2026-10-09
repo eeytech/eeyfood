@@ -1704,7 +1704,7 @@ export function ComprasClient({
                                   onClick={() => handleOpenEditSupplier(f)}
                                   className="gap-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 focus:bg-slate-50 focus:text-slate-900"
                                 >
-                                  <PencilIcon size={14} className="text-slate-500" />
+                                  <PencilIcon size={14} className="text-primary" />
                                   Editar dados
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
@@ -1739,7 +1739,7 @@ export function ComprasClient({
                             className="h-8 text-xs font-semibold text-slate-700 hover:bg-slate-100"
                             onClick={() => handleOpenEditSupplier(f)}
                           >
-                            <PencilIcon size={13} className="mr-1 text-slate-500" />
+                            <PencilIcon size={13} className="mr-1 text-primary" />
                             Editar
                           </Button>
                           <Button
