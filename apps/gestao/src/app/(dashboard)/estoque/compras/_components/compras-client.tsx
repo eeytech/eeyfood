@@ -11,8 +11,11 @@ import {
   DollarSignIcon,
   FileTextIcon,
   FilterXIcon,
+  Loader2Icon,
+  MapPinIcon,
   MoreHorizontalIcon,
   PackageCheckIcon,
+  PencilIcon,
   PlusIcon,
   ReceiptIcon,
   SearchIcon,
@@ -24,6 +27,7 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import {
+  atualizarFornecedorAction,
   confirmarImportacaoNFeAction,
   criarFornecedorAction,
   excluirFornecedorAction,
@@ -33,6 +37,8 @@ import type { MapeamentoItem } from "@/app/(dashboard)/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
+import { DatePicker } from "@/components/ui/date-picker";
+import { BRAZIL_UFS, buildFullAddress, formatCep, parseAddress } from "@/lib/address-utils";
 import {
   Dialog,
   DialogContent,
@@ -97,6 +103,23 @@ interface NFeParsed {
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
+
+const formatPhone = (v: string) => {
+  const d = v.replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 2) return d;
+  if (d.length <= 6) return d.replace(/^(\d{2})(\d+)/, "($1) $2");
+  if (d.length <= 10) return d.replace(/^(\d{2})(\d{4})(\d+)/, "($1) $2-$3");
+  return d.replace(/^(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
+};
+
+const formatCnpj = (v: string) => {
+  const d = v.replace(/\D/g, "").slice(0, 14);
+  if (d.length <= 2) return d;
+  if (d.length <= 5) return d.replace(/^(\d{2})(\d+)/, "$1.$2");
+  if (d.length <= 8) return d.replace(/^(\d{2})(\d{3})(\d+)/, "$1.$2.$3");
+  if (d.length <= 12) return d.replace(/^(\d{2})(\d{3})(\d{3})(\d+)/, "$1.$2.$3/$4");
+  return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{1,2})/, "$1.$2.$3/$4-$5");
+};
 
 // ── Shared Table Pagination ──────────────────────────────────────────────────
 function TablePagination({
@@ -238,11 +261,28 @@ export function ComprasClient({
 
   // ── Supplier form state ─────────────────────────────────────────────────────
   const [fornecedorFormOpen, setFornecedorFormOpen] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [deletingSupplier, setDeletingSupplier] = useState<Supplier | null>(null);
   const [isSupplierPending, startSupplierTransition] = useTransition();
 
+  // Campos do formulário de fornecedor
+  const [companyName, setCompanyName] = useState("");
+  const [cnpj, setCnpj] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [cep, setCep] = useState("");
+  const [logradouro, setLogradouro] = useState("");
+  const [numero, setNumero] = useState("");
+  const [complemento, setComplemento] = useState("");
+  const [bairro, setBairro] = useState("");
+  const [cidade, setCidade] = useState("");
+  const [estado, setEstado] = useState("");
+  const [isSearchingCep, setIsSearchingCep] = useState(false);
+
   // ── Histórico filters & pagination ──────────────────────────────────────────
   const [historySearch, setHistorySearch] = useState("");
+  const [historySupplier, setHistorySupplier] = useState("all");
+  const [historyDate, setHistoryDate] = useState<string>("");
   const [historySort, setHistorySort] = useState("DATE_DESC");
   const [historyPage, setHistoryPage] = useState(1);
   const [historyPageSize, setHistoryPageSize] = useState(10);
@@ -264,12 +304,53 @@ export function ComprasClient({
     return notasCompra
       .filter((nota) => {
         const q = historySearch.toLowerCase().trim();
-        if (!q) return true;
-        return (
-          (nota.invoiceNumber?.toLowerCase().includes(q) ?? false) ||
-          (nota.supplierName?.toLowerCase().includes(q) ?? false) ||
-          (nota.accessKey?.toLowerCase().includes(q) ?? false)
-        );
+        if (q) {
+          const matchesQuery =
+            (nota.invoiceNumber?.toLowerCase().includes(q) ?? false) ||
+            (nota.supplierName?.toLowerCase().includes(q) ?? false) ||
+            (nota.accessKey?.toLowerCase().includes(q) ?? false);
+          if (!matchesQuery) return false;
+        }
+
+        if (historySupplier !== "all") {
+          const matchesSupplier =
+            nota.supplierId === historySupplier ||
+            fornecedores.find((f) => f.id === historySupplier)?.companyName.toLowerCase() ===
+              nota.supplierName?.toLowerCase();
+          if (!matchesSupplier) return false;
+        }
+
+        if (historyDate) {
+          const formatToBr = (d: Date | string | null | undefined): string => {
+            if (!d) return "";
+            try {
+              const dateObj = typeof d === "string" ? new Date(d) : d;
+              if (isNaN(dateObj.getTime())) return "";
+              return dateObj.toLocaleDateString("pt-BR");
+            } catch {
+              return "";
+            }
+          };
+
+          const selectedBrDate = (() => {
+            try {
+              const d = new Date(historyDate + "T12:00:00");
+              return d.toLocaleDateString("pt-BR");
+            } catch {
+              return "";
+            }
+          })();
+
+          if (selectedBrDate) {
+            const issuedBr = formatToBr(nota.issuedAt);
+            const createdBr = formatToBr(nota.createdAt);
+            if (issuedBr !== selectedBrDate && createdBr !== selectedBrDate) {
+              return false;
+            }
+          }
+        }
+
+        return true;
       })
       .sort((a, b) => {
         if (historySort === "DATE_DESC") {
@@ -280,7 +361,7 @@ export function ComprasClient({
         }
         return 0;
       });
-  }, [notasCompra, historySearch, historySort]);
+  }, [notasCompra, historySearch, historySupplier, historyDate, historySort, fornecedores]);
 
   const totalHistoryPages = Math.max(1, Math.ceil(filteredHistory.length / historyPageSize));
   const validHistoryPage = Math.min(historyPage, totalHistoryPages);
@@ -289,7 +370,19 @@ export function ComprasClient({
     return filteredHistory.slice(start, start + historyPageSize);
   }, [filteredHistory, validHistoryPage, historyPageSize]);
 
-  const isFilteringHistory = historySearch.trim() !== "" || historySort !== "DATE_DESC";
+  const isFilteringHistory =
+    historySearch.trim() !== "" ||
+    historySupplier !== "all" ||
+    historyDate !== "" ||
+    historySort !== "DATE_DESC";
+
+  const handleClearHistoryFilters = () => {
+    setHistorySearch("");
+    setHistorySupplier("all");
+    setHistoryDate("");
+    setHistorySort("DATE_DESC");
+    setHistoryPage(1);
+  };
 
   // ── Fornecedores Filtered & Paginated ───────────────────────────────────────
   const filteredSuppliers = useMemo(() => {
@@ -397,16 +490,119 @@ export function ComprasClient({
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleSupplierCreate = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleOpenNewSupplier = () => {
+    setEditingSupplier(null);
+    setCompanyName("");
+    setCnpj("");
+    setPhone("");
+    setEmail("");
+    setCep("");
+    setLogradouro("");
+    setNumero("");
+    setComplemento("");
+    setBairro("");
+    setCidade("");
+    setEstado("");
+    setFornecedorFormOpen(true);
+  };
+
+  const handleOpenEditSupplier = (supplier: Supplier) => {
+    setEditingSupplier(supplier);
+    setCompanyName(supplier.companyName || "");
+    setCnpj(formatCnpj(supplier.cnpj ?? ""));
+    setPhone(formatPhone(supplier.phone ?? ""));
+    setEmail(supplier.email ?? "");
+
+    const parsed = parseAddress(supplier.address);
+    setCep(parsed.cep || "");
+    setLogradouro(parsed.logradouro || "");
+    setNumero(parsed.numero || "");
+    setComplemento(parsed.complemento || "");
+    setBairro(parsed.bairro || "");
+    setCidade(parsed.cidade || "");
+    setEstado(parsed.estado || "");
+
+    setFornecedorFormOpen(true);
+  };
+
+  const fetchViaCep = async (cepValue: string) => {
+    const digits = cepValue.replace(/\D/g, "");
+    if (digits.length !== 8) return;
+
+    setIsSearchingCep(true);
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+      const data = await res.json();
+      if (!data.erro) {
+        if (data.logradouro) setLogradouro(data.logradouro);
+        if (data.bairro) setBairro(data.bairro);
+        if (data.localidade) setCidade(data.localidade);
+        if (data.uf) setEstado(data.uf);
+        toast.success("Endereço preenchido via CEP!");
+      } else {
+        toast.error("CEP não localizado.");
+      }
+    } catch {
+      // Falha silenciosa
+    } finally {
+      setIsSearchingCep(false);
+    }
+  };
+
+  const handleCepChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCep(e.target.value);
+    setCep(formatted);
+    const digits = formatted.replace(/\D/g, "");
+    if (digits.length === 8) {
+      fetchViaCep(digits);
+    }
+  };
+
+  const handleCepBlur = () => {
+    const digits = cep.replace(/\D/g, "");
+    if (digits.length === 8) {
+      fetchViaCep(digits);
+    }
+  };
+
+  const handleSupplierSave = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+
+    const compiledAddress = buildFullAddress({
+      cep,
+      logradouro,
+      numero,
+      complemento,
+      bairro,
+      cidade,
+      estado,
+    });
+
+    formData.set("companyName", companyName);
+    formData.set("cnpj", cnpj);
+    formData.set("phone", phone);
+    formData.set("email", email);
+    formData.set("address", compiledAddress);
+
     startSupplierTransition(async () => {
-      const result = await criarFornecedorAction(slug, formData);
-      if (result.success) {
-        toast.success("Fornecedor cadastrado com sucesso!");
-        setFornecedorFormOpen(false);
+      if (editingSupplier) {
+        const result = await atualizarFornecedorAction(slug, editingSupplier.id, formData);
+        if (result.success) {
+          toast.success("Fornecedor atualizado com sucesso!");
+          setFornecedorFormOpen(false);
+          setEditingSupplier(null);
+        } else {
+          toast.error(result.error ?? "Erro ao atualizar fornecedor.");
+        }
       } else {
-        toast.error(result.error ?? "Erro ao cadastrar fornecedor.");
+        const result = await criarFornecedorAction(slug, formData);
+        if (result.success) {
+          toast.success("Fornecedor cadastrado com sucesso!");
+          setFornecedorFormOpen(false);
+        } else {
+          toast.error(result.error ?? "Erro ao cadastrar fornecedor.");
+        }
       }
     });
   };
@@ -423,88 +619,244 @@ export function ComprasClient({
 
   return (
     <div className="space-y-6">
-      {/* ── Dialog: Criar Fornecedor ───────────────────────── */}
-      <Dialog open={fornecedorFormOpen} onOpenChange={setFornecedorFormOpen}>
-        <DialogContent className="border-slate-200 bg-white shadow-2xl sm:max-w-md">
+      {/* ── Dialog: Criar / Editar Fornecedor ───────────────────────── */}
+      <Dialog
+        open={fornecedorFormOpen}
+        onOpenChange={(open) => {
+          setFornecedorFormOpen(open);
+          if (!open) setEditingSupplier(null);
+        }}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto border-slate-200 bg-white shadow-2xl sm:max-w-xl">
           <DialogHeader>
             <DialogTitle className="font-display text-lg font-bold text-slate-900">
-              Novo Fornecedor
+              {editingSupplier ? "Editar Fornecedor" : "Novo Fornecedor"}
             </DialogTitle>
             <DialogDescription className="text-slate-500">
-              Cadastre um fornecedor parceiro para vincular às notas de compra e insumos.
+              {editingSupplier
+                ? "Atualize as informações cadastrais e o endereço deste fornecedor parceiro."
+                : "Cadastre um fornecedor parceiro para vincular às notas de compra e insumos."}
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSupplierCreate} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="companyName" className="text-xs font-semibold text-slate-700">
-                Razão Social / Nome Fantasia
-              </Label>
-              <Input
-                id="companyName"
-                name="companyName"
-                placeholder="Ex.: Distribuidora de Alimentos Silva"
-                required
-                className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
-              />
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
+          <form onSubmit={handleSupplierSave} className="space-y-4 pt-1">
+            {/* ── Dados Gerais ── */}
+            <div className="space-y-3">
               <div className="space-y-1.5">
-                <Label htmlFor="cnpj" className="text-xs font-semibold text-slate-700">
-                  CNPJ
+                <Label htmlFor="companyName" className="text-xs font-semibold text-slate-700">
+                  Razão Social / Nome Fantasia <span className="text-rose-500">*</span>
                 </Label>
                 <Input
-                  id="cnpj"
-                  name="cnpj"
-                  placeholder="00.000.000/0001-00"
-                  className="h-10 rounded-xl border-slate-200 bg-white font-mono text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+                  id="companyName"
+                  name="companyName"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  placeholder="Ex.: Distribuidora de Alimentos Silva"
+                  required
+                  className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
                 />
               </div>
 
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="cnpj" className="text-xs font-semibold text-slate-700">
+                    CNPJ
+                  </Label>
+                  <Input
+                    id="cnpj"
+                    name="cnpj"
+                    value={cnpj}
+                    onChange={(e) => setCnpj(formatCnpj(e.target.value))}
+                    placeholder="00.000.000/0001-00"
+                    maxLength={18}
+                    className="h-10 rounded-xl border-slate-200 bg-white font-mono text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="phone" className="text-xs font-semibold text-slate-700">
+                    Telefone / WhatsApp
+                  </Label>
+                  <Input
+                    id="phone"
+                    name="phone"
+                    value={phone}
+                    onChange={(e) => setPhone(formatPhone(e.target.value))}
+                    placeholder="(00) 00000-0000"
+                    maxLength={15}
+                    className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-1.5">
-                <Label htmlFor="phone" className="text-xs font-semibold text-slate-700">
-                  Telefone
+                <Label htmlFor="email" className="text-xs font-semibold text-slate-700">
+                  E-mail de Contato
                 </Label>
                 <Input
-                  id="phone"
-                  name="phone"
-                  placeholder="(00) 00000-0000"
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="contato@fornecedor.com.br"
                   className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
                 />
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-xs font-semibold text-slate-700">
-                E-mail de Contato
-              </Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="contato@fornecedor.com.br"
-                className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
-              />
-            </div>
+            {/* ── Endereço Desmembrado ── */}
+            <div className="border-t border-slate-100 pt-3">
+              <div className="mb-3 flex items-center gap-2">
+                <MapPinIcon size={15} className="text-primary" />
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                  Endereço do Fornecedor
+                </h4>
+              </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="address" className="text-xs font-semibold text-slate-700">
-                Endereço
-              </Label>
-              <Input
-                id="address"
-                name="address"
-                placeholder="Rua, número, bairro, cidade/UF"
-                className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
-              />
+              <div className="space-y-3">
+                {/* CEP com busca automática */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="cep" className="text-xs font-semibold text-slate-700">
+                    CEP
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="cep"
+                      name="cep"
+                      value={cep}
+                      onChange={handleCepChange}
+                      onBlur={handleCepBlur}
+                      placeholder="00000-000"
+                      maxLength={9}
+                      className="h-10 rounded-xl border-slate-200 bg-white font-mono text-sm pr-9 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+                    />
+                    {isSearchingCep && (
+                      <Loader2Icon
+                        size={16}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-primary"
+                      />
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-4">
+                  {/* Logradouro / Rua */}
+                  <div className="space-y-1.5 sm:col-span-3">
+                    <Label htmlFor="logradouro" className="text-xs font-semibold text-slate-700">
+                      Rua / Avenida
+                    </Label>
+                    <Input
+                      id="logradouro"
+                      name="logradouro"
+                      value={logradouro}
+                      onChange={(e) => setLogradouro(e.target.value)}
+                      placeholder="Ex.: Rua das Flores"
+                      className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+
+                  {/* Número */}
+                  <div className="space-y-1.5 sm:col-span-1">
+                    <Label htmlFor="numero" className="text-xs font-semibold text-slate-700">
+                      Número
+                    </Label>
+                    <Input
+                      id="numero"
+                      name="numero"
+                      value={numero}
+                      onChange={(e) => setNumero(e.target.value)}
+                      placeholder="123"
+                      className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {/* Complemento */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="complemento" className="text-xs font-semibold text-slate-700">
+                      Complemento (opcional)
+                    </Label>
+                    <Input
+                      id="complemento"
+                      name="complemento"
+                      value={complemento}
+                      onChange={(e) => setComplemento(e.target.value)}
+                      placeholder="Ex.: Galpão 2, Sala 10"
+                      className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+
+                  {/* Bairro */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="bairro" className="text-xs font-semibold text-slate-700">
+                      Bairro
+                    </Label>
+                    <Input
+                      id="bairro"
+                      name="bairro"
+                      value={bairro}
+                      onChange={(e) => setBairro(e.target.value)}
+                      placeholder="Ex.: Distrito Industrial"
+                      className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {/* Cidade */}
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label htmlFor="cidade" className="text-xs font-semibold text-slate-700">
+                      Cidade
+                    </Label>
+                    <Input
+                      id="cidade"
+                      name="cidade"
+                      value={cidade}
+                      onChange={(e) => setCidade(e.target.value)}
+                      placeholder="Ex.: São Paulo"
+                      className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+
+                  {/* Estado / UF */}
+                  <div className="space-y-1.5 sm:col-span-1">
+                    <Label htmlFor="estado" className="text-xs font-semibold text-slate-700">
+                      UF
+                    </Label>
+                    <Select
+                      value={estado || undefined}
+                      onValueChange={(val) => setEstado(val)}
+                    >
+                      <SelectTrigger
+                        id="estado"
+                        className="h-10 rounded-xl border-slate-200 bg-white text-xs font-semibold text-slate-900 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+                      >
+                        <SelectValue placeholder="UF" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-60 rounded-xl border-slate-200 bg-white shadow-xl">
+                        {BRAZIL_UFS.map((uf) => (
+                          <SelectItem key={uf.value} value={uf.value} className="text-xs font-medium">
+                            <span className="font-semibold text-slate-900">{uf.value}</span>
+                            <span className="ml-1.5 text-slate-500">- {uf.name}</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <DialogFooter className="gap-2 pt-2">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setFornecedorFormOpen(false)}
+                onClick={() => {
+                  setFornecedorFormOpen(false);
+                  setEditingSupplier(null);
+                }}
                 className="h-10 rounded-full border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-all"
               >
                 Cancelar
@@ -514,7 +866,11 @@ export function ComprasClient({
                 disabled={isSupplierPending}
                 className="h-10 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
               >
-                {isSupplierPending ? "Salvando..." : "Cadastrar Fornecedor"}
+                {isSupplierPending
+                  ? "Salvando..."
+                  : editingSupplier
+                  ? "Salvar Alterações"
+                  : "Cadastrar Fornecedor"}
               </Button>
             </DialogFooter>
           </form>
@@ -559,27 +915,31 @@ export function ComprasClient({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setFornecedorFormOpen(true)}
-            className="h-10 gap-2 rounded-full border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition-all"
-          >
-            <PlusIcon size={14} />
-            <span>Novo Fornecedor</span>
-          </Button>
+        {activeTab === "importar" && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              onClick={() => {
+                fileInputRef.current?.click();
+              }}
+              className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
+            >
+              <UploadIcon size={16} />
+              <span>Importar XML da NF-e</span>
+            </Button>
+          </div>
+        )}
 
-          <Button
-            onClick={() => {
-              setActiveTab("importar");
-              fileInputRef.current?.click();
-            }}
-            className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
-          >
-            <UploadIcon size={16} />
-            <span>Importar XML da NF-e</span>
-          </Button>
-        </div>
+        {activeTab === "fornecedores" && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              onClick={handleOpenNewSupplier}
+              className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
+            >
+              <PlusIcon size={16} />
+              <span>Novo Fornecedor</span>
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* ── Metric Cards ────────────────────────────────── */}
@@ -943,7 +1303,7 @@ export function ComprasClient({
             {/* Filtros de Histórico */}
             <div className="border-b border-slate-100 bg-slate-50/50 p-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div className="grid flex-1 grid-cols-1 gap-2.5 sm:grid-cols-3">
+                <div className="grid flex-1 grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
                   {/* Busca */}
                   <div className="relative">
                     <SearchIcon
@@ -951,7 +1311,7 @@ export function ComprasClient({
                       className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
                     />
                     <Input
-                      placeholder="Buscar por nº da nota, fornecedor ou chave..."
+                      placeholder="Buscar por nº da nota ou chave..."
                       value={historySearch}
                       onChange={(e) => {
                         setHistorySearch(e.target.value);
@@ -972,6 +1332,39 @@ export function ComprasClient({
                       </button>
                     )}
                   </div>
+
+                  {/* Filtro por Fornecedor */}
+                  <Select
+                    value={historySupplier}
+                    onValueChange={(val) => {
+                      setHistorySupplier(val);
+                      setHistoryPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs font-medium text-slate-700">
+                      <SelectValue placeholder="Todos os fornecedores" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60 rounded-xl border-slate-200 bg-white shadow-lg">
+                      <SelectItem value="all">Todos os fornecedores</SelectItem>
+                      {fornecedores.map((f) => (
+                        <SelectItem key={f.id} value={f.id}>
+                          {f.companyName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {/* Filtro por Data */}
+                  <DatePicker
+                    value={historyDate ? new Date(historyDate + "T12:00:00") : null}
+                    onChange={(_date, dateStr) => {
+                      setHistoryDate(dateStr ? dateStr.slice(0, 10) : "");
+                      setHistoryPage(1);
+                    }}
+                    placeholder="Filtrar por data..."
+                    clearable
+                    buttonClassName="h-10 rounded-xl border-slate-200 bg-white text-xs font-medium text-slate-700"
+                  />
 
                   {/* Ordenação */}
                   <Select
@@ -995,11 +1388,7 @@ export function ComprasClient({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => {
-                      setHistorySearch("");
-                      setHistorySort("DATE_DESC");
-                      setHistoryPage(1);
-                    }}
+                    onClick={handleClearHistoryFilters}
                     className="h-10 gap-1.5 rounded-xl px-3 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                   >
                     <FilterXIcon size={14} />
@@ -1019,18 +1408,14 @@ export function ComprasClient({
                 </h3>
                 <p className="mt-1 max-w-sm text-xs text-slate-500">
                   {isFilteringHistory
-                    ? "Tente ajustar os termos da busca para localizar a nota desejada."
+                    ? "Tente ajustar os termos da busca e filtros aplicados para localizar a nota desejada."
                     : "Faça o upload do seu primeiro arquivo XML para registrar compras."}
                 </p>
                 {isFilteringHistory ? (
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => {
-                      setHistorySearch("");
-                      setHistorySort("DATE_DESC");
-                      setHistoryPage(1);
-                    }}
+                    onClick={handleClearHistoryFilters}
                     className="mt-4 gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition-all"
                   >
                     <FilterXIcon size={14} />
@@ -1249,7 +1634,7 @@ export function ComprasClient({
                 ) : (
                   <Button
                     size="sm"
-                    onClick={() => setFornecedorFormOpen(true)}
+                    onClick={handleOpenNewSupplier}
                     className="mt-4 gap-1.5 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
                   >
                     <PlusIcon size={14} />
@@ -1316,6 +1701,13 @@ export function ComprasClient({
                                 className="w-44 rounded-xl border-slate-200 bg-white p-1 text-slate-900 shadow-xl"
                               >
                                 <DropdownMenuItem
+                                  onClick={() => handleOpenEditSupplier(f)}
+                                  className="gap-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 focus:bg-slate-50 focus:text-slate-900"
+                                >
+                                  <PencilIcon size={14} className="text-slate-500" />
+                                  Editar dados
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
                                   onClick={() => setDeletingSupplier(f)}
                                   className="gap-2 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 focus:bg-rose-50 focus:text-rose-700"
                                 >
@@ -1340,15 +1732,26 @@ export function ComprasClient({
                           <p className="font-semibold text-slate-900">{f.companyName}</p>
                           <p className="font-mono text-xs text-slate-400">{f.cnpj ?? "—"}</p>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 text-xs font-semibold text-rose-600 hover:bg-rose-50"
-                          onClick={() => setDeletingSupplier(f)}
-                        >
-                          <Trash2Icon size={13} className="mr-1" />
-                          Remover
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                            onClick={() => handleOpenEditSupplier(f)}
+                          >
+                            <PencilIcon size={13} className="mr-1 text-slate-500" />
+                            Editar
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 text-xs font-semibold text-rose-600 hover:bg-rose-50"
+                            onClick={() => setDeletingSupplier(f)}
+                          >
+                            <Trash2Icon size={13} className="mr-1" />
+                            Remover
+                          </Button>
+                        </div>
                       </div>
                       <div className="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100">
                         <span>{f.phone ?? "Sem telefone"}</span>
