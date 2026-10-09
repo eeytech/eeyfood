@@ -16,11 +16,17 @@ const normalizarTelefonePdv = (customerPhone?: string) => {
 };
 
 const revalidarRotasDoRestaurante = (slug: string) => {
-  revalidatePath(`/${slug}/pdv`);
-  revalidatePath(`/${slug}/pedidos`);
-  revalidatePath(`/${slug}/estoque`);
-  revalidatePath(`/${slug}/relatorios`);
-  revalidatePath(`/${slug}/menu`, "page");
+  revalidatePath("/pdv");
+  revalidatePath("/pedidos");
+  revalidatePath("/estoque");
+  revalidatePath("/relatorios");
+  if (slug) {
+    revalidatePath(`/${slug}/pdv`);
+    revalidatePath(`/${slug}/pedidos`);
+    revalidatePath(`/${slug}/estoque`);
+    revalidatePath(`/${slug}/relatorios`);
+    revalidatePath(`/${slug}/menu`, "page");
+  }
 };
 
 // ─── Turno de Caixa ───────────────────────────────────────────────────────────

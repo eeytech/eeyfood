@@ -41,10 +41,16 @@ interface RegistrarPagamentoParcialInput {
 }
 
 const revalidarRotasComanda = (slug: string) => {
-  revalidatePath(`/${slug}/comandas`);
-  revalidatePath(`/${slug}/pedidos`);
-  revalidatePath(`/${slug}/estoque`);
-  revalidatePath(`/${slug}/relatorios`);
+  revalidatePath("/comandas");
+  revalidatePath("/pedidos");
+  revalidatePath("/estoque");
+  revalidatePath("/relatorios");
+  if (slug) {
+    revalidatePath(`/${slug}/comandas`);
+    revalidatePath(`/${slug}/pedidos`);
+    revalidatePath(`/${slug}/estoque`);
+    revalidatePath(`/${slug}/relatorios`);
+  }
 };
 
 export const abrirMesaAction = async ({

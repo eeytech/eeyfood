@@ -233,7 +233,7 @@ export function InventoryFormDialog({
               disabled={isPending}
               className="h-10 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
             >
-              {isPending ? "Salvando..." : isEditing ? "Salvar Alterações" : "Cadastrar Item"}
+              {isPending ? "Salvando..." : isEditing ? "Salvar Alterações" : "Cadastrar Insumo"}
             </Button>
           </div>
         </form>

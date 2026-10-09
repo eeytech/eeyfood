@@ -1,11 +1,18 @@
 "use server";
 
 import OpenAI from "openai";
-import type { RestaurantStatus } from "@fsw/db";
-import { buscarGruposAdicionaisDoRestaurante, buscarProdutoComOpcionaisGestao } from "@/lib/admin-queries";
+import {
+  buscarCardapioGestao,
+  buscarGruposAdicionaisDoRestaurante,
+  buscarProdutoComOpcionaisGestao,
+  buscarRestauranteParaGestao,
+  listarInventarioGestao,
+  listarLotesGestao,
+  listarPerdasGestao,
+} from "@/lib/admin-queries";
 import type { InventoryItemType, UnitOfMeasure } from "@fsw/db";
 import { aiSettingsTable, and, buscarRestaurantePorSlug, db, eq, financialCategoriesTable, financialTransactionsTable, inventoryBatchesTable, inventoryItemsTable, inventoryLossesTable, menuCategoriesTable, operatingHoursTable, productOptionGroupsTable, productOptionsTable, productToOptionGroupsTable, productsTable, purchaseInvoicesTable, recipeItemsTable, restaurantsTable, stockMovementsTable, suppliersTable } from "@fsw/db";
-import type { InventoryItem, InventoryLossReason, RecipeItem } from "@fsw/db";
+import type { InventoryItem, InventoryLossReason, RecipeItem, RestaurantStatus } from "@fsw/db";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 
@@ -135,26 +142,56 @@ const buildNutritionInfo = (data: NutritionData) => {
   return info;
 };
 
-const revalidateRestaurantPaths = (slug: string) => {
-  revalidatePath(`/${slug}/pedidos`);
-  revalidatePath(`/${slug}/cardapio`);
-  revalidatePath(`/${slug}/estoque`);
-  revalidatePath(`/${slug}/relatorios`);
-  revalidatePath(`/${slug}/configuracoes`);
-  revalidatePath(`/${slug}/menu`, "page");
-  try {
-    revalidateTag(`restaurant-menu:${slug}`);
-  } catch {}
+const revalidateRestaurantPaths = (slug?: string) => {
+  revalidatePath("/pedidos");
+  revalidatePath("/cardapio");
+  revalidatePath("/estoque");
+  revalidatePath("/relatorios");
+  revalidatePath("/configuracoes");
+  revalidatePath("/pdv");
+  revalidatePath("/comandas");
+  if (slug) {
+    revalidatePath(`/${slug}/pedidos`);
+    revalidatePath(`/${slug}/cardapio`);
+    revalidatePath(`/${slug}/estoque`);
+    revalidatePath(`/${slug}/relatorios`);
+    revalidatePath(`/${slug}/configuracoes`);
+    revalidatePath(`/${slug}/pdv`);
+    revalidatePath(`/${slug}/comandas`);
+    revalidatePath(`/${slug}/menu`, "page");
+    try {
+      revalidateTag(`restaurant-menu:${slug}`);
+    } catch {}
+  }
 };
 
-const getRestaurantOrThrow = async (slug: string) => {
-  const restaurant = await buscarRestaurantePorSlug(slug);
+const getRestaurantOrThrow = async (slug?: string) => {
+  const restaurant = await buscarRestauranteParaGestao(slug);
 
   if (!restaurant) {
     throw new Error("Restaurante não encontrado.");
   }
 
   return restaurant;
+};
+
+export const fetchEstoqueDataAction = async (slug?: string) => {
+  const restaurant = await buscarRestauranteParaGestao(slug);
+  const activeSlug = restaurant?.slug ?? slug ?? "";
+
+  const [cardapio, inventoryItems, lotes, perdas] = await Promise.all([
+    buscarCardapioGestao(activeSlug),
+    listarInventarioGestao(activeSlug),
+    listarLotesGestao(activeSlug),
+    listarPerdasGestao(activeSlug),
+  ]);
+
+  return {
+    products: cardapio?.products ?? [],
+    inventoryItems: inventoryItems ?? [],
+    lotes: lotes ?? [],
+    perdas: perdas ?? [],
+  };
 };
 
 export const createCategoryAction = async (slug: string, formData: FormData) => {

@@ -180,7 +180,7 @@ export const buscarRestauranteParaGestao = async (
 export const buscarCardapioGestao = async (
   slug: string,
 ): Promise<CardapioGestao | null> => {
-  const restaurant = await buscarRestaurantePorSlug(slug);
+  const restaurant = await buscarRestauranteParaGestao(slug);
 
   if (!restaurant) {
     return null;
@@ -836,7 +836,7 @@ export const listarRegrasFreteGratisGestao = async (
 // ─── Inventário Geral ────────────────────────────────────────────────────────
 
 export const listarInventarioGestao = async (slug: string): Promise<InventoryItem[]> => {
-  const restaurant = await buscarRestaurantePorSlug(slug);
+  const restaurant = await buscarRestauranteParaGestao(slug);
   if (!restaurant) return [];
 
   return db
@@ -854,7 +854,7 @@ export interface LoteComInsumo extends InventoryBatch {
 }
 
 export const listarLotesGestao = async (slug: string): Promise<LoteComInsumo[]> => {
-  const restaurant = await buscarRestaurantePorSlug(slug);
+  const restaurant = await buscarRestauranteParaGestao(slug);
   if (!restaurant) return [];
 
   const rows = await db
@@ -889,7 +889,7 @@ export interface PerdaComInsumo extends InventoryLoss {
 }
 
 export const listarPerdasGestao = async (slug: string): Promise<PerdaComInsumo[]> => {
-  const restaurant = await buscarRestaurantePorSlug(slug);
+  const restaurant = await buscarRestauranteParaGestao(slug);
   if (!restaurant) return [];
 
   const rows = await db

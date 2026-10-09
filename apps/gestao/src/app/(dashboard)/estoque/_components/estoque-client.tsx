@@ -20,8 +20,10 @@ import {
   WarehouseIcon,
   XIcon,
 } from "lucide-react";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { io } from "socket.io-client";
 
 import {
   atualizarLoteAction,
@@ -30,6 +32,7 @@ import {
   deleteInventoryItemAction,
   excluirLoteAction,
   excluirPerdaAction,
+  fetchEstoqueDataAction,
   registrarPerdaAction,
   updateStockAction,
 } from "@/app/(dashboard)/actions";
@@ -228,11 +231,102 @@ function TablePagination({
 
 export function EstoqueClient({
   slug,
-  products,
-  inventoryItems,
-  lotes,
-  perdas,
+  products: initialProducts,
+  inventoryItems: initialInventoryItems,
+  lotes: initialLotes,
+  perdas: initialPerdas,
 }: EstoqueClientProps) {
+  const router = useRouter();
+
+  const [products, setProducts] = useState(initialProducts);
+  const [inventoryItems, setInventoryItems] = useState(initialInventoryItems);
+  const [lotes, setLotes] = useState(initialLotes);
+  const [perdas, setPerdas] = useState(initialPerdas);
+
+  useEffect(() => {
+    setProducts(initialProducts);
+  }, [initialProducts]);
+
+  useEffect(() => {
+    setInventoryItems(initialInventoryItems);
+  }, [initialInventoryItems]);
+
+  useEffect(() => {
+    setLotes(initialLotes);
+  }, [initialLotes]);
+
+  useEffect(() => {
+    setPerdas(initialPerdas);
+  }, [initialPerdas]);
+
+  const refreshData = async () => {
+    try {
+      const data = await fetchEstoqueDataAction(slug);
+      if (data) {
+        setProducts(data.products);
+        setInventoryItems(data.inventoryItems);
+        setLotes(data.lotes);
+        setPerdas(data.perdas);
+      }
+    } catch (err) {
+      console.error("Erro ao sincronizar estoque:", err);
+    }
+    router.refresh();
+  };
+
+  useEffect(() => {
+    const handleFocus = () => {
+      void refreshData();
+    };
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [slug]);
+
+  useEffect(() => {
+    const websocketUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || "http://localhost:3001";
+    let socket: ReturnType<typeof io> | null = null;
+
+    try {
+      socket = io(websocketUrl, {
+        transports: ["websocket", "polling"],
+        reconnectionAttempts: 5,
+        reconnectionDelay: 5000,
+        timeout: 5000,
+      });
+
+      const handleSync = () => {
+        void refreshData();
+      };
+
+      socket.on("connect", () => {
+        if (slug) {
+          socket?.emit("JOIN_RESTAURANT_ROOM", slug);
+        }
+      });
+
+      socket.on("NEW_ORDER", handleSync);
+      socket.on("ORDER_UPDATED", handleSync);
+      socket.on("STOCK_UPDATED", handleSync);
+    } catch (err) {
+      console.warn("WebSocket não conectado no estoque:", err);
+    }
+
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        void refreshData();
+      }
+    }, 20000);
+
+    return () => {
+      clearInterval(interval);
+      if (socket) {
+        socket.disconnect();
+      }
+    };
+  }, [slug]);
+
   const [activeTab, setActiveTab] = useState("cardapio");
 
   // ── Produto Cardápio state ─────────────────────────────────────────────────
@@ -517,6 +611,7 @@ export function EstoqueClient({
       await updateStockAction(slug, formData);
       toast.success("Estoque do produto atualizado com sucesso!");
       setAdjustProduct(null);
+      await refreshData();
     });
   };
 
@@ -527,6 +622,7 @@ export function EstoqueClient({
       await deleteInventoryItemAction(slug, id);
       toast.success("Item de inventário excluído com sucesso.");
       setDeleteConfirmItem(null);
+      await refreshData();
     });
   };
 
@@ -538,6 +634,7 @@ export function EstoqueClient({
       if (res.success) {
         toast.success("Lote excluído com sucesso.");
         setDeleteConfirmBatch(null);
+        await refreshData();
       } else {
         toast.error(res.error ?? "Erro ao excluir lote.");
       }
@@ -552,6 +649,7 @@ export function EstoqueClient({
       if (res.success) {
         toast.success("Registro de perda excluído com sucesso.");
         setDeleteConfirmLoss(null);
+        await refreshData();
       } else {
         toast.error(res.error ?? "Erro ao excluir registro de perda.");
       }
@@ -568,7 +666,7 @@ export function EstoqueClient({
         <DialogContent className="border-slate-200 bg-white shadow-2xl sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display text-lg font-bold text-slate-900">
-              Ajustar Saldo de Estoque
+              Editar Saldo de Estoque
             </DialogTitle>
             <DialogDescription className="text-slate-500">
               {adjustProduct?.categoryName} · {adjustProduct?.name}
@@ -662,7 +760,7 @@ export function EstoqueClient({
                   disabled={isPending}
                   className="h-10 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
                 >
-                  {isPending ? "Atualizando..." : "Salvar Saldo"}
+                  {isPending ? "Atualizando..." : "Salvar Alterações"}
                 </Button>
               </DialogFooter>
             </form>
@@ -732,13 +830,17 @@ export function EstoqueClient({
         open={lossDialogOpen}
         onOpenChange={(open) => {
           setLossDialogOpen(open);
-          if (!open) setEditingLoss(null);
+          if (open) {
+            void refreshData();
+          } else {
+            setEditingLoss(null);
+          }
         }}
       >
         <DialogContent className="border-slate-200 bg-white shadow-2xl sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display text-lg font-bold text-slate-900">
-              {editingLoss ? "Editar Registro de Perda" : "Registrar Perda ou Desperdício"}
+              {editingLoss ? "Editar Registro de Perda" : "Cadastrar Registro de Perda ou Desperdício"}
             </DialogTitle>
             <DialogDescription className="text-slate-500">
               {editingLoss
@@ -758,6 +860,7 @@ export function EstoqueClient({
                     toast.success("Registro de perda atualizado com sucesso.");
                     setLossDialogOpen(false);
                     setEditingLoss(null);
+                    await refreshData();
                   } else {
                     toast.error(result.error ?? "Erro ao atualizar perda.");
                   }
@@ -766,6 +869,7 @@ export function EstoqueClient({
                   if (result.success) {
                     toast.success("Desperdício registrado com sucesso.");
                     setLossDialogOpen(false);
+                    await refreshData();
                   } else {
                     toast.error(result.error ?? "Erro ao registrar perda.");
                   }
@@ -895,7 +999,7 @@ export function EstoqueClient({
                   ? "Salvando..."
                   : editingLoss
                     ? "Salvar Alterações"
-                    : "Registrar Desperdício"}
+                    : "Cadastrar Registro de Perda"}
               </Button>
             </DialogFooter>
           </form>
@@ -907,13 +1011,17 @@ export function EstoqueClient({
         open={batchDialogOpen}
         onOpenChange={(open) => {
           setBatchDialogOpen(open);
-          if (!open) setEditingBatch(null);
+          if (open) {
+            void refreshData();
+          } else {
+            setEditingBatch(null);
+          }
         }}
       >
         <DialogContent className="border-slate-200 bg-white shadow-2xl sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="font-display text-lg font-bold text-slate-900">
-              {editingBatch ? "Editar Lote de Estoque" : "Registrar Lote e Entrada"}
+              {editingBatch ? "Editar Lote de Estoque" : "Cadastrar Lote e Entrada"}
             </DialogTitle>
             <DialogDescription className="text-slate-500">
               {editingBatch
@@ -933,6 +1041,7 @@ export function EstoqueClient({
                     toast.success("Lote atualizado com sucesso.");
                     setBatchDialogOpen(false);
                     setEditingBatch(null);
+                    await refreshData();
                   } else {
                     toast.error(result.error ?? "Erro ao atualizar lote.");
                   }
@@ -941,6 +1050,7 @@ export function EstoqueClient({
                   if (result.success) {
                     toast.success("Lote registrado e estoque atualizado.");
                     setBatchDialogOpen(false);
+                    await refreshData();
                   } else {
                     toast.error(result.error ?? "Erro ao registrar lote.");
                   }
@@ -1062,7 +1172,7 @@ export function EstoqueClient({
                   ? "Salvando..."
                   : editingBatch
                     ? "Salvar Alterações"
-                    : "Registrar Lote"}
+                    : "Cadastrar Lote"}
               </Button>
             </DialogFooter>
           </form>
@@ -1075,6 +1185,7 @@ export function EstoqueClient({
         item={editingItem}
         open={invFormOpen}
         onOpenChange={setInvFormOpen}
+        onSuccess={refreshData}
       />
 
       {/* ── Page Header ─────────────────────────────────── */}
@@ -1525,7 +1636,7 @@ export function EstoqueClient({
                                     className="gap-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 focus:bg-slate-50 focus:text-slate-900"
                                   >
                                     <PencilIcon size={14} className="text-primary" />
-                                    Ajustar saldo
+                                    Editar dados
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
@@ -2374,8 +2485,8 @@ export function EstoqueClient({
                     }}
                     className="mt-4 gap-1.5 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
                   >
-                    <AlertTriangleIcon size={14} />
-                    Registrar perda
+                    <PlusIcon size={16} />
+                    Nova Perda
                   </Button>
                 )}
               </div>
