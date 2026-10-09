@@ -3,6 +3,7 @@
 import {
   ChevronDownIcon,
   ChevronUpIcon,
+  ListPlusIcon,
   PencilIcon,
   PlusIcon,
   Trash2Icon,
@@ -27,6 +28,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { GrupoAdicionalComOpcoes } from "@/lib/admin-queries";
 import type { ProductOption } from "@fsw/db";
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+}
 
 interface GlobalOptionGroupsManagerProps {
   slug: string;
@@ -125,13 +133,14 @@ function GroupForm({
           />
         </div>
       </div>
-      <div className="flex justify-end gap-2">
+      <div className="flex justify-end gap-2 pt-1">
         <Button
           type="button"
-          variant="ghost"
+          variant="outline"
           size="sm"
           onClick={onCancel}
           disabled={isPending}
+          className="h-9 rounded-full border-slate-200 px-4 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-all"
         >
           <XIcon size={14} className="mr-1" />
           Cancelar
@@ -141,6 +150,7 @@ function GroupForm({
           size="sm"
           onClick={() => onSubmit(form)}
           disabled={isPending || !form.name.trim()}
+          className="h-9 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
         >
           {isPending ? "Salvando..." : submitLabel}
         </Button>
@@ -290,13 +300,14 @@ function OptionForm({
           />
         </div>
       </div>
-      <div className="flex justify-end gap-2">
+      <div className="flex justify-end gap-2 pt-1">
         <Button
           type="button"
-          variant="ghost"
+          variant="outline"
           size="sm"
           onClick={onCancel}
           disabled={isPending}
+          className="h-8 rounded-full border-slate-200 px-3.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-all"
         >
           <XIcon size={12} className="mr-1" />
           Cancelar
@@ -306,6 +317,7 @@ function OptionForm({
           size="sm"
           onClick={() => onSubmit(form)}
           disabled={isPending || !form.name.trim()}
+          className="h-8 rounded-full bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
         >
           {isPending ? "Salvando..." : submitLabel}
         </Button>
@@ -374,46 +386,50 @@ function OptionRow({
   }
 
   return (
-    <div className="flex items-center gap-2 rounded-lg border bg-white px-3 py-2">
-      {option.imageUrl && (
+    <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white p-3 shadow-2xs transition-colors hover:bg-slate-50/60">
+      {option.imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={option.imageUrl}
           alt={option.name}
-          className="h-8 w-8 shrink-0 rounded-md border object-cover"
+          className="h-9 w-9 shrink-0 rounded-lg border border-slate-200/80 object-cover"
         />
+      ) : (
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200/80 bg-slate-100 text-slate-400">
+          <ListPlusIcon size={16} />
+        </div>
       )}
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{option.name}</p>
+        <p className="truncate text-xs font-semibold text-slate-900">{option.name}</p>
         {option.description && (
-          <p className="truncate text-xs text-muted-foreground">
+          <p className="truncate text-[11px] text-slate-500">
             {option.description}
           </p>
         )}
       </div>
-      <span className="shrink-0 text-sm text-muted-foreground">
-        {(option.price ?? 0) > 0 ? `+ R$ ${(option.price ?? 0).toFixed(2)}` : "Grátis"}
+      <span className="shrink-0 font-display text-xs font-bold text-slate-900">
+        {(option.price ?? 0) > 0 ? `+ ${formatCurrency(option.price ?? 0)}` : "Grátis"}
       </span>
       <div className="flex shrink-0 gap-1">
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          className="h-7 w-7"
+          className="h-7 w-7 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100"
           onClick={() => setEditing(true)}
           disabled={isPending}
         >
-          <PencilIcon size={12} />
+          <PencilIcon size={13} className="text-primary" />
         </Button>
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          className="h-7 w-7 text-rose-500 hover:bg-rose-50"
+          className="h-7 w-7 rounded-lg text-rose-600 hover:bg-rose-50"
           onClick={handleDelete}
           disabled={isPending}
         >
-          <Trash2Icon size={12} />
+          <Trash2Icon size={13} />
         </Button>
       </div>
     </div>
@@ -498,77 +514,84 @@ function GlobalGroupCard({
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border bg-slate-50">
+    <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
       <div
-        className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-slate-100"
+        className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3.5 bg-slate-50/60 transition-colors hover:bg-slate-100/70"
         onClick={() => setExpanded((v) => !v)}
       >
-        <div className="flex min-w-0 items-center gap-2">
-          {expanded ? (
-            <ChevronUpIcon size={15} />
+        <div className="flex min-w-0 items-center gap-2.5">
+          <div className="text-slate-400">
+            {expanded ? (
+              <ChevronUpIcon size={16} />
+            ) : (
+              <ChevronDownIcon size={16} />
+            )}
+          </div>
+          <span className="truncate text-sm font-semibold text-slate-900">{group.name}</span>
+          <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-700">
+            {group.options.length} {group.options.length === 1 ? "item" : "itens"}
+          </span>
+          {group.minOptions > 0 ? (
+            <span className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2.5 py-0.5 text-[11px] font-semibold text-rose-700">
+              Obrigatório (mín: {group.minOptions})
+            </span>
           ) : (
-            <ChevronDownIcon size={15} />
-          )}
-          <span className="truncate text-sm font-semibold">{group.name}</span>
-          <Badge variant="secondary" className="shrink-0 text-xs">
-            {group.options.length} itens
-          </Badge>
-          {group.minOptions > 0 && (
-            <Badge variant="danger" className="shrink-0 text-xs">
-              Obrigatório
-            </Badge>
+            <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[11px] font-medium text-slate-500">
+              Opcional (máx: {group.maxOptions})
+            </span>
           )}
         </div>
         <div
-          className="flex shrink-0 gap-1"
+          className="flex shrink-0 gap-1.5"
           onClick={(e) => e.stopPropagation()}
         >
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="h-8 w-8 rounded-lg border border-slate-200/80 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 shadow-2xs transition-colors"
             onClick={() => setEditingGroup(true)}
             disabled={isPendingGroup}
           >
-            <PencilIcon size={12} />
+            <PencilIcon size={13} className="text-primary" />
           </Button>
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="h-7 w-7 text-rose-500 hover:bg-rose-50"
+            className="h-8 w-8 rounded-lg border border-slate-200/80 bg-white text-rose-600 hover:bg-rose-50 shadow-2xs transition-colors"
             onClick={() => setConfirmDelete(true)}
             disabled={isPendingGroup}
           >
-            <Trash2Icon size={12} />
+            <Trash2Icon size={13} />
           </Button>
         </div>
       </div>
 
       {confirmDelete && (
-        <div className="border-t bg-rose-50 px-4 py-3 text-sm">
-          <p className="font-medium text-rose-800">
+        <div className="border-t border-rose-100 bg-rose-50/70 px-4 py-3 text-sm">
+          <p className="font-semibold text-rose-900">
             Excluir grupo permanentemente?
           </p>
-          <p className="mt-0.5 text-rose-700">
+          <p className="mt-0.5 text-xs text-rose-700">
             Este grupo será removido de <strong>todos os produtos</strong> que o
-            utilizam. Essa ação não pode ser desfeita.
+            utilizam no cardápio. Essa ação não pode ser desfeita.
           </p>
-          <div className="mt-2 flex gap-2">
+          <div className="mt-3 flex gap-2">
             <Button
               type="button"
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={() => setConfirmDelete(false)}
               disabled={isPendingGroup}
+              className="h-8 rounded-full border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
             >
               Cancelar
             </Button>
             <Button
               type="button"
               size="sm"
-              className="bg-rose-600 hover:bg-rose-700"
+              className="h-8 rounded-full bg-rose-600 hover:bg-rose-700 px-4 text-xs font-semibold text-white shadow-sm"
               onClick={handleDeleteGroup}
               disabled={isPendingGroup}
             >
@@ -579,7 +602,7 @@ function GlobalGroupCard({
       )}
 
       {expanded && !confirmDelete && (
-        <div className="space-y-2 border-t bg-slate-50/50 p-3">
+        <div className="space-y-2.5 border-t border-slate-100 bg-slate-50/40 p-4">
           {group.options.map((option) => (
             <OptionRow
               key={option.id}
@@ -602,11 +625,11 @@ function GlobalGroupCard({
               type="button"
               variant="outline"
               size="sm"
-              className="w-full gap-1.5 border-dashed"
+              className="h-9 w-full gap-2 rounded-xl border-dashed border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-all shadow-2xs"
               onClick={() => setAddingOption(true)}
             >
-              <PlusIcon size={13} />
-              Adicionar item
+              <PlusIcon size={14} />
+              Adicionar item a este grupo
             </Button>
           )}
         </div>
@@ -670,11 +693,25 @@ export function GlobalOptionGroupsManager({
   return (
     <div className="space-y-3">
       {groups.length === 0 && !addingGroup && (
-        <div className="rounded-xl border border-dashed py-10 text-center text-sm text-muted-foreground">
-          <p className="font-medium">Nenhum grupo de adicionais cadastrado.</p>
-          <p className="mt-1 text-xs">
-            Crie grupos globais para reutilizá-los em vários produtos.
+        <div className="flex min-h-[220px] flex-col items-center justify-center p-8 text-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/40">
+          <div className="rounded-2xl bg-primary/10 p-3.5 text-primary border border-primary/20">
+            <ListPlusIcon size={28} />
+          </div>
+          <h4 className="mt-3 font-display text-sm font-semibold text-slate-900">
+            Nenhum grupo de adicionais cadastrado
+          </h4>
+          <p className="mt-1 max-w-sm text-xs text-slate-500">
+            Crie grupos de complementos reutilizáveis para vinculá-los aos produtos do seu cardápio.
           </p>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => setAddingGroup(true)}
+            className="mt-4 gap-1.5 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
+          >
+            <PlusIcon size={14} />
+            Criar primeiro grupo
+          </Button>
         </div>
       )}
 
@@ -696,15 +733,17 @@ export function GlobalOptionGroupsManager({
           submitLabel="Criar grupo"
         />
       ) : (
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full gap-2 border-dashed"
-          onClick={() => setAddingGroup(true)}
-        >
-          <PlusIcon size={14} />
-          Novo grupo de adicionais global
-        </Button>
+        groups.length > 0 && (
+          <Button
+            type="button"
+            variant="outline"
+            className="h-10 w-full gap-2 rounded-2xl border-dashed border-slate-300 bg-slate-50/50 text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:border-slate-400 transition-all"
+            onClick={() => setAddingGroup(true)}
+          >
+            <PlusIcon size={14} />
+            Novo grupo de adicionais global
+          </Button>
+        )
       )}
     </div>
   );

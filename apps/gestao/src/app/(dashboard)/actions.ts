@@ -240,6 +240,36 @@ export const deleteCategoryAction = async (slug: string, formData: FormData) => 
   revalidateRestaurantPaths(slug);
 };
 
+export const alternarStatusCategoriaAction = async (
+  slug: string,
+  categoryId: string,
+  isActive: boolean,
+): Promise<{ error?: string; success?: boolean }> => {
+  try {
+    const restaurant = await getRestaurantOrThrow(slug);
+    await db
+      .update(menuCategoriesTable)
+      .set({
+        isActive,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(menuCategoriesTable.id, categoryId),
+          eq(menuCategoriesTable.restaurantId, restaurant.id),
+        ),
+      );
+
+    revalidateRestaurantPaths(slug);
+    return { success: true };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Erro ao alterar status da categoria.",
+    };
+  }
+};
+
 export const createProductAction = async (slug: string, formData: FormData) => {
   const restaurant = await getRestaurantOrThrow(slug);
   const imageUrl = await resolveProductImageUrl(formData);
@@ -432,6 +462,36 @@ export const deleteProductAction = async (slug: string, formData: FormData) => {
     );
 
   revalidateRestaurantPaths(slug);
+};
+
+export const alternarStatusProdutoAction = async (
+  slug: string,
+  productId: string,
+  isActive: boolean,
+): Promise<{ error?: string; success?: boolean }> => {
+  try {
+    const restaurant = await getRestaurantOrThrow(slug);
+    await db
+      .update(productsTable)
+      .set({
+        isActive,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(productsTable.id, productId),
+          eq(productsTable.restaurantId, restaurant.id),
+        ),
+      );
+
+    revalidateRestaurantPaths(slug);
+    return { success: true };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Erro ao alterar status do produto.",
+    };
+  }
 };
 
 export const updateStockAction = async (slug: string, formData: FormData) => {

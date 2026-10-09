@@ -405,7 +405,11 @@ function ProductFields({
         </div>
       </div>
 
-      <Button type="submit" className="w-full" disabled={isPending}>
+      <Button
+        type="submit"
+        className="h-10 w-full rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
+        disabled={isPending}
+      >
         {isPending
           ? defaultValues
             ? "Salvando..."
@@ -431,10 +435,25 @@ export function ProductForm({ slug, categories, defaultValues, onSuccess }: Prod
 
   return (
     <Tabs defaultValue="details">
-      <TabsList className="mb-4 w-full">
-        <TabsTrigger value="details" className="flex-1">Detalhes</TabsTrigger>
-        <TabsTrigger value="recipe" className="flex-1">Ficha Técnica</TabsTrigger>
-        <TabsTrigger value="options" className="flex-1">Adicionais</TabsTrigger>
+      <TabsList className="mb-4 h-auto w-full gap-1.5 rounded-2xl border border-slate-200/80 bg-slate-100/90 p-1.5 shadow-xs">
+        <TabsTrigger
+          value="details"
+          className="flex-1 rounded-xl py-2 text-xs font-semibold text-slate-600 transition data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs"
+        >
+          Detalhes
+        </TabsTrigger>
+        <TabsTrigger
+          value="recipe"
+          className="flex-1 rounded-xl py-2 text-xs font-semibold text-slate-600 transition data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs"
+        >
+          Ficha Técnica
+        </TabsTrigger>
+        <TabsTrigger
+          value="options"
+          className="flex-1 rounded-xl py-2 text-xs font-semibold text-slate-600 transition data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs"
+        >
+          Adicionais
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="details">
