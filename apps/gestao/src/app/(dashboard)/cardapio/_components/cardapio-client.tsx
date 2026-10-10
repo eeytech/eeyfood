@@ -17,14 +17,12 @@ import {
   PencilIcon,
   PizzaIcon,
   PlusIcon,
-  PrinterIcon,
   SearchIcon,
   Trash2Icon,
   UtensilsCrossedIcon,
   WheatOffIcon,
   XIcon,
 } from "lucide-react";
-import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -235,6 +233,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
   const [deletingProduct, setDeletingProduct] = useState<{ id: string; name: string } | null>(null);
 
   const [createCategoryOpen, setCreateCategoryOpen] = useState(false);
+  const [createOptionGroupOpen, setCreateOptionGroupOpen] = useState(false);
   const [editCategory, setEditCategory] = useState<CategoriaComProdutos | null>(null);
   const [deletingCategory, setDeletingCategory] = useState<{ id: string; name: string } | null>(null);
 
@@ -510,52 +509,34 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Link href="/cardapio/impressao">
+          {activeTab === "products" && (
             <Button
-              variant="outline"
-              className="h-10 gap-2 rounded-full border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-all"
+              onClick={() => setCreateProductOpen(true)}
+              className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
             >
-              <PrinterIcon size={14} />
-              <span>Imprimir Cardápio</span>
+              <PlusIcon size={16} />
+              <span>Novo Produto</span>
             </Button>
-          </Link>
+          )}
 
-          {activeTab === "categories" ? (
-            <>
-              <Button
-                onClick={() => setCreateProductOpen(true)}
-                variant="outline"
-                className="h-10 gap-2 rounded-full border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-all"
-              >
-                <PlusIcon size={14} />
-                <span>Novo Produto</span>
-              </Button>
-              <Button
-                onClick={() => setCreateCategoryOpen(true)}
-                className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
-              >
-                <PlusIcon size={16} />
-                <span>Nova Categoria</span>
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button
-                onClick={() => setCreateCategoryOpen(true)}
-                variant="outline"
-                className="h-10 gap-2 rounded-full border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-all"
-              >
-                <PlusIcon size={14} />
-                <span>Nova Categoria</span>
-              </Button>
-              <Button
-                onClick={() => setCreateProductOpen(true)}
-                className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
-              >
-                <PlusIcon size={16} />
-                <span>Novo Produto</span>
-              </Button>
-            </>
+          {activeTab === "categories" && (
+            <Button
+              onClick={() => setCreateCategoryOpen(true)}
+              className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
+            >
+              <PlusIcon size={16} />
+              <span>Nova Categoria</span>
+            </Button>
+          )}
+
+          {activeTab === "additionals" && (
+            <Button
+              onClick={() => setCreateOptionGroupOpen(true)}
+              className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
+            >
+              <PlusIcon size={16} />
+              <span>Novo Grupo Adicional</span>
+            </Button>
           )}
         </div>
       </div>
@@ -628,11 +609,11 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Disponíveis
               </span>
-              <div className="rounded-lg bg-emerald-100 p-1.5 text-emerald-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <CheckCircle2Icon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-emerald-700">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {activeProducts}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -655,14 +636,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Alerta de Estoque
               </span>
-              <div
-                className={cn(
-                  "rounded-lg p-1.5",
-                  lowStockProducts > 0
-                    ? "bg-amber-100 text-amber-700"
-                    : "bg-emerald-100 text-emerald-700",
-                )}
-              >
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 {lowStockProducts > 0 ? (
                   <AlertTriangleIcon size={16} />
                 ) : (
@@ -670,12 +644,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                 )}
               </div>
             </div>
-            <p
-              className={cn(
-                "mt-2 font-display text-2xl font-bold",
-                lowStockProducts > 0 ? "text-amber-700" : "text-emerald-700",
-              )}
-            >
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {lowStockProducts}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -954,8 +923,8 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
 
                             {/* Categoria */}
                             <TableCell className="py-3.5 text-slate-600">
-                              <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200/80 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700">
-                                <Layers3Icon size={12} className="text-slate-400" />
+                              <span className="inline-flex items-center gap-1.5 rounded-lg border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+                                <Layers3Icon size={12} className="text-primary" />
                                 {product.categoryName}
                               </span>
                             </TableCell>
@@ -973,7 +942,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                                     "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold",
                                     isLowStock
                                       ? "border border-rose-200 bg-rose-50 text-rose-700"
-                                      : "border border-slate-200 bg-slate-100 text-slate-700",
+                                      : "border border-primary/20 bg-primary/10 text-primary",
                                   )}
                                 >
                                   {isLowStock && <AlertTriangleIcon size={12} className="text-rose-600" />}
@@ -998,7 +967,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                                 <span
                                   className={cn(
                                     "text-xs font-semibold",
-                                    product.isActive ? "text-emerald-700" : "text-slate-400",
+                                    product.isActive ? "text-primary" : "text-slate-400",
                                   )}
                                 >
                                   {product.isActive ? "Ativo" : "Pausado"}
@@ -1034,7 +1003,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                                   >
                                     {product.isActive ? (
                                       <>
-                                        <AlertCircleIcon size={14} className="text-amber-600" />
+                                        <AlertCircleIcon size={14} className="text-primary" />
                                         <span>Pausar Venda</span>
                                       </>
                                     ) : (
@@ -1114,7 +1083,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                                 <span
                                   className={cn(
                                     "text-[11px] font-semibold",
-                                    product.isActive ? "text-emerald-700" : "text-slate-400",
+                                    product.isActive ? "text-primary" : "text-slate-400",
                                   )}
                                 >
                                   {product.isActive ? "Ativo" : "Pausado"}
@@ -1123,8 +1092,8 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                             </div>
 
                             <div className="mt-2 flex items-center justify-between">
-                              <span className="inline-flex items-center gap-1 rounded-md border border-slate-200/80 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-700">
-                                <Layers3Icon size={11} className="text-slate-400" />
+                              <span className="inline-flex items-center gap-1 rounded-md border border-primary/20 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                                <Layers3Icon size={11} className="text-primary" />
                                 {product.categoryName}
                               </span>
                               <span className="font-display text-sm font-bold text-slate-900">
@@ -1142,7 +1111,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                                   "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
                                   isLowStock
                                     ? "border border-rose-200 bg-rose-50 text-rose-700"
-                                    : "border border-slate-200 bg-slate-100 text-slate-700",
+                                    : "border border-primary/20 bg-primary/10 text-primary",
                                 )}
                               >
                                 {isLowStock && <AlertTriangleIcon size={12} className="text-rose-600" />}
@@ -1379,7 +1348,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
 
                           {/* Produtos */}
                           <TableCell className="py-3.5 text-center">
-                            <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
+                            <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
                               {category.products.length} {category.products.length === 1 ? "produto" : "produtos"}
                             </span>
                           </TableCell>
@@ -1387,8 +1356,8 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                           {/* Tipo especial */}
                           <TableCell className="py-3.5">
                             {category.isPizzaCategory ? (
-                              <span className="inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-2.5 py-0.5 text-xs font-semibold text-orange-800">
-                                <PizzaIcon size={12} className="text-orange-600" />
+                              <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
+                                <PizzaIcon size={12} className="text-primary" />
                                 Pizza Meio a Meio
                               </span>
                             ) : (
@@ -1403,14 +1372,14 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                                 checked={category.isActive}
                                 disabled={isPending}
                                 onCheckedChange={() =>
-                                  handleToggleCategoryStatus(category.id, category.isActive, category.name)
+                                    handleToggleCategoryStatus(category.id, category.isActive, category.name)
                                 }
                                 className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
                               />
                               <span
                                 className={cn(
                                   "text-xs font-semibold",
-                                  category.isActive ? "text-emerald-700" : "text-slate-400",
+                                  category.isActive ? "text-primary" : "text-slate-400",
                                 )}
                               >
                                 {category.isActive ? "Ativa" : "Inativa"}
@@ -1446,7 +1415,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                                 >
                                   {category.isActive ? (
                                     <>
-                                      <AlertCircleIcon size={14} className="text-amber-600" />
+                                      <AlertCircleIcon size={14} className="text-primary" />
                                       <span>Desativar Categoria</span>
                                     </>
                                   ) : (
@@ -1512,7 +1481,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                           <span
                             className={cn(
                               "text-[11px] font-semibold",
-                              category.isActive ? "text-emerald-700" : "text-slate-400",
+                              category.isActive ? "text-primary" : "text-slate-400",
                             )}
                           >
                             {category.isActive ? "Ativa" : "Inativa"}
@@ -1522,11 +1491,12 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
 
                       <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-xs">
                         <div className="flex items-center gap-2">
-                          <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+                          <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
                             {category.products.length} {category.products.length === 1 ? "produto" : "produtos"}
                           </span>
                           {category.isPizzaCategory && (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[11px] font-semibold text-orange-800">
+                            <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                              <PizzaIcon size={11} className="text-primary" />
                               Pizza Meio a Meio
                             </span>
                           )}
@@ -1600,7 +1570,11 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
               </div>
             </div>
             <div className="p-4 sm:p-6">
-              <GlobalOptionGroupsManager slug={slug} />
+              <GlobalOptionGroupsManager
+                slug={slug}
+                isAddingGroup={createOptionGroupOpen}
+                onAddingGroupChange={setCreateOptionGroupOpen}
+              />
             </div>
           </Card>
         </TabsContent>

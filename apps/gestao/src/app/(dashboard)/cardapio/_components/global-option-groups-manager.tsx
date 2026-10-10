@@ -4,6 +4,7 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   ListPlusIcon,
+  MoreHorizontalIcon,
   PencilIcon,
   PlusIcon,
   Trash2Icon,
@@ -24,6 +25,13 @@ import {
 } from "@/app/(dashboard)/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { GrupoAdicionalComOpcoes } from "@/lib/admin-queries";
@@ -38,6 +46,8 @@ function formatCurrency(value: number) {
 
 interface GlobalOptionGroupsManagerProps {
   slug: string;
+  isAddingGroup?: boolean;
+  onAddingGroupChange?: (open: boolean) => void;
 }
 
 interface GroupFormState {
@@ -410,27 +420,38 @@ function OptionRow({
       <span className="shrink-0 font-display text-xs font-bold text-slate-900">
         {(option.price ?? 0) > 0 ? `+ ${formatCurrency(option.price ?? 0)}` : "Grátis"}
       </span>
-      <div className="flex shrink-0 gap-1">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100"
-          onClick={() => setEditing(true)}
-          disabled={isPending}
-        >
-          <PencilIcon size={13} className="text-primary" />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 rounded-lg text-rose-600 hover:bg-rose-50"
-          onClick={handleDelete}
-          disabled={isPending}
-        >
-          <Trash2Icon size={13} />
-        </Button>
+      <div className="flex shrink-0 items-center">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 rounded-lg border border-slate-200/80 bg-white text-slate-600 shadow-2xs hover:bg-slate-50 hover:text-slate-900 transition-colors"
+            >
+              <MoreHorizontalIcon size={14} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-36 rounded-xl border-slate-200 bg-white shadow-lg">
+            <DropdownMenuItem
+              onClick={() => setEditing(true)}
+              disabled={isPending}
+              className="cursor-pointer gap-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
+            >
+              <PencilIcon size={13} className="text-primary" />
+              <span>Editar Item</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={handleDelete}
+              disabled={isPending}
+              className="cursor-pointer gap-2 text-xs font-semibold text-rose-600 focus:bg-rose-50 focus:text-rose-700 hover:bg-rose-50"
+            >
+              <Trash2Icon size={13} />
+              <span>Excluir</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );
@@ -528,7 +549,7 @@ function GlobalGroupCard({
             )}
           </div>
           <span className="truncate text-sm font-semibold text-slate-900">{group.name}</span>
-          <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-700">
+          <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
             {group.options.length} {group.options.length === 1 ? "item" : "itens"}
           </span>
           {group.minOptions > 0 ? (
@@ -542,29 +563,41 @@ function GlobalGroupCard({
           )}
         </div>
         <div
-          className="flex shrink-0 gap-1.5"
+          className="flex shrink-0 items-center"
           onClick={(e) => e.stopPropagation()}
         >
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 rounded-lg border border-slate-200/80 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 shadow-2xs transition-colors"
-            onClick={() => setEditingGroup(true)}
-            disabled={isPendingGroup}
-          >
-            <PencilIcon size={13} className="text-primary" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 rounded-lg border border-slate-200/80 bg-white text-rose-600 hover:bg-rose-50 shadow-2xs transition-colors"
-            onClick={() => setConfirmDelete(true)}
-            disabled={isPendingGroup}
-          >
-            <Trash2Icon size={13} />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-lg border border-slate-200/80 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 shadow-2xs transition-colors"
+                disabled={isPendingGroup}
+              >
+                <MoreHorizontalIcon size={16} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44 rounded-xl border-slate-200 bg-white shadow-lg">
+              <DropdownMenuItem
+                onClick={() => setEditingGroup(true)}
+                disabled={isPendingGroup}
+                className="cursor-pointer gap-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
+              >
+                <PencilIcon size={14} className="text-primary" />
+                <span>Editar Grupo</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setConfirmDelete(true)}
+                disabled={isPendingGroup}
+                className="cursor-pointer gap-2 text-xs font-semibold text-rose-600 focus:bg-rose-50 focus:text-rose-700 hover:bg-rose-50"
+              >
+                <Trash2Icon size={14} />
+                <span>Excluir</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -640,12 +673,21 @@ function GlobalGroupCard({
 
 export function GlobalOptionGroupsManager({
   slug,
+  isAddingGroup: controlledAddingGroup,
+  onAddingGroupChange,
 }: GlobalOptionGroupsManagerProps) {
   const [groups, setGroups] = useState<GrupoAdicionalComOpcoes[]>([]);
   const [loading, setLoading] = useState(true);
-  const [addingGroup, setAddingGroup] = useState(false);
+  const [internalAddingGroup, setInternalAddingGroup] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [refreshTick, setRefreshTick] = useState(0);
+
+  const addingGroup =
+    controlledAddingGroup !== undefined ? controlledAddingGroup : internalAddingGroup;
+  const setAddingGroup = (value: boolean) => {
+    setInternalAddingGroup(value);
+    onAddingGroupChange?.(value);
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -692,6 +734,16 @@ export function GlobalOptionGroupsManager({
 
   return (
     <div className="space-y-3">
+      {addingGroup && (
+        <GroupForm
+          initial={{ ...defaultGroupForm(), displayOrder: String(groups.length) }}
+          onSubmit={handleAddGroup}
+          onCancel={() => setAddingGroup(false)}
+          isPending={isPending}
+          submitLabel="Criar grupo"
+        />
+      )}
+
       {groups.length === 0 && !addingGroup && (
         <div className="flex min-h-[220px] flex-col items-center justify-center p-8 text-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/40">
           <div className="rounded-2xl bg-primary/10 p-3.5 text-primary border border-primary/20">
@@ -723,28 +775,6 @@ export function GlobalOptionGroupsManager({
           onRefresh={handleRefresh}
         />
       ))}
-
-      {addingGroup ? (
-        <GroupForm
-          initial={{ ...defaultGroupForm(), displayOrder: String(groups.length) }}
-          onSubmit={handleAddGroup}
-          onCancel={() => setAddingGroup(false)}
-          isPending={isPending}
-          submitLabel="Criar grupo"
-        />
-      ) : (
-        groups.length > 0 && (
-          <Button
-            type="button"
-            variant="outline"
-            className="h-10 w-full gap-2 rounded-2xl border-dashed border-slate-300 bg-slate-50/50 text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:border-slate-400 transition-all"
-            onClick={() => setAddingGroup(true)}
-          >
-            <PlusIcon size={14} />
-            Novo grupo de adicionais global
-          </Button>
-        )
-      )}
     </div>
   );
 }
