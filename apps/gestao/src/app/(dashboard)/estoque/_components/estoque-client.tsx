@@ -26,21 +26,15 @@ import { toast } from "sonner";
 import { io } from "socket.io-client";
 
 import {
-  atualizarLoteAction,
-  atualizarPerdaAction,
-  criarLoteAction,
   deleteInventoryItemAction,
   excluirLoteAction,
   excluirPerdaAction,
   fetchEstoqueDataAction,
-  registrarPerdaAction,
   updateStockAction,
 } from "@/app/(dashboard)/actions";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
-import { DatePicker } from "@/components/ui/date-picker";
 import {
   Dialog,
   DialogContent,
@@ -78,7 +72,9 @@ import type { CardapioGestao, LoteComInsumo, PerdaComInsumo } from "@/lib/admin-
 import { cn } from "@/lib/utils";
 import type { InventoryItem, InventoryItemType, InventoryLossReason } from "@fsw/db";
 
+import { BatchFormDialog } from "./batch-form-dialog";
 import { InventoryFormDialog } from "./inventory-form-dialog";
+import { LossFormDialog } from "./loss-form-dialog";
 
 type ProductWithCategory = CardapioGestao["products"][number];
 
@@ -358,7 +354,6 @@ export function EstoqueClient({
   const [batchDialogOpen, setBatchDialogOpen] = useState(false);
   const [editingBatch, setEditingBatch] = useState<LoteComInsumo | null>(null);
   const [deleteConfirmBatch, setDeleteConfirmBatch] = useState<LoteComInsumo | null>(null);
-  const [isBatchPending, startBatchTransition] = useTransition();
   const [isDeletingBatch, startDeleteBatchTransition] = useTransition();
   const [batchPage, setBatchPage] = useState(1);
   const [batchPageSize, setBatchPageSize] = useState(10);
@@ -370,7 +365,6 @@ export function EstoqueClient({
   const [lossDialogOpen, setLossDialogOpen] = useState(false);
   const [editingLoss, setEditingLoss] = useState<PerdaComInsumo | null>(null);
   const [deleteConfirmLoss, setDeleteConfirmLoss] = useState<PerdaComInsumo | null>(null);
-  const [isLossPending, startLossTransition] = useTransition();
   const [isDeletingLoss, startDeleteLossTransition] = useTransition();
   const [lossPage, setLossPage] = useState(1);
   const [lossPageSize, setLossPageSize] = useState(10);
@@ -688,7 +682,7 @@ export function EstoqueClient({
                   <p className="text-[10px] uppercase font-semibold tracking-wider text-slate-400">
                     Alerta
                   </p>
-                  <p className="mt-1 font-display text-xl font-bold text-amber-700">
+                  <p className="mt-1 font-display text-xl font-bold text-primary">
                     {adjustProduct.lowStockThreshold}
                   </p>
                 </div>
@@ -826,358 +820,34 @@ export function EstoqueClient({
       />
 
       {/* ── Dialog: Registrar / Editar Perda ─────────────── */}
-      <Dialog
+      <LossFormDialog
+        slug={slug}
         open={lossDialogOpen}
         onOpenChange={(open) => {
           setLossDialogOpen(open);
-          if (open) {
-            void refreshData();
-          } else {
+          if (!open) {
             setEditingLoss(null);
           }
         }}
-      >
-        <DialogContent className="border-slate-200 bg-white shadow-2xl sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold text-slate-900">
-              {editingLoss ? "Editar Registro de Perda" : "Cadastrar Registro de Perda ou Desperdício"}
-            </DialogTitle>
-            <DialogDescription className="text-slate-500">
-              {editingLoss
-                ? `Editando perda do insumo ${editingLoss.inventoryItemName}`
-                : "O saldo do item será reduzido e o impacto financeiro registrado no relatório."}
-            </DialogDescription>
-          </DialogHeader>
-          <form
-            key={editingLoss ? editingLoss.id : "new-loss"}
-            onSubmit={(e) => {
-              e.preventDefault();
-              const formData = new FormData(e.currentTarget);
-              startLossTransition(async () => {
-                if (editingLoss) {
-                  const result = await atualizarPerdaAction(slug, editingLoss.id, formData);
-                  if (result.success) {
-                    toast.success("Registro de perda atualizado com sucesso.");
-                    setLossDialogOpen(false);
-                    setEditingLoss(null);
-                    await refreshData();
-                  } else {
-                    toast.error(result.error ?? "Erro ao atualizar perda.");
-                  }
-                } else {
-                  const result = await registrarPerdaAction(slug, formData);
-                  if (result.success) {
-                    toast.success("Desperdício registrado com sucesso.");
-                    setLossDialogOpen(false);
-                    await refreshData();
-                  } else {
-                    toast.error(result.error ?? "Erro ao registrar perda.");
-                  }
-                }
-              });
-            }}
-            className="space-y-4"
-          >
-            <div className="space-y-1.5">
-              <Label htmlFor="loss-item" className="text-xs font-semibold text-slate-700">
-                Insumo
-              </Label>
-              <select
-                id="loss-item"
-                name="inventoryItemId"
-                defaultValue={editingLoss?.inventoryItemId ?? ""}
-                required
-                className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs sm:text-sm text-slate-900 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
-              >
-                <option value="">Selecione o insumo...</option>
-                {inventoryItems.map((i) => (
-                  <option key={i.id} value={i.id}>
-                    {i.name} (Atual: {i.currentQuantity} {i.unitOfMeasure})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="loss-reason" className="text-xs font-semibold text-slate-700">
-                  Motivo
-                </Label>
-                <select
-                  id="loss-reason"
-                  name="reason"
-                  defaultValue={editingLoss?.reason ?? "VENCIDO"}
-                  required
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs sm:text-sm text-slate-900 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
-                >
-                  <option value="VENCIDO">Vencido</option>
-                  <option value="DANIFICADO">Danificado</option>
-                  <option value="ESTRAGADO">Estragado</option>
-                  <option value="OUTROS">Outros</option>
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="loss-qty" className="text-xs font-semibold text-slate-700">
-                  Qtd. Perdida
-                </Label>
-                <Input
-                  id="loss-qty"
-                  name="quantity"
-                  type="number"
-                  min="0.001"
-                  step="0.001"
-                  defaultValue={editingLoss?.quantity ?? ""}
-                  required
-                  placeholder="Ex.: 2.5"
-                  className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="loss-cost" className="text-xs font-semibold text-slate-700">
-                  Custo Total do Prejuízo (R$)
-                </Label>
-                <Input
-                  id="loss-cost"
-                  name="unitCost"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  defaultValue={editingLoss?.financialLoss ?? ""}
-                  placeholder="Ex.: 35.00"
-                  className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="loss-date" className="text-xs font-semibold text-slate-700">
-                  Data da Ocorrência
-                </Label>
-                <DatePicker
-                  id="loss-date"
-                  name="occurredAt"
-                  defaultValue={editingLoss?.occurredAt ?? undefined}
-                  placeholder="Selecione data"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="loss-notes" className="text-xs font-semibold text-slate-700">
-                Observações
-              </Label>
-              <Input
-                id="loss-notes"
-                name="notes"
-                defaultValue={editingLoss?.notes ?? ""}
-                placeholder="Ex.: Embalagem rasgada no descarregamento..."
-                className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
-              />
-            </div>
-
-            <DialogFooter className="gap-2 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setLossDialogOpen(false);
-                  setEditingLoss(null);
-                }}
-                className="h-10 rounded-full border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-all"
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                disabled={isLossPending}
-                className="h-10 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
-              >
-                {isLossPending
-                  ? "Salvando..."
-                  : editingLoss
-                    ? "Salvar Alterações"
-                    : "Cadastrar Registro de Perda"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+        loss={editingLoss}
+        inventoryItems={inventoryItems}
+        onSuccess={refreshData}
+      />
 
       {/* ── Dialog: Registrar / Editar Lote ──────────────── */}
-      <Dialog
+      <BatchFormDialog
+        slug={slug}
         open={batchDialogOpen}
         onOpenChange={(open) => {
           setBatchDialogOpen(open);
-          if (open) {
-            void refreshData();
-          } else {
+          if (!open) {
             setEditingBatch(null);
           }
         }}
-      >
-        <DialogContent className="border-slate-200 bg-white shadow-2xl sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold text-slate-900">
-              {editingBatch ? "Editar Lote de Estoque" : "Cadastrar Lote e Entrada"}
-            </DialogTitle>
-            <DialogDescription className="text-slate-500">
-              {editingBatch
-                ? `Editando lote do insumo ${editingBatch.inventoryItemName}`
-                : "Dê entrada em um lote de insumos para acompanhar validade e custo unitário."}
-            </DialogDescription>
-          </DialogHeader>
-          <form
-            key={editingBatch ? editingBatch.id : "new-batch"}
-            onSubmit={(e) => {
-              e.preventDefault();
-              const formData = new FormData(e.currentTarget);
-              startBatchTransition(async () => {
-                if (editingBatch) {
-                  const result = await atualizarLoteAction(slug, editingBatch.id, formData);
-                  if (result.success) {
-                    toast.success("Lote atualizado com sucesso.");
-                    setBatchDialogOpen(false);
-                    setEditingBatch(null);
-                    await refreshData();
-                  } else {
-                    toast.error(result.error ?? "Erro ao atualizar lote.");
-                  }
-                } else {
-                  const result = await criarLoteAction(slug, formData);
-                  if (result.success) {
-                    toast.success("Lote registrado e estoque atualizado.");
-                    setBatchDialogOpen(false);
-                    await refreshData();
-                  } else {
-                    toast.error(result.error ?? "Erro ao registrar lote.");
-                  }
-                }
-              });
-            }}
-            className="space-y-4"
-          >
-            <div className="space-y-1.5">
-              <Label htmlFor="batch-item" className="text-xs font-semibold text-slate-700">
-                Insumo
-              </Label>
-              <select
-                id="batch-item"
-                name="inventoryItemId"
-                defaultValue={editingBatch?.inventoryItemId ?? ""}
-                required
-                className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs sm:text-sm text-slate-900 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
-              >
-                <option value="">Selecione o insumo...</option>
-                {inventoryItems.map((i) => (
-                  <option key={i.id} value={i.id}>
-                    {i.name} ({i.unitOfMeasure})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="batch-qty" className="text-xs font-semibold text-slate-700">
-                  Quantidade
-                </Label>
-                <Input
-                  id="batch-qty"
-                  name="quantity"
-                  type="number"
-                  min="0.001"
-                  step="0.001"
-                  defaultValue={editingBatch?.quantity ?? ""}
-                  required
-                  placeholder="Ex.: 10"
-                  className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="batch-cost" className="text-xs font-semibold text-slate-700">
-                  Custo Unitário (R$)
-                </Label>
-                <Input
-                  id="batch-cost"
-                  name="unitCost"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  defaultValue={editingBatch?.unitCost ?? ""}
-                  placeholder="Ex.: 4.50"
-                  className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="batch-mfg" className="text-xs font-semibold text-slate-700">
-                  Data de Fabricação
-                </Label>
-                <DatePicker
-                  id="batch-mfg"
-                  name="manufacturingDate"
-                  defaultValue={editingBatch?.manufacturingDate ?? undefined}
-                  placeholder="Selecione data"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="batch-exp" className="text-xs font-semibold text-slate-700">
-                  Data de Validade
-                </Label>
-                <DatePicker
-                  id="batch-exp"
-                  name="expirationDate"
-                  defaultValue={editingBatch?.expirationDate ?? undefined}
-                  placeholder="Selecione validade"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="batch-code" className="text-xs font-semibold text-slate-700">
-                Código do Lote
-              </Label>
-              <Input
-                id="batch-code"
-                name="batchCode"
-                defaultValue={editingBatch?.batchCode ?? ""}
-                placeholder="Ex.: LOT-2024-001"
-                className="h-10 rounded-xl border-slate-200 bg-white font-mono text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
-              />
-            </div>
-
-            <DialogFooter className="gap-2 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setBatchDialogOpen(false);
-                  setEditingBatch(null);
-                }}
-                className="h-10 rounded-full border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-all"
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                disabled={isBatchPending}
-                className="h-10 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
-              >
-                {isBatchPending
-                  ? "Salvando..."
-                  : editingBatch
-                    ? "Salvar Alterações"
-                    : "Cadastrar Lote"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+        batch={editingBatch}
+        inventoryItems={inventoryItems}
+        onSuccess={refreshData}
+      />
 
       {/* ── Dialog: Criar/Editar Item de Inventário ───────── */}
       <InventoryFormDialog
@@ -1243,8 +913,8 @@ export function EstoqueClient({
               }}
               className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
             >
-              <AlertTriangleIcon size={16} />
-              <span>Registrar Perda</span>
+              <PlusIcon size={16} />
+              <span>Nova Perda</span>
             </Button>
           </div>
         )}
@@ -2567,7 +2237,7 @@ export function EstoqueClient({
                                   className="gap-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 focus:bg-slate-50 focus:text-slate-900 cursor-pointer"
                                 >
                                   <PencilIcon size={14} className="text-primary" />
-                                  Editar registro
+                                  Editar dados
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator className="bg-slate-100" />
                                 <DropdownMenuItem
