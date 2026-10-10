@@ -3,12 +3,18 @@
 import type { MenuCategory, Product, Restaurant } from "@fsw/db";
 import {
   ArrowLeftIcon,
+  CheckIcon,
   DownloadIcon,
+  FileTextIcon,
   FlameIcon,
   LeafIcon,
+  MoonIcon,
+  PaletteIcon,
   PrinterIcon,
   SearchIcon,
   Settings2Icon,
+  SparklesIcon,
+  UtensilsCrossedIcon,
   WheatOffIcon,
   WifiIcon,
   ZoomInIcon,
@@ -20,6 +26,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { useTheme } from "@/components/theme-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,11 +59,52 @@ type ColumnCount = 1 | 2 | 3;
 type PageOrientation = "PORTRAIT" | "LANDSCAPE";
 type FontSizeScale = "COMPACT" | "NORMAL" | "SPACIOUS";
 
+interface TemplateOption {
+  id: TemplateTheme;
+  title: string;
+  badge: string;
+  description: string;
+  icon: React.ComponentType<{ size?: number; className?: string; style?: React.CSSProperties }>;
+}
+
+const TEMPLATE_OPTIONS: TemplateOption[] = [
+  {
+    id: "BISTRO_ELEGANT",
+    title: "Bistrô Elegante",
+    badge: "Fundo Marfim",
+    description: "Moldura dupla nobre, tipografia clássica e elegância",
+    icon: SparklesIcon,
+  },
+  {
+    id: "MODERN_DARK",
+    title: "Dark & Gold",
+    badge: "Fundo Escuro",
+    description: "Visual noturno refinado com acentos dourados",
+    icon: MoonIcon,
+  },
+  {
+    id: "MINIMAL_CLEAN",
+    title: "Minimalista Clean",
+    badge: "Branco Puro",
+    description: "Alto contraste, leitura clara e economia de tinta",
+    icon: FileTextIcon,
+  },
+  {
+    id: "FAST_CASUAL",
+    title: "Fast Casual",
+    badge: "Vibrante & Food",
+    description: "Estilo dinâmico, moderno e convidativo",
+    icon: UtensilsCrossedIcon,
+  },
+];
+
 export function CardapioImpressaoClient({
   slug,
   restaurant,
   initialCategories,
 }: CardapioImpressaoClientProps) {
+  // Theme configuration
+  const { currentThemeConfig } = useTheme();
   // Sales URL for QR code
   const defaultSalesUrl =
     process.env.NEXT_PUBLIC_VENDAS_URL ||
@@ -177,183 +225,254 @@ export function CardapioImpressaoClient({
     });
   };
 
-  // Trigger browser native print
+  // Trigger isolated iframe print (prevents blank pages caused by parent overflow or hidden containers)
   const handlePrint = () => {
-    window.print();
-  };
+    const previewElement = document.getElementById("menu-preview-container");
+    if (!previewElement) {
+      window.print();
+      return;
+    }
 
-  // Generate vector PDF with jsPDF
-  const handleDownloadPdf = async () => {
     try {
-      setIsExportingPdf(true);
-      toast.info("Gerando PDF do cardápio em alta qualidade...");
+      // Remove any existing print iframe
+      const oldIframe = document.getElementById("menu-print-iframe");
+      if (oldIframe) {
+        oldIframe.remove();
+      }
 
-      const { jsPDF } = await import("jspdf");
+      const iframe = document.createElement("iframe");
+      iframe.id = "menu-print-iframe";
+      iframe.style.position = "fixed";
+      iframe.style.right = "0";
+      iframe.style.bottom = "0";
+      iframe.style.width = "0";
+      iframe.style.height = "0";
+      iframe.style.border = "0";
+      iframe.style.zIndex = "-9999";
+      iframe.style.visibility = "hidden";
+      document.body.appendChild(iframe);
 
-      const doc = new jsPDF({
-        orientation: orientation === "LANDSCAPE" ? "landscape" : "portrait",
-        unit: "mm",
-        format: "a4",
+      const doc = iframe.contentWindow?.document;
+      if (!doc) {
+        window.print();
+        return;
+      }
+
+      let styles = "";
+      document.querySelectorAll("link[rel='stylesheet'], style").forEach((styleNode) => {
+        styles += styleNode.outerHTML;
       });
 
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 14;
-      const contentWidth = pageWidth - margin * 2;
+      const pageOrientationCss = orientation === "LANDSCAPE" ? "A4 landscape" : "A4 portrait";
 
-      let currentY = margin;
+      doc.open();
+      doc.write(`
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+          <head>
+            <meta charset="utf-8" />
+            <title>Imprimir Cardápio - ${title}</title>
+            ${styles}
+            <style>
+              @page {
+                size: ${pageOrientationCss};
+                margin: 6mm;
+              }
+              html, body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+                overflow: visible !important;
+                height: auto !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+              }
+              #menu-preview-container {
+                box-shadow: none !important;
+                margin: 0 auto !important;
+                padding: 8mm !important;
+                border: none !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                transform: none !important;
+                display: block !important;
+              }
+              .page-break-avoid {
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+              }
+            </style>
+          </head>
+          <body>
+            ${previewElement.outerHTML}
+          </body>
+        </html>
+      `);
+      doc.close();
 
-      // Color palette based on template
-      const isDark = template === "MODERN_DARK";
-      const bgColor: [number, number, number] = isDark
-        ? [15, 23, 42]
-        : template === "BISTRO_ELEGANT"
-          ? [250, 247, 242]
-          : [255, 255, 255];
-      const textColor: [number, number, number] = isDark
-        ? [248, 250, 252]
-        : [30, 41, 59];
-      const accentColor: [number, number, number] = isDark
-        ? [245, 158, 11]
-        : template === "BISTRO_ELEGANT"
-          ? [136, 19, 55]
-          : [15, 23, 42];
-
-      const drawPageBackground = () => {
-        if (isDark || template === "BISTRO_ELEGANT") {
-          doc.setFillColor(...bgColor);
-          doc.rect(0, 0, pageWidth, pageHeight, "F");
+      setTimeout(() => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch {
+          window.print();
         }
+      }, 500);
+    } catch (err) {
+      console.error("Erro ao imprimir cardápio:", err);
+      window.print();
+    }
+  };
 
-        // Draw elegant border for Bistro
-        if (template === "BISTRO_ELEGANT") {
-          doc.setDrawColor(...accentColor);
-          doc.setLineWidth(0.5);
-          doc.rect(margin - 4, margin - 4, contentWidth + 8, pageHeight - (margin - 4) * 2);
-          doc.setLineWidth(0.2);
-          doc.rect(margin - 2, margin - 2, contentWidth + 4, pageHeight - (margin - 2) * 2);
-        }
+  // Dynamic runtime loader for html2canvas (prevents Next.js webpack compiler freezes during deploy)
+  const loadHtml2Canvas = (): Promise<any> => {
+    if (typeof window === "undefined") return Promise.resolve(null);
+    const win = window as any;
+    if (win.html2canvas) return Promise.resolve(win.html2canvas);
+
+    return new Promise((resolve, reject) => {
+      const existing = document.getElementById("html2canvas-lib");
+      if (existing) {
+        existing.addEventListener("load", () => resolve((window as any).html2canvas));
+        existing.addEventListener("error", reject);
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.id = "html2canvas-lib";
+      script.src = "/html2canvas.min.js";
+      script.onload = () => resolve((window as any).html2canvas);
+      script.onerror = () => {
+        // Fallback to CDN if needed
+        const cdnScript = document.createElement("script");
+        cdnScript.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+        cdnScript.onload = () => resolve((window as any).html2canvas);
+        cdnScript.onerror = () => reject(new Error("Não foi possível carregar o renderizador de PDF."));
+        document.body.appendChild(cdnScript);
       };
+      document.body.appendChild(script);
+    });
+  };
 
-      drawPageBackground();
+  // Generate vector & canvas high-fidelity PDF from the live preview
+  const handleDownloadPdf = async () => {
+    const previewElement = document.getElementById("menu-preview-container");
+    if (!previewElement) {
+      toast.error("Visualização do cardápio não encontrada.");
+      return;
+    }
 
-      // Header
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(22);
-      doc.setTextColor(...accentColor);
-      doc.text(title.toUpperCase(), pageWidth / 2, currentY + 8, { align: "center" });
+    const zoomWrapper = document.getElementById("menu-preview-zoom-wrapper");
+    const prevTransform = zoomWrapper?.style.transform;
 
-      currentY += 12;
+    try {
+      setIsExportingPdf(true);
+      toast.info("Gerando PDF fiel à pré-visualização em alta qualidade...");
 
-      if (subtitle) {
-        doc.setFont("helvetica", "italic");
-        doc.setFontSize(10);
-        const subColor: [number, number, number] = isDark ? [203, 213, 225] : [100, 116, 139];
-        doc.setTextColor(subColor[0], subColor[1], subColor[2]);
-        const splitSub = doc.splitTextToSize(subtitle, contentWidth - 20);
-        doc.text(splitSub, pageWidth / 2, currentY, { align: "center" });
-        currentY += splitSub.length * 4.5 + 4;
+      // Temporarily remove zoom transformation for 1:1 scale rendering
+      if (zoomWrapper) {
+        zoomWrapper.style.transform = "none";
       }
 
-      // Decorative divider
-      doc.setDrawColor(...accentColor);
-      doc.setLineWidth(0.4);
-      doc.line(pageWidth / 2 - 25, currentY, pageWidth / 2 + 25, currentY);
-      currentY += 8;
+      const { jsPDF } = await import("jspdf");
+      const html2canvas = await loadHtml2Canvas();
 
-      // Render Categories and Products
-      for (const category of displayedCategories) {
-        // Check for page break
-        if (currentY > pageHeight - 35) {
-          doc.addPage();
-          drawPageBackground();
-          currentY = margin;
-        }
+      if (!html2canvas) {
+        throw new Error("Renderizador não carregado.");
+      }
 
-        // Category Title
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(13);
-        doc.setTextColor(...accentColor);
-        doc.text(category.name.toUpperCase(), margin, currentY);
+      const canvas = await html2canvas(previewElement, {
+        scale: 2, // High resolution (retina/print quality)
+        useCORS: true,
+        allowTaint: false,
+        logging: false,
+        backgroundColor: null,
+        imageTimeout: 15000,
+        onclone: (_clonedDoc: Document, clonedElement: HTMLElement) => {
+          clonedElement.style.transform = "none";
+          clonedElement.style.boxShadow = "none";
+          clonedElement.style.margin = "0";
+        },
+      });
 
-        doc.setLineWidth(0.3);
-        doc.setDrawColor(...accentColor);
-        doc.line(margin, currentY + 1.5, margin + 40, currentY + 1.5);
+      const isLandscape = orientation === "LANDSCAPE";
+      const doc = new jsPDF({
+        orientation: isLandscape ? "landscape" : "portrait",
+        unit: "mm",
+        format: "a4",
+        compress: true,
+      });
 
-        currentY += 7;
+      const pdfWidthMm = doc.internal.pageSize.getWidth();
+      const pdfHeightMm = doc.internal.pageSize.getHeight();
 
-        for (const product of category.products) {
-          if (currentY > pageHeight - 25) {
+      // Height of one A4 page in canvas pixels
+      const pageHeightPx = Math.floor(canvas.width * (pdfHeightMm / pdfWidthMm));
+
+      if (canvas.height <= pageHeightPx + 15) {
+        // Fits nicely on a single page
+        const imgData = canvas.toDataURL("image/jpeg", 0.95);
+        doc.addImage(imgData, "JPEG", 0, 0, pdfWidthMm, pdfHeightMm, undefined, "FAST");
+      } else {
+        // Multi-page cardápio slicing
+        let yOffsetPx = 0;
+        let pageIndex = 0;
+
+        while (yOffsetPx < canvas.height) {
+          if (pageIndex > 0) {
             doc.addPage();
-            drawPageBackground();
-            currentY = margin;
           }
 
-          // Product Name and Price
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(10.5);
-          doc.setTextColor(...textColor);
-          doc.text(product.name, margin, currentY);
+          const currentSliceHeight = Math.min(pageHeightPx, canvas.height - yOffsetPx);
+          const sliceCanvas = document.createElement("canvas");
+          sliceCanvas.width = canvas.width;
+          sliceCanvas.height = pageHeightPx;
+          const sliceCtx = sliceCanvas.getContext("2d");
 
-          if (showPrices) {
-            const priceStr = new Intl.NumberFormat("pt-BR", {
-              style: "currency",
-              currency: "BRL",
-            }).format(Number(product.price));
+          if (sliceCtx) {
+            const isDark = template === "MODERN_DARK";
+            sliceCtx.fillStyle = isDark
+              ? "#020617"
+              : template === "BISTRO_ELEGANT"
+                ? "#faf7f2"
+                : template === "FAST_CASUAL"
+                  ? "#fffdf7"
+                  : "#ffffff";
+            sliceCtx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
 
-            doc.setFont("helvetica", "bold");
-            doc.setTextColor(...accentColor);
-            doc.text(priceStr, pageWidth - margin, currentY, { align: "right" });
-          }
-
-          currentY += 4.5;
-
-          // Product Description
-          if (showDescriptions && product.description) {
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(8.5);
-            const descColor: [number, number, number] = isDark ? [148, 163, 184] : [100, 116, 139];
-            doc.setTextColor(descColor[0], descColor[1], descColor[2]);
-
-            const descLines = doc.splitTextToSize(
-              product.description,
-              showPrices ? contentWidth - 30 : contentWidth,
+            sliceCtx.drawImage(
+              canvas,
+              0,
+              yOffsetPx,
+              canvas.width,
+              currentSliceHeight,
+              0,
+              0,
+              canvas.width,
+              currentSliceHeight,
             );
-            doc.text(descLines, margin, currentY);
-            currentY += descLines.length * 3.8;
           }
 
-          // Spacing between items
-          currentY += 2.5;
+          const sliceData = sliceCanvas.toDataURL("image/jpeg", 0.95);
+          doc.addImage(sliceData, "JPEG", 0, 0, pdfWidthMm, pdfHeightMm, undefined, "FAST");
+
+          yOffsetPx += pageHeightPx;
+          pageIndex++;
         }
-
-        currentY += 5;
-      }
-
-      // Footer Notes
-      if (currentY > pageHeight - 25) {
-        doc.addPage();
-        drawPageBackground();
-        currentY = margin;
-      }
-
-      if (showFooterNote && footerNote) {
-        currentY = Math.max(currentY + 6, pageHeight - 20);
-        doc.setFont("helvetica", "italic");
-        doc.setFontSize(7.5);
-        const footColor: [number, number, number] = isDark ? [148, 163, 184] : [148, 163, 184];
-        doc.setTextColor(footColor[0], footColor[1], footColor[2]);
-        const footerLines = doc.splitTextToSize(footerNote, contentWidth);
-        doc.text(footerLines, pageWidth / 2, currentY, { align: "center" });
       }
 
       const fileName = `cardapio-${slug || "restaurante"}.pdf`;
       doc.save(fileName);
       toast.success("Cardápio baixado em PDF com sucesso!");
     } catch (err) {
-      console.error(err);
+      console.error("Erro ao gerar PDF:", err);
       toast.error("Ocorreu um erro ao gerar o PDF.");
     } finally {
+      if (zoomWrapper && prevTransform !== undefined) {
+        zoomWrapper.style.transform = prevTransform;
+      }
       setIsExportingPdf(false);
     }
   };
@@ -372,17 +491,20 @@ export function CardapioImpressaoClient({
   return (
     <div className="space-y-6">
       {/* ── Scoped Print Stylesheet ────────────────────────── */}
-      <style jsx global>{`
+      <style>{`
         @media print {
           @page {
             size: ${orientation === "LANDSCAPE" ? "A4 landscape" : "A4 portrait"};
-            margin: 8mm;
+            margin: 6mm;
           }
           html, body {
             background: #ffffff !important;
             color: #000000 !important;
             height: auto !important;
+            min-height: 100% !important;
             overflow: visible !important;
+            margin: 0 !important;
+            padding: 0 !important;
           }
           /* Hide non-print dashboard elements */
           aside,
@@ -393,19 +515,41 @@ export function CardapioImpressaoClient({
           [data-sidebar] {
             display: none !important;
           }
+          /* Reset container hierarchy */
+          main,
+          div {
+            overflow: visible !important;
+          }
           main {
             padding: 0 !important;
             margin: 0 !important;
+            height: auto !important;
+            display: block !important;
+          }
+          #menu-preview-canvas-wrapper {
+            background: transparent !important;
+            border: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            min-height: 0 !important;
             overflow: visible !important;
+            display: block !important;
+          }
+          #menu-preview-zoom-wrapper {
+            transform: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            display: block !important;
           }
           #menu-preview-container {
             transform: none !important;
             width: 100% !important;
             max-width: 100% !important;
-            margin: 0 !important;
-            padding: 0 !important;
+            margin: 0 auto !important;
+            padding: 8mm !important;
             box-shadow: none !important;
             border: none !important;
+            display: block !important;
           }
           .page-break-avoid {
             break-inside: avoid !important;
@@ -436,7 +580,15 @@ export function CardapioImpressaoClient({
               <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
                 Impressão de Cardápio
               </h1>
-              <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
+              <Badge
+                variant="outline"
+                className="font-semibold text-xs shadow-xs"
+                style={{
+                  borderColor: `${currentThemeConfig.hex}40`,
+                  backgroundColor: `${currentThemeConfig.hex}15`,
+                  color: currentThemeConfig.hex,
+                }}
+              >
                 Pronto para Imprimir
               </Badge>
             </div>
@@ -459,7 +611,8 @@ export function CardapioImpressaoClient({
 
           <Button
             onClick={handlePrint}
-            className="h-10 gap-2 rounded-full bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+            className="h-10 gap-2 rounded-full px-5 text-sm font-semibold text-white shadow-sm transition-all hover:brightness-110 active:scale-95"
+            style={{ backgroundColor: currentThemeConfig.hex }}
           >
             <PrinterIcon size={16} />
             <span>Imprimir Cardápio</span>
@@ -467,14 +620,14 @@ export function CardapioImpressaoClient({
         </div>
       </div>
 
-      {/* ── Main Studio Layout (No Print Grid) ─────────────── */}
-      <div className="no-print grid grid-cols-1 gap-6 lg:grid-cols-12">
-        {/* ── Left Configuration Sidebar (5 cols) ─────────── */}
-        <div className="space-y-5 lg:col-span-4">
+      {/* ── Main Studio Layout (Grid) ─────────────────────── */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        {/* ── Left Configuration Sidebar (4 cols) ─────────── */}
+        <div className="no-print space-y-5 lg:col-span-4">
           <Card className="border-slate-200/90 shadow-sm bg-white">
             <CardHeader className="p-4 pb-2 border-b border-slate-100">
               <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                <Settings2Icon size={16} className="text-slate-600" />
+                <Settings2Icon size={16} style={{ color: currentThemeConfig.hex }} />
                 <span>Configurações do Cardápio</span>
               </CardTitle>
             </CardHeader>
@@ -495,27 +648,104 @@ export function CardapioImpressaoClient({
                 {/* TAB 1: DESIGN & FORMAT */}
                 <TabsContent value="design" className="space-y-4">
                   <div>
-                    <Label className="text-xs font-medium text-slate-700">Tema Visual</Label>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-1.5">
+                        <PaletteIcon size={14} style={{ color: currentThemeConfig.hex }} />
+                        <Label className="text-xs font-semibold text-slate-700">Tema Visual</Label>
+                      </div>
+                      <span
+                        className="text-[11px] font-semibold"
+                        style={{ color: currentThemeConfig.hex }}
+                      >
+                        {TEMPLATE_OPTIONS.find((t) => t.id === template)?.title}
+                      </span>
+                    </div>
+
+                    {/* Visual cards for each template with theme-colored icons */}
+                    <div className="grid grid-cols-2 gap-2 mb-2">
+                      {TEMPLATE_OPTIONS.map((opt) => {
+                        const isSelected = template === opt.id;
+                        const Icon = opt.icon;
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => setTemplate(opt.id)}
+                            className={cn(
+                              "group relative flex flex-col items-start gap-1.5 rounded-xl border p-2.5 text-left transition-all",
+                              isSelected
+                                ? "bg-slate-50/80 shadow-xs"
+                                : "border-slate-200/90 bg-white hover:border-slate-300 hover:bg-slate-50/50",
+                            )}
+                            style={{
+                              borderColor: isSelected ? currentThemeConfig.hex : undefined,
+                              boxShadow: isSelected ? `0 0 0 1px ${currentThemeConfig.hex}25` : undefined,
+                            }}
+                          >
+                            <div className="flex w-full items-center justify-between">
+                              <div
+                                className="flex h-7 w-7 items-center justify-center rounded-lg transition-transform group-hover:scale-105"
+                                style={{
+                                  backgroundColor: isSelected
+                                    ? `${currentThemeConfig.hex}18`
+                                    : `${currentThemeConfig.hex}10`,
+                                  color: currentThemeConfig.hex,
+                                }}
+                              >
+                                <Icon size={15} style={{ color: currentThemeConfig.hex }} />
+                              </div>
+                              {isSelected ? (
+                                <span
+                                  className="flex h-4 w-4 items-center justify-center rounded-full text-white shadow-xs"
+                                  style={{ backgroundColor: currentThemeConfig.hex }}
+                                >
+                                  <CheckIcon size={10} strokeWidth={3} />
+                                </span>
+                              ) : (
+                                <span className="text-[10px] text-slate-400 font-mono">
+                                  {opt.badge}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="w-full">
+                              <p
+                                className={cn(
+                                  "text-xs font-semibold leading-tight",
+                                  isSelected ? "font-bold" : "text-slate-700",
+                                )}
+                                style={isSelected ? { color: currentThemeConfig.hex } : undefined}
+                              >
+                                {opt.title}
+                              </p>
+                              <p className="mt-0.5 text-[10px] text-slate-500 leading-tight line-clamp-1">
+                                {opt.description}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
                     <Select
                       value={template}
                       onValueChange={(val) => setTemplate(val as TemplateTheme)}
                     >
-                      <SelectTrigger className="mt-1.5 h-9 rounded-lg border-slate-200 text-xs">
+                      <SelectTrigger className="mt-1 h-8 rounded-lg border-slate-200 text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="BISTRO_ELEGANT">
-                          🍷 Bistrô Elegante (Fundo Marfim e Moldura)
-                        </SelectItem>
-                        <SelectItem value="MODERN_DARK">
-                          🌙 Dark e Gold (Fundo Escuro e Dourado)
-                        </SelectItem>
-                        <SelectItem value="MINIMAL_CLEAN">
-                          📄 Minimalista Clean (Branco Puro e Alto Contraste)
-                        </SelectItem>
-                        <SelectItem value="FAST_CASUAL">
-                          🍔 Fast Casual (Acentos Laranja e Vibrante)
-                        </SelectItem>
+                        {TEMPLATE_OPTIONS.map((opt) => {
+                          const Icon = opt.icon;
+                          return (
+                            <SelectItem key={opt.id} value={opt.id}>
+                              <span className="flex items-center gap-2">
+                                <Icon size={13} style={{ color: currentThemeConfig.hex }} />
+                                <span>{opt.title} ({opt.badge})</span>
+                              </span>
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                   </div>
@@ -859,7 +1089,7 @@ export function CardapioImpressaoClient({
         {/* ── Right Live Preview Canvas (8 cols) ──────────── */}
         <div className="space-y-4 lg:col-span-8">
           {/* Zoom & Helper Toolbar */}
-          <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-xs">
+          <div className="no-print flex items-center justify-between bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-xs">
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-slate-700">Pré-visualização da Folha</span>
               <Badge variant="outline" className="text-[10px] uppercase tracking-wider font-mono">
@@ -901,8 +1131,12 @@ export function CardapioImpressaoClient({
           </div>
 
           {/* Interactive Scaled Preview Wrapper */}
-          <div className="flex justify-center overflow-x-auto p-4 bg-slate-100/80 rounded-2xl border border-slate-200/60 min-h-[600px]">
+          <div
+            id="menu-preview-canvas-wrapper"
+            className="flex justify-center overflow-x-auto p-4 bg-slate-100/80 rounded-2xl border border-slate-200/60 min-h-[600px]"
+          >
             <div
+              id="menu-preview-zoom-wrapper"
               style={{
                 transform: `scale(${zoomLevel / 100})`,
                 transformOrigin: "top center",
