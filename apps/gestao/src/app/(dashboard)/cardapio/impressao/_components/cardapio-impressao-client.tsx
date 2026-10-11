@@ -58,6 +58,22 @@ type TemplateTheme = "MODERN_DARK" | "BISTRO_ELEGANT" | "MINIMAL_CLEAN" | "FAST_
 type ColumnCount = 1 | 2 | 3;
 type PageOrientation = "PORTRAIT" | "LANDSCAPE";
 type FontSizeScale = "COMPACT" | "NORMAL" | "SPACIOUS";
+export type CategoryLayoutMode = "CONTINUOUS" | "GRID_FILL";
+
+export interface PageCategory {
+  id: string;
+  name: string;
+  isContinuation?: boolean;
+  products: Product[];
+  topProduct?: Product;
+}
+
+export interface MenuPage {
+  pageIndex: number;
+  categories: PageCategory[];
+  isFirstPage: boolean;
+  isLastPage: boolean;
+}
 
 interface TemplateOption {
   id: TemplateTheme;
@@ -116,6 +132,7 @@ export function CardapioImpressaoClient({
   const [columns, setColumns] = useState<ColumnCount>(2);
   const [orientation, setOrientation] = useState<PageOrientation>("PORTRAIT");
   const [fontSize, setFontSize] = useState<FontSizeScale>("NORMAL");
+  const [categoryLayoutMode, setCategoryLayoutMode] = useState<CategoryLayoutMode>("CONTINUOUS");
 
   // Visual toggles
   const [showPrices, setShowPrices] = useState(true);
@@ -225,10 +242,207 @@ export function CardapioImpressaoClient({
     });
   };
 
-  // Trigger isolated iframe print (prevents blank pages caused by parent overflow or hidden containers)
+  // Helper to chunk arrays
+  function chunkArray<T>(arr: T[], size: number): T[][] {
+    const result: T[][] = [];
+    for (let i = 0; i < arr.length; i += size) {
+      result.push(arr.slice(i, i + size));
+    }
+    return result;
+  }
+
+  // ── Smart Pagination Engine ──────────────────────────────
+  // Distributes categories and products across distinct A4 sheets
+  // so no item is ever cut across pages in preview, print or PDF
+  const pages = useMemo<MenuPage[]>(() => {
+    if (displayedCategories.length === 0) {
+      return [
+        {
+          pageIndex: 0,
+          categories: [],
+          isFirstPage: true,
+          isLastPage: true,
+        },
+      ];
+    }
+
+    const isPortrait = orientation === "PORTRAIT";
+    // Total usable height in pixels for A4 (portrait ~1010px, landscape ~690px with 12mm padding)
+    const usablePageHeight = isPortrait ? 1010 : 690;
+
+    // Estimate Page 1 Header height
+    let page1HeaderHeight = 65;
+    if (showLogo && restaurant.avatarImageUrl) page1HeaderHeight += 65;
+    if (subtitle) page1HeaderHeight += 24;
+    if (showContact && (phone || address || instagram)) page1HeaderHeight += 24;
+
+    const miniHeaderHeight = 32;
+    const footerHeight = showWifi || showFooterNote || showDigitalMenuQr ? 75 : 0;
+
+    const getPageCapacity = (isFirst: boolean, isLast: boolean) => {
+      const topH = isFirst ? page1HeaderHeight : miniHeaderHeight;
+      const botH = isLast ? footerHeight : 0;
+      const availCol = Math.max(200, usablePageHeight - topH - botH);
+      return availCol * columns;
+    };
+
+    const getProdHeight = (prod: Product) => {
+      let h = fontSize === "COMPACT" ? 28 : fontSize === "SPACIOUS" ? 38 : 32;
+      if (showDescriptions && prod.description) {
+        h += fontSize === "COMPACT" ? 18 : fontSize === "SPACIOUS" ? 26 : 22;
+      }
+      if (showIngredients && prod.ingredients && prod.ingredients.length > 0) {
+        h += fontSize === "COMPACT" ? 13 : fontSize === "SPACIOUS" ? 17 : 15;
+      }
+      if (showImages && prod.imageUrl) {
+        h = Math.max(h, 46);
+      }
+      return h + 12; // inter-item spacing
+    };
+
+    const getCatHeight = (cat: { products: Product[] }) => {
+      return 42 + cat.products.reduce((acc, p) => acc + getProdHeight(p), 0);
+    };
+
+    // 1. Check if all items fit comfortably in a single page
+    const singlePageCap = getPageCapacity(true, true);
+    let totalCostAll = displayedCategories.reduce((acc, cat) => acc + getCatHeight(cat), 0);
+
+    if (categoryLayoutMode === "GRID_FILL" && columns > 1) {
+      let gridCost = 0;
+      for (let i = 0; i < displayedCategories.length; i += columns) {
+        const slice = displayedCategories.slice(i, i + columns);
+        const maxH = Math.max(...slice.map(getCatHeight));
+        gridCost += maxH * columns;
+      }
+      totalCostAll = gridCost;
+    }
+
+    if (totalCostAll <= singlePageCap) {
+      return [
+        {
+          pageIndex: 0,
+          categories: displayedCategories.map((c) => ({
+            id: c.id,
+            name: c.name,
+            products: c.products,
+            topProduct: c.products[0],
+          })),
+          isFirstPage: true,
+          isLastPage: true,
+        },
+      ];
+    }
+
+    // 2. Multi-page pagination
+    const resultPages: MenuPage[] = [];
+    const queue = displayedCategories.map((c) => ({
+      id: c.id,
+      name: c.name,
+      isContinuation: false,
+      products: [...c.products],
+      topProduct: c.products[0],
+    }));
+
+    let currentPageIndex = 0;
+
+    while (queue.length > 0) {
+      const isFirstPage = currentPageIndex === 0;
+
+      const remainingEstimatedCost = queue.reduce((acc, c) => acc + getCatHeight(c), 0);
+      const capacityIfLast = getPageCapacity(isFirstPage, true);
+      const isLikelyLastPage = remainingEstimatedCost <= capacityIfLast;
+
+      const pageCapacity = getPageCapacity(isFirstPage, isLikelyLastPage);
+      let usedCapacity = 0;
+      const pageCategories: PageCategory[] = [];
+
+      while (queue.length > 0) {
+        const nextCat = queue[0];
+        const headerCost = 42;
+        const firstProdCost =
+          nextCat.products.length > 0 ? getProdHeight(nextCat.products[0]) : 0;
+
+        if (
+          pageCategories.length > 0 &&
+          usedCapacity + headerCost + firstProdCost > pageCapacity
+        ) {
+          break;
+        }
+
+        usedCapacity += headerCost;
+
+        const fittedProducts: Product[] = [];
+        while (nextCat.products.length > 0) {
+          const prod = nextCat.products[0];
+          const pCost = getProdHeight(prod);
+          if (
+            fittedProducts.length > 0 &&
+            usedCapacity + pCost > pageCapacity
+          ) {
+            break;
+          }
+          fittedProducts.push(nextCat.products.shift()!);
+          usedCapacity += pCost;
+        }
+
+        pageCategories.push({
+          id: nextCat.id,
+          name: nextCat.name,
+          isContinuation: nextCat.isContinuation,
+          products: fittedProducts,
+          topProduct: nextCat.topProduct,
+        });
+
+        if (nextCat.products.length === 0) {
+          queue.shift();
+        } else {
+          nextCat.isContinuation = true;
+          break;
+        }
+      }
+
+      resultPages.push({
+        pageIndex: currentPageIndex,
+        categories: pageCategories,
+        isFirstPage,
+        isLastPage: queue.length === 0,
+      });
+
+      currentPageIndex++;
+      if (currentPageIndex > 20) break;
+    }
+
+    if (resultPages.length > 0) {
+      resultPages[resultPages.length - 1].isLastPage = true;
+    }
+
+    return resultPages;
+  }, [
+    displayedCategories,
+    columns,
+    orientation,
+    fontSize,
+    showImages,
+    showDescriptions,
+    showIngredients,
+    showLogo,
+    restaurant.avatarImageUrl,
+    subtitle,
+    showContact,
+    phone,
+    address,
+    instagram,
+    showWifi,
+    showFooterNote,
+    showDigitalMenuQr,
+    categoryLayoutMode,
+  ]);
+
+  // Trigger isolated iframe print with clean page breaks per A4 sheet
   const handlePrint = () => {
-    const previewElement = document.getElementById("menu-preview-container");
-    if (!previewElement) {
+    const pageElements = document.querySelectorAll<HTMLElement>(".printable-menu-page");
+    if (!pageElements.length) {
       window.print();
       return;
     }
@@ -264,6 +478,9 @@ export function CardapioImpressaoClient({
       });
 
       const pageOrientationCss = orientation === "LANDSCAPE" ? "A4 landscape" : "A4 portrait";
+      const pagesHtml = Array.from(pageElements)
+        .map((el) => el.outerHTML)
+        .join("\n");
 
       doc.open();
       doc.write(`
@@ -276,7 +493,7 @@ export function CardapioImpressaoClient({
             <style>
               @page {
                 size: ${pageOrientationCss};
-                margin: 6mm;
+                margin: 0 !important;
               }
               html, body {
                 margin: 0 !important;
@@ -289,15 +506,25 @@ export function CardapioImpressaoClient({
                 print-color-adjust: exact !important;
                 color-adjust: exact !important;
               }
-              #menu-preview-container {
+              .printable-menu-page {
                 box-shadow: none !important;
                 margin: 0 auto !important;
-                padding: 8mm !important;
                 border: none !important;
-                width: 100% !important;
-                max-width: 100% !important;
+                width: ${orientation === "LANDSCAPE" ? "297mm" : "210mm"} !important;
+                height: ${orientation === "LANDSCAPE" ? "210mm" : "297mm"} !important;
+                min-height: ${orientation === "LANDSCAPE" ? "210mm" : "297mm"} !important;
+                max-height: ${orientation === "LANDSCAPE" ? "210mm" : "297mm"} !important;
+                page-break-after: always !important;
+                break-after: page !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                box-sizing: border-box !important;
+                overflow: hidden !important;
                 transform: none !important;
-                display: block !important;
+              }
+              .printable-menu-page:last-child {
+                page-break-after: auto !important;
+                break-after: auto !important;
               }
               .page-break-avoid {
                 break-inside: avoid !important;
@@ -306,7 +533,7 @@ export function CardapioImpressaoClient({
             </style>
           </head>
           <body>
-            ${previewElement.outerHTML}
+            ${pagesHtml}
           </body>
         </html>
       `);
@@ -356,10 +583,10 @@ export function CardapioImpressaoClient({
     });
   };
 
-  // Generate vector & canvas high-fidelity PDF from the live preview
+  // Generate vector & canvas high-fidelity multi-page PDF where each A4 page matches 1:1 with preview
   const handleDownloadPdf = async () => {
-    const previewElement = document.getElementById("menu-preview-container");
-    if (!previewElement) {
+    const pageElements = document.querySelectorAll<HTMLElement>(".printable-menu-page");
+    if (!pageElements.length) {
       toast.error("Visualização do cardápio não encontrada.");
       return;
     }
@@ -369,7 +596,7 @@ export function CardapioImpressaoClient({
 
     try {
       setIsExportingPdf(true);
-      toast.info("Gerando PDF fiel à pré-visualização em alta qualidade...");
+      toast.info(`Gerando PDF com ${pageElements.length} folha(s) em alta qualidade...`);
 
       // Temporarily remove zoom transformation for 1:1 scale rendering
       if (zoomWrapper) {
@@ -383,20 +610,6 @@ export function CardapioImpressaoClient({
         throw new Error("Renderizador não carregado.");
       }
 
-      const canvas = await html2canvas(previewElement, {
-        scale: 2, // High resolution (retina/print quality)
-        useCORS: true,
-        allowTaint: false,
-        logging: false,
-        backgroundColor: null,
-        imageTimeout: 15000,
-        onclone: (_clonedDoc: Document, clonedElement: HTMLElement) => {
-          clonedElement.style.transform = "none";
-          clonedElement.style.boxShadow = "none";
-          clonedElement.style.margin = "0";
-        },
-      });
-
       const isLandscape = orientation === "LANDSCAPE";
       const doc = new jsPDF({
         orientation: isLandscape ? "landscape" : "portrait",
@@ -408,64 +621,33 @@ export function CardapioImpressaoClient({
       const pdfWidthMm = doc.internal.pageSize.getWidth();
       const pdfHeightMm = doc.internal.pageSize.getHeight();
 
-      // Height of one A4 page in canvas pixels
-      const pageHeightPx = Math.floor(canvas.width * (pdfHeightMm / pdfWidthMm));
+      for (let i = 0; i < pageElements.length; i++) {
+        if (i > 0) {
+          doc.addPage();
+        }
 
-      if (canvas.height <= pageHeightPx + 15) {
-        // Fits nicely on a single page
+        const pageEl = pageElements[i];
+        const canvas = await html2canvas(pageEl, {
+          scale: 2, // High resolution (retina/print quality)
+          useCORS: true,
+          allowTaint: false,
+          logging: false,
+          backgroundColor: null,
+          imageTimeout: 15000,
+          onclone: (_clonedDoc: Document, clonedEl: HTMLElement) => {
+            clonedEl.style.transform = "none";
+            clonedEl.style.boxShadow = "none";
+            clonedEl.style.margin = "0";
+          },
+        });
+
         const imgData = canvas.toDataURL("image/jpeg", 0.95);
         doc.addImage(imgData, "JPEG", 0, 0, pdfWidthMm, pdfHeightMm, undefined, "FAST");
-      } else {
-        // Multi-page cardápio slicing
-        let yOffsetPx = 0;
-        let pageIndex = 0;
-
-        while (yOffsetPx < canvas.height) {
-          if (pageIndex > 0) {
-            doc.addPage();
-          }
-
-          const currentSliceHeight = Math.min(pageHeightPx, canvas.height - yOffsetPx);
-          const sliceCanvas = document.createElement("canvas");
-          sliceCanvas.width = canvas.width;
-          sliceCanvas.height = pageHeightPx;
-          const sliceCtx = sliceCanvas.getContext("2d");
-
-          if (sliceCtx) {
-            const isDark = template === "MODERN_DARK";
-            sliceCtx.fillStyle = isDark
-              ? "#020617"
-              : template === "BISTRO_ELEGANT"
-                ? "#faf7f2"
-                : template === "FAST_CASUAL"
-                  ? "#fffdf7"
-                  : "#ffffff";
-            sliceCtx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
-
-            sliceCtx.drawImage(
-              canvas,
-              0,
-              yOffsetPx,
-              canvas.width,
-              currentSliceHeight,
-              0,
-              0,
-              canvas.width,
-              currentSliceHeight,
-            );
-          }
-
-          const sliceData = sliceCanvas.toDataURL("image/jpeg", 0.95);
-          doc.addImage(sliceData, "JPEG", 0, 0, pdfWidthMm, pdfHeightMm, undefined, "FAST");
-
-          yOffsetPx += pageHeightPx;
-          pageIndex++;
-        }
       }
 
       const fileName = `cardapio-${slug || "restaurante"}.pdf`;
       doc.save(fileName);
-      toast.success("Cardápio baixado em PDF com sucesso!");
+      toast.success(`Cardápio baixado em PDF com ${pageElements.length} folha(s) com sucesso!`);
     } catch (err) {
       console.error("Erro ao gerar PDF:", err);
       toast.error("Ocorreu um erro ao gerar o PDF.");
@@ -488,6 +670,84 @@ export function CardapioImpressaoClient({
   // URL for digital menu
   const digitalMenuUrl = `${salesBaseUrl.replace(/\/$/, "")}/menu?slug=${slug}`;
 
+  // Product card renderer
+  const renderProductCard = (product: Product) => (
+    <div key={product.id} className="page-break-avoid group">
+      <div className="flex items-start justify-between gap-3">
+        {/* Left: Optional Photo + Title + Desc */}
+        <div className="flex items-start gap-2.5 min-w-0 flex-1">
+          {showImages && product.imageUrl && (
+            <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-black/10 bg-slate-100">
+              <Image
+                src={product.imageUrl}
+                alt={product.name}
+                fill
+                className="object-cover"
+              />
+            </div>
+          )}
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="font-semibold leading-tight text-xs sm:text-sm">
+                {product.name}
+              </span>
+
+              {/* Dietary Badges */}
+              {showDietaryBadges && (
+                <span className="inline-flex items-center gap-1 shrink-0">
+                  {product.isVegan && (
+                    <span title="Vegano" className="text-emerald-600">
+                      <LeafIcon size={11} />
+                    </span>
+                  )}
+                  {product.isGlutenFree && (
+                    <span title="Sem Glúten" className="text-amber-600">
+                      <WheatOffIcon size={11} />
+                    </span>
+                  )}
+                  {product.isSpicy && (
+                    <span title="Apimentado" className="text-rose-500">
+                      <FlameIcon size={11} />
+                    </span>
+                  )}
+                </span>
+              )}
+            </div>
+
+            {showDescriptions && product.description && (
+              <p className="mt-0.5 text-[11px] opacity-70 leading-relaxed line-clamp-2">
+                {product.description}
+              </p>
+            )}
+
+            {showIngredients &&
+              product.ingredients &&
+              product.ingredients.length > 0 && (
+                <p className="mt-0.5 text-[10px] opacity-60 italic">
+                  Ingredientes: {product.ingredients.join(", ")}
+                </p>
+              )}
+          </div>
+        </div>
+
+        {/* Right: Dotted Leader + Price */}
+        {showPrices && (
+          <div className="shrink-0 text-right font-bold text-xs sm:text-sm">
+            <span
+              className={cn(
+                template === "MODERN_DARK" && "text-amber-400",
+                template === "BISTRO_ELEGANT" && "text-amber-950 font-serif",
+              )}
+            >
+              {formatPrice(product.price)}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       {/* ── Scoped Print Stylesheet ────────────────────────── */}
@@ -495,7 +755,7 @@ export function CardapioImpressaoClient({
         @media print {
           @page {
             size: ${orientation === "LANDSCAPE" ? "A4 landscape" : "A4 portrait"};
-            margin: 6mm;
+            margin: 0 !important;
           }
           html, body {
             background: #ffffff !important;
@@ -541,15 +801,29 @@ export function CardapioImpressaoClient({
             padding: 0 !important;
             display: block !important;
           }
-          #menu-preview-container {
+          .printable-menu-page {
             transform: none !important;
-            width: 100% !important;
-            max-width: 100% !important;
+            width: ${orientation === "LANDSCAPE" ? "297mm" : "210mm"} !important;
+            height: ${orientation === "LANDSCAPE" ? "210mm" : "297mm"} !important;
+            min-height: ${orientation === "LANDSCAPE" ? "210mm" : "297mm"} !important;
+            max-height: ${orientation === "LANDSCAPE" ? "210mm" : "297mm"} !important;
             margin: 0 auto !important;
-            padding: 8mm !important;
+            padding: 12mm !important;
             box-shadow: none !important;
             border: none !important;
-            display: block !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+            page-break-after: always !important;
+            break-after: page !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
+          }
+          .printable-menu-page:last-child {
+            page-break-after: auto !important;
+            break-after: auto !important;
           }
           .page-break-avoid {
             break-inside: avoid !important;
@@ -726,28 +1000,6 @@ export function CardapioImpressaoClient({
                         );
                       })}
                     </div>
-
-                    <Select
-                      value={template}
-                      onValueChange={(val) => setTemplate(val as TemplateTheme)}
-                    >
-                      <SelectTrigger className="mt-1 h-8 rounded-lg border-slate-200 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {TEMPLATE_OPTIONS.map((opt) => {
-                          const Icon = opt.icon;
-                          return (
-                            <SelectItem key={opt.id} value={opt.id}>
-                              <span className="flex items-center gap-2">
-                                <Icon size={13} style={{ color: currentThemeConfig.hex }} />
-                                <span>{opt.title} ({opt.badge})</span>
-                              </span>
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -800,6 +1052,57 @@ export function CardapioImpressaoClient({
                         <SelectItem value="SPACIOUS">Espaçoso (Mais respiro)</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-700">Distribuição & Espaços Vazios</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCategoryLayoutMode("CONTINUOUS")}
+                        className={cn(
+                          "flex flex-col text-left p-2.5 rounded-xl border transition-all text-xs",
+                          categoryLayoutMode === "CONTINUOUS"
+                            ? "border-slate-900 bg-slate-900 text-white shadow-xs"
+                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                        )}
+                      >
+                        <span className="font-semibold flex items-center gap-1">
+                          Colunas Fluídas
+                        </span>
+                        <span
+                          className={cn(
+                            "text-[10px] mt-0.5 leading-tight",
+                            categoryLayoutMode === "CONTINUOUS" ? "text-slate-300" : "text-slate-500",
+                          )}
+                        >
+                          Categorias fluem sem vazios
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setCategoryLayoutMode("GRID_FILL")}
+                        className={cn(
+                          "flex flex-col text-left p-2.5 rounded-xl border transition-all text-xs",
+                          categoryLayoutMode === "GRID_FILL"
+                            ? "border-slate-900 bg-slate-900 text-white shadow-xs"
+                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                        )}
+                      >
+                        <span className="font-semibold flex items-center gap-1">
+                          Grade + Destaque
+                        </span>
+                        <span
+                          className={cn(
+                            "text-[10px] mt-0.5 leading-tight",
+                            categoryLayoutMode === "GRID_FILL" ? "text-slate-300" : "text-slate-500",
+                          )}
+                        >
+                          Preenche com Mais Vendido
+                        </span>
+                      </button>
+                    </div>
                   </div>
 
                   <div className="border-t border-slate-100 pt-3 space-y-3">
@@ -1090,10 +1393,21 @@ export function CardapioImpressaoClient({
         <div className="space-y-4 lg:col-span-8">
           {/* Zoom & Helper Toolbar */}
           <div className="no-print flex items-center justify-between bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-xs">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-700">Pré-visualização da Folha</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-semibold text-slate-700">Pré-visualização</span>
               <Badge variant="outline" className="text-[10px] uppercase tracking-wider font-mono">
                 {orientation === "LANDSCAPE" ? "A4 Paisagem" : "A4 Retrato"} • {columns} {columns === 1 ? "Coluna" : "Colunas"}
+              </Badge>
+              <Badge
+                variant="secondary"
+                className={cn(
+                  "text-[10px] font-medium",
+                  pages.length === 1
+                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                    : "bg-blue-50 text-blue-700 border border-blue-200",
+                )}
+              >
+                {pages.length} {pages.length === 1 ? "Folha A4" : "Folhas A4"}
               </Badge>
             </div>
 
@@ -1142,231 +1456,377 @@ export function CardapioImpressaoClient({
                 transformOrigin: "top center",
                 transition: "transform 0.15s ease",
               }}
+              className="space-y-8 pb-8"
             >
-              {/* ── THE PRINTABLE MENU CONTAINER ───────────── */}
-              <div
-                id="menu-preview-container"
-                className={cn(
-                  "relative bg-white shadow-2xl transition-all mx-auto",
-                  // A4 proportions (in mm converted to approximate px)
-                  orientation === "PORTRAIT"
-                    ? "w-[210mm] min-h-[297mm] p-[12mm]"
-                    : "w-[297mm] min-h-[210mm] p-[12mm]",
-                  // Template themes
-                  template === "MODERN_DARK" && "bg-slate-950 text-slate-100 border border-slate-800",
-                  template === "BISTRO_ELEGANT" && "bg-[#faf7f2] text-stone-900 border-2 border-stone-800/20",
-                  template === "MINIMAL_CLEAN" && "bg-white text-slate-900 border border-slate-200",
-                  template === "FAST_CASUAL" && "bg-[#fffdf7] text-stone-900 border border-amber-200",
-                  // Font size scale
-                  fontSize === "COMPACT" && "text-xs",
-                  fontSize === "NORMAL" && "text-sm",
-                  fontSize === "SPACIOUS" && "text-base",
-                )}
-              >
-                {/* Bistro Decorative Inner Border */}
-                {template === "BISTRO_ELEGANT" && (
-                  <div className="pointer-events-none absolute inset-[4mm] border border-amber-800/30 rounded-sm" />
-                )}
+              {pages.map((page, pageIdx) => {
+                const hasAllThreeFooter = Boolean(
+                  showWifi &&
+                    (wifiSsid || wifiPassword) &&
+                    showFooterNote &&
+                    Boolean(footerNote) &&
+                    showDigitalMenuQr,
+                );
 
-                {/* ── Header ───────────────────────────────── */}
-                <div className="relative text-center pb-5 mb-5 border-b border-current/15">
-                  {showLogo && restaurant.avatarImageUrl && (
-                    <div className="mx-auto mb-2.5 h-14 w-14 overflow-hidden rounded-2xl shadow-sm border border-black/10">
-                      <Image
-                        src={restaurant.avatarImageUrl}
-                        alt={restaurant.name}
-                        width={56}
-                        height={56}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                  )}
-
-                  <h1
-                    className={cn(
-                      "font-bold uppercase tracking-wider",
-                      template === "BISTRO_ELEGANT"
-                        ? "font-serif text-3xl tracking-widest text-amber-950"
-                        : template === "MODERN_DARK"
-                          ? "text-3xl text-amber-400 font-display"
-                          : "text-2xl font-bold tracking-tight",
-                    )}
-                  >
-                    {title}
-                  </h1>
-
-                  {subtitle && (
-                    <p
+                return (
+                  <div key={pageIdx} className="flex flex-col items-center">
+                    {/* Folha Header Badge */}
+                    <div
                       className={cn(
-                        "mt-1 max-w-xl mx-auto text-xs italic opacity-75 leading-relaxed",
-                        template === "BISTRO_ELEGANT" && "font-serif",
+                        "no-print mb-2 flex items-center justify-between text-xs text-slate-500 font-medium px-1",
+                        orientation === "PORTRAIT" ? "w-[210mm]" : "w-[297mm]",
                       )}
                     >
-                      {subtitle}
-                    </p>
-                  )}
-
-                  {/* Contact info bar */}
-                  {showContact && (phone || address || instagram) && (
-                    <div className="mt-2.5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] opacity-70">
-                      {phone && <span>📞 {phone}</span>}
-                      {address && <span>📍 {address}</span>}
-                      {instagram && <span>📷 {instagram}</span>}
-                    </div>
-                  )}
-                </div>
-
-                {/* ── Menu Products Layout (Columns) ───────── */}
-                <div
-                  className={cn(
-                    "grid gap-x-8 gap-y-6",
-                    columns === 1 && "grid-cols-1",
-                    columns === 2 && "grid-cols-2",
-                    columns === 3 && "grid-cols-3",
-                  )}
-                >
-                  {displayedCategories.map((category) => (
-                    <div key={category.id} className="page-break-avoid space-y-3.5">
-                      {/* Category Header */}
-                      <div className="border-b border-current/20 pb-1.5 flex items-center justify-between">
-                        <h2
-                          className={cn(
-                            "font-bold uppercase tracking-wider text-sm",
-                            template === "BISTRO_ELEGANT"
-                              ? "font-serif text-amber-900 border-l-2 border-amber-900 pl-2"
-                              : template === "MODERN_DARK"
-                                ? "text-amber-400"
-                                : "text-slate-900",
-                          )}
-                        >
-                          {category.name}
-                        </h2>
-                        <span className="text-[10px] opacity-50 font-mono">
-                          {category.products.length}
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-blue-500" />
+                        <span className="font-semibold text-slate-700">
+                          Folha {pageIdx + 1} de {pages.length}
                         </span>
                       </div>
+                      <span className="text-[11px] font-mono opacity-70">
+                        {page.categories.reduce((acc, c) => acc + c.products.length, 0)} itens nesta folha
+                      </span>
+                    </div>
 
-                      {/* Products List in this Category */}
-                      <div className="space-y-3">
-                        {category.products.map((product) => (
-                          <div key={product.id} className="page-break-avoid group">
-                            <div className="flex items-start justify-between gap-3">
-                              {/* Left: Optional Photo + Title + Desc */}
-                              <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                                {showImages && product.imageUrl && (
-                                  <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-black/10 bg-slate-100">
-                                    <Image
-                                      src={product.imageUrl}
-                                      alt={product.name}
-                                      fill
-                                      className="object-cover"
-                                    />
-                                  </div>
-                                )}
+                    {/* ── THE PRINTABLE MENU PAGE CONTAINER ───────────── */}
+                    <div
+                      id={pageIdx === 0 ? "menu-preview-container" : `menu-preview-page-${pageIdx + 1}`}
+                      data-page-index={pageIdx}
+                      className={cn(
+                        "printable-menu-page relative bg-white shadow-2xl transition-all mx-auto flex flex-col justify-between overflow-hidden",
+                        // A4 proportions
+                        orientation === "PORTRAIT"
+                          ? "w-[210mm] min-h-[297mm] max-h-[297mm] h-[297mm] p-[12mm]"
+                          : "w-[297mm] min-h-[210mm] max-h-[210mm] h-[210mm] p-[12mm]",
+                        // Template themes
+                        template === "MODERN_DARK" && "bg-slate-950 text-slate-100 border border-slate-800",
+                        template === "BISTRO_ELEGANT" && "bg-[#faf7f2] text-stone-900 border-2 border-stone-800/20",
+                        template === "MINIMAL_CLEAN" && "bg-white text-slate-900 border border-slate-200",
+                        template === "FAST_CASUAL" && "bg-[#fffdf7] text-stone-900 border border-amber-200",
+                        // Font size scale
+                        fontSize === "COMPACT" && "text-xs",
+                        fontSize === "NORMAL" && "text-sm",
+                        fontSize === "SPACIOUS" && "text-base",
+                      )}
+                    >
+                      {/* Bistro Decorative Inner Border */}
+                      {template === "BISTRO_ELEGANT" && (
+                        <div className="pointer-events-none absolute inset-[4mm] border border-amber-800/30 rounded-sm" />
+                      )}
 
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className="font-semibold leading-tight text-xs sm:text-sm">
-                                      {product.name}
-                                    </span>
-
-                                    {/* Dietary Badges */}
-                                    {showDietaryBadges && (
-                                      <span className="inline-flex items-center gap-1 shrink-0">
-                                        {product.isVegan && (
-                                          <span title="Vegano" className="text-emerald-600">
-                                            <LeafIcon size={11} />
-                                          </span>
-                                        )}
-                                        {product.isGlutenFree && (
-                                          <span title="Sem Glúten" className="text-amber-600">
-                                            <WheatOffIcon size={11} />
-                                          </span>
-                                        )}
-                                        {product.isSpicy && (
-                                          <span title="Apimentado" className="text-rose-500">
-                                            <FlameIcon size={11} />
-                                          </span>
-                                        )}
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  {showDescriptions && product.description && (
-                                    <p className="mt-0.5 text-[11px] opacity-70 leading-relaxed line-clamp-2">
-                                      {product.description}
-                                    </p>
-                                  )}
-
-                                  {showIngredients &&
-                                    product.ingredients &&
-                                    product.ingredients.length > 0 && (
-                                      <p className="mt-0.5 text-[10px] opacity-60 italic">
-                                        Ingredientes: {product.ingredients.join(", ")}
-                                      </p>
-                                    )}
-                                </div>
+                      <div className="flex-1 flex flex-col min-h-0">
+                        {/* ── Header: Full on Page 1, Compact on Page 2+ ── */}
+                        {pageIdx === 0 ? (
+                          <div className="relative text-center pb-4 mb-4 border-b border-current/15 shrink-0">
+                            {showLogo && restaurant.avatarImageUrl && (
+                              <div className="mx-auto mb-2 h-13 w-13 overflow-hidden rounded-2xl shadow-sm border border-black/10">
+                                <Image
+                                  src={restaurant.avatarImageUrl}
+                                  alt={restaurant.name}
+                                  width={52}
+                                  height={52}
+                                  className="h-full w-full object-cover"
+                                />
                               </div>
+                            )}
 
-                              {/* Right: Dotted Leader + Price */}
-                              {showPrices && (
-                                <div className="shrink-0 text-right font-bold text-xs sm:text-sm">
-                                  <span
+                            <h1
+                              className={cn(
+                                "font-bold uppercase tracking-wider",
+                                template === "BISTRO_ELEGANT"
+                                  ? "font-serif text-3xl tracking-widest text-amber-950"
+                                  : template === "MODERN_DARK"
+                                    ? "text-3xl text-amber-400 font-display"
+                                    : "text-2xl font-bold tracking-tight",
+                              )}
+                            >
+                              {title}
+                            </h1>
+
+                            {subtitle && (
+                              <p
+                                className={cn(
+                                  "mt-1 max-w-xl mx-auto text-xs italic opacity-75 leading-relaxed",
+                                  template === "BISTRO_ELEGANT" && "font-serif",
+                                )}
+                              >
+                                {subtitle}
+                              </p>
+                            )}
+
+                            {/* Contact info bar */}
+                            {showContact && (phone || address || instagram) && (
+                              <div className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] opacity-70">
+                                {phone && <span>📞 {phone}</span>}
+                                {address && <span>📍 {address}</span>}
+                                {instagram && <span>📷 {instagram}</span>}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="relative flex items-center justify-between pb-2 mb-3 border-b border-current/15 text-[11px] opacity-70 shrink-0">
+                            <span className="font-semibold uppercase tracking-wider">{title}</span>
+                            <span>Folha {pageIdx + 1} de {pages.length}</span>
+                          </div>
+                        )}
+
+                        {/* ── Menu Products Layout (Continuous vs Grid Fill) ── */}
+                        <div className="flex-1 min-h-0 overflow-hidden">
+                          {categoryLayoutMode === "CONTINUOUS" ? (
+                            /* Continuous Columns Mode: Categories flow smoothly across columns */
+                            <div
+                              className={cn(
+                                columns === 1 && "space-y-5",
+                                columns === 2 && "columns-2 gap-8 [column-fill:_balance]",
+                                columns === 3 && "columns-3 gap-6 [column-fill:_balance]",
+                              )}
+                            >
+                              {page.categories.map((category) => (
+                                <div
+                                  key={`${category.id}-${category.isContinuation ? "cont" : "start"}`}
+                                  className="break-inside-avoid mb-6 inline-block w-full space-y-3"
+                                >
+                                  {/* Category Header */}
+                                  <div className="border-b border-current/20 pb-1.5 flex items-center justify-between">
+                                    <h2
+                                      className={cn(
+                                        "font-bold uppercase tracking-wider text-sm",
+                                        template === "BISTRO_ELEGANT"
+                                          ? "font-serif text-amber-900 border-l-2 border-amber-900 pl-2"
+                                          : template === "MODERN_DARK"
+                                            ? "text-amber-400"
+                                            : "text-slate-900",
+                                      )}
+                                    >
+                                      {category.name}
+                                      {category.isContinuation && (
+                                        <span className="text-[10px] font-normal opacity-70 ml-1.5 lowercase">
+                                          (continuação)
+                                        </span>
+                                      )}
+                                    </h2>
+                                    <span className="text-[10px] opacity-50 font-mono">
+                                      {category.products.length}
+                                    </span>
+                                  </div>
+
+                                  {/* Products List in this Category */}
+                                  <div className="space-y-2.5">
+                                    {category.products.map((product) => renderProductCard(product))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            /* Grid Fill Mode: balances rows and fills empty slots with Destaque / Mais Vendido */
+                            <div className="space-y-5">
+                              {chunkArray(page.categories, columns).map((rowCats, rowIdx) => {
+                                const maxProductsInRow = Math.max(
+                                  ...rowCats.map((c) => c.products.length),
+                                );
+
+                                return (
+                                  <div
+                                    key={rowIdx}
                                     className={cn(
-                                      template === "MODERN_DARK" && "text-amber-400",
-                                      template === "BISTRO_ELEGANT" && "text-amber-950 font-serif",
+                                      "grid gap-x-8 gap-y-5",
+                                      columns === 1 && "grid-cols-1",
+                                      columns === 2 && "grid-cols-2",
+                                      columns === 3 && "grid-cols-3",
                                     )}
                                   >
-                                    {formatPrice(product.price)}
-                                  </span>
-                                </div>
-                              )}
+                                    {rowCats.map((category) => {
+                                      const diff = maxProductsInRow - category.products.length;
+                                      const topProduct =
+                                        category.topProduct || category.products[0];
+
+                                      return (
+                                        <div
+                                          key={`${category.id}-${category.isContinuation ? "cont" : "start"}`}
+                                          className="page-break-avoid flex flex-col justify-between space-y-3"
+                                        >
+                                          <div className="space-y-3">
+                                            {/* Category Header */}
+                                            <div className="border-b border-current/20 pb-1.5 flex items-center justify-between">
+                                              <h2
+                                                className={cn(
+                                                  "font-bold uppercase tracking-wider text-sm",
+                                                  template === "BISTRO_ELEGANT"
+                                                    ? "font-serif text-amber-900 border-l-2 border-amber-900 pl-2"
+                                                    : template === "MODERN_DARK"
+                                                      ? "text-amber-400"
+                                                      : "text-slate-900",
+                                                )}
+                                              >
+                                                {category.name}
+                                                {category.isContinuation && (
+                                                  <span className="text-[10px] font-normal opacity-70 ml-1.5 lowercase">
+                                                    (continuação)
+                                                  </span>
+                                                )}
+                                              </h2>
+                                              <span className="text-[10px] opacity-50 font-mono">
+                                                {category.products.length}
+                                              </span>
+                                            </div>
+
+                                            {/* Products List */}
+                                            <div className="space-y-2.5">
+                                              {category.products.map((product) =>
+                                                renderProductCard(product),
+                                              )}
+                                            </div>
+                                          </div>
+
+                                          {/* Destaque / Mais Vendido Card to fill empty slots */}
+                                          {diff > 0 && topProduct && (
+                                            <div className="pt-2 mt-auto">
+                                              <div
+                                                className={cn(
+                                                  "rounded-xl border p-2.5 transition-all text-xs space-y-2",
+                                                  template === "MODERN_DARK" &&
+                                                    "border-amber-400/25 bg-amber-400/[0.04] text-slate-100",
+                                                  template === "BISTRO_ELEGANT" &&
+                                                    "border-amber-900/20 bg-amber-950/[0.03] text-stone-900",
+                                                  template === "MINIMAL_CLEAN" &&
+                                                    "border-slate-200 bg-slate-50 text-slate-900",
+                                                  template === "FAST_CASUAL" &&
+                                                    "border-amber-300/80 bg-amber-50/70 text-stone-900",
+                                                )}
+                                              >
+                                                <div className="flex items-center justify-between gap-2">
+                                                  <span
+                                                    className={cn(
+                                                      "inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full",
+                                                      template === "MODERN_DARK" &&
+                                                        "bg-amber-400/15 text-amber-300",
+                                                      template === "BISTRO_ELEGANT" &&
+                                                        "bg-amber-900/10 text-amber-900 font-serif",
+                                                      template === "MINIMAL_CLEAN" &&
+                                                        "bg-slate-200 text-slate-800",
+                                                      template === "FAST_CASUAL" &&
+                                                        "bg-amber-500/15 text-amber-700",
+                                                    )}
+                                                  >
+                                                    <SparklesIcon size={10} />
+                                                    ⭐ Mais Vendido de {category.name}
+                                                  </span>
+                                                  {showPrices && (
+                                                    <span
+                                                      className={cn(
+                                                        "font-bold text-xs shrink-0",
+                                                        template === "MODERN_DARK" &&
+                                                          "text-amber-400",
+                                                        template === "BISTRO_ELEGANT" &&
+                                                          "text-amber-950 font-serif",
+                                                      )}
+                                                    >
+                                                      {formatPrice(topProduct.price)}
+                                                    </span>
+                                                  )}
+                                                </div>
+
+                                                <div className="flex items-center gap-2.5">
+                                                  {showImages && topProduct.imageUrl && (
+                                                    <div className="relative h-11 w-11 shrink-0 rounded-lg overflow-hidden border border-black/10 bg-slate-100">
+                                                      <Image
+                                                        src={topProduct.imageUrl}
+                                                        alt={topProduct.name}
+                                                        fill
+                                                        className="object-cover"
+                                                      />
+                                                    </div>
+                                                  )}
+                                                  <div className="min-w-0 flex-1">
+                                                    <span className="font-semibold text-xs block leading-tight truncate">
+                                                      {topProduct.name}
+                                                    </span>
+                                                    <span className="text-[10px] opacity-70 block line-clamp-1 mt-0.5 leading-relaxed">
+                                                      {topProduct.description ||
+                                                        "O prato favorito e mais pedido pelos nossos clientes!"}
+                                                    </span>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                );
+                              })}
                             </div>
-                          </div>
-                        ))}
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
 
-                {/* ── Footer Elements ───────────────────────── */}
-                <div className="page-break-avoid mt-8 pt-4 border-t border-current/15 flex flex-col sm:flex-row items-center justify-between gap-4">
-                  {/* Left: Wi-Fi Box */}
-                  {showWifi && (wifiSsid || wifiPassword) && (
-                    <div className="flex items-center gap-2.5 rounded-xl border border-current/15 px-3 py-1.5 text-[11px] opacity-80">
-                      <WifiIcon size={14} className="shrink-0" />
-                      <div>
-                        {wifiSsid && <span className="font-semibold">Rede: {wifiSsid}</span>}
-                        {wifiPassword && <span className="ml-2">Senha: {wifiPassword}</span>}
-                      </div>
-                    </div>
-                  )}
+                      {/* ── Footer Elements: Only on the Last Page ── */}
+                      {page.isLastPage && (showWifi || showFooterNote || showDigitalMenuQr) && (
+                        <div className="page-break-avoid mt-auto pt-3 border-t border-current/15 flex flex-row items-center justify-between gap-3 shrink-0">
+                          {/* Left: Wi-Fi Box (expanded laterally when all 3 are displayed) */}
+                          {showWifi && (wifiSsid || wifiPassword) && (
+                            <div
+                              className={cn(
+                                "flex items-center gap-2.5 rounded-xl border border-current/15 px-3 py-1.5 text-[11px] opacity-80 transition-all",
+                                hasAllThreeFooter
+                                  ? "flex-[1.4] min-w-[210px] px-3.5 py-2"
+                                  : "shrink-0",
+                              )}
+                            >
+                              <WifiIcon size={16} className="shrink-0 text-current opacity-90" />
+                              <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-center sm:gap-3 text-[11px] leading-tight">
+                                {wifiSsid && (
+                                  <span className="truncate">
+                                    <span className="opacity-70">Rede: </span>
+                                    <strong className="font-semibold">{wifiSsid}</strong>
+                                  </span>
+                                )}
+                                {wifiPassword && (
+                                  <span className="truncate">
+                                    <span className="opacity-70">Senha: </span>
+                                    <strong className="font-semibold">{wifiPassword}</strong>
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )}
 
-                  {/* Middle / Center: Disclaimer Note */}
-                  {showFooterNote && footerNote && (
-                    <div className="text-[10px] opacity-60 text-center max-w-md mx-auto leading-tight italic">
-                      {footerNote}
-                    </div>
-                  )}
+                          {/* Middle / Center: Disclaimer Note (Taxa de 10% / Avisos - reduced laterally when all 3 displayed) */}
+                          {showFooterNote && footerNote && (
+                            <div
+                              className={cn(
+                                "text-[9.5px] opacity-65 text-center leading-tight italic",
+                                hasAllThreeFooter
+                                  ? "flex-initial max-w-[200px] px-2 py-0.5 line-clamp-3"
+                                  : "max-w-md mx-auto",
+                              )}
+                            >
+                              {footerNote}
+                            </div>
+                          )}
 
-                  {/* Right: Digital Menu QR Code */}
-                  {showDigitalMenuQr && (
-                    <div className="flex items-center gap-2 shrink-0 border border-current/15 rounded-xl p-1.5 bg-white text-slate-900">
-                      <div className="bg-white p-1 rounded-lg">
-                        <QRCodeSVG
-                          value={digitalMenuUrl}
-                          size={46}
-                          level="M"
-                        />
-                      </div>
-                      <div className="text-[10px] leading-tight pr-1">
-                        <span className="font-bold block">Pedir pelo Celular</span>
-                        <span className="opacity-70 text-[9px]">Aponte a câmera</span>
-                      </div>
+                          {/* Right: Digital Menu QR Code (maintains exact same dimensions) */}
+                          {showDigitalMenuQr && (
+                            <div className="flex items-center gap-2 shrink-0 border border-current/15 rounded-xl p-1.5 bg-white text-slate-900 shadow-xs">
+                              <div className="bg-white p-0.5 rounded-lg">
+                                <QRCodeSVG
+                                  value={digitalMenuUrl}
+                                  size={44}
+                                  level="M"
+                                />
+                              </div>
+                              <div className="text-[10px] leading-tight pr-1">
+                                <span className="font-bold block">Pedir pelo Celular</span>
+                                <span className="opacity-70 text-[9px]">Aponte a câmera</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
