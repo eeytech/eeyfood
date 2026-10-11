@@ -24,7 +24,6 @@ import {
   ZoomInIcon,
   ZoomOutIcon,
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import { useMemo, useState } from "react";
@@ -334,24 +333,27 @@ export function CardapioImpressaoClient({
 
     const isPortrait = orientation === "PORTRAIT";
     // Total usable height in pixels for A4 (portrait 1122.5px - 24mm padding ≈ 1030px; landscape 793.7px - 24mm ≈ 700px)
-    const totalSheetHeight = isPortrait ? 1030 : 700;
+    // We calibrate conservatively so no column ever exceeds the physical 297mm A4 sheet height
+    const totalSheetHeight = isPortrait ? 960 : 660;
 
-    // Estimate Page 1 Header height
-    let page1HeaderHeight = 60; // Title (h1) + pb-4 mb-4 border-b
-    if (showLogo && restaurant.avatarImageUrl) page1HeaderHeight += 68; // 56px logo + 12px margin
-    if (subtitle) page1HeaderHeight += 28; // Subtitle + margin
-    if (showContact && (phone || address || instagram)) page1HeaderHeight += 26; // Contact info bar
+    // Estimate Page 1 Header height realistically
+    let page1HeaderHeight = 65; // Title (h1) + pb-4 mb-4 border-b
+    if (showLogo && restaurant.avatarImageUrl) page1HeaderHeight += 70; // 56px logo + 14px margin
+    if (subtitle) page1HeaderHeight += 30; // Subtitle + margin
+    if (showContact && (phone || address || instagram)) page1HeaderHeight += 34; // Contact info bar
 
     const miniHeaderHeight = 36; // Folha X de Y + border
-    const footerHeight = showWifi || showFooterNote || showDigitalMenuQr ? 75 : 0;
+    const footerHeight = showWifi || showFooterNote || showDigitalMenuQr ? 80 : 0;
 
     const getPageCapacity = (isFirst: boolean) => {
       const topH = isFirst ? page1HeaderHeight : miniHeaderHeight;
       const botH = footerHeight;
-      const availCol = Math.max(180, totalSheetHeight - topH - botH);
+      const availCol = Math.max(160, totalSheetHeight - topH - botH);
 
       // Real-world column packing efficiency factor
-      const efficiency = columns === 1 ? 0.94 : columns === 2 ? 0.90 : 0.85;
+      const efficiency = isFirst
+        ? (columns === 1 ? 0.90 : columns === 2 ? 0.82 : 0.78)
+        : (columns === 1 ? 0.94 : columns === 2 ? 0.90 : 0.85);
       return availCol * columns * efficiency;
     };
 
@@ -426,16 +428,17 @@ export function CardapioImpressaoClient({
         0,
       );
 
-      // If the remaining cost fits within pageCapacity with reasonable tolerance (up to 35%),
-      // or if remaining queue has few items (<= 5 products) that would otherwise form an orphan sheet,
-      // absorb all remaining items on this page so we NEVER leave an orphan trailing page (like 2 items on page 3)!
+      // On Page 1, we must NEVER overfill beyond the physical sheet height (strictly 1.0x capacity)
+      // On subsequent pages (Page 2+), we can absorb orphan trailing items (up to 1.35x tolerance)
       const remainingProductCount = queue.reduce((acc, c) => acc + c.products.length, 0);
       let maxPageCapacity = pageCapacity;
-      if (
-        remainingEstimatedCost <= pageCapacity * 1.35 ||
-        (remainingProductCount <= 5 && remainingEstimatedCost <= pageCapacity * 1.5)
-      ) {
-        maxPageCapacity = remainingEstimatedCost + 20;
+      if (!isFirstPage) {
+        if (
+          remainingEstimatedCost <= pageCapacity * 1.35 ||
+          (remainingProductCount <= 5 && remainingEstimatedCost <= pageCapacity * 1.5)
+        ) {
+          maxPageCapacity = remainingEstimatedCost + 20;
+        }
       }
 
       let usedCapacity = 0;
@@ -523,7 +526,7 @@ export function CardapioImpressaoClient({
   ]);
 
   // Trigger isolated iframe print with clean page breaks per A4 sheet
-  const handlePrint = () => {
+  const handlePrint = async () => {
     const pageElements = document.querySelectorAll<HTMLElement>(".printable-menu-page");
     if (!pageElements.length) {
       window.print();
@@ -540,13 +543,13 @@ export function CardapioImpressaoClient({
       const iframe = document.createElement("iframe");
       iframe.id = "menu-print-iframe";
       iframe.style.position = "fixed";
-      iframe.style.right = "0";
-      iframe.style.bottom = "0";
-      iframe.style.width = "0";
-      iframe.style.height = "0";
-      iframe.style.border = "0";
-      iframe.style.zIndex = "-9999";
-      iframe.style.visibility = "hidden";
+      iframe.style.left = "-10000px";
+      iframe.style.top = "0";
+      iframe.style.width = "1024px";
+      iframe.style.height = "1024px";
+      iframe.style.border = "none";
+      iframe.style.opacity = "0";
+      iframe.style.pointerEvents = "none";
       document.body.appendChild(iframe);
 
       const doc = iframe.contentWindow?.document;
@@ -561,9 +564,20 @@ export function CardapioImpressaoClient({
       });
 
       const pageOrientationCss = orientation === "LANDSCAPE" ? "A4 landscape" : "A4 portrait";
-      const pagesHtml = Array.from(pageElements)
-        .map((el) => el.outerHTML)
-        .join("\n");
+
+      // Clone page elements and force eager image loading
+      const tempWrapper = document.createElement("div");
+      pageElements.forEach((el) => {
+        const clone = el.cloneNode(true) as HTMLElement;
+        clone.querySelectorAll("img").forEach((img) => {
+          img.setAttribute("loading", "eager");
+          img.setAttribute("decoding", "sync");
+        });
+        tempWrapper.appendChild(clone);
+      });
+      const pagesHtml = tempWrapper.innerHTML;
+
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
 
       doc.open();
       doc.write(`
@@ -571,6 +585,7 @@ export function CardapioImpressaoClient({
         <html lang="pt-BR">
           <head>
             <meta charset="utf-8" />
+            <base href="${origin}/" />
             <title>Imprimir Cardápio - ${title}</title>
             ${styles}
             <style>
@@ -594,14 +609,15 @@ export function CardapioImpressaoClient({
                 margin: 0 auto !important;
                 border: none !important;
                 width: ${orientation === "LANDSCAPE" ? "297mm" : "210mm"} !important;
+                height: ${orientation === "LANDSCAPE" ? "210mm" : "297mm"} !important;
+                max-height: ${orientation === "LANDSCAPE" ? "210mm" : "297mm"} !important;
                 min-height: ${orientation === "LANDSCAPE" ? "210mm" : "297mm"} !important;
-                height: auto !important;
                 page-break-after: always !important;
                 break-after: page !important;
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
                 box-sizing: border-box !important;
-                overflow: visible !important;
+                overflow: hidden !important;
                 transform: none !important;
               }
               .printable-menu-page:last-child {
@@ -621,14 +637,27 @@ export function CardapioImpressaoClient({
       `);
       doc.close();
 
-      setTimeout(() => {
-        try {
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-        } catch {
-          window.print();
-        }
-      }, 500);
+      // Wait for all images in the iframe to fully load and decode
+      const waitForImages = async () => {
+        const imgs = Array.from(doc.images);
+        if (imgs.length === 0) return;
+        const promises = imgs.map((img) => {
+          if (img.complete && img.naturalHeight > 0) return Promise.resolve();
+          return new Promise<void>((resolve) => {
+            img.onload = () => resolve();
+            img.onerror = () => resolve();
+            setTimeout(resolve, 3500);
+          });
+        });
+        await Promise.all(promises);
+      };
+
+      await waitForImages();
+      // Brief delay for final render paint
+      await new Promise((resolve) => setTimeout(resolve, 250));
+
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
     } catch (err) {
       console.error("Erro ao imprimir cardápio:", err);
       window.print();
@@ -765,11 +794,17 @@ export function CardapioImpressaoClient({
         <div className="flex items-start gap-2.5 min-w-0 flex-1">
           {showImages && product.imageUrl && (
             <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-black/10 bg-slate-100">
-              <Image
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src={product.imageUrl}
                 alt={product.name}
-                fill
-                className="object-cover"
+                loading="eager"
+                decoding="sync"
+                crossOrigin="anonymous"
+                className="h-full w-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = "none";
+                }}
               />
             </div>
           )}
@@ -897,8 +932,9 @@ export function CardapioImpressaoClient({
           .printable-menu-page {
             transform: none !important;
             width: ${orientation === "LANDSCAPE" ? "297mm" : "210mm"} !important;
+            height: ${orientation === "LANDSCAPE" ? "210mm" : "297mm"} !important;
+            max-height: ${orientation === "LANDSCAPE" ? "210mm" : "297mm"} !important;
             min-height: ${orientation === "LANDSCAPE" ? "210mm" : "297mm"} !important;
-            height: auto !important;
             margin: 0 auto !important;
             padding: 12mm !important;
             box-shadow: none !important;
@@ -911,7 +947,7 @@ export function CardapioImpressaoClient({
             page-break-inside: avoid !important;
             break-inside: avoid !important;
             box-sizing: border-box !important;
-            overflow: visible !important;
+            overflow: hidden !important;
           }
           .printable-menu-page:last-child {
             page-break-after: auto !important;
@@ -1331,7 +1367,7 @@ export function CardapioImpressaoClient({
                         variant="ghost"
                         size="sm"
                         onClick={() => toggleAllCategories(true)}
-                        className="h-7 px-2 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        className="h-7 px-2 text-xs text-slate-500 hover:text-slate-700"
                       >
                         Marcar todas
                       </Button>
@@ -1369,13 +1405,6 @@ export function CardapioImpressaoClient({
                         onCheckedChange={setOnlyActive}
                       />
                     </div>
-                  </div>
-
-                  <div className="rounded-lg bg-blue-50/70 border border-blue-200/60 px-2.5 py-1.5 text-[11px] text-blue-800 flex items-center gap-2">
-                    <GripVerticalIcon size={14} className="text-blue-500 shrink-0" />
-                    <span>
-                      <strong>Ordem de Impressão:</strong> Arraste ou use as setas para posicionar as categorias como preferir (ex: bebidas no final).
-                    </span>
                   </div>
 
                   <div className="relative">
@@ -1511,13 +1540,7 @@ export function CardapioImpressaoClient({
                 {orientation === "LANDSCAPE" ? "A4 Paisagem" : "A4 Retrato"} • {columns} {columns === 1 ? "Coluna" : "Colunas"}
               </Badge>
               <Badge
-                variant="secondary"
-                className={cn(
-                  "text-[10px] font-medium",
-                  pages.length === 1
-                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                    : "bg-blue-50 text-blue-700 border border-blue-200",
-                )}
+                variant="outline" className="text-[10px] uppercase tracking-wider font-mono"
               >
                 {pages.length} {pages.length === 1 ? "Folha A4" : "Folhas A4"}
               </Badge>
@@ -1589,7 +1612,6 @@ export function CardapioImpressaoClient({
                       )}
                     >
                       <div className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-blue-500" />
                         <span className="font-semibold text-slate-700">
                           Folha {pageIdx + 1} de {pages.length}
                         </span>
@@ -1634,11 +1656,15 @@ export function CardapioImpressaoClient({
                                 className="mx-auto mb-2.5 h-14 w-14 shrink-0 overflow-hidden rounded-2xl shadow-sm border border-black/10"
                                 style={{ width: 56, height: 56 }}
                               >
-                                <Image
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
                                   src={restaurant.avatarImageUrl}
                                   alt={restaurant.name}
                                   width={56}
                                   height={56}
+                                  loading="eager"
+                                  decoding="sync"
+                                  crossOrigin="anonymous"
                                   className="h-full w-full object-cover"
                                 />
                               </div>
