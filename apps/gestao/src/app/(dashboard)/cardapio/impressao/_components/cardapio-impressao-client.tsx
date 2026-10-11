@@ -4,13 +4,17 @@ import type { MenuCategory, Product, Restaurant } from "@fsw/db";
 import {
   ArrowLeftIcon,
   CheckIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
   DownloadIcon,
   FileTextIcon,
   FlameIcon,
+  GripVerticalIcon,
   LeafIcon,
   MoonIcon,
   PaletteIcon,
   PrinterIcon,
+  RotateCcwIcon,
   SearchIcon,
   Settings2Icon,
   SparklesIcon,
@@ -166,6 +170,30 @@ export function CardapioImpressaoClient({
 
   const [excludedProductIds, setExcludedProductIds] = useState<Set<string>>(new Set());
 
+  // Category ordering state (allows user to choose which categories appear first/last)
+  const [categoryOrder, setCategoryOrder] = useState<string[]>(() => {
+    return initialCategories.map((c) => c.id);
+  });
+  const [draggedCatId, setDraggedCatId] = useState<string | null>(null);
+
+  // Compute ordered categories based on user's custom sequence
+  const orderedCategories = useMemo(() => {
+    const catMap = new Map(initialCategories.map((c) => [c.id, c]));
+    const result: CategoriaComProdutos[] = [];
+    for (const id of categoryOrder) {
+      const cat = catMap.get(id);
+      if (cat) {
+        result.push(cat);
+        catMap.delete(id);
+      }
+    }
+    // Append any leftover categories if new ones were added
+    for (const cat of catMap.values()) {
+      result.push(cat);
+    }
+    return result;
+  }, [initialCategories, categoryOrder]);
+
   // Search filter inside editor
   const [searchFilter, setSearchFilter] = useState("");
 
@@ -175,9 +203,9 @@ export function CardapioImpressaoClient({
   // Is downloading PDF
   const [isExportingPdf, setIsExportingPdf] = useState(false);
 
-  // Active items calculation
+  // Active items calculation (respecting custom category ordering)
   const displayedCategories = useMemo(() => {
-    return initialCategories
+    return orderedCategories
       .filter((cat) => selectedCategoryIds.has(cat.id))
       .map((cat) => {
         let products = cat.products.filter((prod) => !excludedProductIds.has(prod.id));
@@ -201,11 +229,59 @@ export function CardapioImpressaoClient({
         };
       })
       .filter((cat) => cat.products.length > 0);
-  }, [initialCategories, selectedCategoryIds, excludedProductIds, onlyActive, searchFilter]);
+  }, [orderedCategories, selectedCategoryIds, excludedProductIds, onlyActive, searchFilter]);
 
   const totalFilteredProducts = useMemo(() => {
     return displayedCategories.reduce((acc, cat) => acc + cat.products.length, 0);
   }, [displayedCategories]);
+
+  // Handlers for category ordering
+  const moveCategory = (catId: string, direction: "up" | "down") => {
+    setCategoryOrder((prev) => {
+      const index = prev.indexOf(catId);
+      if (index === -1) return prev;
+      const targetIndex = direction === "up" ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= prev.length) return prev;
+      const newOrder = [...prev];
+      const [removed] = newOrder.splice(index, 1);
+      newOrder.splice(targetIndex, 0, removed);
+      return newOrder;
+    });
+  };
+
+  const resetCategoryOrder = () => {
+    setCategoryOrder(initialCategories.map((c) => c.id));
+    toast.success("Ordem das categorias restaurada para o padrão.");
+  };
+
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    setDraggedCatId(id);
+    e.dataTransfer.setData("text/plain", id);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    if (!draggedCatId || draggedCatId === targetId) {
+      setDraggedCatId(null);
+      return;
+    }
+    setCategoryOrder((prev) => {
+      const fromIndex = prev.indexOf(draggedCatId);
+      const toIndex = prev.indexOf(targetId);
+      if (fromIndex === -1 || toIndex === -1) return prev;
+      const newOrder = [...prev];
+      const [moved] = newOrder.splice(fromIndex, 1);
+      newOrder.splice(toIndex, 0, moved);
+      return newOrder;
+    });
+    setDraggedCatId(null);
+  };
 
   // Handlers for category toggles
   const toggleCategory = (catId: string) => {
@@ -1246,10 +1322,10 @@ export function CardapioImpressaoClient({
                   </div>
                 </TabsContent>
 
-                {/* TAB 3: CATEGORIES & PRODUCT SELECTION */}
-                <TabsContent value="items" className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
+                {/* TAB 3: CATEGORIES & PRODUCT SELECTION & ORDERING */}
+                <TabsContent value="items" className="space-y-3.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <Button
                         type="button"
                         variant="ghost"
@@ -1269,6 +1345,18 @@ export function CardapioImpressaoClient({
                       >
                         Desmarcar
                       </Button>
+                      <span className="text-slate-300">|</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={resetCategoryOrder}
+                        className="h-7 px-2 text-xs text-slate-500 hover:text-slate-700 inline-flex items-center gap-1"
+                        title="Restaurar a ordem original das categorias"
+                      >
+                        <RotateCcwIcon size={11} />
+                        Restaurar ordem
+                      </Button>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -1283,6 +1371,13 @@ export function CardapioImpressaoClient({
                     </div>
                   </div>
 
+                  <div className="rounded-lg bg-blue-50/70 border border-blue-200/60 px-2.5 py-1.5 text-[11px] text-blue-800 flex items-center gap-2">
+                    <GripVerticalIcon size={14} className="text-blue-500 shrink-0" />
+                    <span>
+                      <strong>Ordem de Impressão:</strong> Arraste ou use as setas para posicionar as categorias como preferir (ex: bebidas no final).
+                    </span>
+                  </div>
+
                   <div className="relative">
                     <SearchIcon size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
                     <Input
@@ -1293,27 +1388,79 @@ export function CardapioImpressaoClient({
                     />
                   </div>
 
-                  <div className="max-h-[380px] overflow-y-auto space-y-3 pr-1">
-                    {initialCategories.map((cat) => {
+                  <div className="max-h-[380px] overflow-y-auto space-y-2.5 pr-1">
+                    {orderedCategories.map((cat, idx) => {
                       const isCatChecked = selectedCategoryIds.has(cat.id);
                       return (
                         <div
                           key={cat.id}
-                          className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-2.5 space-y-2"
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, cat.id)}
+                          onDragOver={handleDragOver}
+                          onDrop={(e) => handleDrop(e, cat.id)}
+                          className={cn(
+                            "rounded-xl border border-slate-200/80 bg-slate-50/60 p-2.5 space-y-2 transition-all",
+                            draggedCatId === cat.id && "opacity-40 border-dashed border-blue-400 bg-blue-50/30",
+                          )}
                         >
-                          <div className="flex items-center justify-between">
-                            <label className="flex items-center gap-2 text-xs font-semibold text-slate-800 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={isCatChecked}
-                                onChange={() => toggleCategory(cat.id)}
-                                className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
-                              />
-                              <span>{cat.name}</span>
-                            </label>
-                            <Badge variant="secondary" className="text-[10px] py-0 px-1.5 h-4">
-                              {cat.products.length} itens
-                            </Badge>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div
+                                className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-700 p-0.5 rounded transition-colors"
+                                title="Arraste para reordenar esta categoria"
+                              >
+                                <GripVerticalIcon size={14} />
+                              </div>
+                              <span className="text-[10px] font-mono text-slate-500 bg-white border border-slate-200 px-1.5 py-0.5 rounded shrink-0">
+                                #{idx + 1}
+                              </span>
+                              <label className="flex items-center gap-2 text-xs font-semibold text-slate-800 cursor-pointer truncate">
+                                <input
+                                  type="checkbox"
+                                  checked={isCatChecked}
+                                  onChange={() => toggleCategory(cat.id)}
+                                  className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900 shrink-0"
+                                />
+                                <span className="truncate">{cat.name}</span>
+                              </label>
+                            </div>
+
+                            <div className="flex items-center gap-1 shrink-0">
+                              <Badge variant="secondary" className="text-[10px] py-0 px-1.5 h-4">
+                                {cat.products.length} itens
+                              </Badge>
+
+                              <div className="flex items-center gap-0.5 ml-1 bg-white border border-slate-200 rounded-md p-0.5 shadow-2xs">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  disabled={idx === 0}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    moveCategory(cat.id, "up");
+                                  }}
+                                  className="h-5 w-5 p-0 hover:bg-slate-100 disabled:opacity-25 text-slate-600 cursor-pointer"
+                                  title="Mover categoria para cima"
+                                >
+                                  <ChevronUpIcon size={12} />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  disabled={idx === orderedCategories.length - 1}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    moveCategory(cat.id, "down");
+                                  }}
+                                  className="h-5 w-5 p-0 hover:bg-slate-100 disabled:opacity-25 text-slate-600 cursor-pointer"
+                                  title="Mover categoria para baixo"
+                                >
+                                  <ChevronDownIcon size={12} />
+                                </Button>
+                              </div>
+                            </div>
                           </div>
 
                           {isCatChecked && cat.products.length > 0 && (
