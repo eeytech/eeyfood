@@ -284,30 +284,29 @@ export function CardapioImpressaoClient({
       const botH = isLast ? footerHeight : 0;
       const availCol = Math.max(180, totalSheetHeight - topH - botH);
 
-      // Real-world content cannot pack 100% into columns due to column breaks,
-      // category margins, subpixel line wraps, etc.
-      const efficiency = columns === 1 ? 0.88 : columns === 2 ? 0.80 : 0.74;
+      // Real-world column packing efficiency factor
+      const efficiency = columns === 1 ? 0.94 : columns === 2 ? 0.88 : 0.82;
       return availCol * columns * efficiency;
     };
 
     const getProdHeight = (prod: Product) => {
-      let h = fontSize === "COMPACT" ? 34 : fontSize === "SPACIOUS" ? 48 : 40;
+      let h = fontSize === "COMPACT" ? 28 : fontSize === "SPACIOUS" ? 40 : 34;
       if (showImages && prod.imageUrl) {
-        h = Math.max(h, 52);
+        h = Math.max(h, 46);
       }
       if (showDescriptions && prod.description) {
-        const isLong = prod.description.length > 40;
-        h += isLong ? 32 : 18;
+        const isLong = prod.description.length > 50;
+        h += isLong ? 24 : 14;
       }
       if (showIngredients && prod.ingredients && prod.ingredients.length > 0) {
-        const isLong = prod.ingredients.join(", ").length > 45;
-        h += isLong ? 26 : 16;
+        const isLong = prod.ingredients.join(", ").length > 50;
+        h += isLong ? 20 : 12;
       }
-      return h + 10; // inter-item spacing (space-y-2.5)
+      return h + 8; // inter-item spacing
     };
 
     const getCatOverhead = (isContinuation: boolean) => {
-      return (isContinuation ? 38 : 44) + 20; // header + mb-6 spacing
+      return (isContinuation ? 32 : 38) + 14; // header + spacing
     };
 
     const getCatHeight = (cat: { products: Product[]; isContinuation?: boolean }) => {
@@ -326,7 +325,7 @@ export function CardapioImpressaoClient({
         const rowH = Math.max(
           ...row.map((c) => {
             const diff = maxProds - c.products.length;
-            const highlightCost = diff > 0 ? 85 : 0;
+            const highlightCost = diff > 0 ? Math.min(diff, 2) * 60 : 0;
             return getCatHeight(c) + highlightCost;
           }),
         );
@@ -689,6 +688,11 @@ export function CardapioImpressaoClient({
             clonedEl.style.transform = "none";
             clonedEl.style.boxShadow = "none";
             clonedEl.style.margin = "0";
+            clonedEl.querySelectorAll<HTMLElement>(".break-inside-avoid, .page-break-avoid").forEach((el) => {
+              el.style.breakInside = "avoid";
+              (el.style as any).webkitColumnBreakInside = "avoid";
+              (el.style as any).pageBreakInside = "avoid";
+            });
           },
         });
 
@@ -723,7 +727,7 @@ export function CardapioImpressaoClient({
 
   // Product card renderer
   const renderProductCard = (product: Product) => (
-    <div key={product.id} className="page-break-avoid group">
+    <div key={product.id} className="break-inside-avoid page-break-avoid group">
       <div className="flex items-start justify-between gap-3">
         {/* Left: Optional Photo + Title + Desc */}
         <div className="flex items-start gap-2.5 min-w-0 flex-1">
@@ -767,7 +771,7 @@ export function CardapioImpressaoClient({
             </div>
 
             {showDescriptions && product.description && (
-              <p className="mt-0.5 text-[11px] opacity-70 leading-relaxed line-clamp-2">
+              <p className="mt-0.5 text-[11px] opacity-70 leading-snug">
                 {product.description}
               </p>
             )}
@@ -775,7 +779,7 @@ export function CardapioImpressaoClient({
             {showIngredients &&
               product.ingredients &&
               product.ingredients.length > 0 && (
-                <p className="mt-0.5 text-[10px] opacity-60 italic">
+                <p className="mt-0.5 text-[10px] opacity-60 italic leading-snug">
                   Ingredientes: {product.ingredients.join(", ")}
                 </p>
               )}
@@ -803,6 +807,12 @@ export function CardapioImpressaoClient({
     <div className="space-y-6">
       {/* ── Scoped Print Stylesheet ────────────────────────── */}
       <style>{`
+        .printable-menu-page .break-inside-avoid,
+        .printable-menu-page .page-break-avoid {
+          break-inside: avoid !important;
+          page-break-inside: avoid !important;
+          -webkit-column-break-inside: avoid !important;
+        }
         @media print {
           @page {
             size: ${orientation === "LANDSCAPE" ? "A4 landscape" : "A4 portrait"};
@@ -1689,13 +1699,13 @@ export function CardapioImpressaoClient({
                                   >
                                     {rowCats.map((category) => {
                                       const diff = maxProductsInRow - category.products.length;
-                                      const topProduct =
-                                        category.topProduct || category.products[0];
+                                      const highlightCount = Math.min(diff, Math.max(1, category.products.length));
+                                      const highlightProducts = category.products.slice(0, highlightCount);
 
                                       return (
                                         <div
                                           key={`${category.id}-${category.isContinuation ? "cont" : "start"}`}
-                                          className="page-break-avoid flex flex-col justify-between space-y-3"
+                                          className="break-inside-avoid page-break-avoid flex flex-col space-y-3"
                                         >
                                           <div className="space-y-3">
                                             {/* Category Header */}
@@ -1730,76 +1740,81 @@ export function CardapioImpressaoClient({
                                             </div>
                                           </div>
 
-                                          {/* Destaque / Mais Vendido Card to fill empty slots */}
-                                          {diff > 0 && topProduct && (
-                                            <div className="pt-2 mt-auto">
-                                              <div
-                                                className={cn(
-                                                  "rounded-xl border p-2.5 transition-all text-xs space-y-2",
-                                                  template === "MODERN_DARK" &&
-                                                    "border-amber-400/25 bg-amber-400/[0.04] text-slate-100",
-                                                  template === "BISTRO_ELEGANT" &&
-                                                    "border-amber-900/20 bg-amber-950/[0.03] text-stone-900",
-                                                  template === "MINIMAL_CLEAN" &&
-                                                    "border-slate-200 bg-slate-50 text-slate-900",
-                                                  template === "FAST_CASUAL" &&
-                                                    "border-amber-300/80 bg-amber-50/70 text-stone-900",
-                                                )}
-                                              >
-                                                <div className="flex items-center justify-between gap-2">
-                                                  <span
-                                                    className={cn(
-                                                      "inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full",
-                                                      template === "MODERN_DARK" &&
-                                                        "bg-amber-400/15 text-amber-300",
-                                                      template === "BISTRO_ELEGANT" &&
-                                                        "bg-amber-900/10 text-amber-900 font-serif",
-                                                      template === "MINIMAL_CLEAN" &&
-                                                        "bg-slate-200 text-slate-800",
-                                                      template === "FAST_CASUAL" &&
-                                                        "bg-amber-500/15 text-amber-700",
-                                                    )}
-                                                  >
-                                                    <SparklesIcon size={10} />
-                                                    ⭐ Mais Vendido de {category.name}
-                                                  </span>
-                                                  {showPrices && (
+                                          {/* Destaque / Mais Vendido Cards to fill empty slots */}
+                                          {diff > 0 && highlightProducts.length > 0 && (
+                                            <div className="space-y-2.5 pt-1">
+                                              {highlightProducts.map((hlProd, hlIdx) => (
+                                                <div
+                                                  key={hlProd.id || hlIdx}
+                                                  className={cn(
+                                                    "rounded-xl border p-2.5 transition-all text-xs space-y-2",
+                                                    template === "MODERN_DARK" &&
+                                                      "border-amber-400/25 bg-amber-400/[0.04] text-slate-100",
+                                                    template === "BISTRO_ELEGANT" &&
+                                                      "border-amber-900/20 bg-amber-950/[0.03] text-stone-900",
+                                                    template === "MINIMAL_CLEAN" &&
+                                                      "border-slate-200 bg-slate-50 text-slate-900",
+                                                    template === "FAST_CASUAL" &&
+                                                      "border-amber-300/80 bg-amber-50/70 text-stone-900",
+                                                  )}
+                                                >
+                                                  <div className="flex items-center justify-between gap-2">
                                                     <span
                                                       className={cn(
-                                                        "font-bold text-xs shrink-0",
+                                                        "inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full",
                                                         template === "MODERN_DARK" &&
-                                                          "text-amber-400",
+                                                          "bg-amber-400/15 text-amber-300",
                                                         template === "BISTRO_ELEGANT" &&
-                                                          "text-amber-950 font-serif",
+                                                          "bg-amber-900/10 text-amber-900 font-serif",
+                                                        template === "MINIMAL_CLEAN" &&
+                                                          "bg-slate-200 text-slate-800",
+                                                        template === "FAST_CASUAL" &&
+                                                          "bg-amber-500/15 text-amber-700",
                                                       )}
                                                     >
-                                                      {formatPrice(topProduct.price)}
+                                                      <SparklesIcon size={10} />
+                                                      {hlIdx === 0
+                                                        ? `⭐ Mais Vendido de ${category.name}`
+                                                        : `✨ Sugestão da Casa`}
                                                     </span>
-                                                  )}
-                                                </div>
+                                                    {showPrices && (
+                                                      <span
+                                                        className={cn(
+                                                          "font-bold text-xs shrink-0",
+                                                          template === "MODERN_DARK" &&
+                                                            "text-amber-400",
+                                                          template === "BISTRO_ELEGANT" &&
+                                                            "text-amber-950 font-serif",
+                                                        )}
+                                                      >
+                                                        {formatPrice(hlProd.price)}
+                                                      </span>
+                                                    )}
+                                                  </div>
 
-                                                <div className="flex items-center gap-2.5">
-                                                  {showImages && topProduct.imageUrl && (
-                                                    <div className="relative h-11 w-11 shrink-0 rounded-lg overflow-hidden border border-black/10 bg-slate-100">
-                                                      <Image
-                                                        src={topProduct.imageUrl}
-                                                        alt={topProduct.name}
-                                                        fill
-                                                        className="object-cover"
-                                                      />
+                                                  <div className="flex items-center gap-2.5">
+                                                    {showImages && hlProd.imageUrl && (
+                                                      <div className="relative h-11 w-11 shrink-0 rounded-lg overflow-hidden border border-black/10 bg-slate-100">
+                                                        <Image
+                                                          src={hlProd.imageUrl}
+                                                          alt={hlProd.name}
+                                                          fill
+                                                          className="object-cover"
+                                                        />
+                                                      </div>
+                                                    )}
+                                                    <div className="min-w-0 flex-1">
+                                                      <span className="font-semibold text-xs block leading-tight">
+                                                        {hlProd.name}
+                                                      </span>
+                                                      <span className="text-[10px] opacity-70 block line-clamp-2 mt-0.5 leading-relaxed">
+                                                        {hlProd.description ||
+                                                          "O prato favorito e mais pedido pelos nossos clientes!"}
+                                                      </span>
                                                     </div>
-                                                  )}
-                                                  <div className="min-w-0 flex-1">
-                                                    <span className="font-semibold text-xs block leading-tight truncate">
-                                                      {topProduct.name}
-                                                    </span>
-                                                    <span className="text-[10px] opacity-70 block line-clamp-1 mt-0.5 leading-relaxed">
-                                                      {topProduct.description ||
-                                                        "O prato favorito e mais pedido pelos nossos clientes!"}
-                                                    </span>
                                                   </div>
                                                 </div>
-                                              </div>
+                                              ))}
                                             </div>
                                           )}
                                         </div>
@@ -1820,22 +1835,22 @@ export function CardapioImpressaoClient({
                           {showWifi && (wifiSsid || wifiPassword) && (
                             <div
                               className={cn(
-                                "flex items-center gap-2.5 rounded-xl border border-current/15 px-3 py-1.5 text-[11px] opacity-80 transition-all",
+                                "flex items-center gap-2.5 rounded-xl border border-current/15 px-3.5 py-2.5 text-[11px] opacity-80 min-h-[48px] overflow-visible transition-all",
                                 hasAllThreeFooter
-                                  ? "flex-[1.4] min-w-[210px] px-3.5 py-2"
+                                  ? "flex-[1.4] min-w-[210px]"
                                   : "shrink-0",
                               )}
                             >
                               <WifiIcon size={16} className="shrink-0 text-current opacity-90" />
-                              <div className="min-w-0 flex-1 flex flex-col justify-center text-[10.5px] leading-snug space-y-0.5">
+                              <div className="min-w-0 flex-1 flex flex-col justify-center text-[10.5px] leading-normal py-0.5 space-y-0.5">
                                 {wifiSsid && (
-                                  <div className="truncate">
+                                  <div className="leading-snug whitespace-nowrap overflow-visible">
                                     <span className="opacity-70">Rede: </span>
                                     <strong className="font-semibold">{wifiSsid}</strong>
                                   </div>
                                 )}
                                 {wifiPassword && (
-                                  <div className="truncate">
+                                  <div className="leading-snug whitespace-nowrap overflow-visible">
                                     <span className="opacity-70">Senha: </span>
                                     <strong className="font-semibold">{wifiPassword}</strong>
                                   </div>
