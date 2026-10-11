@@ -58,7 +58,6 @@ type TemplateTheme = "MODERN_DARK" | "BISTRO_ELEGANT" | "MINIMAL_CLEAN" | "FAST_
 type ColumnCount = 1 | 2 | 3;
 type PageOrientation = "PORTRAIT" | "LANDSCAPE";
 type FontSizeScale = "COMPACT" | "NORMAL" | "SPACIOUS";
-export type CategoryLayoutMode = "CONTINUOUS" | "GRID_FILL";
 
 export interface PageCategory {
   id: string;
@@ -132,7 +131,6 @@ export function CardapioImpressaoClient({
   const [columns, setColumns] = useState<ColumnCount>(2);
   const [orientation, setOrientation] = useState<PageOrientation>("PORTRAIT");
   const [fontSize, setFontSize] = useState<FontSizeScale>("NORMAL");
-  const [categoryLayoutMode, setCategoryLayoutMode] = useState<CategoryLayoutMode>("CONTINUOUS");
 
   // Visual toggles
   const [showPrices, setShowPrices] = useState(true);
@@ -242,14 +240,6 @@ export function CardapioImpressaoClient({
     });
   };
 
-  // Helper to chunk arrays
-  function chunkArray<T>(arr: T[], size: number): T[][] {
-    const result: T[][] = [];
-    for (let i = 0; i < arr.length; i += size) {
-      result.push(arr.slice(i, i + size));
-    }
-    return result;
-  }
 
   // ── Smart Pagination Engine ──────────────────────────────
   // Distributes categories and products across distinct A4 sheets
@@ -277,36 +267,36 @@ export function CardapioImpressaoClient({
     if (showContact && (phone || address || instagram)) page1HeaderHeight += 26; // Contact info bar
 
     const miniHeaderHeight = 36; // Folha X de Y + border
-    const footerHeight = showWifi || showFooterNote || showDigitalMenuQr ? 80 : 0;
+    const footerHeight = showWifi || showFooterNote || showDigitalMenuQr ? 75 : 0;
 
-    const getPageCapacity = (isFirst: boolean, isLast: boolean) => {
+    const getPageCapacity = (isFirst: boolean) => {
       const topH = isFirst ? page1HeaderHeight : miniHeaderHeight;
-      const botH = isLast ? footerHeight : 0;
+      const botH = footerHeight;
       const availCol = Math.max(180, totalSheetHeight - topH - botH);
 
       // Real-world column packing efficiency factor
-      const efficiency = columns === 1 ? 0.94 : columns === 2 ? 0.88 : 0.82;
+      const efficiency = columns === 1 ? 0.94 : columns === 2 ? 0.90 : 0.85;
       return availCol * columns * efficiency;
     };
 
     const getProdHeight = (prod: Product) => {
-      let h = fontSize === "COMPACT" ? 28 : fontSize === "SPACIOUS" ? 40 : 34;
+      let h = fontSize === "COMPACT" ? 26 : fontSize === "SPACIOUS" ? 38 : 32;
       if (showImages && prod.imageUrl) {
-        h = Math.max(h, 46);
+        h = Math.max(h, 44);
       }
       if (showDescriptions && prod.description) {
         const isLong = prod.description.length > 50;
-        h += isLong ? 24 : 14;
+        h += isLong ? 20 : 12;
       }
       if (showIngredients && prod.ingredients && prod.ingredients.length > 0) {
         const isLong = prod.ingredients.join(", ").length > 50;
-        h += isLong ? 20 : 12;
+        h += isLong ? 16 : 10;
       }
-      return h + 8; // inter-item spacing
+      return h + 6; // inter-item spacing
     };
 
     const getCatOverhead = (isContinuation: boolean) => {
-      return (isContinuation ? 32 : 38) + 14; // header + spacing
+      return (isContinuation ? 28 : 34) + 12; // header + spacing
     };
 
     const getCatHeight = (cat: { products: Product[]; isContinuation?: boolean }) => {
@@ -316,47 +306,14 @@ export function CardapioImpressaoClient({
       );
     };
 
-    // Helper for grid mode row height
-    const calculateGridPageHeight = (cats: PageCategory[]) => {
-      let totalH = 0;
-      for (let i = 0; i < cats.length; i += columns) {
-        const row = cats.slice(i, i + columns);
-        const maxProds = Math.max(...row.map((c) => c.products.length));
-        const rowH = Math.max(
-          ...row.map((c) => {
-            const diff = maxProds - c.products.length;
-            const highlightCost = diff > 0 ? Math.min(diff, 2) * 60 : 0;
-            return getCatHeight(c) + highlightCost;
-          }),
-        );
-        totalH += rowH + (i > 0 ? 20 : 0);
-      }
-      return totalH;
-    };
-
     // 1. Check if all items fit comfortably in a single page
-    const isSinglePagePossible = () => {
-      if (categoryLayoutMode === "GRID_FILL" && columns > 1) {
-        const availH = (totalSheetHeight - page1HeaderHeight - footerHeight) * 0.88;
-        const gridH = calculateGridPageHeight(
-          displayedCategories.map((c) => ({
-            id: c.id,
-            name: c.name,
-            products: c.products,
-          })),
-        );
-        return gridH <= availH;
-      } else {
-        const singleCap = getPageCapacity(true, true);
-        const totalCost = displayedCategories.reduce(
-          (acc, cat) => acc + getCatHeight(cat),
-          0,
-        );
-        return totalCost <= singleCap;
-      }
-    };
+    const singlePageCap = getPageCapacity(true);
+    const totalCostAll = displayedCategories.reduce(
+      (acc, cat) => acc + getCatHeight(cat),
+      0,
+    );
 
-    if (isSinglePagePossible()) {
+    if (totalCostAll <= singlePageCap) {
       return [
         {
           pageIndex: 0,
@@ -386,23 +343,23 @@ export function CardapioImpressaoClient({
 
     while (queue.length > 0) {
       const isFirstPage = currentPageIndex === 0;
-
-      const capacityWithFooter = getPageCapacity(isFirstPage, true);
-      const capacityNoFooter = getPageCapacity(isFirstPage, false);
+      const pageCapacity = getPageCapacity(isFirstPage);
 
       const remainingEstimatedCost = queue.reduce(
         (acc, c) => acc + getCatHeight(c),
         0,
       );
 
-      // Determine page capacity limit
-      let maxPageCapacity: number;
-      if (remainingEstimatedCost <= capacityWithFooter) {
-        maxPageCapacity = capacityWithFooter;
-      } else if (remainingEstimatedCost <= capacityNoFooter) {
-        maxPageCapacity = capacityWithFooter;
-      } else {
-        maxPageCapacity = capacityNoFooter;
+      // If the remaining cost fits within pageCapacity with reasonable tolerance (up to 35%),
+      // or if remaining queue has few items (<= 5 products) that would otherwise form an orphan sheet,
+      // absorb all remaining items on this page so we NEVER leave an orphan trailing page (like 2 items on page 3)!
+      const remainingProductCount = queue.reduce((acc, c) => acc + c.products.length, 0);
+      let maxPageCapacity = pageCapacity;
+      if (
+        remainingEstimatedCost <= pageCapacity * 1.35 ||
+        (remainingProductCount <= 5 && remainingEstimatedCost <= pageCapacity * 1.5)
+      ) {
+        maxPageCapacity = remainingEstimatedCost + 20;
       }
 
       let usedCapacity = 0;
@@ -487,7 +444,6 @@ export function CardapioImpressaoClient({
     showWifi,
     showFooterNote,
     showDigitalMenuQr,
-    categoryLayoutMode,
   ]);
 
   // Trigger isolated iframe print with clean page breaks per A4 sheet
@@ -1114,57 +1070,6 @@ export function CardapioImpressaoClient({
                     </Select>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-slate-700">Distribuição & Espaços Vazios</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setCategoryLayoutMode("CONTINUOUS")}
-                        className={cn(
-                          "flex flex-col text-left p-2.5 rounded-xl border transition-all text-xs",
-                          categoryLayoutMode === "CONTINUOUS"
-                            ? "border-slate-900 bg-slate-900 text-white shadow-xs"
-                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
-                        )}
-                      >
-                        <span className="font-semibold flex items-center gap-1">
-                          Colunas Fluídas
-                        </span>
-                        <span
-                          className={cn(
-                            "text-[10px] mt-0.5 leading-tight",
-                            categoryLayoutMode === "CONTINUOUS" ? "text-slate-300" : "text-slate-500",
-                          )}
-                        >
-                          Categorias fluem sem vazios
-                        </span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setCategoryLayoutMode("GRID_FILL")}
-                        className={cn(
-                          "flex flex-col text-left p-2.5 rounded-xl border transition-all text-xs",
-                          categoryLayoutMode === "GRID_FILL"
-                            ? "border-slate-900 bg-slate-900 text-white shadow-xs"
-                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
-                        )}
-                      >
-                        <span className="font-semibold flex items-center gap-1">
-                          Grade + Destaque
-                        </span>
-                        <span
-                          className={cn(
-                            "text-[10px] mt-0.5 leading-tight",
-                            categoryLayoutMode === "GRID_FILL" ? "text-slate-300" : "text-slate-500",
-                          )}
-                        >
-                          Preenche com Mais Vendido
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-
                   <div className="border-t border-slate-100 pt-3 space-y-3">
                     <Label className="text-xs font-semibold text-slate-900 block">
                       Elementos Visuais no Cardápio
@@ -1632,10 +1537,9 @@ export function CardapioImpressaoClient({
                           </div>
                         )}
 
-                        {/* ── Menu Products Layout (Continuous vs Grid Fill) ── */}
+                        {/* ── Menu Products Layout (Continuous Columns) ── */}
                         <div className="flex-1 min-h-0">
-                          {categoryLayoutMode === "CONTINUOUS" ? (
-                            /* Continuous Columns Mode: Categories flow smoothly across columns */
+                          {/* Continuous Columns Mode: Categories flow smoothly across columns */}
                             <div
                               className={cn(
                                 columns === 1 && "space-y-5",
@@ -1679,157 +1583,11 @@ export function CardapioImpressaoClient({
                                 </div>
                               ))}
                             </div>
-                          ) : (
-                            /* Grid Fill Mode: balances rows and fills empty slots with Destaque / Mais Vendido */
-                            <div className="space-y-5">
-                              {chunkArray(page.categories, columns).map((rowCats, rowIdx) => {
-                                const maxProductsInRow = Math.max(
-                                  ...rowCats.map((c) => c.products.length),
-                                );
-
-                                return (
-                                  <div
-                                    key={rowIdx}
-                                    className={cn(
-                                      "grid gap-x-8 gap-y-5",
-                                      columns === 1 && "grid-cols-1",
-                                      columns === 2 && "grid-cols-2",
-                                      columns === 3 && "grid-cols-3",
-                                    )}
-                                  >
-                                    {rowCats.map((category) => {
-                                      const diff = maxProductsInRow - category.products.length;
-                                      const highlightCount = Math.min(diff, Math.max(1, category.products.length));
-                                      const highlightProducts = category.products.slice(0, highlightCount);
-
-                                      return (
-                                        <div
-                                          key={`${category.id}-${category.isContinuation ? "cont" : "start"}`}
-                                          className="break-inside-avoid page-break-avoid flex flex-col space-y-3"
-                                        >
-                                          <div className="space-y-3">
-                                            {/* Category Header */}
-                                            <div className="border-b border-current/20 pb-1.5 flex items-center justify-between">
-                                              <h2
-                                                className={cn(
-                                                  "font-bold uppercase tracking-wider text-sm",
-                                                  template === "BISTRO_ELEGANT"
-                                                    ? "font-serif text-amber-900 border-l-2 border-amber-900 pl-2"
-                                                    : template === "MODERN_DARK"
-                                                      ? "text-amber-400"
-                                                      : "text-slate-900",
-                                                )}
-                                              >
-                                                {category.name}
-                                                {category.isContinuation && (
-                                                  <span className="text-[10px] font-normal opacity-70 ml-1.5 lowercase">
-                                                    (continuação)
-                                                  </span>
-                                                )}
-                                              </h2>
-                                              <span className="text-[10px] opacity-50 font-mono">
-                                                {category.products.length}
-                                              </span>
-                                            </div>
-
-                                            {/* Products List */}
-                                            <div className="space-y-2.5">
-                                              {category.products.map((product) =>
-                                                renderProductCard(product),
-                                              )}
-                                            </div>
-                                          </div>
-
-                                          {/* Destaque / Mais Vendido Cards to fill empty slots */}
-                                          {diff > 0 && highlightProducts.length > 0 && (
-                                            <div className="space-y-2.5 pt-1">
-                                              {highlightProducts.map((hlProd, hlIdx) => (
-                                                <div
-                                                  key={hlProd.id || hlIdx}
-                                                  className={cn(
-                                                    "rounded-xl border p-2.5 transition-all text-xs space-y-2",
-                                                    template === "MODERN_DARK" &&
-                                                      "border-amber-400/25 bg-amber-400/[0.04] text-slate-100",
-                                                    template === "BISTRO_ELEGANT" &&
-                                                      "border-amber-900/20 bg-amber-950/[0.03] text-stone-900",
-                                                    template === "MINIMAL_CLEAN" &&
-                                                      "border-slate-200 bg-slate-50 text-slate-900",
-                                                    template === "FAST_CASUAL" &&
-                                                      "border-amber-300/80 bg-amber-50/70 text-stone-900",
-                                                  )}
-                                                >
-                                                  <div className="flex items-center justify-between gap-2">
-                                                    <span
-                                                      className={cn(
-                                                        "inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full",
-                                                        template === "MODERN_DARK" &&
-                                                          "bg-amber-400/15 text-amber-300",
-                                                        template === "BISTRO_ELEGANT" &&
-                                                          "bg-amber-900/10 text-amber-900 font-serif",
-                                                        template === "MINIMAL_CLEAN" &&
-                                                          "bg-slate-200 text-slate-800",
-                                                        template === "FAST_CASUAL" &&
-                                                          "bg-amber-500/15 text-amber-700",
-                                                      )}
-                                                    >
-                                                      <SparklesIcon size={10} />
-                                                      {hlIdx === 0
-                                                        ? `⭐ Mais Vendido de ${category.name}`
-                                                        : `✨ Sugestão da Casa`}
-                                                    </span>
-                                                    {showPrices && (
-                                                      <span
-                                                        className={cn(
-                                                          "font-bold text-xs shrink-0",
-                                                          template === "MODERN_DARK" &&
-                                                            "text-amber-400",
-                                                          template === "BISTRO_ELEGANT" &&
-                                                            "text-amber-950 font-serif",
-                                                        )}
-                                                      >
-                                                        {formatPrice(hlProd.price)}
-                                                      </span>
-                                                    )}
-                                                  </div>
-
-                                                  <div className="flex items-center gap-2.5">
-                                                    {showImages && hlProd.imageUrl && (
-                                                      <div className="relative h-11 w-11 shrink-0 rounded-lg overflow-hidden border border-black/10 bg-slate-100">
-                                                        <Image
-                                                          src={hlProd.imageUrl}
-                                                          alt={hlProd.name}
-                                                          fill
-                                                          className="object-cover"
-                                                        />
-                                                      </div>
-                                                    )}
-                                                    <div className="min-w-0 flex-1">
-                                                      <span className="font-semibold text-xs block leading-tight">
-                                                        {hlProd.name}
-                                                      </span>
-                                                      <span className="text-[10px] opacity-70 block line-clamp-2 mt-0.5 leading-relaxed">
-                                                        {hlProd.description ||
-                                                          "O prato favorito e mais pedido pelos nossos clientes!"}
-                                                      </span>
-                                                    </div>
-                                                  </div>
-                                                </div>
-                                              ))}
-                                            </div>
-                                          )}
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
                         </div>
                       </div>
 
-                      {/* ── Footer Elements: Only on the Last Page ── */}
-                      {page.isLastPage && (showWifi || showFooterNote || showDigitalMenuQr) && (
+                      {/* ── Footer Elements: Rendered on all sheets ── */}
+                      {(showWifi || showFooterNote || showDigitalMenuQr) && (
                         <div className="page-break-avoid mt-auto pt-3 border-t border-current/15 flex flex-row items-center justify-between gap-3 shrink-0">
                           {/* Left: Wi-Fi Box (expanded laterally when all 3 are displayed) */}
                           {showWifi && (wifiSsid || wifiPassword) && (
