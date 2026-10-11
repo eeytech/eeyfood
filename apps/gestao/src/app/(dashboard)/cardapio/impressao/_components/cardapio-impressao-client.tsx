@@ -72,6 +72,7 @@ export interface PageCategory {
 
 export interface MenuPage {
   pageIndex: number;
+  columns: PageCategory[][];
   categories: PageCategory[];
   isFirstPage: boolean;
   isLastPage: boolean;
@@ -324,6 +325,7 @@ export function CardapioImpressaoClient({
       return [
         {
           pageIndex: 0,
+          columns: Array.from({ length: columns }, () => []),
           categories: [],
           isFirstPage: true,
           isLastPage: true,
@@ -332,83 +334,56 @@ export function CardapioImpressaoClient({
     }
 
     const isPortrait = orientation === "PORTRAIT";
-    // Total usable height in pixels for A4 (portrait 1122.5px - 20mm padding ≈ 1046px; landscape 793.7px - 20mm ≈ 718px)
-    const totalSheetHeight = isPortrait ? 1040 : 715;
+    // Total usable height in pixels for A4:
+    // portrait: 1122.5px - 20mm (75.6px) padding = ~1046.9px
+    // landscape: 793.7px - 20mm (75.6px) padding = ~718.1px
+    const totalSheetHeight = isPortrait ? 1045 : 718;
 
     // Estimate Page 1 Header height realistically
-    let page1HeaderHeight = 58; // Title (h1) + pb-3 mb-3 border-b
-    if (showLogo && restaurant.avatarImageUrl) page1HeaderHeight += 58; // 48px logo + 10px margin
+    let page1HeaderHeight = 54; // Title (h1) + pb-3 mb-3 border-b
+    if (showLogo && restaurant.avatarImageUrl) page1HeaderHeight += 52; // 48px logo + 8px margin
     if (subtitle) page1HeaderHeight += 24; // Subtitle + margin
-    if (showContact && (phone || address || instagram)) page1HeaderHeight += 24; // Contact info bar
+    if (showContact && (phone || address || instagram)) page1HeaderHeight += 32; // Contact info bar
 
     const miniHeaderHeight = 32; // Folha X de Y + border
-    const footerHeight = showWifi || showFooterNote || showDigitalMenuQr ? 70 : 0;
+    const footerHeight = showWifi || showFooterNote || showDigitalMenuQr ? 68 : 0;
 
-    const getPageCapacity = (isFirst: boolean) => {
+    const getAvailColHeight = (isFirst: boolean) => {
       const topH = isFirst ? page1HeaderHeight : miniHeaderHeight;
       const botH = footerHeight;
-      const availCol = Math.max(160, totalSheetHeight - topH - botH);
-
-      // Page 1 capacity calibrated so Combos (2) + Lanches (3) + Pizzas (6) + Fritas (2) = 13 items fit cleanly on Page 1
-      // while Bebidas (3) is pushed to Page 2
-      const efficiency = isFirst
-        ? (columns === 1 ? 0.90 : columns === 2 ? 0.80 : 0.75)
-        : (columns === 1 ? 0.94 : columns === 2 ? 0.90 : 0.85);
-      return availCol * columns * efficiency;
+      return Math.max(160, totalSheetHeight - topH - botH);
     };
 
     const getProdHeight = (prod: Product) => {
-      let h = fontSize === "COMPACT" ? 24 : fontSize === "SPACIOUS" ? 34 : 28;
-      if (showImages && prod.imageUrl) {
-        h = Math.max(h, 40);
-      }
+      let textH = fontSize === "COMPACT" ? 16 : fontSize === "SPACIOUS" ? 22 : 18;
+
       if (showDescriptions && prod.description) {
-        const isLong = prod.description.length > 50;
-        h += isLong ? 18 : 12;
+        const len = prod.description.length;
+        if (len <= 45) textH += 16;
+        else if (len <= 90) textH += 30;
+        else textH += 44;
       }
+
       if (showIngredients && prod.ingredients && prod.ingredients.length > 0) {
-        const isLong = prod.ingredients.join(", ").length > 50;
-        h += isLong ? 14 : 10;
+        const len = prod.ingredients.join(", ").length;
+        if (len <= 45) textH += 15;
+        else if (len <= 90) textH += 28;
+        else textH += 41;
       }
-      return h + 4; // inter-item spacing (space-y-2)
+
+      let cardH = textH;
+      if (showImages && prod.imageUrl) {
+        cardH = Math.max(cardH, 40);
+      }
+
+      return cardH + 8; // card height + space-y-2 (8px margin)
     };
 
-    const getCatOverhead = (isContinuation: boolean) => {
-      return (isContinuation ? 24 : 30) + 12; // header + category mb-4
+    const getCatHeaderHeight = (isContinuation: boolean) => {
+      return (isContinuation ? 30 : 36) + 8; // header + category spacing
     };
 
-    const getCatHeight = (cat: { products: Product[]; isContinuation?: boolean }) => {
-      return (
-        getCatOverhead(Boolean(cat.isContinuation)) +
-        cat.products.reduce((acc, p) => acc + getProdHeight(p), 0)
-      );
-    };
-
-    // 1. Check if all items fit comfortably in a single page
-    const singlePageCap = getPageCapacity(true);
-    const totalCostAll = displayedCategories.reduce(
-      (acc, cat) => acc + getCatHeight(cat),
-      0,
-    );
-
-    if (totalCostAll <= singlePageCap) {
-      return [
-        {
-          pageIndex: 0,
-          categories: displayedCategories.map((c) => ({
-            id: c.id,
-            name: c.name,
-            products: c.products,
-            topProduct: c.products[0],
-          })),
-          isFirstPage: true,
-          isLastPage: true,
-        },
-      ];
-    }
-
-    // 2. Multi-page pagination
-    const resultPages: MenuPage[] = [];
+    // Deep clone queue of categories and products to distribute
     const queue = displayedCategories.map((c) => ({
       id: c.id,
       name: c.name,
@@ -417,87 +392,99 @@ export function CardapioImpressaoClient({
       topProduct: c.products[0],
     }));
 
+    const resultPages: MenuPage[] = [];
     let currentPageIndex = 0;
 
     while (queue.length > 0) {
       const isFirstPage = currentPageIndex === 0;
-      const pageCapacity = getPageCapacity(isFirstPage);
+      const availColH = getAvailColHeight(isFirstPage);
+      const numCols = columns;
 
-      const remainingEstimatedCost = queue.reduce(
-        (acc, c) => acc + getCatHeight(c),
-        0,
-      );
+      const pageColumns: PageCategory[][] = Array.from({ length: numCols }, () => []);
+      const pageCategoriesList: PageCategory[] = [];
 
-      // On Page 1, we must NEVER overfill beyond the physical sheet height (strictly 1.0x capacity)
-      // On subsequent pages (Page 2+), we can absorb orphan trailing items (up to 1.35x tolerance)
-      const remainingProductCount = queue.reduce((acc, c) => acc + c.products.length, 0);
-      let maxPageCapacity = pageCapacity;
-      if (!isFirstPage) {
-        if (
-          remainingEstimatedCost <= pageCapacity * 1.35 ||
-          (remainingProductCount <= 5 && remainingEstimatedCost <= pageCapacity * 1.5)
-        ) {
-          maxPageCapacity = remainingEstimatedCost + 20;
-        }
-      }
+      for (let colIdx = 0; colIdx < numCols; colIdx++) {
+        if (queue.length === 0) break;
 
-      let usedCapacity = 0;
-      const pageCategories: PageCategory[] = [];
+        let colUsedH = 0;
 
-      while (queue.length > 0) {
-        const nextCat = queue[0];
-        const overhead = getCatOverhead(Boolean(nextCat.isContinuation));
-        const firstProdCost =
-          nextCat.products.length > 0 ? getProdHeight(nextCat.products[0]) : 0;
+        while (queue.length > 0) {
+          const currentCat = queue[0];
+          const headerH = getCatHeaderHeight(currentCat.isContinuation);
+          const firstProd = currentCat.products[0];
+          const firstProdCost = firstProd ? getProdHeight(firstProd) : 0;
 
-        if (
-          pageCategories.length > 0 &&
-          usedCapacity + overhead + firstProdCost > maxPageCapacity
-        ) {
-          break;
-        }
+          // Check if at least the category header and 1 product can fit in the remainder of this column
+          if (colUsedH > 0 && colUsedH + headerH + firstProdCost > availColH) {
+            // Cannot fit in this column; move to next column
+            break;
+          }
 
-        usedCapacity += overhead;
-
-        const fittedProducts: Product[] = [];
-        while (nextCat.products.length > 0) {
-          const prod = nextCat.products[0];
-          const pCost = getProdHeight(prod);
+          // If this category is small (<= 2 items) and doesn't fit entirely, but column already has good content (> 65% full):
+          // prefer moving the whole small category to the next column rather than leaving 1 lonely item
+          const fullCatCost =
+            headerH + currentCat.products.reduce((acc, p) => acc + getProdHeight(p), 0);
           if (
-            fittedProducts.length > 0 &&
-            usedCapacity + pCost > maxPageCapacity
+            currentCat.products.length <= 2 &&
+            colUsedH + fullCatCost > availColH &&
+            colUsedH > availColH * 0.65
           ) {
             break;
           }
-          fittedProducts.push(nextCat.products.shift()!);
-          usedCapacity += pCost;
-        }
 
-        pageCategories.push({
-          id: nextCat.id,
-          name: nextCat.name,
-          isContinuation: nextCat.isContinuation,
-          products: fittedProducts,
-          topProduct: nextCat.topProduct,
-        });
+          colUsedH += headerH;
+          const fittedProducts: Product[] = [];
 
-        if (nextCat.products.length === 0) {
-          queue.shift();
-        } else {
-          nextCat.isContinuation = true;
-          break;
+          while (currentCat.products.length > 0) {
+            const nextProd = currentCat.products[0];
+            const pCost = getProdHeight(nextProd);
+
+            if (fittedProducts.length > 0 && colUsedH + pCost > availColH) {
+              // Column is full!
+              break;
+            }
+
+            fittedProducts.push(currentCat.products.shift()!);
+            colUsedH += pCost;
+          }
+
+          // Category margin bottom (mb-4 = 16px)
+          colUsedH += 16;
+
+          const pageCat: PageCategory = {
+            id: currentCat.id,
+            name: currentCat.name,
+            isContinuation: currentCat.isContinuation,
+            products: fittedProducts,
+            topProduct: currentCat.topProduct,
+          };
+
+          pageColumns[colIdx].push(pageCat);
+          pageCategoriesList.push(pageCat);
+
+          if (currentCat.products.length === 0) {
+            // Finished this category
+            queue.shift();
+          } else {
+            // Category has remaining items; mark as continuation and move to next column
+            currentCat.isContinuation = true;
+            break;
+          }
         }
       }
 
+      const isLast = queue.length === 0;
+
       resultPages.push({
         pageIndex: currentPageIndex,
-        categories: pageCategories,
+        columns: pageColumns,
+        categories: pageCategoriesList,
         isFirstPage,
-        isLastPage: queue.length === 0,
+        isLastPage: isLast,
       });
 
       currentPageIndex++;
-      if (currentPageIndex > 30) break;
+      if (currentPageIndex > 50) break; // safety guard
     }
 
     if (resultPages.length > 0) {
@@ -1710,54 +1697,55 @@ export function CardapioImpressaoClient({
                         )}
 
                         {/* ── Menu Products Layout (Continuous Columns) ── */}
+                        {/* ── Menu Products Layout (Deterministic Column Grid) ── */}
                         <div className="flex-1 min-h-0 pb-2">
-                          {/* Continuous Columns Mode: Categories flow smoothly across columns */}
-                            <div
-                              className={cn(
-                                columns === 1 && "space-y-4",
-                                columns === 2 && "columns-2 gap-7 [column-fill:_balance]",
-                                columns === 3 && "columns-3 gap-5 [column-fill:_balance]",
-                              )}
-                            >
-                              {page.categories.map((category) => (
-                                <div
-                                  key={`${category.id}-${category.isContinuation ? "cont" : "start"}`}
-                                  className={cn(
-                                    "mb-4 w-full space-y-2",
-                                    category.products.length <= 8 ? "break-inside-avoid" : "break-inside-auto",
-                                  )}
-                                >
-                                  {/* Category Header */}
-                                  <div className="border-b border-current/20 pb-1 flex items-center justify-between break-inside-avoid break-after-avoid">
-                                    <h2
-                                      className={cn(
-                                        "font-bold uppercase tracking-wider text-xs sm:text-sm",
-                                        template === "BISTRO_ELEGANT"
-                                          ? "font-serif text-amber-900 border-l-2 border-amber-900 pl-2"
-                                          : template === "MODERN_DARK"
-                                            ? "text-amber-400"
-                                            : "text-slate-900",
-                                      )}
-                                    >
-                                      {category.name}
-                                      {category.isContinuation && (
-                                        <span className="text-[10px] font-normal opacity-70 ml-1.5 lowercase">
-                                          (continuação)
-                                        </span>
-                                      )}
-                                    </h2>
-                                    <span className="text-[10px] opacity-50 font-mono">
-                                      {category.products.length}
-                                    </span>
-                                  </div>
+                          <div
+                            className={cn(
+                              columns === 1 && "grid grid-cols-1 gap-4 items-start",
+                              columns === 2 && "grid grid-cols-2 gap-7 items-start",
+                              columns === 3 && "grid grid-cols-3 gap-5 items-start",
+                            )}
+                          >
+                            {page.columns.map((columnCategories, colIdx) => (
+                              <div key={colIdx} className="w-full space-y-4 flex flex-col min-w-0">
+                                {columnCategories.map((category) => (
+                                  <div
+                                    key={`${category.id}-${category.isContinuation ? `cont-${pageIdx}-${colIdx}` : `start-${pageIdx}-${colIdx}`}`}
+                                    className="w-full space-y-2"
+                                  >
+                                    {/* Category Header */}
+                                    <div className="border-b border-current/20 pb-1 flex items-center justify-between">
+                                      <h2
+                                        className={cn(
+                                          "font-bold uppercase tracking-wider text-xs sm:text-sm",
+                                          template === "BISTRO_ELEGANT"
+                                            ? "font-serif text-amber-900 border-l-2 border-amber-900 pl-2"
+                                            : template === "MODERN_DARK"
+                                              ? "text-amber-400"
+                                              : "text-slate-900",
+                                        )}
+                                      >
+                                        {category.name}
+                                        {category.isContinuation && (
+                                          <span className="text-[10px] font-normal opacity-70 ml-1.5 lowercase">
+                                            (continuação)
+                                          </span>
+                                        )}
+                                      </h2>
+                                      <span className="text-[10px] opacity-50 font-mono">
+                                        {category.products.length}
+                                      </span>
+                                    </div>
 
-                                  {/* Products List in this Category */}
-                                  <div className="space-y-2">
-                                    {category.products.map((product) => renderProductCard(product))}
+                                    {/* Products List in this Category */}
+                                    <div className="space-y-2">
+                                      {category.products.map((product) => renderProductCard(product))}
+                                    </div>
                                   </div>
-                                </div>
-                              ))}
-                            </div>
+                                ))}
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
 
