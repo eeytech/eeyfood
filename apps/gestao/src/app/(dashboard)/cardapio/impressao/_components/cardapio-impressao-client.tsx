@@ -267,58 +267,97 @@ export function CardapioImpressaoClient({
     }
 
     const isPortrait = orientation === "PORTRAIT";
-    // Total usable height in pixels for A4 (portrait ~1010px, landscape ~690px with 12mm padding)
-    const usablePageHeight = isPortrait ? 1010 : 690;
+    // Total usable height in pixels for A4 (portrait 1122.5px - 24mm padding ≈ 1030px; landscape 793.7px - 24mm ≈ 700px)
+    const totalSheetHeight = isPortrait ? 1030 : 700;
 
     // Estimate Page 1 Header height
-    let page1HeaderHeight = 65;
-    if (showLogo && restaurant.avatarImageUrl) page1HeaderHeight += 65;
-    if (subtitle) page1HeaderHeight += 24;
-    if (showContact && (phone || address || instagram)) page1HeaderHeight += 24;
+    let page1HeaderHeight = 60; // Title (h1) + pb-4 mb-4 border-b
+    if (showLogo && restaurant.avatarImageUrl) page1HeaderHeight += 68; // 56px logo + 12px margin
+    if (subtitle) page1HeaderHeight += 28; // Subtitle + margin
+    if (showContact && (phone || address || instagram)) page1HeaderHeight += 26; // Contact info bar
 
-    const miniHeaderHeight = 32;
-    const footerHeight = showWifi || showFooterNote || showDigitalMenuQr ? 75 : 0;
+    const miniHeaderHeight = 36; // Folha X de Y + border
+    const footerHeight = showWifi || showFooterNote || showDigitalMenuQr ? 80 : 0;
 
     const getPageCapacity = (isFirst: boolean, isLast: boolean) => {
       const topH = isFirst ? page1HeaderHeight : miniHeaderHeight;
       const botH = isLast ? footerHeight : 0;
-      const availCol = Math.max(200, usablePageHeight - topH - botH);
-      return availCol * columns;
+      const availCol = Math.max(180, totalSheetHeight - topH - botH);
+
+      // Real-world content cannot pack 100% into columns due to column breaks,
+      // category margins, subpixel line wraps, etc.
+      const efficiency = columns === 1 ? 0.88 : columns === 2 ? 0.80 : 0.74;
+      return availCol * columns * efficiency;
     };
 
     const getProdHeight = (prod: Product) => {
-      let h = fontSize === "COMPACT" ? 28 : fontSize === "SPACIOUS" ? 38 : 32;
+      let h = fontSize === "COMPACT" ? 34 : fontSize === "SPACIOUS" ? 48 : 40;
+      if (showImages && prod.imageUrl) {
+        h = Math.max(h, 52);
+      }
       if (showDescriptions && prod.description) {
-        h += fontSize === "COMPACT" ? 18 : fontSize === "SPACIOUS" ? 26 : 22;
+        const isLong = prod.description.length > 40;
+        h += isLong ? 32 : 18;
       }
       if (showIngredients && prod.ingredients && prod.ingredients.length > 0) {
-        h += fontSize === "COMPACT" ? 13 : fontSize === "SPACIOUS" ? 17 : 15;
+        const isLong = prod.ingredients.join(", ").length > 45;
+        h += isLong ? 26 : 16;
       }
-      if (showImages && prod.imageUrl) {
-        h = Math.max(h, 46);
-      }
-      return h + 12; // inter-item spacing
+      return h + 10; // inter-item spacing (space-y-2.5)
     };
 
-    const getCatHeight = (cat: { products: Product[] }) => {
-      return 42 + cat.products.reduce((acc, p) => acc + getProdHeight(p), 0);
+    const getCatOverhead = (isContinuation: boolean) => {
+      return (isContinuation ? 38 : 44) + 20; // header + mb-6 spacing
+    };
+
+    const getCatHeight = (cat: { products: Product[]; isContinuation?: boolean }) => {
+      return (
+        getCatOverhead(Boolean(cat.isContinuation)) +
+        cat.products.reduce((acc, p) => acc + getProdHeight(p), 0)
+      );
+    };
+
+    // Helper for grid mode row height
+    const calculateGridPageHeight = (cats: PageCategory[]) => {
+      let totalH = 0;
+      for (let i = 0; i < cats.length; i += columns) {
+        const row = cats.slice(i, i + columns);
+        const maxProds = Math.max(...row.map((c) => c.products.length));
+        const rowH = Math.max(
+          ...row.map((c) => {
+            const diff = maxProds - c.products.length;
+            const highlightCost = diff > 0 ? 85 : 0;
+            return getCatHeight(c) + highlightCost;
+          }),
+        );
+        totalH += rowH + (i > 0 ? 20 : 0);
+      }
+      return totalH;
     };
 
     // 1. Check if all items fit comfortably in a single page
-    const singlePageCap = getPageCapacity(true, true);
-    let totalCostAll = displayedCategories.reduce((acc, cat) => acc + getCatHeight(cat), 0);
-
-    if (categoryLayoutMode === "GRID_FILL" && columns > 1) {
-      let gridCost = 0;
-      for (let i = 0; i < displayedCategories.length; i += columns) {
-        const slice = displayedCategories.slice(i, i + columns);
-        const maxH = Math.max(...slice.map(getCatHeight));
-        gridCost += maxH * columns;
+    const isSinglePagePossible = () => {
+      if (categoryLayoutMode === "GRID_FILL" && columns > 1) {
+        const availH = (totalSheetHeight - page1HeaderHeight - footerHeight) * 0.88;
+        const gridH = calculateGridPageHeight(
+          displayedCategories.map((c) => ({
+            id: c.id,
+            name: c.name,
+            products: c.products,
+          })),
+        );
+        return gridH <= availH;
+      } else {
+        const singleCap = getPageCapacity(true, true);
+        const totalCost = displayedCategories.reduce(
+          (acc, cat) => acc + getCatHeight(cat),
+          0,
+        );
+        return totalCost <= singleCap;
       }
-      totalCostAll = gridCost;
-    }
+    };
 
-    if (totalCostAll <= singlePageCap) {
+    if (isSinglePagePossible()) {
       return [
         {
           pageIndex: 0,
@@ -349,28 +388,41 @@ export function CardapioImpressaoClient({
     while (queue.length > 0) {
       const isFirstPage = currentPageIndex === 0;
 
-      const remainingEstimatedCost = queue.reduce((acc, c) => acc + getCatHeight(c), 0);
-      const capacityIfLast = getPageCapacity(isFirstPage, true);
-      const isLikelyLastPage = remainingEstimatedCost <= capacityIfLast;
+      const capacityWithFooter = getPageCapacity(isFirstPage, true);
+      const capacityNoFooter = getPageCapacity(isFirstPage, false);
 
-      const pageCapacity = getPageCapacity(isFirstPage, isLikelyLastPage);
+      const remainingEstimatedCost = queue.reduce(
+        (acc, c) => acc + getCatHeight(c),
+        0,
+      );
+
+      // Determine page capacity limit
+      let maxPageCapacity: number;
+      if (remainingEstimatedCost <= capacityWithFooter) {
+        maxPageCapacity = capacityWithFooter;
+      } else if (remainingEstimatedCost <= capacityNoFooter) {
+        maxPageCapacity = capacityWithFooter;
+      } else {
+        maxPageCapacity = capacityNoFooter;
+      }
+
       let usedCapacity = 0;
       const pageCategories: PageCategory[] = [];
 
       while (queue.length > 0) {
         const nextCat = queue[0];
-        const headerCost = 42;
+        const overhead = getCatOverhead(Boolean(nextCat.isContinuation));
         const firstProdCost =
           nextCat.products.length > 0 ? getProdHeight(nextCat.products[0]) : 0;
 
         if (
           pageCategories.length > 0 &&
-          usedCapacity + headerCost + firstProdCost > pageCapacity
+          usedCapacity + overhead + firstProdCost > maxPageCapacity
         ) {
           break;
         }
 
-        usedCapacity += headerCost;
+        usedCapacity += overhead;
 
         const fittedProducts: Product[] = [];
         while (nextCat.products.length > 0) {
@@ -378,7 +430,7 @@ export function CardapioImpressaoClient({
           const pCost = getProdHeight(prod);
           if (
             fittedProducts.length > 0 &&
-            usedCapacity + pCost > pageCapacity
+            usedCapacity + pCost > maxPageCapacity
           ) {
             break;
           }
@@ -410,7 +462,7 @@ export function CardapioImpressaoClient({
       });
 
       currentPageIndex++;
-      if (currentPageIndex > 20) break;
+      if (currentPageIndex > 30) break;
     }
 
     if (resultPages.length > 0) {
@@ -511,15 +563,14 @@ export function CardapioImpressaoClient({
                 margin: 0 auto !important;
                 border: none !important;
                 width: ${orientation === "LANDSCAPE" ? "297mm" : "210mm"} !important;
-                height: ${orientation === "LANDSCAPE" ? "210mm" : "297mm"} !important;
                 min-height: ${orientation === "LANDSCAPE" ? "210mm" : "297mm"} !important;
-                max-height: ${orientation === "LANDSCAPE" ? "210mm" : "297mm"} !important;
+                height: auto !important;
                 page-break-after: always !important;
                 break-after: page !important;
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
                 box-sizing: border-box !important;
-                overflow: hidden !important;
+                overflow: visible !important;
                 transform: none !important;
               }
               .printable-menu-page:last-child {
@@ -804,9 +855,8 @@ export function CardapioImpressaoClient({
           .printable-menu-page {
             transform: none !important;
             width: ${orientation === "LANDSCAPE" ? "297mm" : "210mm"} !important;
-            height: ${orientation === "LANDSCAPE" ? "210mm" : "297mm"} !important;
             min-height: ${orientation === "LANDSCAPE" ? "210mm" : "297mm"} !important;
-            max-height: ${orientation === "LANDSCAPE" ? "210mm" : "297mm"} !important;
+            height: auto !important;
             margin: 0 auto !important;
             padding: 12mm !important;
             box-shadow: none !important;
@@ -819,7 +869,7 @@ export function CardapioImpressaoClient({
             page-break-inside: avoid !important;
             break-inside: avoid !important;
             box-sizing: border-box !important;
-            overflow: hidden !important;
+            overflow: visible !important;
           }
           .printable-menu-page:last-child {
             page-break-after: auto !important;
@@ -1492,11 +1542,11 @@ export function CardapioImpressaoClient({
                       id={pageIdx === 0 ? "menu-preview-container" : `menu-preview-page-${pageIdx + 1}`}
                       data-page-index={pageIdx}
                       className={cn(
-                        "printable-menu-page relative bg-white shadow-2xl transition-all mx-auto flex flex-col justify-between overflow-hidden",
+                        "printable-menu-page relative bg-white shadow-2xl transition-all mx-auto flex flex-col justify-between",
                         // A4 proportions
                         orientation === "PORTRAIT"
-                          ? "w-[210mm] min-h-[297mm] max-h-[297mm] h-[297mm] p-[12mm]"
-                          : "w-[297mm] min-h-[210mm] max-h-[210mm] h-[210mm] p-[12mm]",
+                          ? "w-[210mm] min-h-[297mm] p-[12mm]"
+                          : "w-[297mm] min-h-[210mm] p-[12mm]",
                         // Template themes
                         template === "MODERN_DARK" && "bg-slate-950 text-slate-100 border border-slate-800",
                         template === "BISTRO_ELEGANT" && "bg-[#faf7f2] text-stone-900 border-2 border-stone-800/20",
@@ -1518,12 +1568,15 @@ export function CardapioImpressaoClient({
                         {pageIdx === 0 ? (
                           <div className="relative text-center pb-4 mb-4 border-b border-current/15 shrink-0">
                             {showLogo && restaurant.avatarImageUrl && (
-                              <div className="mx-auto mb-2 h-13 w-13 overflow-hidden rounded-2xl shadow-sm border border-black/10">
+                              <div
+                                className="mx-auto mb-2.5 h-14 w-14 shrink-0 overflow-hidden rounded-2xl shadow-sm border border-black/10"
+                                style={{ width: 56, height: 56 }}
+                              >
                                 <Image
                                   src={restaurant.avatarImageUrl}
                                   alt={restaurant.name}
-                                  width={52}
-                                  height={52}
+                                  width={56}
+                                  height={56}
                                   className="h-full w-full object-cover"
                                 />
                               </div>
@@ -1570,7 +1623,7 @@ export function CardapioImpressaoClient({
                         )}
 
                         {/* ── Menu Products Layout (Continuous vs Grid Fill) ── */}
-                        <div className="flex-1 min-h-0 overflow-hidden">
+                        <div className="flex-1 min-h-0">
                           {categoryLayoutMode === "CONTINUOUS" ? (
                             /* Continuous Columns Mode: Categories flow smoothly across columns */
                             <div
@@ -1583,10 +1636,10 @@ export function CardapioImpressaoClient({
                               {page.categories.map((category) => (
                                 <div
                                   key={`${category.id}-${category.isContinuation ? "cont" : "start"}`}
-                                  className="break-inside-avoid mb-6 inline-block w-full space-y-3"
+                                  className="mb-6 w-full space-y-3 break-inside-auto"
                                 >
                                   {/* Category Header */}
-                                  <div className="border-b border-current/20 pb-1.5 flex items-center justify-between">
+                                  <div className="border-b border-current/20 pb-1.5 flex items-center justify-between break-inside-avoid break-after-avoid">
                                     <h2
                                       className={cn(
                                         "font-bold uppercase tracking-wider text-sm",
@@ -1774,18 +1827,18 @@ export function CardapioImpressaoClient({
                               )}
                             >
                               <WifiIcon size={16} className="shrink-0 text-current opacity-90" />
-                              <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-center sm:gap-3 text-[11px] leading-tight">
+                              <div className="min-w-0 flex-1 flex flex-col justify-center text-[10.5px] leading-snug space-y-0.5">
                                 {wifiSsid && (
-                                  <span className="truncate">
+                                  <div className="truncate">
                                     <span className="opacity-70">Rede: </span>
                                     <strong className="font-semibold">{wifiSsid}</strong>
-                                  </span>
+                                  </div>
                                 )}
                                 {wifiPassword && (
-                                  <span className="truncate">
+                                  <div className="truncate">
                                     <span className="opacity-70">Senha: </span>
                                     <strong className="font-semibold">{wifiPassword}</strong>
-                                  </span>
+                                  </div>
                                 )}
                               </div>
                             </div>
