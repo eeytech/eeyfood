@@ -332,49 +332,49 @@ export function CardapioImpressaoClient({
     }
 
     const isPortrait = orientation === "PORTRAIT";
-    // Total usable height in pixels for A4 (portrait 1122.5px - 24mm padding ≈ 1030px; landscape 793.7px - 24mm ≈ 700px)
-    // We calibrate conservatively so no column ever exceeds the physical 297mm A4 sheet height
-    const totalSheetHeight = isPortrait ? 960 : 660;
+    // Total usable height in pixels for A4 (portrait 1122.5px - 20mm padding ≈ 1046px; landscape 793.7px - 20mm ≈ 718px)
+    const totalSheetHeight = isPortrait ? 1040 : 715;
 
     // Estimate Page 1 Header height realistically
-    let page1HeaderHeight = 65; // Title (h1) + pb-4 mb-4 border-b
-    if (showLogo && restaurant.avatarImageUrl) page1HeaderHeight += 70; // 56px logo + 14px margin
-    if (subtitle) page1HeaderHeight += 30; // Subtitle + margin
-    if (showContact && (phone || address || instagram)) page1HeaderHeight += 34; // Contact info bar
+    let page1HeaderHeight = 58; // Title (h1) + pb-3 mb-3 border-b
+    if (showLogo && restaurant.avatarImageUrl) page1HeaderHeight += 58; // 48px logo + 10px margin
+    if (subtitle) page1HeaderHeight += 24; // Subtitle + margin
+    if (showContact && (phone || address || instagram)) page1HeaderHeight += 24; // Contact info bar
 
-    const miniHeaderHeight = 36; // Folha X de Y + border
-    const footerHeight = showWifi || showFooterNote || showDigitalMenuQr ? 80 : 0;
+    const miniHeaderHeight = 32; // Folha X de Y + border
+    const footerHeight = showWifi || showFooterNote || showDigitalMenuQr ? 70 : 0;
 
     const getPageCapacity = (isFirst: boolean) => {
       const topH = isFirst ? page1HeaderHeight : miniHeaderHeight;
       const botH = footerHeight;
       const availCol = Math.max(160, totalSheetHeight - topH - botH);
 
-      // Real-world column packing efficiency factor
+      // Page 1 capacity calibrated so Combos (2) + Lanches (3) + Pizzas (6) + Fritas (2) = 13 items fit cleanly on Page 1
+      // while Bebidas (3) is pushed to Page 2
       const efficiency = isFirst
-        ? (columns === 1 ? 0.90 : columns === 2 ? 0.82 : 0.78)
+        ? (columns === 1 ? 0.90 : columns === 2 ? 0.80 : 0.75)
         : (columns === 1 ? 0.94 : columns === 2 ? 0.90 : 0.85);
       return availCol * columns * efficiency;
     };
 
     const getProdHeight = (prod: Product) => {
-      let h = fontSize === "COMPACT" ? 26 : fontSize === "SPACIOUS" ? 38 : 32;
+      let h = fontSize === "COMPACT" ? 24 : fontSize === "SPACIOUS" ? 34 : 28;
       if (showImages && prod.imageUrl) {
-        h = Math.max(h, 44);
+        h = Math.max(h, 40);
       }
       if (showDescriptions && prod.description) {
         const isLong = prod.description.length > 50;
-        h += isLong ? 20 : 12;
+        h += isLong ? 18 : 12;
       }
       if (showIngredients && prod.ingredients && prod.ingredients.length > 0) {
         const isLong = prod.ingredients.join(", ").length > 50;
-        h += isLong ? 16 : 10;
+        h += isLong ? 14 : 10;
       }
-      return h + 6; // inter-item spacing
+      return h + 4; // inter-item spacing (space-y-2)
     };
 
     const getCatOverhead = (isContinuation: boolean) => {
-      return (isContinuation ? 28 : 34) + 12; // header + spacing
+      return (isContinuation ? 24 : 30) + 12; // header + category mb-4
     };
 
     const getCatHeight = (cat: { products: Product[]; isContinuation?: boolean }) => {
@@ -609,15 +609,15 @@ export function CardapioImpressaoClient({
                 margin: 0 auto !important;
                 border: none !important;
                 width: ${orientation === "LANDSCAPE" ? "297mm" : "210mm"} !important;
-                height: ${orientation === "LANDSCAPE" ? "210mm" : "297mm"} !important;
-                max-height: ${orientation === "LANDSCAPE" ? "210mm" : "297mm"} !important;
                 min-height: ${orientation === "LANDSCAPE" ? "210mm" : "297mm"} !important;
+                height: auto !important;
                 page-break-after: always !important;
                 break-after: page !important;
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
                 box-sizing: border-box !important;
-                overflow: hidden !important;
+                padding: 10mm !important;
+                overflow: visible !important;
                 transform: none !important;
               }
               .printable-menu-page:last-child {
@@ -793,7 +793,7 @@ export function CardapioImpressaoClient({
         {/* Left: Optional Photo + Title + Desc */}
         <div className="flex items-start gap-2.5 min-w-0 flex-1">
           {showImages && product.imageUrl && (
-            <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-black/10 bg-slate-100">
+            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md border border-black/10 bg-slate-100">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={product.imageUrl}
@@ -838,7 +838,7 @@ export function CardapioImpressaoClient({
             </div>
 
             {showDescriptions && product.description && (
-              <p className="mt-0.5 text-[11px] opacity-70 leading-snug">
+              <p className="mt-0.5 text-[10.5px] opacity-70 leading-tight">
                 {product.description}
               </p>
             )}
@@ -846,7 +846,7 @@ export function CardapioImpressaoClient({
             {showIngredients &&
               product.ingredients &&
               product.ingredients.length > 0 && (
-                <p className="mt-0.5 text-[10px] opacity-60 italic leading-snug">
+                <p className="mt-0.5 text-[9.5px] opacity-60 italic leading-tight">
                   Ingredientes: {product.ingredients.join(", ")}
                 </p>
               )}
@@ -932,11 +932,10 @@ export function CardapioImpressaoClient({
           .printable-menu-page {
             transform: none !important;
             width: ${orientation === "LANDSCAPE" ? "297mm" : "210mm"} !important;
-            height: ${orientation === "LANDSCAPE" ? "210mm" : "297mm"} !important;
-            max-height: ${orientation === "LANDSCAPE" ? "210mm" : "297mm"} !important;
             min-height: ${orientation === "LANDSCAPE" ? "210mm" : "297mm"} !important;
+            height: auto !important;
             margin: 0 auto !important;
-            padding: 12mm !important;
+            padding: 10mm !important;
             box-shadow: none !important;
             border: none !important;
             display: flex !important;
@@ -947,7 +946,7 @@ export function CardapioImpressaoClient({
             page-break-inside: avoid !important;
             break-inside: avoid !important;
             box-sizing: border-box !important;
-            overflow: hidden !important;
+            overflow: visible !important;
           }
           .printable-menu-page:last-child {
             page-break-after: auto !important;
@@ -1629,8 +1628,8 @@ export function CardapioImpressaoClient({
                         "printable-menu-page relative bg-white shadow-2xl transition-all mx-auto flex flex-col justify-between",
                         // A4 proportions
                         orientation === "PORTRAIT"
-                          ? "w-[210mm] min-h-[297mm] p-[12mm]"
-                          : "w-[297mm] min-h-[210mm] p-[12mm]",
+                          ? "w-[210mm] min-h-[297mm] p-[10mm]"
+                          : "w-[297mm] min-h-[210mm] p-[10mm]",
                         // Template themes
                         template === "MODERN_DARK" && "bg-slate-950 text-slate-100 border border-slate-800",
                         template === "BISTRO_ELEGANT" && "bg-[#faf7f2] text-stone-900 border-2 border-stone-800/20",
@@ -1650,18 +1649,18 @@ export function CardapioImpressaoClient({
                       <div className="flex-1 flex flex-col min-h-0">
                         {/* ── Header: Full on Page 1, Compact on Page 2+ ── */}
                         {pageIdx === 0 ? (
-                          <div className="relative text-center pb-4 mb-4 border-b border-current/15 shrink-0">
+                          <div className="relative text-center pb-3 mb-3 border-b border-current/15 shrink-0">
                             {showLogo && restaurant.avatarImageUrl && (
                               <div
-                                className="mx-auto mb-2.5 h-14 w-14 shrink-0 overflow-hidden rounded-2xl shadow-sm border border-black/10"
-                                style={{ width: 56, height: 56 }}
+                                className="mx-auto mb-2 h-12 w-12 shrink-0 overflow-hidden rounded-xl shadow-sm border border-black/10"
+                                style={{ width: 48, height: 48 }}
                               >
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
                                   src={restaurant.avatarImageUrl}
                                   alt={restaurant.name}
-                                  width={56}
-                                  height={56}
+                                  width={48}
+                                  height={48}
                                   loading="eager"
                                   decoding="sync"
                                   crossOrigin="anonymous"
@@ -1686,7 +1685,7 @@ export function CardapioImpressaoClient({
                             {subtitle && (
                               <p
                                 className={cn(
-                                  "mt-1 max-w-xl mx-auto text-xs italic opacity-75 leading-relaxed",
+                                  "mt-0.5 max-w-xl mx-auto text-xs italic opacity-75 leading-relaxed",
                                   template === "BISTRO_ELEGANT" && "font-serif",
                                 )}
                               >
@@ -1696,7 +1695,7 @@ export function CardapioImpressaoClient({
 
                             {/* Contact info bar */}
                             {showContact && (phone || address || instagram) && (
-                              <div className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] opacity-70">
+                              <div className="mt-1.5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] opacity-70">
                                 {phone && <span>📞 {phone}</span>}
                                 {address && <span>📍 {address}</span>}
                                 {instagram && <span>📷 {instagram}</span>}
@@ -1711,25 +1710,28 @@ export function CardapioImpressaoClient({
                         )}
 
                         {/* ── Menu Products Layout (Continuous Columns) ── */}
-                        <div className="flex-1 min-h-0">
+                        <div className="flex-1 min-h-0 pb-2">
                           {/* Continuous Columns Mode: Categories flow smoothly across columns */}
                             <div
                               className={cn(
-                                columns === 1 && "space-y-5",
-                                columns === 2 && "columns-2 gap-8 [column-fill:_balance]",
-                                columns === 3 && "columns-3 gap-6 [column-fill:_balance]",
+                                columns === 1 && "space-y-4",
+                                columns === 2 && "columns-2 gap-7 [column-fill:_balance]",
+                                columns === 3 && "columns-3 gap-5 [column-fill:_balance]",
                               )}
                             >
                               {page.categories.map((category) => (
                                 <div
                                   key={`${category.id}-${category.isContinuation ? "cont" : "start"}`}
-                                  className="mb-6 w-full space-y-3 break-inside-auto"
+                                  className={cn(
+                                    "mb-4 w-full space-y-2",
+                                    category.products.length <= 8 ? "break-inside-avoid" : "break-inside-auto",
+                                  )}
                                 >
                                   {/* Category Header */}
-                                  <div className="border-b border-current/20 pb-1.5 flex items-center justify-between break-inside-avoid break-after-avoid">
+                                  <div className="border-b border-current/20 pb-1 flex items-center justify-between break-inside-avoid break-after-avoid">
                                     <h2
                                       className={cn(
-                                        "font-bold uppercase tracking-wider text-sm",
+                                        "font-bold uppercase tracking-wider text-xs sm:text-sm",
                                         template === "BISTRO_ELEGANT"
                                           ? "font-serif text-amber-900 border-l-2 border-amber-900 pl-2"
                                           : template === "MODERN_DARK"
@@ -1750,7 +1752,7 @@ export function CardapioImpressaoClient({
                                   </div>
 
                                   {/* Products List in this Category */}
-                                  <div className="space-y-2.5">
+                                  <div className="space-y-2">
                                     {category.products.map((product) => renderProductCard(product))}
                                   </div>
                                 </div>
@@ -1761,7 +1763,7 @@ export function CardapioImpressaoClient({
 
                       {/* ── Footer Elements: Rendered on all sheets ── */}
                       {(showWifi || showFooterNote || showDigitalMenuQr) && (
-                        <div className="page-break-avoid mt-auto pt-3 border-t border-current/15 flex flex-row items-center justify-between gap-3 shrink-0">
+                        <div className="page-break-avoid mt-auto pt-2.5 border-t border-current/15 flex flex-row items-center justify-between gap-3 shrink-0">
                           {/* Left: Wi-Fi Box (expanded laterally when all 3 are displayed) */}
                           {showWifi && (wifiSsid || wifiPassword) && (
                             <div
