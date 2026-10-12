@@ -561,7 +561,7 @@ function OptionRow({
                 className="cursor-pointer gap-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
               >
                 <PencilIcon size={13} className="text-primary" />
-                <span>Editar Item</span>
+                <span>Editar dados</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -570,7 +570,7 @@ function OptionRow({
                 className="cursor-pointer gap-2 text-xs font-semibold text-rose-600 focus:bg-rose-50 focus:text-rose-700 hover:bg-rose-50"
               >
                 <Trash2Icon size={13} />
-                <span>Excluir</span>
+                <span>Excluir item</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

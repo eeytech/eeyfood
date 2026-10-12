@@ -5,6 +5,7 @@ import {
   ChevronUpIcon,
   LinkIcon,
   Loader2Icon,
+  MoreHorizontalIcon,
   PencilIcon,
   PlusIcon,
   Trash2Icon,
@@ -38,6 +39,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { GrupoAdicionalComOpcoes } from "@/lib/admin-queries";
@@ -528,29 +536,39 @@ function OptionRow({
         <span className="shrink-0 text-sm text-muted-foreground font-medium">
           {(option.price ?? 0) > 0 ? `+ R$ ${(option.price ?? 0).toFixed(2)}` : "Grátis"}
         </span>
-        <div className="flex shrink-0 gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={() => setEditing(true)}
-            disabled={isPending}
-            title="Editar adicional"
-          >
-            <PencilIcon size={12} />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-rose-500 hover:bg-rose-50"
-            onClick={() => setConfirmDeleteOption(true)}
-            disabled={isPending}
-            title="Excluir adicional"
-          >
-            <Trash2Icon size={12} />
-          </Button>
+        <div className="flex shrink-0">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 rounded-lg border border-slate-200/80 bg-white text-slate-600 shadow-2xs hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                disabled={isPending}
+              >
+                <MoreHorizontalIcon size={14} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-36 rounded-xl border-slate-200 bg-white shadow-lg">
+              <DropdownMenuItem
+                onClick={() => setEditing(true)}
+                disabled={isPending}
+                className="cursor-pointer gap-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
+              >
+                <PencilIcon size={13} className="text-primary" />
+                <span>Editar dados</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setConfirmDeleteOption(true)}
+                disabled={isPending}
+                className="cursor-pointer gap-2 text-xs font-semibold text-rose-600 focus:bg-rose-50 focus:text-rose-700 hover:bg-rose-50"
+              >
+                <Trash2Icon size={13} />
+                <span>Excluir item</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -689,42 +707,49 @@ function GroupCard({
             )}
           </div>
           <div
-            className="flex shrink-0 gap-1"
+            className="flex shrink-0"
             onClick={(e) => e.stopPropagation()}
           >
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={() => setEditingGroup(true)}
-              disabled={isPendingGroup}
-              title="Editar grupo"
-            >
-              <PencilIcon size={12} />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-amber-600 hover:bg-amber-50"
-              onClick={() => setConfirmUnlink(true)}
-              disabled={isPendingGroup}
-              title="Desvincular deste produto"
-            >
-              <UnlinkIcon size={12} />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-rose-500 hover:bg-rose-50"
-              onClick={() => setConfirmDelete(true)}
-              disabled={isPendingGroup}
-              title="Excluir permanentemente"
-            >
-              <Trash2Icon size={12} />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 rounded-lg border border-slate-200/80 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 shadow-2xs transition-colors"
+                  disabled={isPendingGroup}
+                >
+                  <MoreHorizontalIcon size={14} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48 rounded-xl border-slate-200 bg-white shadow-lg">
+                <DropdownMenuItem
+                  onClick={() => setEditingGroup(true)}
+                  disabled={isPendingGroup}
+                  className="cursor-pointer gap-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
+                >
+                  <PencilIcon size={13} className="text-primary" />
+                  <span>Editar dados</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setConfirmUnlink(true)}
+                  disabled={isPendingGroup}
+                  className="cursor-pointer gap-2 text-xs font-semibold text-amber-600 hover:bg-amber-50 focus:bg-amber-50"
+                >
+                  <UnlinkIcon size={13} />
+                  <span>Desvincular produto</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setConfirmDelete(true)}
+                  disabled={isPendingGroup}
+                  className="cursor-pointer gap-2 text-xs font-semibold text-rose-600 focus:bg-rose-50 focus:text-rose-700 hover:bg-rose-50"
+                >
+                  <Trash2Icon size={13} />
+                  <span>Excluir grupo</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 

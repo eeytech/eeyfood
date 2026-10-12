@@ -157,23 +157,68 @@ export const testAiProviderKeyAction = async (
         timeout: 10000,
       });
 
-      let modelTested = "llama-3.1-8b-instant";
-      try {
-        await client.chat.completions.create({
-          model: modelTested,
-          messages: [{ role: "user", content: "Diga apenas: OK" }],
-          max_tokens: 5,
-          temperature: 0,
+      // Busca dinamicamente os modelos ativos e liberados para esta chave na Groq
+      const modelsRes = await client.models.list();
+      const availableModels = (modelsRes?.data || [])
+        .map((m) => m.id)
+        .filter((id) => {
+          const lower = id.toLowerCase();
+          return (
+            !lower.includes("whisper") &&
+            !lower.includes("guard") &&
+            !lower.includes("safeguard") &&
+            !lower.includes("bge") &&
+            !lower.includes("tts") &&
+            !lower.includes("clip") &&
+            !lower.includes("vision")
+          );
         });
-      } catch {
-        // Fallback para llama-3.3-70b-versatile
-        modelTested = "llama-3.3-70b-versatile";
-        await client.chat.completions.create({
-          model: modelTested,
-          messages: [{ role: "user", content: "Diga apenas: OK" }],
-          max_tokens: 5,
-          temperature: 0,
-        });
+
+      if (!availableModels || availableModels.length === 0) {
+        return {
+          success: false,
+          provider: "GROQ",
+          error: "Chave conectou à Groq, mas nenhum modelo de chat de texto está liberado nesta conta.",
+        };
+      }
+
+      // Prioridade de modelos rápidos e ativos
+      const preferred = [
+        "openai/gpt-oss-20b",
+        "llama-3.1-8b-instant",
+        "llama-3.3-70b-versatile",
+      ];
+      const sortedCandidates = [
+        ...preferred.filter((p) => availableModels.includes(p)),
+        ...availableModels.filter((a) => !preferred.includes(a)),
+      ];
+
+      let modelTested = "";
+      let testSuccess = false;
+      let lastTestErr: unknown = null;
+
+      // Testa a geração com os melhores modelos candidatos disponíveis
+      for (const candidate of sortedCandidates.slice(0, 3)) {
+        try {
+          await client.chat.completions.create({
+            model: candidate,
+            messages: [{ role: "user", content: "Diga apenas: OK" }],
+            max_tokens: 5,
+            temperature: 0,
+          });
+          modelTested = candidate;
+          testSuccess = true;
+          break;
+        } catch (err) {
+          lastTestErr = err;
+        }
+      }
+
+      if (!testSuccess) {
+        throw (
+          lastTestErr ||
+          new Error("Não foi possível gerar resposta com os modelos disponíveis da Groq.")
+        );
       }
 
       const responseTimeMs = Date.now() - startTime;
@@ -269,6 +314,13 @@ export const testAiProviderKeyAction = async (
       ) {
         friendly =
           "Limite de requisições excedido na Groq (Erro 429). Aguarde alguns instantes.";
+      } else if (
+        rawMsg.includes("404") ||
+        rawMsg.toLowerCase().includes("does not exist") ||
+        rawMsg.toLowerCase().includes("model")
+      ) {
+        friendly =
+          "Nenhum modelo compatível encontrado na sua conta da Groq (Erro 404). Verifique as permissões de modelos no console https://console.groq.com/docs/models.";
       }
     } else if (provider === "GOOGLE_GEMINI") {
       if (

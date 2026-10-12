@@ -38,10 +38,11 @@ export const HANDOFF_SIGNAL = "__HANDOFF_REQUIRED__";
 let cachedGroqModels: { models: string[]; timestamp: number } | null = null;
 const GROQ_CACHE_TTL = 1000 * 60 * 30; // 30 minutos
 
-// Modelos oficiais de produção ativos da Groq (atualizados para 2026)
+// Modelos oficiais de produção ativos da Groq
 const DEFAULT_GROQ_MODELS = [
-  "llama-3.3-70b-versatile",
+  "openai/gpt-oss-20b",
   "llama-3.1-8b-instant",
+  "llama-3.3-70b-versatile",
 ];
 
 async function getAvailableGroqModels(apiKey: string): Promise<string[]> {
@@ -75,8 +76,9 @@ async function getAvailableGroqModels(apiKey: string): Promise<string[]> {
 
     if (available.length > 0) {
       const preferred = [
-        "llama-3.3-70b-versatile",
+        "openai/gpt-oss-20b",
         "llama-3.1-8b-instant",
+        "llama-3.3-70b-versatile",
       ];
       const sorted = [
         ...preferred.filter((p) => available.includes(p)),
