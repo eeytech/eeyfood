@@ -314,6 +314,19 @@ export function CashbackClient({
     e.preventDefault();
     setFormError(null);
 
+    if (!form.name.trim()) {
+      setFormError("Informe a descrição da regra.");
+      toast.error("Por favor, preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    const percent = parseFloat(form.cashbackPercent);
+    if (isNaN(percent) || percent <= 0) {
+      setFormError("Informe um percentual de retorno válido maior que zero.");
+      toast.error("Informe um percentual de retorno válido maior que zero.");
+      return;
+    }
+
     const formData = new FormData(e.currentTarget);
     if (form.isActive) {
       formData.set("isActive", "on");
@@ -1022,7 +1035,7 @@ export function CashbackClient({
                   de {totalCount} regra{totalCount !== 1 ? "s" : ""}
                 </span>
                 {isFiltering && (
-                  <span className="text-[11px] font-medium text-amber-600">
+                  <span className="text-[11px] font-medium text-primary">
                     (Filtros aplicados)
                   </span>
                 )}
@@ -1129,7 +1142,7 @@ export function CashbackClient({
             </div>
           </DialogHeader>
 
-          <form onSubmit={handleSubmitForm} className="space-y-4 pt-2">
+          <form onSubmit={handleSubmitForm} noValidate className="space-y-4 pt-2">
             {formError && (
               <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
                 <AlertCircleIcon size={16} className="mt-0.5 shrink-0" />

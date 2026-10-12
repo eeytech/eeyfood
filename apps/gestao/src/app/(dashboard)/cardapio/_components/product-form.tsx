@@ -1,7 +1,7 @@
 "use client";
 
-import { InfoIcon, Loader2Icon, SparklesIcon } from "lucide-react";
-import { useState, useTransition } from "react";
+import { InfoIcon, Loader2Icon, SparklesIcon, UploadIcon } from "lucide-react";
+import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import {
@@ -88,6 +88,8 @@ function ProductFields({
 
   const [imageUrl, setImageUrl] = useState(defaultValues?.imageUrl ?? "");
   const [hasImageFile, setHasImageFile] = useState(false);
+  const [preview, setPreview] = useState<string>(defaultValues?.imageUrl ?? "");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [ncm, setNcm] = useState(defaultValues?.ncm ?? "");
@@ -179,11 +181,6 @@ function ProductFields({
       newErrors.categoryId = "Selecione uma categoria para o produto.";
     }
 
-    // Se for produto novo, exige imagem (URL ou arquivo anexado)
-    if (!defaultValues && !imageUrl.trim() && !hasImageFile) {
-      newErrors.image = "A imagem do produto é obrigatória (informe uma URL ou envie uma foto).";
-    }
-
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       const firstError = Object.values(newErrors)[0];
@@ -206,6 +203,9 @@ function ProductFields({
     formData.set("ncm", ncm);
     formData.set("cfop", cfop);
     formData.set("csosn", csosn);
+    if (fileInputRef.current?.files?.[0]) {
+      formData.set("imageFile", fileInputRef.current.files[0]);
+    }
     if (imageUrl.trim()) {
       formData.set("imageUrl", imageUrl.trim());
     }
@@ -239,7 +239,7 @@ function ProductFields({
       {/* Nome do Produto */}
       <div className="space-y-1.5">
         <Label htmlFor="prod-name" className="text-xs font-semibold text-slate-700">
-          Nome do produto <span className="text-rose-500">*</span>
+          Nome do produto
         </Label>
         <Input
           id="prod-name"
@@ -267,7 +267,7 @@ function ProductFields({
             htmlFor="prod-description"
             className="text-xs font-semibold text-slate-700"
           >
-            Descrição <span className="text-rose-500">*</span>
+            Descrição
           </Label>
           <Button
             type="button"
@@ -308,7 +308,7 @@ function ProductFields({
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="prod-price" className="text-xs font-semibold text-slate-700">
-            Preço de venda <span className="text-rose-500">*</span>
+            Preço de venda
           </Label>
           <Input
             id="prod-price"
@@ -350,7 +350,7 @@ function ProductFields({
             htmlFor="prod-category"
             className="text-xs font-semibold text-slate-700"
           >
-            Categoria <span className="text-rose-500">*</span>
+            Categoria
           </Label>
           <Select
             value={categoryId}
@@ -422,75 +422,85 @@ function ProductFields({
         </div>
       )}
 
-      {/* Imagem do Produto */}
-      {defaultValues?.imageUrl && (
-        <div className="flex items-center gap-3 rounded-lg border border-slate-200/80 bg-slate-50 p-2.5">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={defaultValues.imageUrl}
-            alt={defaultValues.name}
-            className="h-12 w-12 rounded-md border object-cover"
-          />
-          <div className="space-y-0.5">
-            <span className="text-xs font-medium text-slate-800">Imagem atual</span>
-            <p className="text-[11px] text-slate-500">
-              Para trocar, informe uma nova URL ou selecione um arquivo abaixo.
+      {/* Upload de Imagem */}
+      <div className="space-y-1.5">
+        <Label className="text-xs font-semibold text-slate-700">
+          Foto do Produto (opcional)
+        </Label>
+        <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-slate-50/60 p-2.5">
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className="relative flex h-14 w-14 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-slate-200 bg-white transition hover:border-slate-300 hover:bg-slate-100"
+          >
+            {preview ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={preview}
+                alt="Preview do produto"
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <UploadIcon size={18} className="text-slate-400" />
+            )}
+            <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition hover:opacity-100">
+              <UploadIcon size={16} className="text-white" />
+            </div>
+          </div>
+
+          <div className="flex-1 space-y-1">
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <UploadIcon size={12} className="mr-1" />
+                Carregar imagem
+              </Button>
+              {preview && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                  onClick={() => {
+                    setPreview("");
+                    setImageUrl("");
+                    setHasImageFile(false);
+                    if (fileInputRef.current) fileInputRef.current.value = "";
+                  }}
+                >
+                  Remover
+                </Button>
+              )}
+            </div>
+            <p className="text-[10px] text-slate-500">
+              PNG, JPG ou WEBP até 2MB.
             </p>
           </div>
-        </div>
-      )}
 
-      <div className="space-y-1.5">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label
-              htmlFor="prod-image-url"
-              className="text-xs font-semibold text-slate-700"
-            >
-              URL da imagem {!defaultValues && <span className="text-rose-500">*</span>}
-            </Label>
-            <Input
-              id="prod-image-url"
-              name="imageUrl"
-              placeholder="https://..."
-              value={imageUrl}
-              onChange={(e) => {
-                setImageUrl(e.target.value);
-                if (errors.image) setErrors((prev) => ({ ...prev, image: "" }));
-              }}
-              className={cn(
-                "h-9 text-xs transition-colors",
-                errors.image && "border-rose-500 focus-visible:ring-rose-400 bg-rose-50/20",
-              )}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label
-              htmlFor="prod-image-file"
-              className="text-xs font-semibold text-slate-700"
-            >
-              {defaultValues ? "Substituir por arquivo" : "Ou upload de arquivo"} {!defaultValues && !imageUrl.trim() && <span className="text-rose-500">*</span>}
-            </Label>
-            <Input
-              id="prod-image-file"
-              name="imageFile"
-              type="file"
-              accept="image/*"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                setHasImageFile(Boolean(file));
-                if (errors.image) setErrors((prev) => ({ ...prev, image: "" }));
-              }}
-              className={cn(
-                "h-9 text-xs file:text-xs file:py-0 transition-colors",
-                errors.image && "border-rose-500 bg-rose-50/20",
-              )}
-            />
-          </div>
+          <input
+            ref={fileInputRef}
+            id="prod-image-file"
+            name="imageFile"
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              if (file.size > 2 * 1024 * 1024) {
+                toast.error("A imagem deve ter no máximo 2MB.");
+                return;
+              }
+              const objectUrl = URL.createObjectURL(file);
+              setPreview(objectUrl);
+              setHasImageFile(true);
+            }}
+          />
         </div>
-        {errors.image && (
-          <p className="text-[11px] font-medium text-rose-500">{errors.image}</p>
-        )}
       </div>
 
       {/* Estoque Inicial e Alerta */}

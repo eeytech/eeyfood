@@ -158,7 +158,6 @@ export default async function AiSettingsPage({ params }: AiSettingsPageProps) {
           <AiProviderSelector
             initialProvider={aiSettings?.aiProvider}
             initialGeminiKey={aiSettings?.geminiApiKey}
-            initialGroqKey={aiSettings?.groqApiKey}
             initialOpenAiKey={aiSettings?.openaiApiKey}
           />
 

@@ -323,6 +323,12 @@ export function CuponsClient({
     e.preventDefault();
     setFormError(null);
 
+    if (!form.code.trim()) {
+      setFormError("Informe o código do cupom.");
+      toast.error("Por favor, preencha todos os campos obrigatórios.");
+      return;
+    }
+
     const formData = new FormData(e.currentTarget);
     if (form.isActive) {
       formData.set("isActive", "on");
@@ -334,6 +340,7 @@ export function CuponsClient({
       const val = currencyStringToNumber(form.discountValue);
       if (val <= 0) {
         setFormError("Informe um valor de desconto maior que zero.");
+        toast.error("Informe um valor de desconto maior que zero.");
         return;
       }
       formData.set("discountValue", val.toString());
@@ -341,6 +348,7 @@ export function CuponsClient({
       const val = parseFloat(form.discountValue.replace(",", "."));
       if (isNaN(val) || val <= 0) {
         setFormError("Informe um percentual de desconto maior que zero.");
+        toast.error("Informe um percentual de desconto maior que zero.");
         return;
       }
       formData.set("discountValue", val.toString());
@@ -1052,7 +1060,7 @@ export function CuponsClient({
                   de {totalCount} cupom{totalCount !== 1 ? "s" : ""}
                 </span>
                 {isFiltering && (
-                  <span className="text-[11px] font-medium text-amber-600">
+                  <span className="text-[11px] font-medium text-primary">
                     (Filtros aplicados)
                   </span>
                 )}
@@ -1159,7 +1167,7 @@ export function CuponsClient({
             </div>
           </DialogHeader>
 
-          <form onSubmit={handleSubmitForm} className="space-y-4 pt-2">
+          <form onSubmit={handleSubmitForm} noValidate className="space-y-4 pt-2">
             {formError && (
               <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
                 <AlertCircleIcon size={16} className="mt-0.5 shrink-0" />

@@ -83,14 +83,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 interface ProdutoComanda {
   id: string;
@@ -256,6 +252,8 @@ const ComandaDigital = ({
 
   // ── Fila form ──────────────────────────────────────────────────────────
   const [filaForm, setFilaForm] = useState({ customerName: "", partySize: 2 });
+  const [filaErrors, setFilaErrors] = useState<Record<string, string>>({});
+  const [reservaErrors, setReservaErrors] = useState<Record<string, string>>({});
 
   // ── Avulsa form ────────────────────────────────────────────────────────
   const [avulsaCustomerName, setAvulsaCustomerName] = useState("");
@@ -720,18 +718,34 @@ const ComandaDigital = ({
   };
 
   const handleCriarReserva = () => {
-    if (!reservaForm.customerName || !reservaForm.scheduledFor) return;
+    const newErrors: Record<string, string> = {};
+    if (!reservaForm.customerName.trim()) {
+      newErrors.customerName = "Informe o nome do cliente.";
+    }
+    if (!reservaForm.scheduledFor) {
+      newErrors.scheduledFor = "Selecione a data e horário da reserva.";
+    }
+    if (!reservaForm.partySize || reservaForm.partySize < 1) {
+      newErrors.partySize = "Informe a quantidade de pessoas.";
+    }
+    if (Object.keys(newErrors).length > 0) {
+      setReservaErrors(newErrors);
+      const firstError = Object.values(newErrors)[0];
+      toast.error(firstError || "Por favor, preencha todos os campos obrigatórios.");
+      return;
+    }
+
     setFeedback(null);
     startTransition(async () => {
       try {
         const reserva = await criarReservaAction({
           slug,
-          customerName: reservaForm.customerName,
-          customerPhone: reservaForm.customerPhone,
+          customerName: reservaForm.customerName.trim(),
+          customerPhone: reservaForm.customerPhone.trim(),
           partySize: reservaForm.partySize,
           scheduledFor: reservaForm.scheduledFor,
           diningTableId: reservaForm.diningTableId || undefined,
-          notes: reservaForm.notes,
+          notes: reservaForm.notes.trim(),
         });
         setReservations((prev) => [...prev, reserva]);
         setReservaForm({
@@ -742,33 +756,54 @@ const ComandaDigital = ({
           diningTableId: "",
           notes: "",
         });
+        setReservaErrors({});
+        toast.success("Reserva cadastrada com sucesso!");
         setFeedback({ type: "success", message: "Reserva criada com sucesso." });
       } catch (e) {
+        const msg = e instanceof Error ? e.message : "Erro ao criar reserva.";
+        toast.error(msg);
         setFeedback({
           type: "error",
-          message: e instanceof Error ? e.message : "Erro ao criar reserva.",
+          message: msg,
         });
       }
     });
   };
 
   const handleAdicionarFila = () => {
-    if (!filaForm.customerName) return;
+    const newErrors: Record<string, string> = {};
+    if (!filaForm.customerName.trim()) {
+      newErrors.customerName = "Informe o nome do cliente.";
+    }
+    if (!filaForm.partySize || filaForm.partySize < 1) {
+      newErrors.partySize = "Informe a quantidade de pessoas.";
+    }
+    if (Object.keys(newErrors).length > 0) {
+      setFilaErrors(newErrors);
+      const firstError = Object.values(newErrors)[0];
+      toast.error(firstError || "Por favor, preencha todos os campos obrigatórios.");
+      return;
+    }
+
     setFeedback(null);
     startTransition(async () => {
       try {
         const entry = await adicionarClienteFilaAction({
           slug,
-          customerName: filaForm.customerName,
+          customerName: filaForm.customerName.trim(),
           partySize: filaForm.partySize,
         });
         setQueue((prev) => [...prev, entry]);
         setFilaForm({ customerName: "", partySize: 2 });
+        setFilaErrors({});
+        toast.success(`${filaForm.customerName.trim()} adicionado(a) à fila!`);
         setFeedback({ type: "success", message: `${filaForm.customerName} adicionado(a) a fila.` });
       } catch (e) {
+        const msg = e instanceof Error ? e.message : "Erro ao adicionar a fila.";
+        toast.error(msg);
         setFeedback({
           type: "error",
-          message: e instanceof Error ? e.message : "Erro ao adicionar a fila.",
+          message: msg,
         });
       }
     });
@@ -2828,274 +2863,438 @@ const ComandaDigital = ({
         </DialogContent>
       </Dialog>
 
-      {/* ── Fila de espera drawer ───────────────────────────────────── */}
-      <Sheet open={isFilaOpen} onOpenChange={setIsFilaOpen}>
-        <SheetContent className="w-full max-w-sm overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>Fila de espera</SheetTitle>
-            <SheetDescription>
-              Gerencie clientes aguardando uma mesa disponivel.
-            </SheetDescription>
-          </SheetHeader>
-
-          <div className="mt-4 space-y-4">
-            {/* Add to queue form */}
-            <div className="space-y-2 rounded-xl border p-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                Adicionar a fila
-              </p>
-              <Input
-                value={filaForm.customerName}
-                onChange={(e) => setFilaForm((f) => ({ ...f, customerName: e.target.value }))}
-                placeholder="Nome do cliente"
-              />
-              <div className="flex items-center gap-2">
-                <label className="text-xs text-muted-foreground">Pessoas:</label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={20}
-                  value={filaForm.partySize}
-                  onChange={(e) =>
-                    setFilaForm((f) => ({ ...f, partySize: Math.max(1, Number(e.target.value)) }))
-                  }
-                  className="h-8 w-20"
-                />
+      {/* ── Fila de espera dialog ───────────────────────────────────── */}
+      <Dialog open={isFilaOpen} onOpenChange={setIsFilaOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl">
+          <DialogHeader className="pb-3 border-b">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <UsersRoundIcon size={20} />
               </div>
+              <div>
+                <DialogTitle className="text-lg font-bold">Fila de Espera</DialogTitle>
+                <DialogDescription className="text-xs">
+                  Gerencie clientes aguardando uma mesa disponível no salão.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="mt-4 space-y-5">
+            {/* Form */}
+            <div className="space-y-3 rounded-xl border border-slate-200/80 bg-slate-50/50 p-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                Adicionar à Fila
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="md:col-span-2 space-y-1.5">
+                  <Label htmlFor="fila-customer-name" className="text-xs font-semibold text-slate-700">
+                    Nome do cliente
+                  </Label>
+                  <Input
+                    id="fila-customer-name"
+                    value={filaForm.customerName}
+                    onChange={(e) => {
+                      setFilaForm((f) => ({ ...f, customerName: e.target.value }));
+                      if (filaErrors.customerName) setFilaErrors((prev) => ({ ...prev, customerName: "" }));
+                    }}
+                    placeholder="Ex.: Carlos Silva"
+                    className={cn(
+                      "h-9 text-xs transition-colors bg-white",
+                      filaErrors.customerName && "border-rose-500 bg-rose-50/20 focus-visible:ring-rose-400",
+                    )}
+                  />
+                  {filaErrors.customerName && (
+                    <p className="text-[11px] font-medium text-rose-500">{filaErrors.customerName}</p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="fila-party-size" className="text-xs font-semibold text-slate-700">
+                    Pessoas
+                  </Label>
+                  <Input
+                    id="fila-party-size"
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={filaForm.partySize}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      setFilaForm((f) => ({ ...f, partySize: Math.max(1, val) }));
+                      if (filaErrors.partySize) setFilaErrors((prev) => ({ ...prev, partySize: "" }));
+                    }}
+                    className={cn(
+                      "h-9 text-xs transition-colors bg-white",
+                      filaErrors.partySize && "border-rose-500 bg-rose-50/20 focus-visible:ring-rose-400",
+                    )}
+                  />
+                  {filaErrors.partySize && (
+                    <p className="text-[11px] font-medium text-rose-500">{filaErrors.partySize}</p>
+                  )}
+                </div>
+              </div>
+
               <Button
                 size="sm"
-                className="w-full"
-                disabled={!filaForm.customerName || isPending}
+                className="w-full h-9 font-semibold"
+                disabled={isPending}
                 onClick={handleAdicionarFila}
               >
-                <PlusIcon size={14} />
-                Adicionar
+                {isPending ? (
+                  <Loader2Icon size={14} className="animate-spin mr-1.5" />
+                ) : (
+                  <PlusIcon size={14} className="mr-1.5" />
+                )}
+                Adicionar à Fila
               </Button>
             </div>
 
-            {/* Queue list */}
-            {queue.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">
-                Fila vazia. Nenhum cliente aguardando.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {queue.map((entry) => (
-                  <div key={entry.id} className="rounded-xl border p-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="font-semibold text-sm">
-                          #{entry.position} — {entry.customerName}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {entry.partySize} pessoas · Chegou {formatTime(entry.arrivedAt)}
-                        </p>
-                      </div>
-                      <Badge variant="warning" className="text-xs">
-                        Aguardando
-                      </Badge>
-                    </div>
-                    {freeTables > 0 && (
-                      <div className="mt-2 space-y-1.5">
-                        <p className="text-xs text-muted-foreground">Acomodar em:</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {tables
-                            .filter((m) => !m.currentOrder)
-                            .map((m) => (
-                              <Button
-                                key={m.table.id}
-                                size="sm"
-                                variant="outline"
-                                className="h-7 text-xs"
-                                disabled={isPending}
-                                onClick={() => handleAcomodarFila(entry.id, m.table.id)}
-                              >
-                                {m.table.name}
-                              </Button>
-                            ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
+            {/* List */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                  Clientes Aguardando ({queue.length})
+                </p>
+                {freeTables > 0 && (
+                  <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    {freeTables} {freeTables === 1 ? "mesa livre" : "mesas livres"}
+                  </span>
+                )}
               </div>
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
 
-      {/* ── Reservas drawer ─────────────────────────────────────────── */}
-      <Sheet open={isReservasOpen} onOpenChange={setIsReservasOpen}>
-        <SheetContent className="w-full max-w-sm overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>Reservas</SheetTitle>
-            <SheetDescription>Agenda de reservas do restaurante.</SheetDescription>
-          </SheetHeader>
-
-          <div className="mt-4 space-y-4">
-            {/* New reservation form */}
-            <div className="space-y-2 rounded-xl border p-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                Nova reserva
-              </p>
-              <Input
-                value={reservaForm.customerName}
-                onChange={(e) => setReservaForm((f) => ({ ...f, customerName: e.target.value }))}
-                placeholder="Nome do cliente *"
-              />
-              <Input
-                value={reservaForm.customerPhone}
-                onChange={(e) => setReservaForm((f) => ({ ...f, customerPhone: e.target.value }))}
-                placeholder="Telefone"
-              />
-              <div className="flex items-center gap-2">
-                <label className="text-xs text-muted-foreground">Pessoas:</label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={50}
-                  value={reservaForm.partySize}
-                  onChange={(e) =>
-                    setReservaForm((f) => ({
-                      ...f,
-                      partySize: Math.max(1, Number(e.target.value)),
-                    }))
-                  }
-                  className="h-8 w-20"
-                />
-              </div>
-              <DatePicker
-                value={reservaForm.scheduledFor}
-                onChange={(_, str) => setReservaForm((f) => ({ ...f, scheduledFor: str }))}
-                withTime
-                placeholder="Data e horário da reserva"
-              />
-              <Select
-                value={reservaForm.diningTableId}
-                onValueChange={(v) => setReservaForm((f) => ({ ...f, diningTableId: v }))}
-              >
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Mesa (opcional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {tables.map((m) => (
-                    <SelectItem key={m.table.id} value={m.table.id}>
-                      {m.table.name} ({String(m.table.seats)} lugares)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Input
-                value={reservaForm.notes}
-                onChange={(e) => setReservaForm((f) => ({ ...f, notes: e.target.value }))}
-                placeholder="Observacoes"
-              />
-              <Button
-                size="sm"
-                className="w-full"
-                disabled={!reservaForm.customerName || !reservaForm.scheduledFor || isPending}
-                onClick={handleCriarReserva}
-              >
-                <PlusIcon size={14} />
-                Criar reserva
-              </Button>
-            </div>
-
-            {/* Reservations list */}
-            {reservations.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">
-                Nenhuma reserva cadastrada.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {reservations
-                  .filter((r) => r.status !== "CANCELLED" && r.status !== "FINISHED")
-                  .map((r) => (
-                    <div key={r.id} className="rounded-xl border p-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <p className="font-semibold text-sm">{r.customerName}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {r.partySize} pessoas ·{" "}
-                            {formatDateTime(r.scheduledFor)}
-                          </p>
-                          {r.customerPhone && (
-                            <p className="text-xs text-muted-foreground">{r.customerPhone}</p>
-                          )}
-                          {r.notes && (
-                            <p className="mt-0.5 text-xs italic text-muted-foreground">
-                              {r.notes}
+              {queue.length === 0 ? (
+                <div className="py-8 text-center rounded-xl border border-dashed border-slate-200 bg-slate-50/50">
+                  <UsersRoundIcon size={28} className="mx-auto text-slate-400 mb-2 opacity-60" />
+                  <p className="text-sm font-semibold text-slate-700">Fila vazia</p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Nenhum cliente aguardando mesa no momento.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                  {queue.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-xs transition-all hover:border-slate-300"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-2.5">
+                          <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-bold">
+                            #{entry.position}
+                          </span>
+                          <div>
+                            <p className="font-semibold text-sm text-slate-800">
+                              {entry.customerName}
                             </p>
-                          )}
+                            <p className="text-xs text-slate-500 mt-0.5">
+                              {entry.partySize} {entry.partySize === 1 ? "pessoa" : "pessoas"} · Chegou às {formatTime(entry.arrivedAt)}
+                            </p>
+                          </div>
                         </div>
-                        <Badge
-                          variant={
-                            r.status === "CONFIRMED"
-                              ? "success"
-                              : r.status === "PENDING"
-                                ? "warning"
-                                : "secondary"
-                          }
-                          className="shrink-0 text-xs"
-                        >
-                          {r.status === "CONFIRMED"
-                            ? "Confirmada"
-                            : r.status === "PENDING"
-                              ? "Pendente"
-                              : r.status}
+                        <Badge variant="warning" className="text-xs font-medium shrink-0">
+                          Aguardando
                         </Badge>
                       </div>
-                      <div className="mt-2 flex gap-1.5">
-                        {r.status === "PENDING" && (
+
+                      {freeTables > 0 && (
+                        <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
+                          <span className="text-xs text-slate-500 font-medium">Acomodar na mesa:</span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {tables
+                              .filter((m) => !m.currentOrder)
+                              .map((m) => (
+                                <Button
+                                  key={m.table.id}
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 px-2.5 text-xs font-medium border-primary/30 text-primary hover:bg-primary/10"
+                                  disabled={isPending}
+                                  onClick={() => handleAcomodarFila(entry.id, m.table.id)}
+                                >
+                                  {m.table.name}
+                                </Button>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Reservas dialog ─────────────────────────────────────────── */}
+      <Dialog open={isReservasOpen} onOpenChange={setIsReservasOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl">
+          <DialogHeader className="pb-3 border-b">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <ClockIcon size={20} />
+              </div>
+              <div>
+                <DialogTitle className="text-lg font-bold">Reservas de Mesas</DialogTitle>
+                <DialogDescription className="text-xs">
+                  Agenda e controle de reservas do restaurante.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="mt-4 space-y-5">
+            {/* Form */}
+            <div className="space-y-3 rounded-xl border border-slate-200/80 bg-slate-50/50 p-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                Nova Reserva
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="reserva-name" className="text-xs font-semibold text-slate-700">
+                    Nome do cliente
+                  </Label>
+                  <Input
+                    id="reserva-name"
+                    value={reservaForm.customerName}
+                    onChange={(e) => {
+                      setReservaForm((f) => ({ ...f, customerName: e.target.value }));
+                      if (reservaErrors.customerName) setReservaErrors((prev) => ({ ...prev, customerName: "" }));
+                    }}
+                    placeholder="Ex.: Mariana Souza"
+                    className={cn(
+                      "h-9 text-xs transition-colors bg-white",
+                      reservaErrors.customerName && "border-rose-500 bg-rose-50/20 focus-visible:ring-rose-400",
+                    )}
+                  />
+                  {reservaErrors.customerName && (
+                    <p className="text-[11px] font-medium text-rose-500">{reservaErrors.customerName}</p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="reserva-phone" className="text-xs font-semibold text-slate-700">
+                    Telefone de contato
+                  </Label>
+                  <Input
+                    id="reserva-phone"
+                    value={reservaForm.customerPhone}
+                    onChange={(e) => setReservaForm((f) => ({ ...f, customerPhone: e.target.value }))}
+                    placeholder="(00) 00000-0000"
+                    className="h-9 text-xs bg-white"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="reserva-party-size" className="text-xs font-semibold text-slate-700">
+                    Quantidade de pessoas
+                  </Label>
+                  <Input
+                    id="reserva-party-size"
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={reservaForm.partySize}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      setReservaForm((f) => ({
+                        ...f,
+                        partySize: Math.max(1, val),
+                      }));
+                      if (reservaErrors.partySize) setReservaErrors((prev) => ({ ...prev, partySize: "" }));
+                    }}
+                    className={cn(
+                      "h-9 text-xs transition-colors bg-white",
+                      reservaErrors.partySize && "border-rose-500 bg-rose-50/20 focus-visible:ring-rose-400",
+                    )}
+                  />
+                  {reservaErrors.partySize && (
+                    <p className="text-[11px] font-medium text-rose-500">{reservaErrors.partySize}</p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="reserva-datetime" className="text-xs font-semibold text-slate-700">
+                    Data e horário da reserva
+                  </Label>
+                  <DatePicker
+                    value={reservaForm.scheduledFor}
+                    onChange={(_, str) => {
+                      setReservaForm((f) => ({ ...f, scheduledFor: str }));
+                      if (reservaErrors.scheduledFor) setReservaErrors((prev) => ({ ...prev, scheduledFor: "" }));
+                    }}
+                    withTime
+                    placeholder="Selecione data e horário"
+                    className={cn(
+                      "h-9 text-xs bg-white",
+                      reservaErrors.scheduledFor && "border-rose-500 ring-1 ring-rose-500",
+                    )}
+                  />
+                  {reservaErrors.scheduledFor && (
+                    <p className="text-[11px] font-medium text-rose-500">{reservaErrors.scheduledFor}</p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-slate-700">
+                    Mesa preferencial
+                  </Label>
+                  <Select
+                    value={reservaForm.diningTableId}
+                    onValueChange={(v) => setReservaForm((f) => ({ ...f, diningTableId: v }))}
+                  >
+                    <SelectTrigger className="h-9 text-xs bg-white">
+                      <SelectValue placeholder="Selecione a mesa (opcional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tables.map((m) => (
+                        <SelectItem key={m.table.id} value={m.table.id}>
+                          {m.table.name} ({String(m.table.seats)} lugares)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="reserva-notes" className="text-xs font-semibold text-slate-700">
+                    Observações
+                  </Label>
+                  <Input
+                    id="reserva-notes"
+                    value={reservaForm.notes}
+                    onChange={(e) => setReservaForm((f) => ({ ...f, notes: e.target.value }))}
+                    placeholder="Ex.: Aniversário, perto da janela"
+                    className="h-9 text-xs bg-white"
+                  />
+                </div>
+              </div>
+
+              <Button
+                size="sm"
+                className="w-full h-9 font-semibold"
+                disabled={isPending}
+                onClick={handleCriarReserva}
+              >
+                {isPending ? (
+                  <Loader2Icon size={14} className="animate-spin mr-1.5" />
+                ) : (
+                  <PlusIcon size={14} className="mr-1.5" />
+                )}
+                Criar Reserva
+              </Button>
+            </div>
+
+            {/* List */}
+            <div className="space-y-3">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                Reservas Cadastradas ({reservations.filter((r) => r.status !== "CANCELLED" && r.status !== "FINISHED").length})
+              </p>
+
+              {reservations.filter((r) => r.status !== "CANCELLED" && r.status !== "FINISHED").length === 0 ? (
+                <div className="py-8 text-center rounded-xl border border-dashed border-slate-200 bg-slate-50/50">
+                  <ClockIcon size={28} className="mx-auto text-slate-400 mb-2 opacity-60" />
+                  <p className="text-sm font-semibold text-slate-700">Nenhuma reserva ativa</p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Todas as reservas foram atendidas ou não há agendamentos.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                  {reservations
+                    .filter((r) => r.status !== "CANCELLED" && r.status !== "FINISHED")
+                    .map((r) => (
+                      <div
+                        key={r.id}
+                        className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-xs transition-all hover:border-slate-300"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-semibold text-sm text-slate-800">{r.customerName}</p>
+                            <p className="text-xs text-slate-500 mt-0.5">
+                              {r.partySize} {r.partySize === 1 ? "pessoa" : "pessoas"} · {formatDateTime(r.scheduledFor)}
+                            </p>
+                            {r.customerPhone && (
+                              <p className="text-xs text-slate-500 mt-0.5">Tel: {r.customerPhone}</p>
+                            )}
+                            {r.notes && (
+                              <p className="mt-1 text-xs italic text-slate-600 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
+                                {r.notes}
+                              </p>
+                            )}
+                          </div>
+                          <Badge
+                            variant={
+                              r.status === "CONFIRMED"
+                                ? "success"
+                                : r.status === "PENDING"
+                                  ? "warning"
+                                  : "secondary"
+                            }
+                            className="shrink-0 text-xs font-medium"
+                          >
+                            {r.status === "CONFIRMED"
+                              ? "Confirmada"
+                              : r.status === "PENDING"
+                                ? "Pendente"
+                                : r.status}
+                          </Badge>
+                        </div>
+                        <div className="mt-3 pt-2.5 border-t border-slate-100 flex justify-end gap-1.5">
+                          {r.status === "PENDING" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs font-medium border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                              disabled={isPending}
+                              onClick={async () => {
+                                await atualizarStatusReservaAction({
+                                  slug,
+                                  reservaId: r.id,
+                                  status: "CONFIRMED",
+                                });
+                                setReservations((prev) =>
+                                  prev.map((x) =>
+                                    x.id === r.id ? { ...x, status: "CONFIRMED" as const } : x,
+                                  ),
+                                );
+                                toast.success("Reserva confirmada com sucesso!");
+                              }}
+                            >
+                              Confirmar
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-7 text-xs"
+                            className="h-7 text-xs font-medium text-rose-600 border-rose-200 hover:bg-rose-50"
                             disabled={isPending}
                             onClick={async () => {
                               await atualizarStatusReservaAction({
                                 slug,
                                 reservaId: r.id,
-                                status: "CONFIRMED",
+                                status: "CANCELLED",
                               });
                               setReservations((prev) =>
                                 prev.map((x) =>
-                                  x.id === r.id ? { ...x, status: "CONFIRMED" as const } : x,
+                                  x.id === r.id ? { ...x, status: "CANCELLED" as const } : x,
                                 ),
                               );
+                              toast.info("Reserva cancelada.");
                             }}
                           >
-                            Confirmar
+                            Cancelar
                           </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-xs text-rose-600"
-                          disabled={isPending}
-                          onClick={async () => {
-                            await atualizarStatusReservaAction({
-                              slug,
-                              reservaId: r.id,
-                              status: "CANCELLED",
-                            });
-                            setReservations((prev) =>
-                              prev.map((x) =>
-                                x.id === r.id ? { ...x, status: "CANCELLED" as const } : x,
-                              ),
-                            );
-                          }}
-                        >
-                          Cancelar
-                        </Button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-              </div>
-            )}
+                    ))}
+                </div>
+              )}
+            </div>
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 };

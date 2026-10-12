@@ -1,7 +1,8 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 import type { InventoryActionResult } from "@/app/(dashboard)/actions";
 import {
@@ -55,11 +56,28 @@ export function InventoryFormDialog({
   onSuccess,
 }: InventoryFormDialogProps) {
   const [isPending, startTransition] = useTransition();
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const isEditing = !!item;
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const newErrors: Record<string, string> = {};
+
+    const name = formData.get("name")?.toString().trim();
+    if (!name) {
+      newErrors.name = "Informe o nome do item.";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      const firstError = Object.values(newErrors)[0];
+      toast.error(firstError || "Por favor, preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    setErrors({});
+
     if (isEditing) {
       formData.set("itemId", item.id);
     }
@@ -97,7 +115,7 @@ export function InventoryFormDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="mt-2 space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="mt-2 space-y-4">
           {/* Nome */}
           <div className="space-y-1.5">
             <Label htmlFor="inv-name" className="text-xs font-semibold text-slate-700">
@@ -108,9 +126,15 @@ export function InventoryFormDialog({
               name="name"
               placeholder="Ex.: Embalagem pizza G, Luva de borracha..."
               defaultValue={item?.name ?? ""}
-              required
-              className="h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+              onChange={() => setErrors((prev) => ({ ...prev, name: "" }))}
+              className={cn(
+                "h-10 rounded-xl border-slate-200 bg-white text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-colors",
+                errors.name && "border-rose-500 bg-rose-50/20 focus-visible:ring-rose-500"
+              )}
             />
+            {errors.name && (
+              <p className="text-[11px] font-medium text-rose-500">{errors.name}</p>
+            )}
           </div>
 
           {/* Descrição */}

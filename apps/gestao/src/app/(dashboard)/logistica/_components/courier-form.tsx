@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Loader2Icon, SearchIcon } from "lucide-react";
+import { toast } from "sonner";
 
 import {
   createCourierAction,
@@ -100,6 +101,7 @@ export function CourierForm({ slug, defaultValues, onSuccess, onCancel }: Courie
   const [selectedDays, setSelectedDays] = useState<string[]>(
     defaultValues?.workDays ?? [],
   );
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const toggleDay = (day: string) => {
     setSelectedDays((prev) =>
@@ -130,6 +132,20 @@ export function CourierForm({ slug, defaultValues, onSuccess, onCancel }: Courie
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
+    const newErrors: Record<string, string> = {};
+    const name = formData.get("name")?.toString().trim();
+    if (!name) newErrors.name = "Informe o nome completo.";
+    if (!phone.trim()) newErrors.phone = "Informe o telefone / WhatsApp.";
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      const firstError = Object.values(newErrors)[0];
+      toast.error(firstError || "Por favor, preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    setErrors({});
+
     if (isActive) formData.set("isActive", "on");
     else formData.delete("isActive");
 
@@ -155,7 +171,7 @@ export function CourierForm({ slug, defaultValues, onSuccess, onCancel }: Courie
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-0 pt-1">
+    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-0 pt-1">
       <div className="max-h-[65vh] space-y-5 overflow-y-auto pr-1">
         {/* ── Dados Pessoais ── */}
         <div>
@@ -176,9 +192,15 @@ export function CourierForm({ slug, defaultValues, onSuccess, onCancel }: Courie
                 name="name"
                 placeholder="Ex.: João Silva"
                 defaultValue={defaultValues?.name}
-                required
-                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                onChange={() => setErrors((prev) => ({ ...prev, name: "" }))}
+                className={cn(
+                  "h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary transition-colors",
+                  errors.name && "border-rose-500 bg-rose-50/20 focus-visible:ring-rose-500"
+                )}
               />
+              {errors.name && (
+                <p className="text-[11px] font-medium text-rose-500">{errors.name}</p>
+              )}
             </div>
 
             {/* Telefone/WhatsApp, CPF e RG na mesma linha */}
@@ -192,10 +214,18 @@ export function CourierForm({ slug, defaultValues, onSuccess, onCancel }: Courie
                   name="phone"
                   placeholder="(11) 99999-9999"
                   value={phone}
-                  onChange={(e) => setPhone(formatPhone(e.target.value))}
-                  required
-                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                  onChange={(e) => {
+                    setErrors((prev) => ({ ...prev, phone: "" }));
+                    setPhone(formatPhone(e.target.value));
+                  }}
+                  className={cn(
+                    "h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary transition-colors",
+                    errors.phone && "border-rose-500 bg-rose-50/20 focus-visible:ring-rose-500"
+                  )}
                 />
+                {errors.phone && (
+                  <p className="text-[11px] font-medium text-rose-500">{errors.phone}</p>
+                )}
               </div>
 
               <div className="space-y-1.5">

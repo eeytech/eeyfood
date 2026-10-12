@@ -1204,7 +1204,7 @@ export function CustomerDetailClient({
             {/* Botão limpar filtros se ativo */}
             {isFilteringOrders && (
               <div className="flex items-center justify-between pt-2">
-                <span className="text-xs font-medium text-amber-600">
+                <span className="text-xs font-medium text-primary">
                   Filtros aplicados ({filteredOrders.length} resultado
                   {filteredOrders.length !== 1 ? "s" : ""})
                 </span>
@@ -1878,7 +1878,7 @@ export function CustomerDetailClient({
             {/* Aviso e botão de limpar filtros */}
             {isFilteringInteractions && (
               <div className="flex items-center justify-between pt-2">
-                <span className="text-xs font-medium text-amber-600">
+                <span className="text-xs font-medium text-primary">
                   Filtros aplicados ({filteredInteractions.length} resultado
                   {filteredInteractions.length !== 1 ? "s" : ""})
                 </span>

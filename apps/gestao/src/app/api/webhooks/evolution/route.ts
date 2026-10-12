@@ -90,7 +90,6 @@ export async function POST(request: Request) {
         evolutionApiKey: aiSettingsTable.evolutionApiKey,
         aiProvider: aiSettingsTable.aiProvider,
         geminiApiKey: aiSettingsTable.geminiApiKey,
-        groqApiKey: aiSettingsTable.groqApiKey,
         openaiApiKey: aiSettingsTable.openaiApiKey,
         isBotActive: aiSettingsTable.isBotActive,
         isBotPaused: aiSettingsTable.isBotPaused,
@@ -116,7 +115,6 @@ export async function POST(request: Request) {
           evolutionApiKey: aiSettingsTable.evolutionApiKey,
           aiProvider: aiSettingsTable.aiProvider,
           geminiApiKey: aiSettingsTable.geminiApiKey,
-          groqApiKey: aiSettingsTable.groqApiKey,
           openaiApiKey: aiSettingsTable.openaiApiKey,
           isBotActive: aiSettingsTable.isBotActive,
           isBotPaused: aiSettingsTable.isBotPaused,
@@ -159,7 +157,6 @@ export async function POST(request: Request) {
               evolutionApiKey: aiSettingsTable.evolutionApiKey,
               aiProvider: aiSettingsTable.aiProvider,
               geminiApiKey: aiSettingsTable.geminiApiKey,
-              groqApiKey: aiSettingsTable.groqApiKey,
               openaiApiKey: aiSettingsTable.openaiApiKey,
               isBotActive: aiSettingsTable.isBotActive,
               isBotPaused: aiSettingsTable.isBotPaused,
@@ -261,36 +258,7 @@ export async function POST(request: Request) {
 
         const provider = (aiSettings.aiProvider || "GOOGLE_GEMINI").toUpperCase();
 
-        // 1. Se for Groq: usa Whisper Large V3 gratuito e ultrarrápido
-        if (provider === "GROQ" && (aiSettings.groqApiKey || process.env.GROQ_API_KEY)) {
-          try {
-            const buffer = Buffer.from(base64Data, "base64");
-            const audioFile = await toFile(buffer, `audio.${ext}`, { type: mimeType });
-            const groq = new OpenAI({
-              apiKey: aiSettings.groqApiKey || process.env.GROQ_API_KEY,
-              baseURL: "https://api.groq.com/openai/v1",
-            });
-            try {
-              const transcription = await groq.audio.transcriptions.create({
-                file: audioFile,
-                model: "whisper-large-v3",
-                language: "pt",
-              });
-              messageText = transcription.text;
-            } catch {
-              const transcription = await groq.audio.transcriptions.create({
-                file: audioFile,
-                model: "whisper-large-v3-turbo",
-                language: "pt",
-              });
-              messageText = transcription.text;
-            }
-          } catch (groqErr) {
-            console.warn("[Webhook Evolution] Aviso ao transcrever com Groq:", groqErr);
-          }
-        }
-
-        // 2. Se for Google Gemini (ou fallback): usa transcrição nativa multimodal gratuita
+        // 1. Se for Google Gemini (ou fallback): usa transcrição nativa multimodal gratuita
         if (
           !messageText &&
           (provider === "GOOGLE_GEMINI" ||
@@ -335,7 +303,7 @@ export async function POST(request: Request) {
           }
         }
 
-        // 3. Fallback para OpenAI Whisper (se configurada)
+        // 2. Fallback para OpenAI Whisper (se configurada)
         if (!messageText && (aiSettings.openaiApiKey || process.env.OPENAI_API_KEY)) {
           try {
             const buffer = Buffer.from(base64Data, "base64");

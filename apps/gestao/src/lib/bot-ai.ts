@@ -34,70 +34,6 @@ const detectaHandoff = (text: string): boolean => {
 
 export const HANDOFF_SIGNAL = "__HANDOFF_REQUIRED__";
 
-// Cache simples em memória para modelos descobertos dinamicamente na Groq
-let cachedGroqModels: { models: string[]; timestamp: number } | null = null;
-const GROQ_CACHE_TTL = 1000 * 60 * 30; // 30 minutos
-
-// Modelos oficiais de produção ativos da Groq
-const DEFAULT_GROQ_MODELS = [
-  "openai/gpt-oss-20b",
-  "llama-3.1-8b-instant",
-  "llama-3.3-70b-versatile",
-];
-
-async function getAvailableGroqModels(apiKey: string): Promise<string[]> {
-  const now = Date.now();
-  if (cachedGroqModels && now - cachedGroqModels.timestamp < GROQ_CACHE_TTL) {
-    return cachedGroqModels.models;
-  }
-
-  try {
-    const client = new OpenAI({
-      apiKey,
-      baseURL: "https://api.groq.com/openai/v1",
-      timeout: 5000,
-    });
-    const res = await client.models.list();
-    const available = res.data
-      .map((m) => m.id)
-      .filter((id) => {
-        const lower = id.toLowerCase();
-        return (
-          !lower.includes("whisper") &&
-          !lower.includes("bge") &&
-          !lower.includes("guard") &&
-          !lower.includes("safeguard") &&
-          !lower.includes("orpheus") &&
-          !lower.includes("tts") &&
-          !lower.includes("clip") &&
-          !lower.includes("vision")
-        );
-      });
-
-    if (available.length > 0) {
-      const preferred = [
-        "openai/gpt-oss-20b",
-        "llama-3.1-8b-instant",
-        "llama-3.3-70b-versatile",
-      ];
-      const sorted = [
-        ...preferred.filter((p) => available.includes(p)),
-        ...available.filter((a) => !preferred.includes(a)),
-      ];
-      console.log(`[Bot AI] Modelos ativos detectados na Groq: ${sorted.join(", ")}`);
-      cachedGroqModels = { models: sorted, timestamp: now };
-      return sorted;
-    }
-  } catch (err) {
-    console.warn(
-      "[Bot AI] Aviso ao listar modelos dinâmicos da Groq:",
-      err instanceof Error ? err.message : err,
-    );
-  }
-
-  return DEFAULT_GROQ_MODELS;
-}
-
 interface ProcessarMensagemBotInput {
   slug: string;
   customerPhone: string;
@@ -147,9 +83,9 @@ export const processarMensagemBot = async ({
   }
 
   // Configuração dinâmica do provedor com fallback de modelos e provedores
-  const selectedProvider = (aiSettings.aiProvider || "GOOGLE_GEMINI").toUpperCase();
+  const rawProvider = (aiSettings.aiProvider || "GOOGLE_GEMINI").toUpperCase();
+  const selectedProvider = rawProvider === "OPENAI" ? "OPENAI" : "GOOGLE_GEMINI";
 
-  // Cache simples em memória para modelos descobertos dinamicamente na Groq
   interface ProviderConfig {
     name: string;
     apiKey: string;
@@ -172,17 +108,6 @@ export const processarMensagemBot = async ({
         models: ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash", "gemini-1.5-pro"],
       };
     }
-    if (p === "GROQ") {
-      const key = aiSettings.groqApiKey || process.env.GROQ_API_KEY || "";
-      if (!key) return null;
-      const models = await getAvailableGroqModels(key);
-      return {
-        name: "GROQ",
-        apiKey: key,
-        baseURL: "https://api.groq.com/openai/v1",
-        models,
-      };
-    }
     if (p === "OPENAI") {
       const key = aiSettings.openaiApiKey || process.env.OPENAI_API_KEY || "";
       if (!key) return null;
@@ -202,8 +127,8 @@ export const processarMensagemBot = async ({
     providerList.push(primaryProvider);
   }
 
-  // Adiciona outros provedores configurados como reserva
-  for (const alt of ["GOOGLE_GEMINI", "GROQ", "OPENAI"]) {
+  // Adiciona o outro provedor configurado como reserva se disponível
+  for (const alt of ["GOOGLE_GEMINI", "OPENAI"]) {
     if (alt !== selectedProvider) {
       const altConfig = await getProviderConfig(alt);
       if (altConfig) providerList.push(altConfig);
@@ -212,7 +137,7 @@ export const processarMensagemBot = async ({
 
   if (providerList.length === 0) {
     console.warn(
-      `[Bot AI] Nenhuma chave de API configurada para o bot no restaurante "${slug}". Acesse a aba /ai e insira sua chave gratuita do Google Gemini, Groq ou OpenAI.`,
+      `[Bot AI] Nenhuma chave de API configurada para o bot no restaurante "${slug}". Acesse a aba /ai e insira sua chave gratuita do Google Gemini ou OpenAI.`,
     );
     return null;
   }

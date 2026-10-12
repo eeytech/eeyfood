@@ -40,10 +40,16 @@ const CONSUMPTION_LABELS: Record<string, string> = {
 const TAB_LABELS: Record<string, string> = {
   overview: "Painel Geral",
   produtos: "Produtos e Opcionais",
+  horarios: "Horários e Pico",
+  clientes: "Clientes e LTV",
+  mesas: "Mesas e Salão",
+  cancelamentos: "Perdas e Descontos",
   logistica: "Logística e Entregadores",
   marketing: "Marketing — Cupons e Cashback",
   pagamentos: "Pagamentos e Custos",
   dre: "DRE — Demonstrativo de Resultado do Exercício",
+  kpis: "KPIs e BI Avançado",
+  ia: "Assistente IA",
 };
 
 interface ExportPDFButtonProps {

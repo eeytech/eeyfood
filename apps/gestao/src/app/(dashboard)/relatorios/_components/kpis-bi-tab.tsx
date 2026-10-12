@@ -35,25 +35,25 @@ const KPICard = ({
   value,
   description,
   icon: Icon,
-  badgeClass,
+  badgeClass = "bg-primary/10 text-primary border border-primary/20",
   valueClass = "text-slate-900",
 }: {
   label: string;
   value: string;
   description?: string;
   icon: React.ElementType;
-  badgeClass: string;
+  badgeClass?: string;
   valueClass?: string;
 }) => (
-  <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+  <Card className="border-slate-200/80 bg-white shadow-xs transition-all hover:border-primary/40 hover:shadow-sm">
     <CardContent className="p-4">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</span>
-        <div className={`rounded-lg p-1.5 ${badgeClass}`}>
+        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</span>
+        <div className={`rounded-xl p-2 ${badgeClass}`}>
           <Icon size={16} />
         </div>
       </div>
-      <p className={`mt-2 font-display text-2xl font-bold ${valueClass}`}>{value}</p>
+      <p className={`mt-2.5 font-display text-2xl font-bold ${valueClass}`}>{value}</p>
       {description && <p className="mt-0.5 text-xs text-slate-500">{description}</p>}
     </CardContent>
   </Card>
@@ -80,23 +80,23 @@ const KPIsBITab = ({ kpis }: KPIBiTabProps) => {
 
   return (
     <div className="space-y-6">
-      {/* KPI Cards */}
+      {/* KPI Cards com cores do tema */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 sm:gap-4">
         <KPICard
           label="LTV Médio (Lifetime Value)"
           value={fmt(kpis.ltv)}
           description="Gasto médio total por cliente ativo"
           icon={DollarSignIcon}
-          badgeClass="bg-emerald-100 text-emerald-700"
-          valueClass="text-emerald-700"
+          badgeClass="bg-primary/10 text-primary border border-primary/20"
+          valueClass="text-primary font-bold"
         />
         <KPICard
           label="Churn Rate"
           value={fmtPct(kpis.churnRate)}
           description="Clientes inativos ou em risco sobre o total"
           icon={TrendingDownIcon}
-          badgeClass={kpis.churnRate > 30 ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700"}
-          valueClass={kpis.churnRate > 30 ? "text-rose-700" : "text-amber-700"}
+          badgeClass="bg-primary/10 text-primary border border-primary/20"
+          valueClass="text-slate-800"
         />
         <KPICard
           label="CAC (Custo de Aquisição)"
@@ -107,16 +107,16 @@ const KPIsBITab = ({ kpis }: KPIBiTabProps) => {
               : "Sem gastos de marketing cadastrados"
           }
           icon={UsersIcon}
-          badgeClass="bg-blue-100 text-blue-700"
-          valueClass="text-blue-700"
+          badgeClass="bg-primary/10 text-primary border border-primary/20"
+          valueClass="text-primary font-bold"
         />
         <KPICard
           label="ROI em Cupons"
           value={kpis.roi > 0 ? fmtPct(kpis.roi) : "—"}
           description="Retorno sobre investimento em cupons"
           icon={kpis.roi >= 0 ? TrendingUpIcon : TrendingDownIcon}
-          badgeClass={kpis.roi >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}
-          valueClass={kpis.roi >= 0 ? "text-emerald-700" : "text-rose-700"}
+          badgeClass="bg-primary/10 text-primary border border-primary/20"
+          valueClass="text-primary font-bold"
         />
       </div>
 

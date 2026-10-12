@@ -1,6 +1,7 @@
 "use client";
 
-import { PackageSearchIcon } from "lucide-react";
+import { PackageSearchIcon, SearchIcon, SparklesIcon, TrendingDownIcon, TrophyIcon } from "lucide-react";
+import { useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -13,6 +14,7 @@ import {
 } from "recharts";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -31,7 +33,7 @@ const EmptyState = ({ label }: { label: string }) => (
     <div className="rounded-full bg-slate-100 p-3 text-slate-400">
       <PackageSearchIcon size={24} />
     </div>
-    <p className="font-display text-sm font-semibold text-slate-900">Nenhum registro</p>
+    <p className="font-display text-sm font-semibold text-slate-900">Nenhum registro encontrado</p>
     <p className="max-w-xs text-xs text-slate-500">{label}</p>
   </div>
 );
@@ -42,26 +44,180 @@ interface ProdutosTabProps {
 
 const ProdutosTab = ({ data }: ProdutosTabProps) => {
   const { topProducts, bottomProducts, topModifiers } = data;
+  const [search, setSearch] = useState("");
+  const [metricSort, setMetricSort] = useState<"QTY" | "REVENUE">("QTY");
+
+  const totalSoldUnits = useMemo(
+    () => topProducts.reduce((sum, p) => sum + p.totalQuantity, 0),
+    [topProducts],
+  );
+
+  const topProductLeader = topProducts[0];
+  const topModifierLeader = topModifiers[0];
+  const zeroSalesCount = bottomProducts.filter((p) => p.totalQuantity === 0).length;
+
+  const filteredTop = useMemo(() => {
+    let list = [...topProducts];
+    if (search.trim()) {
+      const q = search.toLowerCase().trim();
+      list = list.filter((p) => p.productName.toLowerCase().includes(q));
+    }
+    if (metricSort === "REVENUE") {
+      list.sort((a, b) => b.grossRevenue - a.grossRevenue);
+    } else {
+      list.sort((a, b) => b.totalQuantity - a.totalQuantity);
+    }
+    return list;
+  }, [topProducts, search, metricSort]);
+
+  const filteredBottom = useMemo(() => {
+    if (!search.trim()) return bottomProducts;
+    const q = search.toLowerCase().trim();
+    return bottomProducts.filter((p) => p.productName.toLowerCase().includes(q));
+  }, [bottomProducts, search]);
+
+  const filteredModifiers = useMemo(() => {
+    if (!search.trim()) return topModifiers;
+    const q = search.toLowerCase().trim();
+    return topModifiers.filter((m) => m.optionName.toLowerCase().includes(q));
+  }, [topModifiers, search]);
 
   return (
     <div className="space-y-6">
-      {/* Top 10 produtos — gráfico horizontal */}
-      <Card className="border-slate-200/80 bg-white shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="font-display text-base font-semibold text-slate-900">
-            Top 10 produtos mais vendidos
-          </CardTitle>
-          <CardDescription className="text-xs text-slate-500">
-            Ranking por quantidade de unidades vendidas no período
-          </CardDescription>
+      {/* KPI Cards dos Produtos com cores do tema */}
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 sm:gap-4">
+        <Card className="border-slate-200/80 bg-white shadow-xs transition-all hover:border-primary/40 hover:shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Unidades vendidas
+              </span>
+              <div className="rounded-xl border border-primary/20 bg-primary/10 p-2 text-primary">
+                <PackageSearchIcon size={16} />
+              </div>
+            </div>
+            <p className="mt-2.5 font-display text-2xl font-bold text-primary">
+              {totalSoldUnits}
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500">Total acumulado no período</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200/80 bg-white shadow-xs transition-all hover:border-primary/40 hover:shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Mais vendido
+              </span>
+              <div className="rounded-xl border border-primary/20 bg-primary/10 p-2 text-primary">
+                <TrophyIcon size={16} />
+              </div>
+            </div>
+            <p className="mt-2.5 font-display text-lg font-bold text-slate-900 truncate" title={topProductLeader?.productName ?? "—"}>
+              {topProductLeader ? topProductLeader.productName : "—"}
+            </p>
+            <p className="mt-0.5 text-xs text-primary font-medium">
+              {topProductLeader ? `${topProductLeader.totalQuantity} un. (${fmt(topProductLeader.grossRevenue)})` : "Sem vendas"}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200/80 bg-white shadow-xs transition-all hover:border-primary/40 hover:shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Opcional mais pedido
+              </span>
+              <div className="rounded-xl border border-primary/20 bg-primary/10 p-2 text-primary">
+                <SparklesIcon size={16} />
+              </div>
+            </div>
+            <p className="mt-2.5 font-display text-lg font-bold text-slate-900 truncate" title={topModifierLeader?.optionName ?? "—"}>
+              {topModifierLeader ? topModifierLeader.optionName : "—"}
+            </p>
+            <p className="mt-0.5 text-xs text-primary font-medium">
+              {topModifierLeader ? `${topModifierLeader.totalCount} seleções (${fmt(topModifierLeader.estimatedRevenue)})` : "Sem adicionais"}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200/80 bg-white shadow-xs transition-all hover:border-primary/40 hover:shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Sem saída no período
+              </span>
+              <div className="rounded-xl border border-primary/20 bg-primary/10 p-2 text-primary">
+                <TrendingDownIcon size={16} />
+              </div>
+            </div>
+            <p className="mt-2.5 font-display text-2xl font-bold text-slate-900">
+              {zeroSalesCount}
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500">Itens com 0 unidades vendidas</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Top produtos — gráfico horizontal com filtros */}
+      <Card className="border-slate-200/80 bg-white shadow-xs">
+        <CardHeader className="pb-3 border-b border-slate-100">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle className="font-display text-base font-semibold text-slate-900">
+                Ranking de produtos mais vendidos
+              </CardTitle>
+              <CardDescription className="text-xs text-slate-500">
+                Desempenho por unidades e faturamento no período
+              </CardDescription>
+            </div>
+
+            {/* Barra de Filtros */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative">
+                <SearchIcon size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar produto ou opcional..."
+                  className="h-8 w-52 pl-8 text-xs bg-slate-50/70"
+                />
+              </div>
+
+              <div className="flex items-center rounded-lg border border-slate-200 bg-slate-50/80 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setMetricSort("QTY")}
+                  className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                    metricSort === "QTY"
+                      ? "bg-white text-primary shadow-xs font-semibold"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Por unidades
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMetricSort("REVENUE")}
+                  className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                    metricSort === "REVENUE"
+                      ? "bg-white text-primary shadow-xs font-semibold"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Por faturamento
+                </button>
+              </div>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
-          {topProducts.length === 0 ? (
-            <EmptyState label="Nenhum produto vendido no período selecionado." />
+        <CardContent className="pt-4">
+          {filteredTop.length === 0 ? (
+            <EmptyState label="Nenhum produto atende aos critérios do filtro." />
           ) : (
-            <ResponsiveContainer width="100%" height={Math.max(240, topProducts.length * 44)}>
+            <ResponsiveContainer width="100%" height={Math.max(240, filteredTop.length * 44)}>
               <BarChart
-                data={topProducts}
+                data={filteredTop}
                 layout="vertical"
                 margin={{ top: 0, right: 16, left: 0, bottom: 0 }}
               >
@@ -91,12 +247,17 @@ const ProdutosTab = ({ data }: ProdutosTabProps) => {
                     fontSize: 12,
                   }}
                 />
-                <Bar dataKey="totalQuantity" name="Unidades" radius={[0, 6, 6, 0]}>
-                  {topProducts.map((_, i) => (
+                <Bar
+                  dataKey={metricSort === "REVENUE" ? "grossRevenue" : "totalQuantity"}
+                  name={metricSort === "REVENUE" ? "Receita" : "Unidades"}
+                  radius={[0, 6, 6, 0]}
+                  fill="#e41d2c"
+                >
+                  {filteredTop.map((_, i) => (
                     <Cell
                       key={i}
                       fill={i === 0 ? "#e41d2c" : i === 1 ? "#ff6b00" : "#64748b"}
-                      fillOpacity={1 - i * 0.06}
+                      fillOpacity={1 - i * 0.05}
                     />
                   ))}
                 </Bar>
@@ -118,9 +279,9 @@ const ProdutosTab = ({ data }: ProdutosTabProps) => {
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
-            {bottomProducts.length === 0 ? (
+            {filteredBottom.length === 0 ? (
               <div className="p-6">
-                <EmptyState label="Nenhum produto cadastrado." />
+                <EmptyState label="Nenhum produto cadastrado ou correspondente à busca." />
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -133,7 +294,7 @@ const ProdutosTab = ({ data }: ProdutosTabProps) => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {bottomProducts.map((p) => (
+                    {filteredBottom.map((p) => (
                       <TableRow key={p.productId} className="border-b border-slate-100 hover:bg-slate-50/60">
                         <TableCell className="font-medium text-slate-900">
                           {p.productName}
@@ -155,19 +316,19 @@ const ProdutosTab = ({ data }: ProdutosTabProps) => {
         </Card>
 
         {/* Opcionais mais pedidos */}
-        <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+        <Card className="overflow-hidden border-slate-200/80 bg-white shadow-xs">
           <CardHeader className="border-b border-slate-100 pb-3">
             <CardTitle className="font-display text-base font-semibold text-slate-900">
               Opcionais / adicionais mais pedidos
             </CardTitle>
             <CardDescription className="text-xs text-slate-500">
-              Modificadores com maior número de seleções
+              Modificadores com maior número de seleções no período
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
-            {topModifiers.length === 0 ? (
+            {filteredModifiers.length === 0 ? (
               <div className="p-6">
-                <EmptyState label="Nenhum opcional registrado no período." />
+                <EmptyState label="Nenhum opcional registrado ou correspondente à busca." />
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -181,12 +342,12 @@ const ProdutosTab = ({ data }: ProdutosTabProps) => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {topModifiers.map((m, i) => (
+                    {filteredModifiers.map((m, i) => (
                       <TableRow key={m.optionName} className="border-b border-slate-100 hover:bg-slate-50/60">
                         <TableCell className="font-mono text-xs text-slate-400">#{i + 1}</TableCell>
                         <TableCell className="font-medium text-slate-900">{m.optionName}</TableCell>
                         <TableCell className="text-right font-medium text-slate-700">{m.totalCount}</TableCell>
-                        <TableCell className="text-right font-semibold text-emerald-700">{fmt(m.estimatedRevenue)}</TableCell>
+                        <TableCell className="text-right font-semibold text-primary">{fmt(m.estimatedRevenue)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

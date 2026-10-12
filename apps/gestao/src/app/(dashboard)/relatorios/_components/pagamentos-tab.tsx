@@ -1,9 +1,11 @@
 "use client";
 
-import { ArrowDownCircleIcon, ArrowUpCircleIcon, CreditCardIcon } from "lucide-react";
+import { ArrowDownCircleIcon, ArrowUpCircleIcon, CreditCardIcon, SearchIcon } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -36,6 +38,8 @@ interface PagamentosTabProps {
 
 const PagamentosTab = ({ data }: PagamentosTabProps) => {
   const { paymentMethods, financialBreakdown, summary } = data;
+  const [transSearch, setTransSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<"ALL" | "EXPENSE" | "REVENUE">("ALL");
 
   const paymentWithLabels = paymentMethods.map((p) => ({
     ...p,
@@ -46,6 +50,18 @@ const PagamentosTab = ({ data }: PagamentosTabProps) => {
   const revenues = financialBreakdown.filter((f) => f.type === "REVENUE");
   const totalExpenses = expenses.reduce((s, e) => s + e.total, 0);
   const totalRevenues = revenues.reduce((s, r) => s + r.total, 0);
+
+  const filteredBreakdown = useMemo(() => {
+    let list = [...financialBreakdown];
+    if (transSearch.trim()) {
+      const q = transSearch.toLowerCase().trim();
+      list = list.filter((f) => (f.categoryName ?? "Sem categoria").toLowerCase().includes(q));
+    }
+    if (typeFilter !== "ALL") {
+      list = list.filter((f) => f.type === typeFilter);
+    }
+    return list;
+  }, [financialBreakdown, transSearch, typeFilter]);
 
   return (
     <div className="space-y-6">
@@ -124,28 +140,81 @@ const PagamentosTab = ({ data }: PagamentosTabProps) => {
         </Card>
 
         {/* Balanço financeiro */}
-        <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+        <Card className="overflow-hidden border-slate-200/80 bg-white shadow-xs">
           <CardHeader className="border-b border-slate-100 pb-3">
-            <CardTitle className="font-display text-base font-semibold text-slate-900">
-              Balanço operacional
-            </CardTitle>
-            <CardDescription className="text-xs text-slate-500">
-              Faturamento vs. gastos operacionais cadastrados no período
-            </CardDescription>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle className="font-display text-base font-semibold text-slate-900">
+                  Balanço operacional
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-500">
+                  Faturamento vs. gastos operacionais cadastrados no período
+                </CardDescription>
+              </div>
+
+              {/* Filtros da tabela */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative">
+                  <SearchIcon size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <Input
+                    value={transSearch}
+                    onChange={(e) => setTransSearch(e.target.value)}
+                    placeholder="Filtrar categoria..."
+                    className="h-8 w-40 pl-8 text-xs bg-slate-50/70"
+                  />
+                </div>
+
+                <div className="flex items-center rounded-lg border border-slate-200 bg-slate-50/80 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setTypeFilter("ALL")}
+                    className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+                      typeFilter === "ALL"
+                        ? "bg-white text-primary shadow-xs font-semibold"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    Todos
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTypeFilter("REVENUE")}
+                    className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+                      typeFilter === "REVENUE"
+                        ? "bg-white text-primary shadow-xs font-semibold"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    Receitas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTypeFilter("EXPENSE")}
+                    className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+                      typeFilter === "EXPENSE"
+                        ? "bg-white text-primary shadow-xs font-semibold"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    Despesas
+                  </button>
+                </div>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="space-y-5 p-5">
-            {/* Summary row */}
+            {/* Summary row com cores do tema */}
             <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5 shadow-2xs">
+                <span className="text-xs font-semibold uppercase tracking-wide text-primary">
                   Receita de pedidos
                 </span>
-                <p className="mt-1 font-display text-lg font-bold text-emerald-700">
+                <p className="mt-1 font-display text-lg font-bold text-primary">
                   {fmt(summary.grossRevenue)}
                 </p>
               </div>
               <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Gastos operacionais
                 </span>
                 <p className="mt-1 font-display text-lg font-bold text-rose-700">
@@ -153,13 +222,13 @@ const PagamentosTab = ({ data }: PagamentosTabProps) => {
                 </p>
               </div>
               <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Balanço líquido
                 </span>
                 <p
                   className={`mt-1 font-display text-lg font-bold ${
                     summary.grossRevenue + totalRevenues - totalExpenses >= 0
-                      ? "text-blue-700"
+                      ? "text-primary"
                       : "text-rose-700"
                   }`}
                 >
@@ -169,9 +238,9 @@ const PagamentosTab = ({ data }: PagamentosTabProps) => {
             </div>
 
             {/* Breakdown table */}
-            {financialBreakdown.length === 0 ? (
+            {filteredBreakdown.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 py-8 text-center text-xs text-slate-500">
-                Nenhuma transação financeira registrada no período.
+                Nenhuma transação financeira encontrada para os filtros selecionados.
               </div>
             ) : (
               <div className="overflow-x-auto rounded-xl border border-slate-200/80">
@@ -185,7 +254,7 @@ const PagamentosTab = ({ data }: PagamentosTabProps) => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {financialBreakdown.map((f, i) => (
+                    {filteredBreakdown.map((f, i) => (
                       <TableRow key={i} className="border-b border-slate-100 hover:bg-slate-50/60">
                         <TableCell className="font-medium text-slate-900">
                           {f.categoryName ?? "Sem categoria"}
@@ -197,7 +266,7 @@ const PagamentosTab = ({ data }: PagamentosTabProps) => {
                               Despesa
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200/80 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+                            <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
                               <ArrowUpCircleIcon size={12} />
                               Receita
                             </span>

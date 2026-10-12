@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Loader2Icon } from "lucide-react";
+import { toast } from "sonner";
 
 import {
   createVehicleAction,
@@ -18,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import type { CompanyVehicle } from "@fsw/db";
 
 interface VehicleFormProps {
@@ -35,11 +37,30 @@ export function VehicleForm({
 }: VehicleFormProps) {
   const [isPending, startTransition] = useTransition();
   const [status, setStatus] = useState<string>(defaultValues?.status ?? "ACTIVE");
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     formData.set("status", status);
+
+    const newErrors: Record<string, string> = {};
+    const brand = formData.get("brand")?.toString().trim();
+    const model = formData.get("model")?.toString().trim();
+    const licensePlate = formData.get("licensePlate")?.toString().trim();
+
+    if (!brand) newErrors.brand = "Informe a marca do veículo.";
+    if (!model) newErrors.model = "Informe o modelo do veículo.";
+    if (!licensePlate) newErrors.licensePlate = "Informe a placa do veículo.";
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      const firstError = Object.values(newErrors)[0];
+      toast.error(firstError || "Por favor, preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    setErrors({});
 
     startTransition(async () => {
       if (defaultValues) {
@@ -53,7 +74,7 @@ export function VehicleForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-0 pt-1">
+    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-0 pt-1">
       <div className="max-h-[65vh] space-y-5 overflow-y-auto pr-1">
         {/* ── Identificação ── */}
         <div>
@@ -78,9 +99,15 @@ export function VehicleForm({
                   name="brand"
                   placeholder="Ex.: Honda"
                   defaultValue={defaultValues?.brand}
-                  required
-                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                  onChange={() => setErrors((prev) => ({ ...prev, brand: "" }))}
+                  className={cn(
+                    "h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary transition-colors",
+                    errors.brand && "border-rose-500 bg-rose-50/20 focus-visible:ring-rose-500"
+                  )}
                 />
+                {errors.brand && (
+                  <p className="text-[11px] font-medium text-rose-500">{errors.brand}</p>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label
@@ -94,9 +121,15 @@ export function VehicleForm({
                   name="model"
                   placeholder="Ex.: CG 160"
                   defaultValue={defaultValues?.model}
-                  required
-                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                  onChange={() => setErrors((prev) => ({ ...prev, model: "" }))}
+                  className={cn(
+                    "h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary transition-colors",
+                    errors.model && "border-rose-500 bg-rose-50/20 focus-visible:ring-rose-500"
+                  )}
                 />
+                {errors.model && (
+                  <p className="text-[11px] font-medium text-rose-500">{errors.model}</p>
+                )}
               </div>
             </div>
 
@@ -160,9 +193,15 @@ export function VehicleForm({
                 name="licensePlate"
                 placeholder="ABC-1234"
                 defaultValue={defaultValues?.licensePlate}
-                required
-                className="h-10 rounded-xl border-slate-200 bg-white uppercase text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                onChange={() => setErrors((prev) => ({ ...prev, licensePlate: "" }))}
+                className={cn(
+                  "h-10 rounded-xl border-slate-200 bg-white uppercase text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary transition-colors",
+                  errors.licensePlate && "border-rose-500 bg-rose-50/20 focus-visible:ring-rose-500"
+                )}
               />
+              {errors.licensePlate && (
+                <p className="text-[11px] font-medium text-rose-500">{errors.licensePlate}</p>
+              )}
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">

@@ -178,13 +178,12 @@ export async function buscarStatusWhatsAppAction(
     );
 
     const isBotActive = aiSettings?.isBotActive ?? false;
-    const aiProvider = (aiSettings?.aiProvider || "GOOGLE_GEMINI").toUpperCase();
+    const rawAiProvider = (aiSettings?.aiProvider || "GOOGLE_GEMINI").toUpperCase();
+    const aiProvider = rawAiProvider === "OPENAI" ? "OPENAI" : "GOOGLE_GEMINI";
     const hasAiApiKey = Boolean(
       (aiProvider === "GOOGLE_GEMINI" && (aiSettings?.geminiApiKey || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY)) ||
-      (aiProvider === "GROQ" && (aiSettings?.groqApiKey || process.env.GROQ_API_KEY)) ||
       (aiProvider === "OPENAI" && (aiSettings?.openaiApiKey || process.env.OPENAI_API_KEY)) ||
       aiSettings?.geminiApiKey ||
-      aiSettings?.groqApiKey ||
       aiSettings?.openaiApiKey ||
       process.env.GEMINI_API_KEY ||
       process.env.GOOGLE_API_KEY,

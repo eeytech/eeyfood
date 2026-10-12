@@ -15,7 +15,7 @@ import { z } from "zod";
 
 export type TestAiKeyResult = {
   success: boolean;
-  provider: "GOOGLE_GEMINI" | "GROQ" | "OPENAI";
+  provider: "GOOGLE_GEMINI" | "OPENAI";
   message?: string;
   error?: string;
   modelTested?: string;
@@ -28,7 +28,6 @@ import { sincronizarWebhookAction } from "./ai/whatsapp-actions";
 const aiSettingsSchema = z.object({
   aiProvider: z.string().default("GOOGLE_GEMINI"),
   geminiApiKey: z.string().trim().optional(),
-  groqApiKey: z.string().trim().optional(),
   openaiApiKey: z.string().trim().optional(),
   evolutionInstanceName: z.string().trim().optional(),
   evolutionApiKey: z.string().trim().optional(),
@@ -64,10 +63,12 @@ export const updateAiSettingsAction = async (
   const systemPrompt =
     rawPrompt && rawPrompt.length >= 10 ? rawPrompt : DEFAULT_AI_SYSTEM_PROMPT;
 
+  const rawProvider = getStringValue(formData.get("aiProvider"));
+  const aiProvider = rawProvider === "OPENAI" ? "OPENAI" : "GOOGLE_GEMINI";
+
   const parsedData = aiSettingsSchema.safeParse({
-    aiProvider: getStringValue(formData.get("aiProvider")) || "GOOGLE_GEMINI",
+    aiProvider,
     geminiApiKey: getStringValue(formData.get("geminiApiKey")),
-    groqApiKey: getStringValue(formData.get("groqApiKey")),
     openaiApiKey: getStringValue(formData.get("openaiApiKey")),
     evolutionInstanceName,
     evolutionApiKey,
@@ -135,7 +136,7 @@ export const reativarTodosClientesAction = async (slug: string) => {
 };
 
 export const testAiProviderKeyAction = async (
-  provider: "GOOGLE_GEMINI" | "GROQ" | "OPENAI",
+  provider: "GOOGLE_GEMINI" | "OPENAI",
   apiKey: string,
 ): Promise<TestAiKeyResult> => {
   const cleanedKey = (apiKey || "").trim().replace(/^["']|["']$/g, "");
@@ -150,87 +151,6 @@ export const testAiProviderKeyAction = async (
   const startTime = Date.now();
 
   try {
-    if (provider === "GROQ") {
-      const client = new OpenAI({
-        apiKey: cleanedKey,
-        baseURL: "https://api.groq.com/openai/v1",
-        timeout: 10000,
-      });
-
-      // Busca dinamicamente os modelos ativos e liberados para esta chave na Groq
-      const modelsRes = await client.models.list();
-      const availableModels = (modelsRes?.data || [])
-        .map((m) => m.id)
-        .filter((id) => {
-          const lower = id.toLowerCase();
-          return (
-            !lower.includes("whisper") &&
-            !lower.includes("guard") &&
-            !lower.includes("safeguard") &&
-            !lower.includes("bge") &&
-            !lower.includes("tts") &&
-            !lower.includes("clip") &&
-            !lower.includes("vision")
-          );
-        });
-
-      if (!availableModels || availableModels.length === 0) {
-        return {
-          success: false,
-          provider: "GROQ",
-          error: "Chave conectou à Groq, mas nenhum modelo de chat de texto está liberado nesta conta.",
-        };
-      }
-
-      // Prioridade de modelos rápidos e ativos
-      const preferred = [
-        "openai/gpt-oss-20b",
-        "llama-3.1-8b-instant",
-        "llama-3.3-70b-versatile",
-      ];
-      const sortedCandidates = [
-        ...preferred.filter((p) => availableModels.includes(p)),
-        ...availableModels.filter((a) => !preferred.includes(a)),
-      ];
-
-      let modelTested = "";
-      let testSuccess = false;
-      let lastTestErr: unknown = null;
-
-      // Testa a geração com os melhores modelos candidatos disponíveis
-      for (const candidate of sortedCandidates.slice(0, 3)) {
-        try {
-          await client.chat.completions.create({
-            model: candidate,
-            messages: [{ role: "user", content: "Diga apenas: OK" }],
-            max_tokens: 5,
-            temperature: 0,
-          });
-          modelTested = candidate;
-          testSuccess = true;
-          break;
-        } catch (err) {
-          lastTestErr = err;
-        }
-      }
-
-      if (!testSuccess) {
-        throw (
-          lastTestErr ||
-          new Error("Não foi possível gerar resposta com os modelos disponíveis da Groq.")
-        );
-      }
-
-      const responseTimeMs = Date.now() - startTime;
-      return {
-        success: true,
-        provider: "GROQ",
-        modelTested,
-        responseTimeMs,
-        message: `Chave da Groq válida! Conexão estabelecida com sucesso com o modelo ${modelTested} (${(responseTimeMs / 1000).toFixed(2)}s).`,
-      };
-    }
-
     if (provider === "GOOGLE_GEMINI") {
       const client = new OpenAI({
         apiKey: cleanedKey,
@@ -299,30 +219,7 @@ export const testAiProviderKeyAction = async (
     const rawMsg = err instanceof Error ? err.message : String(err);
     let friendly = rawMsg;
 
-    if (provider === "GROQ") {
-      if (
-        rawMsg.includes("401") ||
-        rawMsg.toLowerCase().includes("invalid api key") ||
-        rawMsg.toLowerCase().includes("invalid_api_key")
-      ) {
-        friendly =
-          "Chave da Groq inválida ou revogada (Erro 401). Verifique a chave no console https://console.groq.com/keys.";
-      } else if (
-        rawMsg.includes("429") ||
-        rawMsg.toLowerCase().includes("rate limit") ||
-        rawMsg.toLowerCase().includes("quota")
-      ) {
-        friendly =
-          "Limite de requisições excedido na Groq (Erro 429). Aguarde alguns instantes.";
-      } else if (
-        rawMsg.includes("404") ||
-        rawMsg.toLowerCase().includes("does not exist") ||
-        rawMsg.toLowerCase().includes("model")
-      ) {
-        friendly =
-          "Nenhum modelo compatível encontrado na sua conta da Groq (Erro 404). Verifique as permissões de modelos no console https://console.groq.com/docs/models.";
-      }
-    } else if (provider === "GOOGLE_GEMINI") {
+    if (provider === "GOOGLE_GEMINI") {
       if (
         rawMsg.toLowerCase().includes("api_key_invalid") ||
         rawMsg.includes("400")

@@ -48,27 +48,27 @@ const KPICard = ({
   value,
   subtext,
   icon: Icon,
-  badgeClass,
+  badgeClass = "bg-primary/10 text-primary border border-primary/20",
   valueClass = "text-slate-900",
 }: {
   label: string;
   value: string;
   subtext?: string;
   icon: React.ElementType;
-  badgeClass: string;
+  badgeClass?: string;
   valueClass?: string;
 }) => (
-  <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+  <Card className="border-slate-200/80 bg-white shadow-xs transition-all hover:border-primary/40 hover:shadow-sm">
     <CardContent className="p-4">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
           {label}
         </span>
-        <div className={`rounded-lg p-1.5 ${badgeClass}`}>
+        <div className={`rounded-xl p-2 ${badgeClass}`}>
           <Icon size={16} />
         </div>
       </div>
-      <p className={`mt-2 font-display text-2xl font-bold ${valueClass}`}>{value}</p>
+      <p className={`mt-2.5 font-display text-2xl font-bold ${valueClass}`}>{value}</p>
       {subtext && <p className="mt-0.5 text-xs text-slate-500">{subtext}</p>}
     </CardContent>
   </Card>
@@ -94,55 +94,55 @@ const OverviewTab = ({ data }: OverviewTabProps) => {
 
   return (
     <div className="space-y-6">
-      {/* KPI Cards */}
+      {/* KPI Cards com cores do tema */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 sm:gap-4">
         <KPICard
           label="Faturamento bruto"
           value={fmt(summary.grossRevenue)}
           subtext="Receita de todos os pedidos"
           icon={ReceiptIcon}
-          badgeClass="bg-primary/10 text-primary"
-          valueClass="text-primary"
+          badgeClass="bg-primary/10 text-primary border border-primary/20"
+          valueClass="text-primary font-bold"
         />
         <KPICard
           label="Custo estimado"
           value={fmt(summary.estimatedCost)}
           subtext="CMV e insumos calculados"
           icon={TrendingDownIcon}
-          badgeClass="bg-amber-100 text-amber-700"
-          valueClass="text-amber-700"
+          badgeClass="bg-primary/10 text-primary border border-primary/20"
+          valueClass="text-slate-800"
         />
         <KPICard
           label="Lucro líquido"
           value={fmt(summary.estimatedProfit)}
           subtext="Resultado bruto menos CMV"
           icon={TrendingUpIcon}
-          badgeClass="bg-emerald-100 text-emerald-700"
-          valueClass="text-emerald-700"
+          badgeClass="bg-primary/10 text-primary border border-primary/20"
+          valueClass="text-primary font-bold"
         />
         <KPICard
           label="Ticket médio"
           value={fmt(summary.avgTicket)}
           subtext="Média por pedido fechado"
           icon={BarChart3Icon}
-          badgeClass="bg-blue-100 text-blue-700"
-          valueClass="text-blue-700"
+          badgeClass="bg-primary/10 text-primary border border-primary/20"
+          valueClass="text-slate-800"
         />
         <KPICard
           label="Total de pedidos"
           value={String(summary.totalOrders)}
           subtext="Pedidos pagos no período"
           icon={PackageSearchIcon}
-          badgeClass="bg-purple-100 text-purple-700"
-          valueClass="text-purple-700"
+          badgeClass="bg-primary/10 text-primary border border-primary/20"
+          valueClass="text-primary font-bold"
         />
         <KPICard
           label="Margem de lucro"
           value={`${summary.profitMargin.toFixed(1)}%`}
           subtext="Rentabilidade operacional"
           icon={PercentIcon}
-          badgeClass="bg-indigo-100 text-indigo-700"
-          valueClass="text-indigo-700"
+          badgeClass="bg-primary/10 text-primary border border-primary/20"
+          valueClass="text-slate-800"
         />
       </div>
 

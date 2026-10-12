@@ -1191,7 +1191,7 @@ export function FinanceiroClient({
                       {transacoes.length} lançamento{transacoes.length !== 1 ? "s" : ""}
                     </span>
                     {isFiltering && (
-                      <span className="text-[11px] font-medium text-amber-600">
+                      <span className="text-[11px] font-medium text-primary">
                         (Filtros aplicados)
                       </span>
                     )}

@@ -175,7 +175,7 @@ export function DeliveryFeeRuleForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-0 pt-1">
+    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-0 pt-1">
       <div className="max-h-[65vh] space-y-4 overflow-y-auto pr-1">
         {/* Nome da Zona */}
         <div className="space-y-1.5">

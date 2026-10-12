@@ -294,7 +294,7 @@ function AddRecipeItemDialog({
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedId) {
-      toast.warning("Selecione um insumo.");
+      toast.error("Por favor, preencha todos os campos obrigatórios.");
       return;
     }
     const parsed = parseFloat(qty);
@@ -322,7 +322,7 @@ function AddRecipeItemDialog({
         <form onSubmit={handleAdd}>
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-slate-900">
-              Adicionar Ingrediente à Ficha Técnica
+              Cadastrar Ingrediente à Ficha Técnica
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
               Vincule um insumo do estoque para dar baixa automática na venda deste produto.
@@ -413,11 +413,11 @@ function AddRecipeItemDialog({
                 </Button>
                 <Button
                   type="submit"
-                  disabled={isPending || !selectedId}
+                  disabled={isPending}
                   className="h-9 gap-1.5 bg-primary text-xs font-semibold text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/25"
                 >
                   {isPending && <Loader2Icon size={14} className="animate-spin" />}
-                  Adicionar Ingrediente
+                  Cadastrar Ingrediente
                 </Button>
               </DialogFooter>
             </>
@@ -495,7 +495,7 @@ export function RecipeManager({ slug, productId }: RecipeManagerProps) {
         onClick={() => setAdding(true)}
       >
         <PlusIcon size={14} />
-        Adicionar ingrediente
+        Cadastrar Ingrediente
       </Button>
 
       <AddRecipeItemDialog

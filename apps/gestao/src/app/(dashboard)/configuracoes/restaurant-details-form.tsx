@@ -420,76 +420,146 @@ export const RestaurantDetailsForm = ({
 
           {/* ── Imagens e Mídia ────────────────────────────── */}
           <div className="grid gap-5 sm:grid-cols-2 pt-1">
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-slate-700">
-                Logo do Restaurante
+                Logo do Restaurante (opcional)
               </Label>
-              <div
-                className="relative flex aspect-square w-32 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 transition hover:border-slate-300 hover:bg-slate-100"
-                onClick={() => avatarInputRef.current?.click()}
-              >
-                {avatarPreview ? (
-                  <Image
-                    src={avatarPreview}
-                    alt="Preview do logo"
-                    fill
-                    className="object-cover"
-                    unoptimized
-                  />
-                ) : (
-                  <UploadIcon size={20} className="text-slate-400" />
-                )}
-                <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition hover:opacity-100">
-                  <UploadIcon size={20} className="text-white" />
+              <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-slate-50/60 p-2.5">
+                <div
+                  onClick={() => avatarInputRef.current?.click()}
+                  className="relative flex h-14 w-14 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-slate-200 bg-white transition hover:border-slate-300 hover:bg-slate-100"
+                >
+                  {avatarPreview ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={avatarPreview}
+                      alt="Preview do logo"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <UploadIcon size={18} className="text-slate-400" />
+                  )}
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition hover:opacity-100">
+                    <UploadIcon size={16} className="text-white" />
+                  </div>
                 </div>
+
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => avatarInputRef.current?.click()}
+                      disabled={isPending}
+                    >
+                      <UploadIcon size={12} className="mr-1" />
+                      Carregar imagem
+                    </Button>
+                    {avatarPreview && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                        onClick={() => {
+                          setAvatarPreview("");
+                          if (avatarInputRef.current) avatarInputRef.current.value = "";
+                        }}
+                        disabled={isPending}
+                      >
+                        Remover
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-slate-500">
+                    PNG, JPG ou WEBP até 2MB.
+                  </p>
+                </div>
+
+                <input
+                  ref={avatarInputRef}
+                  id="avatarFile"
+                  name="avatarFile"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={isPending}
+                  onChange={(e) => handleImageChange(e, setAvatarPreview)}
+                />
               </div>
-              <p className="text-[11px] text-slate-500">Formatos JPG, PNG ou WEBP. Máx. 2 MB.</p>
-              <input
-                ref={avatarInputRef}
-                id="avatarFile"
-                name="avatarFile"
-                type="file"
-                accept="image/*"
-                className="hidden"
-                disabled={isPending}
-                onChange={(e) => handleImageChange(e, setAvatarPreview)}
-              />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-slate-700">
-                Banner de Capa
+                Banner de Capa (opcional)
               </Label>
-              <div
-                className="relative flex h-32 w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 transition hover:border-slate-300 hover:bg-slate-100"
-                onClick={() => coverInputRef.current?.click()}
-              >
-                {coverPreview ? (
-                  <Image
-                    src={coverPreview}
-                    alt="Preview da capa"
-                    fill
-                    className="object-cover"
-                    unoptimized
-                  />
-                ) : (
-                  <UploadIcon size={20} className="text-slate-400" />
-                )}
-                <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition hover:opacity-100">
-                  <UploadIcon size={20} className="text-white" />
+              <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-slate-50/60 p-2.5">
+                <div
+                  onClick={() => coverInputRef.current?.click()}
+                  className="relative flex h-14 w-14 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-slate-200 bg-white transition hover:border-slate-300 hover:bg-slate-100"
+                >
+                  {coverPreview ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={coverPreview}
+                      alt="Preview da capa"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <UploadIcon size={18} className="text-slate-400" />
+                  )}
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition hover:opacity-100">
+                    <UploadIcon size={16} className="text-white" />
+                  </div>
                 </div>
+
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => coverInputRef.current?.click()}
+                      disabled={isPending}
+                    >
+                      <UploadIcon size={12} className="mr-1" />
+                      Carregar imagem
+                    </Button>
+                    {coverPreview && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                        onClick={() => {
+                          setCoverPreview("");
+                          if (coverInputRef.current) coverInputRef.current.value = "";
+                        }}
+                        disabled={isPending}
+                      >
+                        Remover
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-slate-500">
+                    PNG, JPG ou WEBP até 2MB.
+                  </p>
+                </div>
+
+                <input
+                  ref={coverInputRef}
+                  id="coverFile"
+                  name="coverFile"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={isPending}
+                  onChange={(e) => handleImageChange(e, setCoverPreview)}
+                />
               </div>
-              <p className="text-[11px] text-slate-500">Imagem panorâmica para topo do cardápio digital.</p>
-              <input
-                ref={coverInputRef}
-                id="coverFile"
-                name="coverFile"
-                type="file"
-                accept="image/*"
-                className="hidden"
-                disabled={isPending}
-                onChange={(e) => handleImageChange(e, setCoverPreview)}
-              />
             </div>
           </div>
 

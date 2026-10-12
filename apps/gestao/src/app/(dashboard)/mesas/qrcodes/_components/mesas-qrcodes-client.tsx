@@ -17,12 +17,12 @@ import {
   ZoomInIcon,
   ZoomOutIcon,
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
-import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
+import { QRCodeSVG } from "qrcode.react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { useTheme } from "@/components/theme-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,20 +48,13 @@ interface MesasQrCodesClientProps {
 type CardTemplate = "TOTEM_ACRYLIC" | "STICKER_COMPACT" | "DARK_ELEGANT" | "TENT_FOLDABLE";
 type GridDistribution = "1_PER_PAGE" | "2_PER_PAGE" | "4_PER_PAGE" | "6_PER_PAGE";
 
-const COLOR_PALETTES = [
-  { label: "Preto Clássico", value: "#0f172a" },
-  { label: "Azul Marinho", value: "#1e3a8a" },
-  { label: "Verde Esmeralda", value: "#065f46" },
-  { label: "Dourado Nobre", value: "#854d0e" },
-  { label: "Vinho Elegante", value: "#881337" },
-  { label: "Laranja Restaurante", value: "#c2410c" },
-];
-
 export function MesasQrCodesClient({
   slug,
   restaurant,
   tables,
 }: MesasQrCodesClientProps) {
+  const { currentThemeConfig } = useTheme();
+
   // Sales URL
   const defaultSalesUrl =
     process.env.NEXT_PUBLIC_VENDAS_URL ||
@@ -71,7 +64,7 @@ export function MesasQrCodesClient({
   // Template & Layout
   const [template, setTemplate] = useState<CardTemplate>("TOTEM_ACRYLIC");
   const [gridDistribution, setGridDistribution] = useState<GridDistribution>("4_PER_PAGE");
-  const [primaryColor, setPrimaryColor] = useState("#0f172a");
+  const [primaryColor, setPrimaryColor] = useState(currentThemeConfig.hex || "#0f172a");
 
   // Visual toggles
   const [showLogo, setShowLogo] = useState(true);
@@ -95,6 +88,19 @@ export function MesasQrCodesClient({
   const [tableSearch, setTableSearch] = useState("");
   const [zoomLevel, setZoomLevel] = useState(100);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+
+  const colorPalettes = useMemo(
+    () => [
+      { label: "Cor do Tema", value: currentThemeConfig.hex },
+      { label: "Preto Clássico", value: "#0f172a" },
+      { label: "Azul Marinho", value: "#1e3a8a" },
+      { label: "Verde Esmeralda", value: "#065f46" },
+      { label: "Dourado Nobre", value: "#854d0e" },
+      { label: "Vinho Elegante", value: "#881337" },
+      { label: "Laranja Restaurante", value: "#c2410c" },
+    ],
+    [currentThemeConfig.hex],
+  );
 
   // Filtered tables to display
   const displayedTables = useMemo(() => {
@@ -152,180 +158,548 @@ export function MesasQrCodesClient({
     }
   };
 
-  // Trigger print
-  const handlePrint = () => {
-    window.print();
-  };
+  // Pagination for A4 sheets
+  const itemsPerPage =
+    gridDistribution === "1_PER_PAGE"
+      ? 1
+      : gridDistribution === "2_PER_PAGE"
+        ? 2
+        : gridDistribution === "4_PER_PAGE"
+          ? 4
+          : 6;
 
-  // Download high-resolution PNG for a specific table
-  const handleDownloadPng = (table: DiningTable) => {
-    try {
-      const canvas = document.getElementById(`qr-canvas-${table.id}`) as HTMLCanvasElement;
-      if (!canvas) {
-        toast.error("Canvas do QR Code não encontrado.");
+  const pages = useMemo(() => {
+    const chunks: DiningTable[][] = [];
+    for (let i = 0; i < displayedTables.length; i += itemsPerPage) {
+      chunks.push(displayedTables.slice(i, i + itemsPerPage));
+    }
+    return chunks;
+  }, [displayedTables, itemsPerPage]);
+
+  // Dynamic runtime loader for html2canvas (matches menu print screen)
+  const loadHtml2Canvas = (): Promise<any> => {
+    if (typeof window === "undefined") return Promise.resolve(null);
+    const win = window as any;
+    if (win.html2canvas) return Promise.resolve(win.html2canvas);
+
+    return new Promise((resolve, reject) => {
+      const existing = document.getElementById("html2canvas-lib");
+      if (existing) {
+        existing.addEventListener("load", () => resolve((window as any).html2canvas));
+        existing.addEventListener("error", reject);
         return;
       }
 
-      const pngUrl = canvas.toDataURL("image/png");
-      const downloadLink = document.createElement("a");
-      downloadLink.href = pngUrl;
-      downloadLink.download = `qrcode-${slug}-${table.name.toLowerCase().replace(/\s+/g, "-")}.png`;
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      document.body.removeChild(downloadLink);
+      const script = document.createElement("script");
+      script.id = "html2canvas-lib";
+      script.src = "/html2canvas.min.js";
+      script.onload = () => resolve((window as any).html2canvas);
+      script.onerror = () => {
+        const cdnScript = document.createElement("script");
+        cdnScript.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+        cdnScript.onload = () => resolve((window as any).html2canvas);
+        cdnScript.onerror = () => reject(new Error("Não foi possível carregar o renderizador de PDF."));
+        document.body.appendChild(cdnScript);
+      };
+      document.body.appendChild(script);
+    });
+  };
 
-      toast.success(`QR Code da ${table.name} baixado em PNG!`);
+  // Isolated iframe print with clean A4 page breaks (model from menu print)
+  const handlePrint = async () => {
+    const pageElements = document.querySelectorAll<HTMLElement>(".printable-table-page");
+    if (!pageElements.length) {
+      window.print();
+      return;
+    }
+
+    try {
+      // Remove any existing print iframe
+      const oldIframe = document.getElementById("qrcodes-print-iframe");
+      if (oldIframe) {
+        oldIframe.remove();
+      }
+
+      const iframe = document.createElement("iframe");
+      iframe.id = "qrcodes-print-iframe";
+      iframe.style.position = "fixed";
+      iframe.style.left = "-10000px";
+      iframe.style.top = "0";
+      iframe.style.width = "1024px";
+      iframe.style.height = "1024px";
+      iframe.style.border = "none";
+      iframe.style.opacity = "0";
+      iframe.style.pointerEvents = "none";
+      document.body.appendChild(iframe);
+
+      const doc = iframe.contentWindow?.document;
+      if (!doc) {
+        window.print();
+        return;
+      }
+
+      let styles = "";
+      document.querySelectorAll("link[rel='stylesheet'], style").forEach((styleNode) => {
+        styles += styleNode.outerHTML;
+      });
+
+      // Clone page elements, strip non-print items, and force eager image loading
+      const tempWrapper = document.createElement("div");
+      pageElements.forEach((el) => {
+        const clone = el.cloneNode(true) as HTMLElement;
+        clone.querySelectorAll(".no-print").forEach((np) => np.remove());
+        clone.querySelectorAll("img").forEach((img) => {
+          img.setAttribute("loading", "eager");
+          img.setAttribute("decoding", "sync");
+        });
+        tempWrapper.appendChild(clone);
+      });
+      const pagesHtml = tempWrapper.innerHTML;
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+
+      doc.open();
+      doc.write(`
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+          <head>
+            <meta charset="utf-8" />
+            <base href="${origin}/" />
+            <title>Imprimir QR Codes de Mesas - ${restaurant.name}</title>
+            ${styles}
+            <style>
+              @page {
+                size: A4 portrait;
+                margin: 0 !important;
+              }
+              html, body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+                overflow: visible !important;
+                height: auto !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+              }
+              .printable-table-page {
+                box-shadow: none !important;
+                margin: 0 auto !important;
+                border: none !important;
+                width: 210mm !important;
+                min-height: 297mm !important;
+                height: auto !important;
+                page-break-after: always !important;
+                break-after: page !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                box-sizing: border-box !important;
+                padding: 8mm !important;
+                overflow: visible !important;
+                transform: none !important;
+              }
+              .printable-table-page:last-child {
+                page-break-after: auto !important;
+                break-after: auto !important;
+              }
+              .table-card-print {
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+              }
+            </style>
+          </head>
+          <body>
+            ${pagesHtml}
+          </body>
+        </html>
+      `);
+      doc.close();
+
+      const waitForImages = async () => {
+        const imgs = Array.from(doc.images);
+        if (imgs.length === 0) return;
+        const promises = imgs.map((img) => {
+          if (img.complete && img.naturalHeight > 0) return Promise.resolve();
+          return new Promise<void>((resolve) => {
+            img.onload = () => resolve();
+            img.onerror = () => resolve();
+            setTimeout(resolve, 3500);
+          });
+        });
+        await Promise.all(promises);
+      };
+
+      await waitForImages();
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
     } catch (err) {
-      console.error(err);
-      toast.error("Erro ao gerar imagem PNG.");
+      console.error("Erro ao imprimir QR codes:", err);
+      window.print();
     }
   };
 
-  // Download PDF with jsPDF
+  // High-fidelity PDF export with html2canvas and jsPDF (model from menu print)
   const handleDownloadPdf = async () => {
+    const pageElements = document.querySelectorAll<HTMLElement>(".printable-table-page");
+    if (!pageElements.length) {
+      toast.error("Nenhuma mesa selecionada para exportar.");
+      return;
+    }
+
+    const zoomWrapper = document.getElementById("qrcodes-preview-zoom-wrapper");
+    const prevTransform = zoomWrapper?.style.transform;
+
     try {
       setIsExportingPdf(true);
-      toast.info("Gerando PDF com os displays das mesas...");
+      toast.info(`Gerando PDF com ${pageElements.length} folha(s) em alta qualidade...`);
+
+      if (zoomWrapper) {
+        zoomWrapper.style.transform = "none";
+      }
 
       const { jsPDF } = await import("jspdf");
+      const html2canvas = await loadHtml2Canvas();
+
+      if (!html2canvas) {
+        throw new Error("Renderizador não carregado.");
+      }
 
       const doc = new jsPDF({
         orientation: "portrait",
         unit: "mm",
         format: "a4",
+        compress: true,
       });
 
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 8;
+      const pdfWidthMm = doc.internal.pageSize.getWidth();
+      const pdfHeightMm = doc.internal.pageSize.getHeight();
 
-      // Define grid dimensions (e.g. 2x2 = 4 per page)
-      const cols = gridDistribution === "1_PER_PAGE" ? 1 : gridDistribution === "2_PER_PAGE" ? 1 : 2;
-      const rows = gridDistribution === "1_PER_PAGE" ? 1 : gridDistribution === "2_PER_PAGE" ? 2 : gridDistribution === "6_PER_PAGE" ? 3 : 2;
-      const itemsPerPage = cols * rows;
-
-      const cellWidth = (pageWidth - margin * 2) / cols;
-      const cellHeight = (pageHeight - margin * 2) / rows;
-
-
-      for (let i = 0; i < displayedTables.length; i++) {
-        const table = displayedTables[i];
-
-        if (i > 0 && i % itemsPerPage === 0) {
+      for (let i = 0; i < pageElements.length; i++) {
+        if (i > 0) {
           doc.addPage();
         }
 
-        const pageItemIndex = i % itemsPerPage;
-        const colIndex = pageItemIndex % cols;
-        const rowIndex = Math.floor(pageItemIndex / cols);
-
-        const x = margin + colIndex * cellWidth;
-        const y = margin + rowIndex * cellHeight;
-
-        // Draw card border
-        doc.setDrawColor(203, 213, 225);
-        doc.setLineWidth(0.3);
-        doc.roundedRect(x + 2, y + 2, cellWidth - 4, cellHeight - 4, 3, 3);
-
-        // Restaurant Name
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(10);
-        doc.setTextColor(15, 23, 42);
-        doc.text(restaurant.name.toUpperCase(), x + cellWidth / 2, y + 10, {
-          align: "center",
+        const pageEl = pageElements[i];
+        const canvas = await html2canvas(pageEl, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: false,
+          logging: false,
+          backgroundColor: "#ffffff",
+          imageTimeout: 15000,
+          onclone: (_clonedDoc: Document, clonedEl: HTMLElement) => {
+            clonedEl.style.transform = "none";
+            clonedEl.style.boxShadow = "none";
+            clonedEl.style.margin = "0";
+            clonedEl.querySelectorAll<HTMLElement>(".no-print").forEach((el) => {
+              el.style.display = "none";
+            });
+          },
         });
 
-        // Table Name Banner
-        doc.setFillColor(15, 23, 42);
-        doc.roundedRect(x + cellWidth / 2 - 25, y + 14, 50, 8, 2, 2, "F");
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(11);
-        doc.text(table.name.toUpperCase(), x + cellWidth / 2, y + 19.5, {
-          align: "center",
-        });
-
-        // Instruction
-        doc.setTextColor(71, 85, 105);
-        doc.setFontSize(7.5);
-        doc.setFont("helvetica", "normal");
-        doc.text(callToAction, x + cellWidth / 2, y + 26, {
-          align: "center",
-        });
-
-        // Draw QR Code Image if canvas exists
-        const canvas = document.getElementById(`qr-canvas-${table.id}`) as HTMLCanvasElement;
-        if (canvas) {
-          const qrData = canvas.toDataURL("image/png");
-          const qrSize = Math.min(cellWidth * 0.45, 42);
-          doc.addImage(
-            qrData,
-            "PNG",
-            x + cellWidth / 2 - qrSize / 2,
-            y + 28,
-            qrSize,
-            qrSize,
-          );
-        }
-
-        // Wi-Fi info box
-        if (showWifi && (wifiSsid || wifiPassword)) {
-          doc.setFontSize(7);
-          doc.setTextColor(100, 116, 139);
-          doc.text(
-            `Wi-Fi: ${wifiSsid}   •   Senha: ${wifiPassword}`,
-            x + cellWidth / 2,
-            y + cellHeight - 12,
-            { align: "center" },
-          );
-        }
-
-        // Subtext Footer
-        doc.setFontSize(6.5);
-        doc.setTextColor(148, 163, 184);
-        doc.text(subtext, x + cellWidth / 2, y + cellHeight - 6, {
-          align: "center",
-        });
+        const imgData = canvas.toDataURL("image/jpeg", 0.95);
+        doc.addImage(imgData, "JPEG", 0, 0, pdfWidthMm, pdfHeightMm, undefined, "FAST");
       }
 
-      const fileName = `qrcodes-mesas-${slug}.pdf`;
+      const fileName = `qrcodes-mesas-${slug || "restaurante"}.pdf`;
       doc.save(fileName);
-      toast.success("PDF das mesas gerado com sucesso!");
+      toast.success(`PDF das mesas gerado com ${pageElements.length} folha(s) com sucesso!`);
     } catch (err) {
-      console.error(err);
+      console.error("Erro ao gerar PDF:", err);
       toast.error("Ocorreu um erro ao gerar o PDF das mesas.");
     } finally {
+      if (zoomWrapper && prevTransform !== undefined) {
+        zoomWrapper.style.transform = prevTransform;
+      }
       setIsExportingPdf(false);
     }
   };
 
+  // Download high-resolution PNG for a specific table's complete display card
+  const handleDownloadPng = async (table: DiningTable) => {
+    try {
+      const cardEl = document.getElementById(`table-card-${table.id}`);
+      if (!cardEl) {
+        toast.error("Card da mesa não encontrado.");
+        return;
+      }
+
+      const html2canvas = await loadHtml2Canvas();
+      if (!html2canvas) {
+        toast.error("Renderizador não carregado.");
+        return;
+      }
+
+      toast.info(`Gerando imagem da ${table.name}...`);
+      const canvas = await html2canvas(cardEl, {
+        scale: 3,
+        useCORS: true,
+        allowTaint: false,
+        logging: false,
+        backgroundColor: template === "DARK_ELEGANT" ? "#020617" : "#ffffff",
+        imageTimeout: 10000,
+        onclone: (_clonedDoc: Document, clonedEl: HTMLElement) => {
+          clonedEl.style.transform = "none";
+          clonedEl.style.boxShadow = "none";
+          clonedEl.querySelectorAll<HTMLElement>(".no-print").forEach((el) => {
+            el.style.display = "none";
+          });
+        },
+      });
+
+      const pngUrl = canvas.toDataURL("image/png");
+      const downloadLink = document.createElement("a");
+      downloadLink.href = pngUrl;
+      downloadLink.download = `display-mesa-${slug}-${table.name.toLowerCase().replace(/\s+/g, "-")}.png`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+
+      toast.success(`Display da ${table.name} baixado em PNG!`);
+    } catch (err) {
+      console.error("Erro ao gerar PNG:", err);
+      toast.error("Erro ao gerar imagem PNG.");
+    }
+  };
+
+  // Render individual table display card
+  const renderTableCard = (table: DiningTable) => {
+    const targetUrl = getTableUrl(table.id);
+
+    return (
+      <div
+        key={table.id}
+        id={`table-card-${table.id}`}
+        className={cn(
+          "table-card-print relative rounded-2xl border transition-all p-5 flex flex-col items-center justify-between text-center overflow-hidden",
+          showCutLines && "border-dashed border-slate-300",
+          !showCutLines && "border-slate-200/80 shadow-xs",
+          // Theme variations
+          template === "DARK_ELEGANT"
+            ? "bg-slate-950 text-white border-slate-800"
+            : template === "STICKER_COMPACT"
+              ? "bg-white text-slate-900 aspect-square justify-center p-3"
+              : template === "TENT_FOLDABLE"
+                ? "bg-white text-slate-900 border-stone-300"
+                : "bg-white text-slate-900",
+          // Size variations
+          gridDistribution === "4_PER_PAGE" && "min-h-[132mm] h-full",
+          gridDistribution === "2_PER_PAGE" && "min-h-[132mm] h-full",
+          gridDistribution === "1_PER_PAGE" && "min-h-[270mm] p-10 justify-around h-full",
+          gridDistribution === "6_PER_PAGE" && "min-h-[88mm] p-3 h-full",
+        )}
+      >
+        {/* Cut Guide Scissors Indicator */}
+        {showCutLines && (
+          <div className="no-print absolute top-1.5 right-2 flex items-center gap-1 text-[9px] text-slate-400 font-mono">
+            <ScissorsIcon size={10} />
+            <span>corte</span>
+          </div>
+        )}
+
+        {/* ── Top Branding ──────────────────────── */}
+        <div className="w-full flex flex-col items-center gap-1.5 pt-1">
+          {showLogo && restaurant.avatarImageUrl && (
+            <div
+              className={cn(
+                "overflow-hidden rounded-xl border border-black/10 shadow-xs shrink-0",
+                gridDistribution === "6_PER_PAGE" ? "h-8 w-8" : "h-11 w-11",
+              )}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={restaurant.avatarImageUrl}
+                alt={restaurant.name}
+                width={44}
+                height={44}
+                loading="eager"
+                decoding="sync"
+                crossOrigin="anonymous"
+                className="h-full w-full object-cover"
+              />
+            </div>
+          )}
+
+          {showRestaurantName && (
+            <span
+              className={cn(
+                "font-bold uppercase tracking-wider opacity-80",
+                gridDistribution === "6_PER_PAGE" ? "text-[10px]" : "text-xs",
+              )}
+            >
+              {restaurant.name}
+            </span>
+          )}
+
+          {/* Table Number Pill Banner */}
+          <div
+            className={cn(
+              "mt-1 rounded-full text-white shadow-sm flex items-center gap-1.5",
+              gridDistribution === "6_PER_PAGE" ? "px-3 py-0.5" : "px-4 py-1",
+            )}
+            style={{ backgroundColor: primaryColor }}
+          >
+            <UtensilsIcon size={gridDistribution === "6_PER_PAGE" ? 11 : 13} />
+            <span
+              className={cn(
+                "font-extrabold uppercase tracking-wide",
+                gridDistribution === "6_PER_PAGE" ? "text-xs" : "text-sm",
+              )}
+            >
+              {table.name}
+            </span>
+          </div>
+        </div>
+
+        {/* Fold Guide for Tent Foldable Template */}
+        {template === "TENT_FOLDABLE" && (
+          <div className="w-full flex items-center gap-2 my-2 text-[9px] text-slate-400 font-mono">
+            <span className="h-px bg-slate-300 flex-1 border-t border-dashed" />
+            <span>✂️ Linha de Dobra</span>
+            <span className="h-px bg-slate-300 flex-1 border-t border-dashed" />
+          </div>
+        )}
+
+        {/* ── Center: QR Code ────────────────────── */}
+        <div className="my-2.5 flex flex-col items-center">
+          <div
+            className={cn(
+              "rounded-2xl bg-white border border-slate-200/80 shadow-md",
+              gridDistribution === "6_PER_PAGE" ? "p-1.5" : "p-2.5",
+            )}
+          >
+            <QRCodeSVG
+              value={targetUrl}
+              size={
+                gridDistribution === "1_PER_PAGE"
+                  ? 220
+                  : gridDistribution === "2_PER_PAGE"
+                    ? 150
+                    : gridDistribution === "6_PER_PAGE"
+                      ? 95
+                      : 130
+              }
+              level="H"
+            />
+          </div>
+
+          <p
+            className={cn(
+              "mt-2 font-bold tracking-tight max-w-[200px] leading-tight",
+              gridDistribution === "6_PER_PAGE" ? "text-[10px]" : "text-[11px]",
+            )}
+          >
+            {callToAction}
+          </p>
+
+          {/* 3 Step Instruction Icons */}
+          {showInstructions && template !== "STICKER_COMPACT" && (
+            <div
+              className={cn(
+                "mt-1.5 flex items-center justify-center gap-2 opacity-75",
+                gridDistribution === "6_PER_PAGE" ? "text-[8px]" : "text-[9px]",
+              )}
+            >
+              <span className="flex items-center gap-1">
+                <SmartphoneIcon size={11} /> 1. Aponte
+              </span>
+              <span>•</span>
+              <span className="flex items-center gap-1">
+                <UtensilsIcon size={11} /> 2. Escolha
+              </span>
+              <span>•</span>
+              <span className="flex items-center gap-1">
+                <CheckIcon size={11} /> 3. Peça
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* ── Bottom: Wi-Fi & Courtesy Footer ───── */}
+        <div className="w-full flex flex-col items-center gap-1 pb-1">
+          {showWifi && (wifiSsid || wifiPassword) && (
+            <div
+              className={cn(
+                "flex items-center justify-center gap-2 rounded-lg border border-current/15 px-2.5 py-1 opacity-80 max-w-full",
+                gridDistribution === "6_PER_PAGE" ? "text-[8px]" : "text-[9px]",
+              )}
+            >
+              <WifiIcon size={11} className="shrink-0" />
+              <span className="truncate">
+                Wi-Fi: <strong className="font-semibold">{wifiSsid}</strong>
+                {wifiPassword && ` • Senha: ${wifiPassword}`}
+              </span>
+            </div>
+          )}
+
+          {subtext && template !== "STICKER_COMPACT" && (
+            <span
+              className={cn(
+                "opacity-60 font-medium",
+                gridDistribution === "6_PER_PAGE" ? "text-[8px]" : "text-[9px]",
+              )}
+            >
+              {subtext}
+            </span>
+          )}
+
+          {/* Card Hover Action Buttons (No Print) */}
+          <div className="no-print mt-2 flex items-center gap-1 pt-1 border-t border-slate-100 w-full justify-center">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => handleCopyUrl(table.id, table.name)}
+              className="h-6 px-2 text-[10px] text-slate-600 hover:text-slate-900"
+            >
+              <CopyIcon size={11} className="mr-1" />
+              Copiar Link
+            </Button>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => handleDownloadPng(table)}
+              className="h-6 px-2 text-[10px] text-slate-600 hover:text-slate-900"
+            >
+              <DownloadIcon size={11} className="mr-1" />
+              PNG
+            </Button>
+
+            <a
+              href={targetUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center h-6 px-2 text-[10px] text-blue-600 hover:text-blue-800"
+            >
+              <ExternalLinkIcon size={11} className="mr-1" />
+              Testar
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
-      {/* ── Hidden Off-Screen Canvases for PNG & PDF Export ── */}
-      <div className="hidden">
-        {tables.map((table) => (
-          <QRCodeCanvas
-            key={table.id}
-            id={`qr-canvas-${table.id}`}
-            value={getTableUrl(table.id)}
-            size={380}
-            level="H"
-            includeMargin
-          />
-        ))}
-      </div>
-
       {/* ── Print Stylesheet ─────────────────────────────── */}
       <style jsx global>{`
         @media print {
           @page {
             size: A4 portrait;
-            margin: 6mm;
+            margin: 0 !important;
           }
           html, body {
             background: #ffffff !important;
             color: #000000 !important;
             height: auto !important;
             overflow: visible !important;
+            margin: 0 !important;
+            padding: 0 !important;
           }
           aside,
           nav,
@@ -340,14 +714,25 @@ export function MesasQrCodesClient({
             margin: 0 !important;
             overflow: visible !important;
           }
-          #qrcodes-print-sheet {
-            transform: none !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            margin: 0 !important;
-            padding: 0 !important;
+          .printable-table-page {
             box-shadow: none !important;
+            margin: 0 auto !important;
             border: none !important;
+            width: 210mm !important;
+            min-height: 297mm !important;
+            height: auto !important;
+            page-break-after: always !important;
+            break-after: page !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            box-sizing: border-box !important;
+            padding: 8mm !important;
+            overflow: visible !important;
+            transform: none !important;
+          }
+          .printable-table-page:last-child {
+            page-break-after: auto !important;
+            break-after: auto !important;
           }
           .table-card-print {
             break-inside: avoid !important;
@@ -396,13 +781,14 @@ export function MesasQrCodesClient({
             className="h-10 gap-2 rounded-full border-slate-300 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
           >
             <DownloadIcon size={15} />
-            <span>{isExportingPdf ? "Gerando..." : "Baixar Todas em PDF"}</span>
+            <span>{isExportingPdf ? "Gerando PDF..." : "Baixar PDF"}</span>
           </Button>
 
           <Button
             onClick={handlePrint}
             disabled={displayedTables.length === 0}
-            className="h-10 gap-2 rounded-full bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+            className="h-10 gap-2 rounded-full px-5 text-sm font-semibold text-white shadow-sm transition-all hover:brightness-110 active:scale-95"
+            style={{ backgroundColor: currentThemeConfig.hex }}
           >
             <PrinterIcon size={16} />
             <span>Imprimir Displays ({displayedTables.length})</span>
@@ -411,13 +797,13 @@ export function MesasQrCodesClient({
       </div>
 
       {/* ── Main Studio Grid ──────────────────────────────── */}
-      <div className="no-print grid grid-cols-1 gap-6 lg:grid-cols-12">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* ── Left Sidebar Settings (4 cols) ──────────────── */}
-        <div className="space-y-5 lg:col-span-4">
+        <div className="no-print space-y-5 lg:col-span-4">
           <Card className="border-slate-200/90 shadow-sm bg-white">
             <CardHeader className="p-4 pb-2 border-b border-slate-100">
               <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                <QrCodeIcon size={16} className="text-slate-600" />
+                <QrCodeIcon size={16} style={{ color: currentThemeConfig.hex }} />
                 <span>Personalizar Displays</span>
               </CardTitle>
             </CardHeader>
@@ -492,7 +878,7 @@ export function MesasQrCodesClient({
                   <div>
                     <Label className="text-xs font-medium text-slate-700">Cor de Destaque</Label>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
-                      {COLOR_PALETTES.map((palette) => (
+                      {colorPalettes.map((palette) => (
                         <button
                           key={palette.value}
                           type="button"
@@ -500,7 +886,7 @@ export function MesasQrCodesClient({
                           className={cn(
                             "h-7 w-7 rounded-full border-2 transition-transform hover:scale-110",
                             primaryColor === palette.value
-                              ? "border-slate-900 scale-110 shadow-sm"
+                              ? "border-slate-900 scale-110 shadow-sm ring-2 ring-primary/20"
                               : "border-transparent",
                           )}
                           style={{ backgroundColor: palette.value }}
@@ -721,14 +1107,27 @@ export function MesasQrCodesClient({
           </Card>
         </div>
 
-        {/* ── Right Canvas: Printable Sheet Preview (8 cols) ─ */}
+        {/* ── Right Live Preview Canvas (8 cols) ──────────── */}
         <div className="space-y-4 lg:col-span-8">
           {/* Zoom and Header Controls */}
-          <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-xs">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-700">Folha de Impressão A4</span>
+          <div className="no-print flex items-center justify-between bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-xs">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-semibold text-slate-700">Pré-visualização</span>
               <Badge variant="outline" className="text-[10px] uppercase font-mono">
-                {displayedTables.length} {displayedTables.length === 1 ? "Mesa" : "Mesas"} • {gridDistribution.replace("_PER_PAGE", " por folha")}
+                A4 Retrato •{" "}
+                {gridDistribution === "1_PER_PAGE"
+                  ? "1 por folha"
+                  : gridDistribution === "2_PER_PAGE"
+                    ? "2 por folha"
+                    : gridDistribution === "4_PER_PAGE"
+                      ? "4 por folha"
+                      : "6 por folha"}
+              </Badge>
+              <Badge variant="outline" className="text-[10px] uppercase font-mono">
+                {pages.length} {pages.length === 1 ? "Folha A4" : "Folhas A4"}
+              </Badge>
+              <Badge variant="outline" className="text-[10px] uppercase font-mono">
+                {displayedTables.length} {displayedTables.length === 1 ? "Mesa selecionada" : "Mesas selecionadas"}
               </Badge>
             </div>
 
@@ -738,6 +1137,7 @@ export function MesasQrCodesClient({
                 size="icon"
                 onClick={() => setZoomLevel((z) => Math.max(50, z - 10))}
                 className="h-7 w-7 text-slate-600 hover:bg-slate-100"
+                title="Diminuir Zoom"
               >
                 <ZoomOutIcon size={14} />
               </Button>
@@ -749,6 +1149,7 @@ export function MesasQrCodesClient({
                 size="icon"
                 onClick={() => setZoomLevel((z) => Math.min(130, z + 10))}
                 className="h-7 w-7 text-slate-600 hover:bg-slate-100"
+                title="Aumentar Zoom"
               >
                 <ZoomInIcon size={14} />
               </Button>
@@ -764,199 +1165,63 @@ export function MesasQrCodesClient({
           </div>
 
           {/* Scaled Preview Canvas Wrapper */}
-          <div className="flex justify-center overflow-x-auto p-4 bg-slate-100/80 rounded-2xl border border-slate-200/60 min-h-[600px]">
+          <div
+            id="qrcodes-preview-canvas-wrapper"
+            className="flex justify-center overflow-x-auto p-4 bg-slate-100/80 rounded-2xl border border-slate-200/60 min-h-[600px]"
+          >
             <div
+              id="qrcodes-preview-zoom-wrapper"
               style={{
                 transform: `scale(${zoomLevel / 100})`,
                 transformOrigin: "top center",
                 transition: "transform 0.15s ease",
               }}
+              className="space-y-8 pb-8"
             >
-              {/* ── THE PRINTABLE SHEET (A4) ─────────────────── */}
-              <div
-                id="qrcodes-print-sheet"
-                className="bg-white shadow-2xl transition-all mx-auto w-[210mm] min-h-[297mm] p-[8mm]"
-              >
-                {displayedTables.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-[260mm] text-center p-8">
-                    <QrCodeIcon size={48} className="text-slate-300 mb-3" />
-                    <h3 className="text-lg font-bold text-slate-700">Nenhuma mesa selecionada</h3>
-                    <p className="text-sm text-slate-400 mt-1 max-w-sm">
-                      Selecione ao menos uma mesa no painel lateral esquerdo para gerar e imprimir as plaquinhas.
-                    </p>
+              {displayedTables.length === 0 ? (
+                <div className="bg-white shadow-2xl transition-all mx-auto w-[210mm] min-h-[297mm] p-[8mm] flex flex-col items-center justify-center text-center">
+                  <QrCodeIcon size={48} className="text-slate-300 mb-3" />
+                  <h3 className="text-lg font-bold text-slate-700">Nenhuma mesa selecionada</h3>
+                  <p className="text-sm text-slate-400 mt-1 max-w-sm">
+                    Selecione ao menos uma mesa no painel lateral esquerdo para gerar e imprimir as plaquinhas.
+                  </p>
+                </div>
+              ) : (
+                pages.map((pageTables, pageIdx) => (
+                  <div key={pageIdx} className="flex flex-col items-center">
+                    {/* Folha Header Badge */}
+                    <div className="no-print mb-2 flex items-center justify-between text-xs text-slate-500 font-medium px-1 w-[210mm]">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-slate-700">
+                          Folha {pageIdx + 1} de {pages.length}
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-mono opacity-70">
+                        {pageTables.length} {pageTables.length === 1 ? "mesa" : "mesas"} nesta folha
+                      </span>
+                    </div>
+
+                    {/* ── THE PRINTABLE SHEET (A4) ─────────────────── */}
+                    <div
+                      id={`table-qr-page-${pageIdx + 1}`}
+                      data-page-index={pageIdx}
+                      className="printable-table-page relative bg-white shadow-2xl transition-all mx-auto w-[210mm] min-h-[297mm] p-[8mm] flex flex-col justify-between"
+                    >
+                      <div
+                        className={cn(
+                          "grid gap-4 w-full h-full flex-1",
+                          gridDistribution === "1_PER_PAGE" && "grid-cols-1",
+                          gridDistribution === "2_PER_PAGE" && "grid-cols-1 md:grid-cols-2",
+                          gridDistribution === "4_PER_PAGE" && "grid-cols-2",
+                          gridDistribution === "6_PER_PAGE" && "grid-cols-2 md:grid-cols-3",
+                        )}
+                      >
+                        {pageTables.map((table) => renderTableCard(table))}
+                      </div>
+                    </div>
                   </div>
-                ) : (
-                  <div
-                    className={cn(
-                      "grid gap-4",
-                      gridDistribution === "1_PER_PAGE" && "grid-cols-1",
-                      gridDistribution === "2_PER_PAGE" && "grid-cols-1 md:grid-cols-2",
-                      gridDistribution === "4_PER_PAGE" && "grid-cols-2",
-                      gridDistribution === "6_PER_PAGE" && "grid-cols-2 md:grid-cols-3",
-                    )}
-                  >
-                    {displayedTables.map((table) => {
-                      const targetUrl = getTableUrl(table.id);
-
-                      return (
-                        <div
-                          key={table.id}
-                          className={cn(
-                            "table-card-print relative rounded-2xl border transition-all p-5 flex flex-col items-center justify-between text-center overflow-hidden",
-                            showCutLines && "border-dashed border-slate-300",
-                            !showCutLines && "border-slate-200/80 shadow-xs",
-                            // Theme variations
-                            template === "DARK_ELEGANT"
-                              ? "bg-slate-950 text-white"
-                              : template === "STICKER_COMPACT"
-                                ? "bg-white text-slate-900 aspect-square justify-center p-3"
-                                : "bg-white text-slate-900",
-                            // Size variations
-                            gridDistribution === "4_PER_PAGE" && "min-h-[135mm]",
-                            gridDistribution === "2_PER_PAGE" && "min-h-[135mm]",
-                            gridDistribution === "1_PER_PAGE" && "min-h-[270mm] p-10 justify-around",
-                            gridDistribution === "6_PER_PAGE" && "min-h-[90mm] p-3",
-                          )}
-                        >
-                          {/* Cut Guide Scissors Indicator */}
-                          {showCutLines && (
-                            <div className="no-print absolute top-1 right-1 flex items-center gap-1 text-[9px] text-slate-400 font-mono">
-                              <ScissorsIcon size={10} />
-                              <span>corte</span>
-                            </div>
-                          )}
-
-                          {/* ── Top Branding ──────────────────────── */}
-                          <div className="w-full flex flex-col items-center gap-1.5 pt-1">
-                            {showLogo && restaurant.avatarImageUrl && (
-                              <div className="h-10 w-10 overflow-hidden rounded-xl border border-black/10 shadow-xs">
-                                <Image
-                                  src={restaurant.avatarImageUrl}
-                                  alt={restaurant.name}
-                                  width={40}
-                                  height={40}
-                                  className="h-full w-full object-cover"
-                                />
-                              </div>
-                            )}
-
-                            {showRestaurantName && (
-                              <span className="text-xs font-bold uppercase tracking-wider opacity-80">
-                                {restaurant.name}
-                              </span>
-                            )}
-
-                            {/* Table Number Pill Banner */}
-                            <div
-                              className="mt-1 px-4 py-1 rounded-full text-white shadow-sm flex items-center gap-1.5"
-                              style={{ backgroundColor: primaryColor }}
-                            >
-                              <UtensilsIcon size={13} />
-                              <span className="text-sm font-extrabold uppercase tracking-wide">
-                                {table.name}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* ── Center: QR Code ────────────────────── */}
-                          <div className="my-3 flex flex-col items-center">
-                            <div className="p-2.5 rounded-2xl bg-white border border-slate-200/80 shadow-md">
-                              <QRCodeSVG
-                                value={targetUrl}
-                                size={
-                                  gridDistribution === "1_PER_PAGE"
-                                    ? 220
-                                    : gridDistribution === "2_PER_PAGE"
-                                      ? 150
-                                      : gridDistribution === "6_PER_PAGE"
-                                        ? 100
-                                        : 130
-                                }
-                                level="H"
-                              />
-                            </div>
-
-                            <p className="mt-2.5 text-[11px] font-bold tracking-tight max-w-[200px] leading-tight">
-                              {callToAction}
-                            </p>
-
-                            {/* 3 Step Instruction Icons */}
-                            {showInstructions && template !== "STICKER_COMPACT" && (
-                              <div className="mt-2 flex items-center justify-center gap-2 text-[9px] opacity-75">
-                                <span className="flex items-center gap-1">
-                                  <SmartphoneIcon size={11} /> 1. Aponte
-                                </span>
-                                <span>•</span>
-                                <span className="flex items-center gap-1">
-                                  <UtensilsIcon size={11} /> 2. Escolha
-                                </span>
-                                <span>•</span>
-                                <span className="flex items-center gap-1">
-                                  <CheckIcon size={11} /> 3. Peça
-                                </span>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* ── Bottom: Wi-Fi & Courtesy Footer ───── */}
-                          <div className="w-full flex flex-col items-center gap-1 pb-1">
-                            {showWifi && (wifiSsid || wifiPassword) && (
-                              <div className="flex items-center justify-center gap-2 rounded-lg border border-current/15 px-2.5 py-1 text-[9px] opacity-80 max-w-full">
-                                <WifiIcon size={11} className="shrink-0" />
-                                <span className="truncate">
-                                  Wi-Fi: <strong className="font-semibold">{wifiSsid}</strong>
-                                  {wifiPassword && ` • Senha: ${wifiPassword}`}
-                                </span>
-                              </div>
-                            )}
-
-                            {subtext && template !== "STICKER_COMPACT" && (
-                              <span className="text-[9px] opacity-60 font-medium">
-                                {subtext}
-                              </span>
-                            )}
-
-                            {/* Card Hover Action Buttons (No Print) */}
-                            <div className="no-print mt-2 flex items-center gap-1 pt-1 border-t border-slate-100 w-full justify-center">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleCopyUrl(table.id, table.name)}
-                                className="h-6 px-2 text-[10px] text-slate-600 hover:text-slate-900"
-                              >
-                                <CopyIcon size={11} className="mr-1" />
-                                Copiar Link
-                              </Button>
-
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDownloadPng(table)}
-                                className="h-6 px-2 text-[10px] text-slate-600 hover:text-slate-900"
-                              >
-                                <DownloadIcon size={11} className="mr-1" />
-                                PNG
-                              </Button>
-
-                              <a
-                                href={targetUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex items-center h-6 px-2 text-[10px] text-blue-600 hover:text-blue-800"
-                              >
-                                <ExternalLinkIcon size={11} className="mr-1" />
-                                Testar
-                              </a>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+                ))
+              )}
             </div>
           </div>
         </div>

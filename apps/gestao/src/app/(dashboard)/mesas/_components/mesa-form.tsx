@@ -1,6 +1,7 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
 
 import {
   createTableAction,
@@ -9,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import type { DiningTable } from "@fsw/db";
 
 interface MesaFormProps {
@@ -19,10 +21,31 @@ interface MesaFormProps {
 
 export function MesaForm({ slug, defaultValues, onSuccess }: MesaFormProps) {
   const [isPending, startTransition] = useTransition();
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const newErrors: Record<string, string> = {};
+
+    const name = formData.get("name")?.toString().trim() ?? "";
+    if (!name) {
+      newErrors.name = "Informe o nome da mesa.";
+    }
+
+    const seats = Number(formData.get("seats"));
+    if (!seats || seats <= 0) {
+      newErrors.seats = "A capacidade deve ser de no mínimo 1 lugar.";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      const firstError = Object.values(newErrors)[0];
+      toast.error(firstError || "Por favor, preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    setErrors({});
 
     startTransition(async () => {
       if (defaultValues) {
@@ -36,7 +59,7 @@ export function MesaForm({ slug, defaultValues, onSuccess }: MesaFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} noValidate className="space-y-4">
       <div className="space-y-1.5">
         <Label htmlFor="mesa-name">Nome da mesa</Label>
         <Input
@@ -44,8 +67,14 @@ export function MesaForm({ slug, defaultValues, onSuccess }: MesaFormProps) {
           name="name"
           placeholder="Ex.: Mesa 01"
           defaultValue={defaultValues?.name}
-          required
+          onChange={() => setErrors((prev) => ({ ...prev, name: "" }))}
+          className={cn(
+            errors.name && "border-rose-500 bg-rose-50/20 focus-visible:ring-rose-500"
+          )}
         />
+        {errors.name && (
+          <p className="text-[11px] font-medium text-rose-500">{errors.name}</p>
+        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -57,8 +86,14 @@ export function MesaForm({ slug, defaultValues, onSuccess }: MesaFormProps) {
             type="number"
             min="1"
             defaultValue={String(defaultValues?.seats ?? 4)}
-            required
+            onChange={() => setErrors((prev) => ({ ...prev, seats: "" }))}
+            className={cn(
+              errors.seats && "border-rose-500 bg-rose-50/20 focus-visible:ring-rose-500"
+            )}
           />
+          {errors.seats && (
+            <p className="text-[11px] font-medium text-rose-500">{errors.seats}</p>
+          )}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="mesa-order">Ordem de exibição</Label>

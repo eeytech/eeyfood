@@ -3,11 +3,15 @@
 import {
   BarChart3Icon,
   BikeIcon,
+  ClockIcon,
   CreditCardIcon,
   ReceiptIcon,
+  ShieldAlertIcon,
   SparklesIcon,
+  StoreIcon,
   TagIcon,
   TrendingUpIcon,
+  UsersIcon,
   UtensilsCrossedIcon,
 } from "lucide-react";
 import { useState } from "react";
@@ -16,10 +20,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { AdvancedKPIs, DashboardData } from "@/lib/admin-queries";
 
 import AssistenteIaTab from "./assistente-ia-tab";
+import CancelamentosTab from "./cancelamentos-tab";
+import ClientesTab from "./clientes-tab";
 import DreTab from "./dre-tab";
+import HorariosTab from "./horarios-tab";
 import KPIsBITab from "./kpis-bi-tab";
 import LogisticaTab from "./logistica-tab";
 import MarketingTab from "./marketing-tab";
+import MesasTab from "./mesas-tab";
 import OverviewTab from "./overview-tab";
 import PagamentosTab from "./pagamentos-tab";
 import ProdutosTab from "./produtos-tab";
@@ -27,6 +35,10 @@ import ProdutosTab from "./produtos-tab";
 export const TABS = [
   { value: "overview", label: "Painel Geral", icon: BarChart3Icon },
   { value: "produtos", label: "Produtos", icon: UtensilsCrossedIcon },
+  { value: "horarios", label: "Horários & Pico", icon: ClockIcon },
+  { value: "clientes", label: "Clientes & LTV", icon: UsersIcon },
+  { value: "mesas", label: "Mesas & Salão", icon: StoreIcon },
+  { value: "cancelamentos", label: "Perdas & Descontos", icon: ShieldAlertIcon },
   { value: "logistica", label: "Logística", icon: BikeIcon },
   { value: "marketing", label: "Marketing", icon: TagIcon },
   { value: "pagamentos", label: "Pagamentos", icon: CreditCardIcon },
@@ -71,7 +83,7 @@ const DashboardTabs = ({
               <TabsTrigger
                 key={tab.value}
                 value={tab.value}
-                className="rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-600 transition-all hover:text-slate-900 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
+                className="rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-600 transition-all hover:text-slate-900 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm"
               >
                 <Icon size={14} className="mr-1.5" />
                 {tab.label}
@@ -87,6 +99,22 @@ const DashboardTabs = ({
 
       <TabsContent value="produtos" className="mt-5">
         <ProdutosTab data={data} />
+      </TabsContent>
+
+      <TabsContent value="horarios" className="mt-5">
+        <HorariosTab data={data} />
+      </TabsContent>
+
+      <TabsContent value="clientes" className="mt-5">
+        <ClientesTab data={data} kpis={kpis} />
+      </TabsContent>
+
+      <TabsContent value="mesas" className="mt-5">
+        <MesasTab data={data} />
+      </TabsContent>
+
+      <TabsContent value="cancelamentos" className="mt-5">
+        <CancelamentosTab data={data} />
       </TabsContent>
 
       <TabsContent value="logistica" className="mt-5">

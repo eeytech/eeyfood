@@ -548,7 +548,7 @@ export function VehiclesTab({
                   {total} veículo{total !== 1 ? "s" : ""}
                 </span>
                 {isFiltering && (
-                  <span className="text-[11px] font-medium text-amber-600">
+                  <span className="text-[11px] font-medium text-primary">
                     (Filtros aplicados)
                   </span>
                 )}

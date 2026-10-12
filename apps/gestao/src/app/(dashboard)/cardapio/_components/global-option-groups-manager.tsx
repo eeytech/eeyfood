@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 import {
   createProductOptionAction,
@@ -136,27 +137,35 @@ function GroupDialog({
   isPending: boolean;
 }) {
   const [form, setForm] = useState<GroupFormState>(initial);
+  const [nameError, setNameError] = useState("");
 
   useEffect(() => {
     if (open) {
       setForm(initial);
+      setNameError("");
     }
   }, [open, initial]);
 
   const set =
-    (field: keyof GroupFormState) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    (field: keyof GroupFormState) => (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (field === "name") setNameError("");
       setForm((prev) => ({ ...prev, [field]: e.target.value }));
+    };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim()) return;
+    if (!form.name.trim()) {
+      setNameError("Informe o nome do grupo.");
+      toast.error("Por favor, preencha todos os campos obrigatórios.");
+      return;
+    }
     onSubmit(form);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[480px]">
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-slate-900">
               {title}
@@ -176,9 +185,14 @@ function GroupDialog({
                 value={form.name}
                 onChange={set("name")}
                 placeholder="Ex: Tamanho, Molhos, Ponto da Carne..."
-                required
-                className="h-9 text-xs"
+                className={cn(
+                  "h-9 text-xs transition-colors",
+                  nameError && "border-rose-500 bg-rose-50/20 focus-visible:ring-rose-500"
+                )}
               />
+              {nameError && (
+                <p className="text-[11px] font-medium text-rose-500">{nameError}</p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -192,7 +206,6 @@ function GroupDialog({
                   min="0"
                   value={form.minOptions}
                   onChange={set("minOptions")}
-                  required
                   className="h-9 text-xs"
                 />
                 <p className="text-[10px] text-slate-400">
@@ -210,7 +223,6 @@ function GroupDialog({
                   min="1"
                   value={form.maxOptions}
                   onChange={set("maxOptions")}
-                  required
                   className="h-9 text-xs"
                 />
                 <p className="text-[10px] text-slate-400">
@@ -245,7 +257,7 @@ function GroupDialog({
             </Button>
             <Button
               type="submit"
-              disabled={isPending || !form.name.trim()}
+              disabled={isPending}
               className="h-9 gap-1.5 bg-primary text-xs font-semibold text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/25"
             >
               {isPending && <Loader2Icon size={14} className="animate-spin" />}
@@ -278,6 +290,7 @@ function OptionDialog({
   isPending: boolean;
 }) {
   const [form, setForm] = useState<OptionFormState>(initial);
+  const [nameError, setNameError] = useState("");
   const [preview, setPreview] = useState<string>(initial.imageUrl || "");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -285,6 +298,7 @@ function OptionDialog({
     if (open) {
       setForm(initial);
       setPreview(initial.imageUrl || "");
+      setNameError("");
     }
   }, [open, initial]);
 
@@ -304,14 +318,18 @@ function OptionDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim()) return;
+    if (!form.name.trim()) {
+      setNameError("Informe o nome do adicional.");
+      toast.error("Por favor, preencha todos os campos obrigatórios.");
+      return;
+    }
     onSubmit(form);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[480px]">
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-slate-900">
               {title}
@@ -329,11 +347,19 @@ function OptionDialog({
               <Input
                 id="opt-name"
                 value={form.name}
-                onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                onChange={(e) => {
+                  setNameError("");
+                  setForm((prev) => ({ ...prev, name: e.target.value }));
+                }}
                 placeholder="Ex: Bacon Extra, Queijo Cheddar, Molho Especial..."
-                required
-                className="h-9 text-xs"
+                className={cn(
+                  "h-9 text-xs transition-colors",
+                  nameError && "border-rose-500 bg-rose-50/20 focus-visible:ring-rose-500"
+                )}
               />
+              {nameError && (
+                <p className="text-[11px] font-medium text-rose-500">{nameError}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -460,7 +486,7 @@ function OptionDialog({
             </Button>
             <Button
               type="submit"
-              disabled={isPending || !form.name.trim()}
+              disabled={isPending}
               className="h-9 gap-1.5 bg-primary text-xs font-semibold text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/25"
             >
               {isPending && <Loader2Icon size={14} className="animate-spin" />}
@@ -694,7 +720,7 @@ function GlobalGroupCard({
               {group.options.length} {group.options.length === 1 ? "item" : "itens"}
             </span>
             {group.minOptions > 0 ? (
-              <span className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2.5 py-0.5 text-[11px] font-semibold text-rose-700">
+              <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
                 Obrigatório (mín: {group.minOptions})
               </span>
             ) : (

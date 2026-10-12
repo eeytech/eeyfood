@@ -783,7 +783,7 @@ export function GarconsTab({
                   de {totalGarcons} garçom{totalGarcons !== 1 ? "s" : ""}
                 </span>
                 {isFiltering && (
-                  <span className="text-[11px] font-medium text-amber-600">
+                  <span className="text-[11px] font-medium text-primary">
                     (Filtros aplicados)
                   </span>
                 )}
@@ -1038,7 +1038,7 @@ export function GarconsTab({
                     de {totalFechamentos} repasse{totalFechamentos !== 1 ? "s" : ""}
                   </span>
                   {isFilteringFechamentos && (
-                    <span className="text-[11px] font-medium text-amber-600">
+                    <span className="text-[11px] font-medium text-primary">
                       (Filtros aplicados)
                     </span>
                   )}

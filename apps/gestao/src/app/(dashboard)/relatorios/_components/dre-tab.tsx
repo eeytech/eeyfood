@@ -160,19 +160,19 @@ const DreTab = ({ data }: DreTabProps) => {
 
   return (
     <div className="space-y-6">
-      {/* KPI Summary Cards */}
+      {/* KPI Summary Cards com cores do tema */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 sm:gap-4">
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+        <Card className="border-slate-200/80 bg-white shadow-xs transition-all hover:border-primary/40 hover:shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Receita Bruta Total
               </span>
-              <div className="rounded-lg bg-slate-100 p-1.5 text-slate-700">
+              <div className="rounded-xl border border-primary/20 bg-primary/10 p-2 text-primary">
                 <ReceiptIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-slate-900">
+            <p className="mt-2.5 font-display text-2xl font-bold text-primary">
               {fmt(receitaBrutaTotal)}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -181,17 +181,17 @@ const DreTab = ({ data }: DreTabProps) => {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+        <Card className="border-slate-200/80 bg-white shadow-xs transition-all hover:border-primary/40 hover:shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 CMV – Custo Mercadoria
               </span>
-              <div className="rounded-lg bg-amber-100 p-1.5 text-amber-700">
+              <div className="rounded-xl border border-primary/20 bg-primary/10 p-2 text-primary">
                 <TrendingDownIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-amber-700">
+            <p className="mt-2.5 font-display text-2xl font-bold text-slate-900">
               {fmt(cmv)}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -200,17 +200,17 @@ const DreTab = ({ data }: DreTabProps) => {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+        <Card className="border-slate-200/80 bg-white shadow-xs transition-all hover:border-primary/40 hover:shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Despesas Operacionais
               </span>
-              <div className="rounded-lg bg-rose-100 p-1.5 text-rose-700">
+              <div className="rounded-xl border border-primary/20 bg-primary/10 p-2 text-primary">
                 <DollarSignIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-rose-700">
+            <p className="mt-2.5 font-display text-2xl font-bold text-rose-700">
               {fmt(totalDespesas)}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -219,17 +219,17 @@ const DreTab = ({ data }: DreTabProps) => {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+        <Card className="border-slate-200/80 bg-white shadow-xs transition-all hover:border-primary/40 hover:shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                Resultado Líquido
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Resultado Líquido (EBITDA)
               </span>
-              <div className={`rounded-lg p-1.5 ${isProfit ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
+              <div className="rounded-xl border border-primary/20 bg-primary/10 p-2 text-primary">
                 <TrendingUpIcon size={16} />
               </div>
             </div>
-            <p className={`mt-2 font-display text-2xl font-bold ${isProfit ? "text-emerald-700" : "text-rose-700"}`}>
+            <p className={`mt-2.5 font-display text-2xl font-bold ${isProfit ? "text-primary font-bold" : "text-rose-700"}`}>
               {fmt(resultadoLiquido)}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">

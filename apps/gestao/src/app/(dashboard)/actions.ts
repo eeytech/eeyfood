@@ -1568,7 +1568,6 @@ export const generateProductAiAction = async (
     .select({
       aiProvider: aiSettingsTable.aiProvider,
       geminiApiKey: aiSettingsTable.geminiApiKey,
-      groqApiKey: aiSettingsTable.groqApiKey,
       openaiApiKey: aiSettingsTable.openaiApiKey,
     })
     .from(aiSettingsTable)
@@ -1582,9 +1581,6 @@ export const generateProductAiAction = async (
     aiSettings?.geminiApiKey ||
       process.env.GEMINI_API_KEY ||
       process.env.GOOGLE_API_KEY,
-  );
-  const groqKey = cleanKey(
-    aiSettings?.groqApiKey || process.env.GROQ_API_KEY,
   );
   const openaiKey = cleanKey(
     aiSettings?.openaiApiKey || process.env.OPENAI_API_KEY,
@@ -1606,14 +1602,6 @@ export const generateProductAiAction = async (
           models: ["gemini-2.0-flash", "gemini-1.5-flash"],
         }
       : null,
-    GROQ: groqKey
-      ? {
-          name: "Groq",
-          apiKey: groqKey,
-          baseURL: "https://api.groq.com/openai/v1",
-          models: ["llama-3.1-8b-instant", "llama-3.3-70b-versatile"],
-        }
-      : null,
     OPENAI: openaiKey
       ? {
           name: "OpenAI",
@@ -1623,7 +1611,8 @@ export const generateProductAiAction = async (
       : null,
   };
 
-  const selectedProvider = (aiSettings?.aiProvider || "GOOGLE_GEMINI").toUpperCase();
+  const rawProvider = (aiSettings?.aiProvider || "GOOGLE_GEMINI").toUpperCase();
+  const selectedProvider = rawProvider === "OPENAI" ? "OPENAI" : "GOOGLE_GEMINI";
   const providerList: ProviderCandidate[] = [];
 
   if (candidateMap[selectedProvider]) {
@@ -1639,7 +1628,7 @@ export const generateProductAiAction = async (
   if (providerList.length === 0) {
     return {
       error:
-        "Nenhuma chave de IA configurada. Acesse a aba Inteligência Artificial e configure sua chave do Google Gemini, Groq ou OpenAI.",
+        "Nenhuma chave de IA configurada. Acesse a aba Inteligência Artificial e configure sua chave do Google Gemini (grátis) ou OpenAI (pago).",
     };
   }
 
@@ -1671,7 +1660,7 @@ Os valores nutricionais são estimativas por porção individual e devem ser nú
 
     for (const model of provider.models) {
       try {
-        const isJsonMode = provider.name === "Groq" || provider.name === "OpenAI";
+        const isJsonMode = provider.name === "OpenAI";
         const response = await client.chat.completions.create({
           model,
           messages: [

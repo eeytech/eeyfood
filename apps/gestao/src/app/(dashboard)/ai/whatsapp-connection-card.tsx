@@ -492,7 +492,7 @@ export function WhatsAppConnectionCard({
                       Nenhuma chave de IA configurada para gerar as respostas
                     </p>
                     <p className="text-red-700">
-                      Para que a IA converse com seus clientes, insira sua chave gratuita do Google Gemini (ou Groq / OpenAI) na aba de IA.
+                      Para que a IA converse com seus clientes, insira sua chave gratuita do Google Gemini (ou OpenAI) na aba de IA.
                     </p>
                     <Link
                       href={`/${slug}/ai`}

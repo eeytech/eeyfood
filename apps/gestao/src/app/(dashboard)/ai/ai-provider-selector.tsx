@@ -31,27 +31,24 @@ import {
   type TestAiKeyResult,
 } from "../ai-actions";
 
-export type AiProviderType = "GOOGLE_GEMINI" | "GROQ" | "OPENAI";
+export type AiProviderType = "GOOGLE_GEMINI" | "OPENAI";
 
 interface AiProviderSelectorProps {
   initialProvider?: string | null;
   initialGeminiKey?: string | null;
-  initialGroqKey?: string | null;
   initialOpenAiKey?: string | null;
 }
 
 export function AiProviderSelector({
   initialProvider = "GOOGLE_GEMINI",
   initialGeminiKey = "",
-  initialGroqKey = "",
   initialOpenAiKey = "",
 }: AiProviderSelectorProps) {
   const [provider, setProvider] = useState<AiProviderType>(
-    (initialProvider?.toUpperCase() as AiProviderType) || "GOOGLE_GEMINI",
+    initialProvider?.toUpperCase() === "OPENAI" ? "OPENAI" : "GOOGLE_GEMINI",
   );
 
   const [geminiKey, setGeminiKey] = useState(initialGeminiKey || "");
-  const [groqKey, setGroqKey] = useState(initialGroqKey || "");
   const [openAiKey, setOpenAiKey] = useState(initialOpenAiKey || "");
   const [showKey, setShowKey] = useState(false);
 
@@ -61,7 +58,6 @@ export function AiProviderSelector({
     Record<AiProviderType, TestAiKeyResult | null>
   >({
     GOOGLE_GEMINI: null,
-    GROQ: null,
     OPENAI: null,
   });
 
@@ -125,13 +121,13 @@ export function AiProviderSelector({
         {/* Input Oculto para envio no FormData */}
         <input type="hidden" name="aiProvider" value={provider} />
 
-        {/* Seletor de Cards dos Provedores */}
-        <div className="grid gap-3 sm:grid-cols-3">
-          {/* Opção 1: Google Gemini */}
+        {/* Seletor de Cards dos Provedores (Gemini Grátis e OpenAI Pago) */}
+        <div className="grid gap-3 sm:grid-cols-2">
+          {/* Opção 1: Google Gemini (Grátis) */}
           <button
             type="button"
             onClick={() => setProvider("GOOGLE_GEMINI")}
-            className={`relative flex flex-col justify-between rounded-xl border p-3.5 text-left transition-all ${
+            className={`relative flex flex-col justify-between rounded-xl border p-4 text-left transition-all ${
               provider === "GOOGLE_GEMINI"
                 ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/40"
                 : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
@@ -162,10 +158,10 @@ export function AiProviderSelector({
                 )}
               </div>
               <p className="font-display text-sm font-bold text-slate-900">
-                Google Gemini
+                Google Gemini (Grátis)
               </p>
               <p className="text-[11px] text-slate-500 leading-snug">
-                Gemini 2.0 Flash. Até 1.500 msgs/dia sem cartão.
+                Gemini 2.0 Flash. Até 1.500 msgs/dia sem cartão de crédito e transcreve áudios com perfeição.
               </p>
             </div>
             <div
@@ -174,66 +170,15 @@ export function AiProviderSelector({
               }`}
             >
               <SparklesIcon size={12} />
-              Recomendado
+              Recomendado Grátis
             </div>
           </button>
 
-          {/* Opção 2: Groq (Llama 3) */}
-          <button
-            type="button"
-            onClick={() => setProvider("GROQ")}
-            className={`relative flex flex-col justify-between rounded-xl border p-3.5 text-left transition-all ${
-              provider === "GROQ"
-                ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/40"
-                : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
-            }`}
-          >
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <Badge
-                    className={
-                      provider === "GROQ"
-                        ? "bg-primary/10 text-primary hover:bg-primary/15 border-0 text-[10px] font-bold px-2 py-0.5"
-                        : "bg-slate-100 text-slate-700 hover:bg-slate-200/80 border-0 text-[10px] font-bold px-2 py-0.5"
-                    }
-                  >
-                    100% Gratuito
-                  </Badge>
-                  {testResults.GROQ?.success && (
-                    <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-0 text-[9px] font-bold px-1.5 py-0.2">
-                      ✓ Validada
-                    </Badge>
-                  )}
-                </div>
-                {provider === "GROQ" && (
-                  <div className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                    <CheckIcon size={11} strokeWidth={3} />
-                  </div>
-                )}
-              </div>
-              <p className="font-display text-sm font-bold text-slate-900">
-                Groq (Super Rápido)
-              </p>
-              <p className="text-[11px] text-slate-500 leading-snug">
-                Respostas ultrarrápidas em menos de 1 segundo (GPT-OSS / Llama).
-              </p>
-            </div>
-            <div
-              className={`mt-3 flex items-center gap-1 text-[10px] font-medium ${
-                provider === "GROQ" ? "text-primary" : "text-slate-500"
-              }`}
-            >
-              <ZapIcon size={12} />
-              Super Rápido
-            </div>
-          </button>
-
-          {/* Opção 3: OpenAI (GPT-4o) */}
+          {/* Opção 2: OpenAI (Pago) */}
           <button
             type="button"
             onClick={() => setProvider("OPENAI")}
-            className={`relative flex flex-col justify-between rounded-xl border p-3.5 text-left transition-all ${
+            className={`relative flex flex-col justify-between rounded-xl border p-4 text-left transition-all ${
               provider === "OPENAI"
                 ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/40"
                 : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
@@ -265,10 +210,10 @@ export function AiProviderSelector({
                 )}
               </div>
               <p className="font-display text-sm font-bold text-slate-900">
-                OpenAI (GPT-4o)
+                OpenAI ChatGPT (Pago)
               </p>
               <p className="text-[11px] text-slate-500 leading-snug">
-                Padrão de referência. Requer recarga mínima de US$ 5.
+                Modelos oficiais GPT-4o e Whisper-1. Requer recarga pré-paga na OpenAI Platform.
               </p>
             </div>
             <div
@@ -277,7 +222,7 @@ export function AiProviderSelector({
               }`}
             >
               <KeyIcon size={12} />
-              API Paga
+              API Paga (Créditos)
             </div>
           </button>
         </div>
@@ -398,120 +343,6 @@ export function AiProviderSelector({
             </div>
           )}
 
-          {provider === "GROQ" && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
-                  <KeyIcon size={13} className="text-primary" />
-                  Chave de API da Groq Cloud
-                </label>
-                <a
-                  href="https://console.groq.com/keys"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-[11px] font-semibold text-primary hover:text-primary/80 hover:underline"
-                >
-                  Obter chave grátis na Groq
-                  <ExternalLinkIcon size={11} />
-                </a>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-2">
-                <div className="relative flex-1">
-                  <Input
-                    name="groqApiKey"
-                    type={showKey ? "text" : "password"}
-                    value={groqKey}
-                    onChange={(e) => {
-                      setGroqKey(e.target.value);
-                      if (testResults.GROQ) {
-                        setTestResults((prev) => ({
-                          ...prev,
-                          GROQ: null,
-                        }));
-                      }
-                    }}
-                    placeholder="gsk_..."
-                    className="h-10 rounded-xl border-slate-200 bg-white font-mono text-xs pr-10 focus:border-primary focus-visible:ring-primary"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowKey(!showKey)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                    tabIndex={-1}
-                    title={showKey ? "Ocultar chave" : "Mostrar chave"}
-                  >
-                    {showKey ? <EyeOffIcon size={14} /> : <EyeIcon size={14} />}
-                  </button>
-                </div>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleTestKey("GROQ", groqKey)}
-                  disabled={testingProvider === "GROQ"}
-                  className="h-10 px-4 rounded-xl border-primary/25 bg-primary/5 text-primary hover:bg-primary/10 hover:border-primary shrink-0 gap-1.5 text-xs font-semibold shadow-none transition-colors"
-                >
-                  {testingProvider === "GROQ" ? (
-                    <>
-                      <Loader2Icon size={14} className="animate-spin text-primary" />
-                      <span>Testando...</span>
-                    </>
-                  ) : (
-                    <>
-                      <SparklesIcon size={14} className="text-primary" />
-                      <span>Testar Chave</span>
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              {testResults.GROQ && (
-                <div
-                  className={`flex items-start gap-2.5 rounded-xl border p-3 text-xs transition-all animate-in fade-in-50 ${
-                    testResults.GROQ.success
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-                      : "border-rose-200 bg-rose-50 text-rose-900"
-                  }`}
-                >
-                  {testResults.GROQ.success ? (
-                    <CheckCircle2Icon className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />
-                  ) : (
-                    <AlertCircleIcon className="h-4 w-4 shrink-0 text-rose-600 mt-0.5" />
-                  )}
-                  <div className="flex-1 space-y-0.5">
-                    <p className="font-semibold">
-                      {testResults.GROQ.success
-                        ? "Chave da Groq validada com sucesso!"
-                        : "Falha na validação da chave"}
-                    </p>
-                    <p
-                      className={`text-[11px] leading-relaxed ${
-                        testResults.GROQ.success
-                          ? "text-emerald-700"
-                          : "text-rose-700"
-                      }`}
-                    >
-                      {testResults.GROQ.success
-                        ? testResults.GROQ.message
-                        : testResults.GROQ.error}
-                    </p>
-                    {testResults.GROQ.success && (
-                      <p className="text-[10px] text-emerald-600 font-medium pt-0.5">
-                        Dica: Lembre-se de clicar em &quot;Salvar Configurações&quot; no topo para gravar a alteração.
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <p className="text-[11px] text-slate-500 leading-relaxed">
-                Gratuita e ultraveloz. Utiliza modelos avançados de alta velocidade da Groq para texto e Whisper Large v3 para transcrição de áudios sem custo.
-              </p>
-            </div>
-          )}
-
           {provider === "OPENAI" && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -525,7 +356,7 @@ export function AiProviderSelector({
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-[11px] font-semibold text-primary hover:text-primary/80 hover:underline"
                 >
-                  Gerar chave na OpenAI Platform
+                  Obter chave na OpenAI Platform
                   <ExternalLinkIcon size={11} />
                 </a>
               </div>
@@ -545,7 +376,7 @@ export function AiProviderSelector({
                         }));
                       }
                     }}
-                    placeholder="sk-..."
+                    placeholder="sk-proj-..."
                     className="h-10 rounded-xl border-slate-200 bg-white font-mono text-xs pr-10 focus:border-primary focus-visible:ring-primary"
                   />
                   <button
@@ -629,9 +460,6 @@ export function AiProviderSelector({
           {/* Salva os outros valores caso o usuário alterne de provedor para não perdê-los */}
           {provider !== "GOOGLE_GEMINI" && (
             <input type="hidden" name="geminiApiKey" value={geminiKey} />
-          )}
-          {provider !== "GROQ" && (
-            <input type="hidden" name="groqApiKey" value={groqKey} />
           )}
           {provider !== "OPENAI" && (
             <input type="hidden" name="openaiApiKey" value={openAiKey} />
