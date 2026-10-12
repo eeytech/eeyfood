@@ -4,6 +4,7 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   LinkIcon,
+  Loader2Icon,
   PencilIcon,
   PlusIcon,
   Trash2Icon,
@@ -28,6 +29,15 @@ import {
 } from "@/app/(dashboard)/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { GrupoAdicionalComOpcoes } from "@/lib/admin-queries";
@@ -72,88 +82,147 @@ const defaultOptionForm = (): OptionFormState => ({
   imageFile: null,
 });
 
-function GroupForm({
+function GroupDialog({
+  open,
+  onOpenChange,
   initial,
-  onSubmit,
-  onCancel,
-  isPending,
+  title,
+  description,
   submitLabel,
+  onSubmit,
+  isPending,
 }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   initial: GroupFormState;
-  onSubmit: (data: GroupFormState) => void;
-  onCancel: () => void;
-  isPending: boolean;
+  title: string;
+  description: string;
   submitLabel: string;
+  onSubmit: (data: GroupFormState) => void;
+  isPending: boolean;
 }) {
   const [form, setForm] = useState<GroupFormState>(initial);
+
+  useEffect(() => {
+    if (open) {
+      setForm(initial);
+    }
+  }, [open, initial]);
+
   const set =
     (field: keyof GroupFormState) => (e: React.ChangeEvent<HTMLInputElement>) =>
       setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name.trim()) return;
+    onSubmit(form);
+  };
+
   return (
-    <div className="space-y-3 rounded-xl border bg-slate-50 p-4">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-1 sm:col-span-2">
-          <Label className="text-xs">Nome do grupo</Label>
-          <Input
-            value={form.name}
-            onChange={set("name")}
-            placeholder="Ex: Tamanho, Molho, Extras..."
-            className="h-9"
-          />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Mínimo de opções</Label>
-          <Input
-            type="number"
-            min="0"
-            value={form.minOptions}
-            onChange={set("minOptions")}
-            className="h-9"
-          />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Máximo de opções</Label>
-          <Input
-            type="number"
-            min="1"
-            value={form.maxOptions}
-            onChange={set("maxOptions")}
-            className="h-9"
-          />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Ordem de exibição</Label>
-          <Input
-            type="number"
-            min="0"
-            value={form.displayOrder}
-            onChange={set("displayOrder")}
-            className="h-9"
-          />
-        </div>
-      </div>
-      <div className="flex justify-end gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={onCancel}
-          disabled={isPending}
-        >
-          <XIcon size={14} className="mr-1" />
-          Cancelar
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          onClick={() => onSubmit(form)}
-          disabled={isPending || !form.name.trim()}
-        >
-          {isPending ? "Salvando..." : submitLabel}
-        </Button>
-      </div>
-    </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[480px]">
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-slate-900">
+              {title}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              {description}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="prog-group-name" className="text-xs font-semibold text-slate-700">
+                Nome do Grupo
+              </Label>
+              <Input
+                id="prog-group-name"
+                value={form.name}
+                onChange={set("name")}
+                placeholder="Ex: Tamanho, Molhos, Ponto da Carne..."
+                required
+                className="h-9 text-xs"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="prog-group-min" className="text-xs font-semibold text-slate-700">
+                  Mínimo de opções
+                </Label>
+                <Input
+                  id="prog-group-min"
+                  type="number"
+                  min="0"
+                  value={form.minOptions}
+                  onChange={set("minOptions")}
+                  required
+                  className="h-9 text-xs"
+                />
+                <p className="text-[10px] text-slate-400">
+                  Deixe 0 se for opcional.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="prog-group-max" className="text-xs font-semibold text-slate-700">
+                  Máximo de opções
+                </Label>
+                <Input
+                  id="prog-group-max"
+                  type="number"
+                  min="1"
+                  value={form.maxOptions}
+                  onChange={set("maxOptions")}
+                  required
+                  className="h-9 text-xs"
+                />
+                <p className="text-[10px] text-slate-400">
+                  Quantidade máxima permitida.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="prog-group-order" className="text-xs font-semibold text-slate-700">
+                Ordem de exibição
+              </Label>
+              <Input
+                id="prog-group-order"
+                type="number"
+                min="0"
+                value={form.displayOrder}
+                onChange={set("displayOrder")}
+                required
+                className="h-9 text-xs"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isPending}
+              className="h-9 text-xs"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={isPending || !form.name.trim()}
+              className="h-9 gap-1.5 bg-primary text-xs font-semibold text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/25"
+            >
+              {isPending && <Loader2Icon size={14} className="animate-spin" />}
+              {submitLabel}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -332,6 +401,7 @@ function OptionRow({
   onRefresh: () => void;
 }) {
   const [editing, setEditing] = useState(false);
+  const [confirmDeleteOption, setConfirmDeleteOption] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const handleUpdate = (data: OptionFormState) => {
@@ -358,6 +428,7 @@ function OptionRow({
     fd.set("optionId", option.id);
     startTransition(async () => {
       await deleteProductOptionAction(slug, fd);
+      setConfirmDeleteOption(false);
       onRefresh();
       toast.success("Adicional removido.");
     });
@@ -382,49 +453,69 @@ function OptionRow({
   }
 
   return (
-    <div className="flex items-center gap-2 rounded-lg border bg-white px-3 py-2">
-      {option.imageUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={option.imageUrl}
-          alt={option.name}
-          className="h-8 w-8 shrink-0 rounded-md border object-cover"
-        />
-      )}
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{option.name}</p>
-        {option.description && (
-          <p className="truncate text-xs text-muted-foreground">
-            {option.description}
-          </p>
+    <>
+      <div className="flex items-center gap-2 rounded-lg border bg-white px-3 py-2">
+        {option.imageUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={option.imageUrl}
+            alt={option.name}
+            className="h-8 w-8 shrink-0 rounded-md border object-cover"
+          />
         )}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium">{option.name}</p>
+          {option.description && (
+            <p className="truncate text-xs text-muted-foreground">
+              {option.description}
+            </p>
+          )}
+        </div>
+        <span className="shrink-0 text-sm text-muted-foreground">
+          {(option.price ?? 0) > 0 ? `+ R$ ${(option.price ?? 0).toFixed(2)}` : "Grátis"}
+        </span>
+        <div className="flex shrink-0 gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => setEditing(true)}
+            disabled={isPending}
+            title="Editar adicional"
+          >
+            <PencilIcon size={12} />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-rose-500 hover:bg-rose-50"
+            onClick={() => setConfirmDeleteOption(true)}
+            disabled={isPending}
+            title="Excluir adicional"
+          >
+            <Trash2Icon size={12} />
+          </Button>
+        </div>
       </div>
-      <span className="shrink-0 text-sm text-muted-foreground">
-        {(option.price ?? 0) > 0 ? `+ R$ ${(option.price ?? 0).toFixed(2)}` : "Grátis"}
-      </span>
-      <div className="flex shrink-0 gap-1">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7"
-          onClick={() => setEditing(true)}
-          disabled={isPending}
-        >
-          <PencilIcon size={12} />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 text-rose-500 hover:bg-rose-50"
-          onClick={handleDelete}
-          disabled={isPending}
-        >
-          <Trash2Icon size={12} />
-        </Button>
-      </div>
-    </div>
+
+      <ConfirmDeleteDialog
+        open={confirmDeleteOption}
+        onOpenChange={setConfirmDeleteOption}
+        title="Excluir Adicional"
+        description={
+          <>
+            Tem certeza que deseja remover o adicional{" "}
+            <strong className="text-slate-900 font-semibold">{option.name}</strong>?
+            Esta ação não pode ser desfeita.
+          </>
+        }
+        confirmLabel="Sim, excluir adicional"
+        isPending={isPending}
+        onConfirm={handleDelete}
+      />
+    </>
   );
 }
 
@@ -503,179 +594,152 @@ function GroupCard({
     });
   };
 
-  if (editingGroup) {
-    return (
-      <GroupForm
+  return (
+    <>
+      <div className="overflow-hidden rounded-xl border bg-slate-50">
+        <div
+          className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-slate-100"
+          onClick={() => setExpanded((v) => !v)}
+        >
+          <div className="flex min-w-0 items-center gap-2">
+            {expanded ? (
+              <ChevronUpIcon size={15} />
+            ) : (
+              <ChevronDownIcon size={15} />
+            )}
+            <span className="truncate text-sm font-semibold">{group.name}</span>
+            <Badge variant="secondary" className="shrink-0 text-xs">
+              {group.options.length} itens
+            </Badge>
+            {group.minOptions > 0 && (
+              <Badge variant="danger" className="shrink-0 text-xs">
+                Obrigatório
+              </Badge>
+            )}
+          </div>
+          <div
+            className="flex shrink-0 gap-1"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setEditingGroup(true)}
+              disabled={isPendingGroup}
+              title="Editar grupo"
+            >
+              <PencilIcon size={12} />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-amber-600 hover:bg-amber-50"
+              onClick={() => setConfirmUnlink(true)}
+              disabled={isPendingGroup}
+              title="Desvincular deste produto"
+            >
+              <UnlinkIcon size={12} />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-rose-500 hover:bg-rose-50"
+              onClick={() => setConfirmDelete(true)}
+              disabled={isPendingGroup}
+              title="Excluir permanentemente"
+            >
+              <Trash2Icon size={12} />
+            </Button>
+          </div>
+        </div>
+
+        {expanded && (
+          <div className="space-y-2 border-t bg-slate-50/50 p-3">
+            {group.options.map((option) => (
+              <OptionRow
+                key={option.id}
+                option={option}
+                slug={slug}
+                onRefresh={onRefresh}
+              />
+            ))}
+
+            {addingOption ? (
+              <OptionForm
+                initial={defaultOptionForm()}
+                onSubmit={handleAddOption}
+                onCancel={() => setAddingOption(false)}
+                isPending={isPendingOption}
+                submitLabel="Adicionar"
+              />
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full gap-1.5 border-dashed"
+                onClick={() => setAddingOption(true)}
+              >
+                <PlusIcon size={13} />
+                Adicionar item
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+
+      <GroupDialog
+        open={editingGroup}
+        onOpenChange={setEditingGroup}
         initial={{
           name: group.name,
           minOptions: String(group.minOptions),
           maxOptions: String(group.maxOptions),
           displayOrder: String(group.displayOrder),
         }}
+        title="Editar Grupo de Adicionais"
+        description="Altere as configurações e limites deste grupo de adicionais."
+        submitLabel="Salvar Alterações"
         onSubmit={handleUpdateGroup}
-        onCancel={() => setEditingGroup(false)}
         isPending={isPendingGroup}
-        submitLabel="Salvar grupo"
       />
-    );
-  }
 
-  return (
-    <div className="overflow-hidden rounded-xl border bg-slate-50">
-      <div
-        className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-slate-100"
-        onClick={() => setExpanded((v) => !v)}
-      >
-        <div className="flex min-w-0 items-center gap-2">
-          {expanded ? (
-            <ChevronUpIcon size={15} />
-          ) : (
-            <ChevronDownIcon size={15} />
-          )}
-          <span className="truncate text-sm font-semibold">{group.name}</span>
-          <Badge variant="secondary" className="shrink-0 text-xs">
-            {group.options.length} itens
-          </Badge>
-          {group.minOptions > 0 && (
-            <Badge variant="danger" className="shrink-0 text-xs">
-              Obrigatório
-            </Badge>
-          )}
-        </div>
-        <div
-          className="flex shrink-0 gap-1"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={() => setEditingGroup(true)}
-            disabled={isPendingGroup}
-            title="Editar grupo"
-          >
-            <PencilIcon size={12} />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-amber-600 hover:bg-amber-50"
-            onClick={() => { setConfirmUnlink(true); setConfirmDelete(false); }}
-            disabled={isPendingGroup}
-            title="Desvincular deste produto"
-          >
-            <UnlinkIcon size={12} />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-rose-500 hover:bg-rose-50"
-            onClick={() => { setConfirmDelete(true); setConfirmUnlink(false); }}
-            disabled={isPendingGroup}
-            title="Excluir permanentemente"
-          >
-            <Trash2Icon size={12} />
-          </Button>
-        </div>
-      </div>
+      <ConfirmDeleteDialog
+        open={confirmUnlink}
+        onOpenChange={setConfirmUnlink}
+        title="Desvincular Grupo"
+        description={
+          <>
+            Tem certeza que deseja desvincular o grupo{" "}
+            <strong className="text-slate-900 font-semibold">{group.name}</strong> deste produto?
+            O grupo continuará existindo e vinculado aos outros produtos.
+          </>
+        }
+        confirmLabel="Sim, desvincular"
+        isPending={isPendingGroup}
+        onConfirm={handleUnlink}
+      />
 
-      {confirmUnlink && (
-        <div className="border-t bg-amber-50 px-4 py-3 text-sm">
-          <p className="font-medium text-amber-800">Desvincular grupo deste produto?</p>
-          <p className="mt-0.5 text-amber-700">
-            O grupo e seus itens continuarão existindo e vinculados a outros produtos.
-            Apenas este produto deixará de exibi-lo.
-          </p>
-          <div className="mt-2 flex gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setConfirmUnlink(false)}
-              disabled={isPendingGroup}
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              className="bg-amber-600 hover:bg-amber-700"
-              onClick={handleUnlink}
-              disabled={isPendingGroup}
-            >
-              {isPendingGroup ? "Desvinculando..." : "Desvincular"}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {confirmDelete && (
-        <div className="border-t bg-rose-50 px-4 py-3 text-sm">
-          <p className="font-medium text-rose-800">Excluir grupo permanentemente?</p>
-          <p className="mt-0.5 text-rose-700">
-            Este grupo será removido de <strong>todos os produtos</strong> que o
-            utilizam. Essa ação não pode ser desfeita.
-          </p>
-          <div className="mt-2 flex gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setConfirmDelete(false)}
-              disabled={isPendingGroup}
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              className="bg-rose-600 hover:bg-rose-700"
-              onClick={handleDeleteGroup}
-              disabled={isPendingGroup}
-            >
-              {isPendingGroup ? "Excluindo..." : "Excluir permanentemente"}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {expanded && !confirmUnlink && !confirmDelete && (
-        <div className="space-y-2 border-t bg-slate-50/50 p-3">
-          {group.options.map((option) => (
-            <OptionRow
-              key={option.id}
-              option={option}
-              slug={slug}
-              onRefresh={onRefresh}
-            />
-          ))}
-
-          {addingOption ? (
-            <OptionForm
-              initial={defaultOptionForm()}
-              onSubmit={handleAddOption}
-              onCancel={() => setAddingOption(false)}
-              isPending={isPendingOption}
-              submitLabel="Adicionar"
-            />
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="w-full gap-1.5 border-dashed"
-              onClick={() => setAddingOption(true)}
-            >
-              <PlusIcon size={13} />
-              Adicionar item
-            </Button>
-          )}
-        </div>
-      )}
-    </div>
+      <ConfirmDeleteDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title="Excluir Grupo de Adicionais"
+        description={
+          <>
+            Tem certeza que deseja remover o grupo{" "}
+            <strong className="text-slate-900 font-semibold">{group.name}</strong>?
+            Este grupo será removido de <strong>todos os produtos</strong> do cardápio. Essa ação não pode ser desfeita.
+          </>
+        }
+        confirmLabel="Sim, excluir grupo"
+        isPending={isPendingGroup}
+        onConfirm={handleDeleteGroup}
+      />
+    </>
   );
 }
 
@@ -868,37 +932,38 @@ export function ProductOptionsManager({
         />
       )}
 
-      {addingGroup ? (
-        <GroupForm
-          initial={{ ...defaultGroupForm(), displayOrder: String(groups.length) }}
-          onSubmit={handleAddGroup}
-          onCancel={() => setAddingGroup(false)}
-          isPending={isPending}
-          submitLabel="Criar grupo"
-        />
-      ) : (
-        !linkingGroup && (
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1 gap-2 border-dashed"
-              onClick={() => setAddingGroup(true)}
-            >
-              <PlusIcon size={14} />
-              Novo grupo
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1 gap-2 border-dashed"
-              onClick={() => setLinkingGroup(true)}
-            >
-              <LinkIcon size={14} />
-              Vincular grupo existente
-            </Button>
-          </div>
-        )
+      <GroupDialog
+        open={addingGroup}
+        onOpenChange={setAddingGroup}
+        initial={{ ...defaultGroupForm(), displayOrder: String(groups.length) }}
+        title="Cadastrar Novo Grupo de Adicionais"
+        description="Cadastre um novo grupo de adicionais para este produto."
+        submitLabel="Cadastrar Grupo"
+        onSubmit={handleAddGroup}
+        isPending={isPending}
+      />
+
+      {!linkingGroup && (
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="flex-1 gap-2 border-dashed"
+            onClick={() => setAddingGroup(true)}
+          >
+            <PlusIcon size={14} />
+            Novo grupo
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="flex-1 gap-2 border-dashed"
+            onClick={() => setLinkingGroup(true)}
+          >
+            <LinkIcon size={14} />
+            Vincular grupo existente
+          </Button>
+        </div>
       )}
     </div>
   );

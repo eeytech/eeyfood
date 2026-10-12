@@ -4,6 +4,7 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   ListPlusIcon,
+  Loader2Icon,
   MoreHorizontalIcon,
   PencilIcon,
   PlusIcon,
@@ -15,16 +16,25 @@ import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import {
-  createProductOptionGroupAction,
   createProductOptionAction,
-  deleteProductOptionGroupAction,
+  createProductOptionGroupAction,
   deleteProductOptionAction,
+  deleteProductOptionGroupAction,
   fetchRestaurantOptionGroupsAction,
-  updateProductOptionGroupAction,
   updateProductOptionAction,
+  updateProductOptionGroupAction,
 } from "@/app/(dashboard)/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -82,90 +92,147 @@ const defaultOptionForm = (): OptionFormState => ({
   imageFile: null,
 });
 
-function GroupForm({
+function GroupDialog({
+  open,
+  onOpenChange,
   initial,
-  onSubmit,
-  onCancel,
-  isPending,
+  title,
+  description,
   submitLabel,
+  onSubmit,
+  isPending,
 }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   initial: GroupFormState;
-  onSubmit: (data: GroupFormState) => void;
-  onCancel: () => void;
-  isPending: boolean;
+  title: string;
+  description: string;
   submitLabel: string;
+  onSubmit: (data: GroupFormState) => void;
+  isPending: boolean;
 }) {
   const [form, setForm] = useState<GroupFormState>(initial);
+
+  useEffect(() => {
+    if (open) {
+      setForm(initial);
+    }
+  }, [open, initial]);
+
   const set =
     (field: keyof GroupFormState) => (e: React.ChangeEvent<HTMLInputElement>) =>
       setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name.trim()) return;
+    onSubmit(form);
+  };
+
   return (
-    <div className="space-y-3 rounded-xl border bg-slate-50 p-4">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-1 sm:col-span-2">
-          <Label className="text-xs">Nome do grupo</Label>
-          <Input
-            value={form.name}
-            onChange={set("name")}
-            placeholder="Ex: Tamanho, Molho, Extras..."
-            className="h-9"
-          />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Mínimo de opções</Label>
-          <Input
-            type="number"
-            min="0"
-            value={form.minOptions}
-            onChange={set("minOptions")}
-            className="h-9"
-          />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Máximo de opções</Label>
-          <Input
-            type="number"
-            min="1"
-            value={form.maxOptions}
-            onChange={set("maxOptions")}
-            className="h-9"
-          />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Ordem de exibição</Label>
-          <Input
-            type="number"
-            min="0"
-            value={form.displayOrder}
-            onChange={set("displayOrder")}
-            className="h-9"
-          />
-        </div>
-      </div>
-      <div className="flex justify-end gap-2 pt-1">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={onCancel}
-          disabled={isPending}
-          className="h-9 rounded-full border-slate-200 px-4 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-all"
-        >
-          <XIcon size={14} className="mr-1" />
-          Cancelar
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          onClick={() => onSubmit(form)}
-          disabled={isPending || !form.name.trim()}
-          className="h-9 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
-        >
-          {isPending ? "Salvando..." : submitLabel}
-        </Button>
-      </div>
-    </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[480px]">
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-slate-900">
+              {title}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              {description}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="group-name" className="text-xs font-semibold text-slate-700">
+                Nome do Grupo
+              </Label>
+              <Input
+                id="group-name"
+                value={form.name}
+                onChange={set("name")}
+                placeholder="Ex: Tamanho, Molhos, Ponto da Carne..."
+                required
+                className="h-9 text-xs"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="group-min" className="text-xs font-semibold text-slate-700">
+                  Mínimo de opções
+                </Label>
+                <Input
+                  id="group-min"
+                  type="number"
+                  min="0"
+                  value={form.minOptions}
+                  onChange={set("minOptions")}
+                  required
+                  className="h-9 text-xs"
+                />
+                <p className="text-[10px] text-slate-400">
+                  Deixe 0 se a escolha for opcional.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="group-max" className="text-xs font-semibold text-slate-700">
+                  Máximo de opções
+                </Label>
+                <Input
+                  id="group-max"
+                  type="number"
+                  min="1"
+                  value={form.maxOptions}
+                  onChange={set("maxOptions")}
+                  required
+                  className="h-9 text-xs"
+                />
+                <p className="text-[10px] text-slate-400">
+                  Quantidade máxima permitida.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="group-order" className="text-xs font-semibold text-slate-700">
+                Ordem de exibição
+              </Label>
+              <Input
+                id="group-order"
+                type="number"
+                min="0"
+                value={form.displayOrder}
+                onChange={set("displayOrder")}
+                required
+                className="h-9 text-xs"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isPending}
+              className="h-9 text-xs"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={isPending || !form.name.trim()}
+              className="h-9 gap-1.5 bg-primary text-xs font-semibold text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/25"
+            >
+              {isPending && <Loader2Icon size={14} className="animate-spin" />}
+              {submitLabel}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -346,6 +413,7 @@ function OptionRow({
   onRefresh: () => void;
 }) {
   const [editing, setEditing] = useState(false);
+  const [confirmDeleteOption, setConfirmDeleteOption] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const handleUpdate = (data: OptionFormState) => {
@@ -367,11 +435,12 @@ function OptionRow({
     });
   };
 
-  const handleDelete = () => {
+  const handleDeleteConfirm = () => {
     const fd = new FormData();
     fd.set("optionId", option.id);
     startTransition(async () => {
       await deleteProductOptionAction(slug, fd);
+      setConfirmDeleteOption(false);
       onRefresh();
       toast.success("Adicional removido.");
     });
@@ -396,64 +465,82 @@ function OptionRow({
   }
 
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white p-3 shadow-2xs transition-colors hover:bg-slate-50/60">
-      {option.imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={option.imageUrl}
-          alt={option.name}
-          className="h-9 w-9 shrink-0 rounded-lg border border-slate-200/80 object-cover"
-        />
-      ) : (
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200/80 bg-slate-100 text-slate-400">
-          <ListPlusIcon size={16} />
-        </div>
-      )}
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-xs font-semibold text-slate-900">{option.name}</p>
-        {option.description && (
-          <p className="truncate text-[11px] text-slate-500">
-            {option.description}
-          </p>
+    <>
+      <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white p-3 shadow-2xs transition-colors hover:bg-slate-50/60">
+        {option.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={option.imageUrl}
+            alt={option.name}
+            className="h-9 w-9 shrink-0 rounded-lg border border-slate-200/80 object-cover"
+          />
+        ) : (
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200/80 bg-slate-100 text-slate-400">
+            <ListPlusIcon size={16} />
+          </div>
         )}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs font-semibold text-slate-900">{option.name}</p>
+          {option.description && (
+            <p className="truncate text-[11px] text-slate-500">
+              {option.description}
+            </p>
+          )}
+        </div>
+        <span className="shrink-0 font-display text-xs font-bold text-slate-900">
+          {(option.price ?? 0) > 0 ? `+ ${formatCurrency(option.price ?? 0)}` : "Grátis"}
+        </span>
+        <div className="flex shrink-0 items-center">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 rounded-lg border border-slate-200/80 bg-white text-slate-600 shadow-2xs hover:bg-slate-50 hover:text-slate-900 transition-colors"
+              >
+                <MoreHorizontalIcon size={14} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-36 rounded-xl border-slate-200 bg-white shadow-lg">
+              <DropdownMenuItem
+                onClick={() => setEditing(true)}
+                disabled={isPending}
+                className="cursor-pointer gap-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
+              >
+                <PencilIcon size={13} className="text-primary" />
+                <span>Editar Item</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setConfirmDeleteOption(true)}
+                disabled={isPending}
+                className="cursor-pointer gap-2 text-xs font-semibold text-rose-600 focus:bg-rose-50 focus:text-rose-700 hover:bg-rose-50"
+              >
+                <Trash2Icon size={13} />
+                <span>Excluir</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
-      <span className="shrink-0 font-display text-xs font-bold text-slate-900">
-        {(option.price ?? 0) > 0 ? `+ ${formatCurrency(option.price ?? 0)}` : "Grátis"}
-      </span>
-      <div className="flex shrink-0 items-center">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 rounded-lg border border-slate-200/80 bg-white text-slate-600 shadow-2xs hover:bg-slate-50 hover:text-slate-900 transition-colors"
-            >
-              <MoreHorizontalIcon size={14} />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-36 rounded-xl border-slate-200 bg-white shadow-lg">
-            <DropdownMenuItem
-              onClick={() => setEditing(true)}
-              disabled={isPending}
-              className="cursor-pointer gap-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
-            >
-              <PencilIcon size={13} className="text-primary" />
-              <span>Editar Item</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={handleDelete}
-              disabled={isPending}
-              className="cursor-pointer gap-2 text-xs font-semibold text-rose-600 focus:bg-rose-50 focus:text-rose-700 hover:bg-rose-50"
-            >
-              <Trash2Icon size={13} />
-              <span>Excluir</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </div>
+
+      <ConfirmDeleteDialog
+        open={confirmDeleteOption}
+        onOpenChange={setConfirmDeleteOption}
+        title="Excluir Adicional"
+        description={
+          <>
+            Tem certeza que deseja remover o adicional{" "}
+            <strong className="text-slate-900 font-semibold">{option.name}</strong>?
+            Esta ação não pode ser desfeita.
+          </>
+        }
+        confirmLabel="Sim, excluir adicional"
+        isPending={isPending}
+        onConfirm={handleDeleteConfirm}
+      />
+    </>
   );
 }
 
@@ -493,6 +580,7 @@ function GlobalGroupCard({
     fd.set("groupId", group.id);
     startGroupTransition(async () => {
       await deleteProductOptionGroupAction(slug, fd);
+      setConfirmDelete(false);
       onRefresh();
       toast.success("Grupo excluído.");
     });
@@ -517,157 +605,142 @@ function GlobalGroupCard({
     });
   };
 
-  if (editingGroup) {
-    return (
-      <GroupForm
+  return (
+    <>
+      <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+        <div
+          className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3.5 bg-slate-50/60 transition-colors hover:bg-slate-100/70"
+          onClick={() => setExpanded((v) => !v)}
+        >
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div className="text-slate-400">
+              {expanded ? (
+                <ChevronUpIcon size={16} />
+              ) : (
+                <ChevronDownIcon size={16} />
+              )}
+            </div>
+            <span className="truncate text-sm font-semibold text-slate-900">{group.name}</span>
+            <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
+              {group.options.length} {group.options.length === 1 ? "item" : "itens"}
+            </span>
+            {group.minOptions > 0 ? (
+              <span className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2.5 py-0.5 text-[11px] font-semibold text-rose-700">
+                Obrigatório (mín: {group.minOptions})
+              </span>
+            ) : (
+              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[11px] font-medium text-slate-500">
+                Opcional (máx: {group.maxOptions})
+              </span>
+            )}
+          </div>
+          <div
+            className="flex shrink-0 items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-lg border border-slate-200/80 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 shadow-2xs transition-colors"
+                  disabled={isPendingGroup}
+                >
+                  <MoreHorizontalIcon size={16} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44 rounded-xl border-slate-200 bg-white shadow-lg">
+                <DropdownMenuItem
+                  onClick={() => setEditingGroup(true)}
+                  disabled={isPendingGroup}
+                  className="cursor-pointer gap-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
+                >
+                  <PencilIcon size={14} className="text-primary" />
+                  <span>Editar dados</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setConfirmDelete(true)}
+                  disabled={isPendingGroup}
+                  className="cursor-pointer gap-2 text-xs font-semibold text-rose-600 focus:bg-rose-50 focus:text-rose-700 hover:bg-rose-50"
+                >
+                  <Trash2Icon size={14} />
+                  <span>Excluir grupo</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        {expanded && (
+          <div className="space-y-2.5 border-t border-slate-100 bg-slate-50/40 p-4">
+            {group.options.map((option) => (
+              <OptionRow
+                key={option.id}
+                option={option}
+                slug={slug}
+                onRefresh={onRefresh}
+              />
+            ))}
+
+            {addingOption ? (
+              <OptionForm
+                initial={defaultOptionForm()}
+                onSubmit={handleAddOption}
+                onCancel={() => setAddingOption(false)}
+                isPending={isPendingOption}
+                submitLabel="Adicionar"
+              />
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-9 w-full gap-2 rounded-xl border-dashed border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-all shadow-2xs"
+                onClick={() => setAddingOption(true)}
+              >
+                <PlusIcon size={14} />
+                Adicionar item a este grupo
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+
+      <GroupDialog
+        open={editingGroup}
+        onOpenChange={setEditingGroup}
         initial={{
           name: group.name,
           minOptions: String(group.minOptions),
           maxOptions: String(group.maxOptions),
           displayOrder: String(group.displayOrder),
         }}
+        title="Editar Grupo de Adicionais"
+        description="Altere as configurações e limites deste grupo de adicionais."
+        submitLabel="Salvar Alterações"
         onSubmit={handleUpdateGroup}
-        onCancel={() => setEditingGroup(false)}
         isPending={isPendingGroup}
-        submitLabel="Salvar grupo"
       />
-    );
-  }
 
-  return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
-      <div
-        className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3.5 bg-slate-50/60 transition-colors hover:bg-slate-100/70"
-        onClick={() => setExpanded((v) => !v)}
-      >
-        <div className="flex min-w-0 items-center gap-2.5">
-          <div className="text-slate-400">
-            {expanded ? (
-              <ChevronUpIcon size={16} />
-            ) : (
-              <ChevronDownIcon size={16} />
-            )}
-          </div>
-          <span className="truncate text-sm font-semibold text-slate-900">{group.name}</span>
-          <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
-            {group.options.length} {group.options.length === 1 ? "item" : "itens"}
-          </span>
-          {group.minOptions > 0 ? (
-            <span className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2.5 py-0.5 text-[11px] font-semibold text-rose-700">
-              Obrigatório (mín: {group.minOptions})
-            </span>
-          ) : (
-            <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[11px] font-medium text-slate-500">
-              Opcional (máx: {group.maxOptions})
-            </span>
-          )}
-        </div>
-        <div
-          className="flex shrink-0 items-center"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-lg border border-slate-200/80 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 shadow-2xs transition-colors"
-                disabled={isPendingGroup}
-              >
-                <MoreHorizontalIcon size={16} />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44 rounded-xl border-slate-200 bg-white shadow-lg">
-              <DropdownMenuItem
-                onClick={() => setEditingGroup(true)}
-                disabled={isPendingGroup}
-                className="cursor-pointer gap-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
-              >
-                <PencilIcon size={14} className="text-primary" />
-                <span>Editar Grupo</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => setConfirmDelete(true)}
-                disabled={isPendingGroup}
-                className="cursor-pointer gap-2 text-xs font-semibold text-rose-600 focus:bg-rose-50 focus:text-rose-700 hover:bg-rose-50"
-              >
-                <Trash2Icon size={14} />
-                <span>Excluir</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-
-      {confirmDelete && (
-        <div className="border-t border-rose-100 bg-rose-50/70 px-4 py-3 text-sm">
-          <p className="font-semibold text-rose-900">
-            Excluir grupo permanentemente?
-          </p>
-          <p className="mt-0.5 text-xs text-rose-700">
+      <ConfirmDeleteDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title="Excluir Grupo de Adicionais"
+        description={
+          <>
+            Tem certeza que deseja remover o grupo{" "}
+            <strong className="text-slate-900 font-semibold">{group.name}</strong>?
             Este grupo será removido de <strong>todos os produtos</strong> que o
             utilizam no cardápio. Essa ação não pode ser desfeita.
-          </p>
-          <div className="mt-3 flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setConfirmDelete(false)}
-              disabled={isPendingGroup}
-              className="h-8 rounded-full border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              className="h-8 rounded-full bg-rose-600 hover:bg-rose-700 px-4 text-xs font-semibold text-white shadow-sm"
-              onClick={handleDeleteGroup}
-              disabled={isPendingGroup}
-            >
-              {isPendingGroup ? "Excluindo..." : "Excluir permanentemente"}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {expanded && !confirmDelete && (
-        <div className="space-y-2.5 border-t border-slate-100 bg-slate-50/40 p-4">
-          {group.options.map((option) => (
-            <OptionRow
-              key={option.id}
-              option={option}
-              slug={slug}
-              onRefresh={onRefresh}
-            />
-          ))}
-
-          {addingOption ? (
-            <OptionForm
-              initial={defaultOptionForm()}
-              onSubmit={handleAddOption}
-              onCancel={() => setAddingOption(false)}
-              isPending={isPendingOption}
-              submitLabel="Adicionar"
-            />
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-9 w-full gap-2 rounded-xl border-dashed border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-all shadow-2xs"
-              onClick={() => setAddingOption(true)}
-            >
-              <PlusIcon size={14} />
-              Adicionar item a este grupo
-            </Button>
-          )}
-        </div>
-      )}
-    </div>
+          </>
+        }
+        confirmLabel="Sim, excluir grupo"
+        isPending={isPendingGroup}
+        onConfirm={handleDeleteGroup}
+      />
+    </>
   );
 }
 
@@ -734,15 +807,16 @@ export function GlobalOptionGroupsManager({
 
   return (
     <div className="space-y-3">
-      {addingGroup && (
-        <GroupForm
-          initial={{ ...defaultGroupForm(), displayOrder: String(groups.length) }}
-          onSubmit={handleAddGroup}
-          onCancel={() => setAddingGroup(false)}
-          isPending={isPending}
-          submitLabel="Criar grupo"
-        />
-      )}
+      <GroupDialog
+        open={addingGroup}
+        onOpenChange={setAddingGroup}
+        initial={{ ...defaultGroupForm(), displayOrder: String(groups.length) }}
+        title="Cadastrar Novo Grupo de Adicionais"
+        description="Cadastre um grupo de adicionais reutilizável para associar aos produtos do seu cardápio."
+        submitLabel="Cadastrar Grupo"
+        onSubmit={handleAddGroup}
+        isPending={isPending}
+      />
 
       {groups.length === 0 && !addingGroup && (
         <div className="flex min-h-[220px] flex-col items-center justify-center p-8 text-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/40">

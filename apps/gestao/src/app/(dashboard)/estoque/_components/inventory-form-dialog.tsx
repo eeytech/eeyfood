@@ -88,7 +88,7 @@ export function InventoryFormDialog({
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg border-slate-200 bg-white shadow-2xl">
         <DialogHeader>
           <DialogTitle className="font-display text-lg font-bold text-slate-900">
-            {isEditing ? "Editar Insumo" : "Novo Insumo"}
+            {isEditing ? "Editar Insumo" : "Cadastrar Novo Insumo"}
           </DialogTitle>
           <DialogDescription className="text-slate-500">
             {isEditing

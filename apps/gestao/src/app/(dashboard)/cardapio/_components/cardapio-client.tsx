@@ -454,21 +454,14 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
         open={editCategory !== null}
         onOpenChange={(open) => !open && setEditCategory(null)}
       >
-        <DialogContent className="border-slate-200 bg-white shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold text-slate-900">
-              Editar categoria
-            </DialogTitle>
-            <DialogDescription className="text-slate-500">
-              {editCategory?.name}
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-[480px]">
           {editCategory && (
             <CategoryForm
               key={editCategory.id}
               slug={slug}
               defaultValues={editCategory}
               onSuccess={() => setEditCategory(null)}
+              onCancel={() => setEditCategory(null)}
             />
           )}
         </DialogContent>
@@ -476,18 +469,11 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
 
       {/* ── Dialog: Criar Categoria ──────────────────────── */}
       <Dialog open={createCategoryOpen} onOpenChange={setCreateCategoryOpen}>
-        <DialogContent className="border-slate-200 bg-white shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold text-slate-900">
-              Nova categoria
-            </DialogTitle>
-            <DialogDescription className="text-slate-500">
-              Organize o cardápio criando uma nova categoria de produtos.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-[480px]">
           <CategoryForm
             slug={slug}
             onSuccess={() => setCreateCategoryOpen(false)}
+            onCancel={() => setCreateCategoryOpen(false)}
           />
         </DialogContent>
       </Dialog>
@@ -937,15 +923,8 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                             {/* Estoque */}
                             <TableCell className="py-3.5 text-right">
                               {product.trackInventory ? (
-                                <span
-                                  className={cn(
-                                    "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold",
-                                    isLowStock
-                                      ? "border border-rose-200 bg-rose-50 text-rose-700"
-                                      : "border border-primary/20 bg-primary/10 text-primary",
-                                  )}
-                                >
-                                  {isLowStock && <AlertTriangleIcon size={12} className="text-rose-600" />}
+                                <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+                                  {isLowStock && <AlertTriangleIcon size={12} className="text-primary" />}
                                   {product.stockQuantity} un
                                 </span>
                               ) : (
@@ -993,7 +972,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                                     className="cursor-pointer gap-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
                                   >
                                     <PencilIcon size={14} className="text-primary" />
-                                    <span>Editar Produto</span>
+                                    <span>Editar dados</span>
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() =>
@@ -1004,12 +983,12 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                                     {product.isActive ? (
                                       <>
                                         <AlertCircleIcon size={14} className="text-primary" />
-                                        <span>Pausar Venda</span>
+                                        <span>Pausar venda</span>
                                       </>
                                     ) : (
                                       <>
                                         <CheckCircle2Icon size={14} className="text-emerald-600" />
-                                        <span>Ativar Venda</span>
+                                        <span>Ativar venda</span>
                                       </>
                                     )}
                                   </DropdownMenuItem>
@@ -1022,7 +1001,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                                     className="cursor-pointer gap-2 text-xs font-semibold text-rose-600 focus:bg-rose-50 focus:text-rose-700 hover:bg-rose-50"
                                   >
                                     <Trash2Icon size={14} />
-                                    <span>Excluir</span>
+                                    <span>Excluir produto</span>
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
@@ -1106,15 +1085,8 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                         <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-xs">
                           <div>
                             {product.trackInventory ? (
-                              <span
-                                className={cn(
-                                  "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
-                                  isLowStock
-                                    ? "border border-rose-200 bg-rose-50 text-rose-700"
-                                    : "border border-primary/20 bg-primary/10 text-primary",
-                                )}
-                              >
-                                {isLowStock && <AlertTriangleIcon size={12} className="text-rose-600" />}
+                              <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                                {isLowStock && <AlertTriangleIcon size={12} className="text-primary" />}
                                 Estoque: {product.stockQuantity} un
                               </span>
                             ) : (
@@ -1405,7 +1377,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                                   className="cursor-pointer gap-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
                                 >
                                   <PencilIcon size={14} className="text-primary" />
-                                  <span>Editar Categoria</span>
+                                  <span>Editar dados</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() =>
@@ -1416,12 +1388,12 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                                   {category.isActive ? (
                                     <>
                                       <AlertCircleIcon size={14} className="text-primary" />
-                                      <span>Desativar Categoria</span>
+                                      <span>Desativar categoria</span>
                                     </>
                                   ) : (
                                     <>
                                       <CheckCircle2Icon size={14} className="text-emerald-600" />
-                                      <span>Ativar Categoria</span>
+                                      <span>Ativar categoria</span>
                                     </>
                                   )}
                                 </DropdownMenuItem>
@@ -1434,7 +1406,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
                                   className="cursor-pointer gap-2 text-xs font-semibold text-rose-600 focus:bg-rose-50 focus:text-rose-700 hover:bg-rose-50"
                                 >
                                   <Trash2Icon size={14} />
-                                  <span>Excluir</span>
+                                  <span>Excluir categoria</span>
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -1586,7 +1558,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
         onOpenChange={(open) => {
           if (!open) setDeletingProduct(null);
         }}
-        title="Excluir produto"
+        title="Excluir Produto"
         description={
           <>
             Tem certeza que deseja remover o produto{" "}
@@ -1607,7 +1579,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
         onOpenChange={(open) => {
           if (!open) setDeletingCategory(null);
         }}
-        title="Excluir categoria"
+        title="Excluir Categoria"
         description={
           <>
             Tem certeza que deseja remover a categoria{" "}

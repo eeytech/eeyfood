@@ -630,7 +630,7 @@ export function ComprasClient({
         <DialogContent className="max-h-[90vh] overflow-y-auto border-slate-200 bg-white shadow-2xl sm:max-w-xl">
           <DialogHeader>
             <DialogTitle className="font-display text-lg font-bold text-slate-900">
-              {editingSupplier ? "Editar Fornecedor" : "Novo Fornecedor"}
+              {editingSupplier ? "Editar Fornecedor" : "Cadastrar Novo Fornecedor"}
             </DialogTitle>
             <DialogDescription className="text-slate-500">
               {editingSupplier
