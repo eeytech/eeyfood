@@ -48,6 +48,30 @@ interface ProductOptionsManagerProps {
   productId: string;
 }
 
+const formatCurrencyInput = (val: number | string | null | undefined): string => {
+  if (val === null || val === undefined || val === "") return "";
+  if (typeof val === "number") {
+    if (isNaN(val) || val < 0) return "";
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(val);
+  }
+  const digits = val.replace(/\D/g, "");
+  if (!digits) return "";
+  const num = Number(digits) / 100;
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(num);
+};
+
+const parseCurrencyToRawNumber = (val: string): number => {
+  const digits = val.replace(/\D/g, "");
+  if (!digits) return 0;
+  return Number(digits) / 100;
+};
+
 type GroupWithOptions = ProductOptionGroup & { options: ProductOption[] };
 
 interface GroupFormState {
@@ -77,7 +101,7 @@ const defaultOptionForm = (): OptionFormState => ({
   name: "",
   description: "",
   imageUrl: "",
-  price: "0",
+  price: "",
   displayOrder: "0",
   imageFile: null,
 });
@@ -191,12 +215,10 @@ function GroupDialog({
               </Label>
               <Input
                 id="prog-group-order"
-                type="number"
-                min="0"
                 value={form.displayOrder}
-                onChange={set("displayOrder")}
-                required
-                className="h-9 text-xs"
+                onChange={(e) => setForm((prev) => ({ ...prev, displayOrder: e.target.value.replace(/\D/g, "") }))}
+                placeholder="0"
+                className="h-9 text-xs font-mono"
               />
             </div>
           </div>
@@ -226,26 +248,35 @@ function GroupDialog({
   );
 }
 
-function OptionForm({
+function OptionDialog({
+  open,
+  onOpenChange,
   initial,
-  onSubmit,
-  onCancel,
-  isPending,
+  title,
+  description,
   submitLabel,
+  onSubmit,
+  isPending,
 }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   initial: OptionFormState;
-  onSubmit: (data: OptionFormState) => void;
-  onCancel: () => void;
-  isPending: boolean;
+  title: string;
+  description: string;
   submitLabel: string;
+  onSubmit: (data: OptionFormState) => void;
+  isPending: boolean;
 }) {
   const [form, setForm] = useState<OptionFormState>(initial);
   const [preview, setPreview] = useState<string>(initial.imageUrl || "");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const set =
-    (field: keyof OptionFormState) => (e: React.ChangeEvent<HTMLInputElement>) =>
-      setForm((prev) => ({ ...prev, [field]: e.target.value }));
+  useEffect(() => {
+    if (open) {
+      setForm(initial);
+      setPreview(initial.imageUrl || "");
+    }
+  }, [open, initial]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -261,133 +292,174 @@ function OptionForm({
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name.trim()) return;
+    onSubmit(form);
+  };
+
   return (
-    <div className="space-y-3 rounded-xl border bg-white p-3 shadow-sm">
-      <div className="grid gap-2 sm:grid-cols-2">
-        <div className="space-y-1 sm:col-span-2">
-          <Label className="text-xs">Nome</Label>
-          <Input
-            value={form.name}
-            onChange={set("name")}
-            placeholder="Ex: Grande, Barbecue, Bacon extra..."
-            className="h-8 text-sm"
-          />
-        </div>
-        <div className="space-y-1 sm:col-span-2">
-          <Label className="text-xs">Descrição (opcional)</Label>
-          <Input
-            value={form.description}
-            onChange={set("description")}
-            placeholder="Descrição curta"
-            className="h-8 text-sm"
-          />
-        </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[480px]">
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-slate-900">
+              {title}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              {description}
+            </DialogDescription>
+          </DialogHeader>
 
-        {/* Upload de Imagem do Adicional (Salva direto no servidor) */}
-        <div className="space-y-1 sm:col-span-2">
-          <Label className="text-xs">Foto do adicional (opcional)</Label>
-          <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-slate-50/60 p-2.5">
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className="relative flex h-14 w-14 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-slate-200 bg-white transition hover:border-slate-300 hover:bg-slate-100"
-            >
-              {preview ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={preview}
-                  alt="Preview"
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <UploadIcon size={18} className="text-slate-400" />
-              )}
-              <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition hover:opacity-100">
-                <UploadIcon size={16} className="text-white" />
-              </div>
+          <div className="space-y-4 py-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="prog-opt-name" className="text-xs font-semibold text-slate-700">
+                Nome do Adicional
+              </Label>
+              <Input
+                id="prog-opt-name"
+                value={form.name}
+                onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                placeholder="Ex: Bacon Extra, Queijo Cheddar, Molho Especial..."
+                required
+                className="h-9 text-xs"
+              />
             </div>
 
-            <div className="flex-1 space-y-1">
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-7 text-xs"
+            <div className="space-y-1.5">
+              <Label htmlFor="prog-opt-desc" className="text-xs font-semibold text-slate-700">
+                Descrição (opcional)
+              </Label>
+              <Input
+                id="prog-opt-desc"
+                value={form.description}
+                onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+                placeholder="Breve descrição do ingrediente ou porção..."
+                className="h-9 text-xs"
+              />
+            </div>
+
+            {/* Upload de Imagem */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">
+                Foto do Adicional (opcional)
+              </Label>
+              <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-slate-50/60 p-2.5">
+                <div
                   onClick={() => fileInputRef.current?.click()}
+                  className="relative flex h-14 w-14 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-slate-200 bg-white transition hover:border-slate-300 hover:bg-slate-100"
                 >
-                  <UploadIcon size={12} className="mr-1" />
-                  Carregar do dispositivo
-                </Button>
-                {preview && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50"
-                    onClick={handleRemoveImage}
-                  >
-                    Remover
-                  </Button>
-                )}
+                  {preview ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={preview}
+                      alt="Preview"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <UploadIcon size={18} className="text-slate-400" />
+                  )}
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition hover:opacity-100">
+                    <UploadIcon size={16} className="text-white" />
+                  </div>
+                </div>
+
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <UploadIcon size={12} className="mr-1" />
+                      Carregar imagem
+                    </Button>
+                    {preview && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                        onClick={handleRemoveImage}
+                      >
+                        Remover
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-slate-500">
+                    PNG, JPG ou WEBP até 2MB.
+                  </p>
+                </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
               </div>
-              <p className="text-[11px] text-slate-500">
-                Upload direto salvo no servidor (máx. 2MB).
-              </p>
             </div>
 
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleFileChange}
-            />
-          </div>
-        </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="prog-opt-price" className="text-xs font-semibold text-slate-700">
+                  Preço Adicional
+                </Label>
+                <Input
+                  id="prog-opt-price"
+                  value={form.price}
+                  onChange={(e) => setForm((prev) => ({ ...prev, price: formatCurrencyInput(e.target.value) }))}
+                  placeholder="R$ 0,00"
+                  className="h-9 text-xs font-medium"
+                />
+                <p className="text-[10px] text-slate-400">
+                  Deixe R$ 0,00 se for gratuito.
+                </p>
+              </div>
 
-        <div className="space-y-1">
-          <Label className="text-xs">Preço adicional (R$)</Label>
-          <Input
-            type="number"
-            step="0.01"
-            min="0"
-            value={form.price}
-            onChange={set("price")}
-            className="h-8 text-sm"
-          />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Ordem</Label>
-          <Input
-            type="number"
-            min="0"
-            value={form.displayOrder}
-            onChange={set("displayOrder")}
-            className="h-8 text-sm"
-          />
-        </div>
-      </div>
-      <div className="flex justify-end gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={onCancel}
-          disabled={isPending}
-        >
-          <XIcon size={12} className="mr-1" />
-          Cancelar
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          onClick={() => onSubmit(form)}
-          disabled={isPending || !form.name.trim()}
-        >
-          {isPending ? "Salvando..." : submitLabel}
-        </Button>
-      </div>
-    </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="prog-opt-order" className="text-xs font-semibold text-slate-700">
+                  Ordem de Exibição
+                </Label>
+                <Input
+                  id="prog-opt-order"
+                  value={form.displayOrder}
+                  onChange={(e) => setForm((prev) => ({ ...prev, displayOrder: e.target.value.replace(/\D/g, "") }))}
+                  placeholder="0"
+                  className="h-9 text-xs font-mono"
+                />
+                <p className="text-[10px] text-slate-400">
+                  Posição na listagem.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isPending}
+              className="h-9 text-xs"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={isPending || !form.name.trim()}
+              className="h-9 gap-1.5 bg-primary text-xs font-semibold text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/25"
+            >
+              {isPending && <Loader2Icon size={14} className="animate-spin" />}
+              {submitLabel}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -407,19 +479,19 @@ function OptionRow({
   const handleUpdate = (data: OptionFormState) => {
     const fd = new FormData();
     fd.set("optionId", option.id);
-    fd.set("name", data.name);
-    fd.set("description", data.description);
+    fd.set("name", data.name.trim());
+    fd.set("description", data.description.trim());
     fd.set("imageUrl", data.imageUrl);
     if (data.imageFile) {
       fd.set("imageFile", data.imageFile);
     }
-    fd.set("price", data.price);
-    fd.set("displayOrder", data.displayOrder);
+    fd.set("price", String(parseCurrencyToRawNumber(data.price)));
+    fd.set("displayOrder", data.displayOrder ? data.displayOrder.replace(/\D/g, "") : "0");
     startTransition(async () => {
       await updateProductOptionAction(slug, fd);
       setEditing(false);
       onRefresh();
-      toast.success("Adicional atualizado.");
+      toast.success("Adicional atualizado com sucesso!");
     });
   };
 
@@ -433,24 +505,6 @@ function OptionRow({
       toast.success("Adicional removido.");
     });
   };
-
-  if (editing) {
-    return (
-      <OptionForm
-        initial={{
-          name: option.name,
-          description: option.description ?? "",
-          imageUrl: option.imageUrl ?? "",
-          price: String(option.price),
-          displayOrder: String(option.displayOrder),
-        }}
-        onSubmit={handleUpdate}
-        onCancel={() => setEditing(false)}
-        isPending={isPending}
-        submitLabel="Salvar"
-      />
-    );
-  }
 
   return (
     <>
@@ -471,7 +525,7 @@ function OptionRow({
             </p>
           )}
         </div>
-        <span className="shrink-0 text-sm text-muted-foreground">
+        <span className="shrink-0 text-sm text-muted-foreground font-medium">
           {(option.price ?? 0) > 0 ? `+ R$ ${(option.price ?? 0).toFixed(2)}` : "Grátis"}
         </span>
         <div className="flex shrink-0 gap-1">
@@ -499,6 +553,23 @@ function OptionRow({
           </Button>
         </div>
       </div>
+
+      <OptionDialog
+        open={editing}
+        onOpenChange={setEditing}
+        initial={{
+          name: option.name,
+          description: option.description ?? "",
+          imageUrl: option.imageUrl ?? "",
+          price: formatCurrencyInput(option.price),
+          displayOrder: String(option.displayOrder),
+        }}
+        title="Editar Item Adicional"
+        description={`Edite as informações, preço e imagem do adicional "${option.name}".`}
+        submitLabel="Salvar Alterações"
+        onSubmit={handleUpdate}
+        isPending={isPending}
+      />
 
       <ConfirmDeleteDialog
         open={confirmDeleteOption}
@@ -578,19 +649,19 @@ function GroupCard({
   const handleAddOption = (data: OptionFormState) => {
     const fd = new FormData();
     fd.set("groupId", group.id);
-    fd.set("name", data.name);
-    fd.set("description", data.description);
+    fd.set("name", data.name.trim());
+    fd.set("description", data.description.trim());
     fd.set("imageUrl", data.imageUrl);
     if (data.imageFile) {
       fd.set("imageFile", data.imageFile);
     }
-    fd.set("price", data.price);
-    fd.set("displayOrder", String(group.options.length));
+    fd.set("price", String(parseCurrencyToRawNumber(data.price)));
+    fd.set("displayOrder", data.displayOrder ? data.displayOrder.replace(/\D/g, "") : String(group.options.length));
     startOptionTransition(async () => {
       await createProductOptionAction(slug, fd);
       setAddingOption(false);
       onRefresh();
-      toast.success("Adicional criado.");
+      toast.success("Adicional criado com sucesso!");
     });
   };
 
@@ -668,26 +739,27 @@ function GroupCard({
               />
             ))}
 
-            {addingOption ? (
-              <OptionForm
-                initial={defaultOptionForm()}
-                onSubmit={handleAddOption}
-                onCancel={() => setAddingOption(false)}
-                isPending={isPendingOption}
-                submitLabel="Adicionar"
-              />
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="w-full gap-1.5 border-dashed"
-                onClick={() => setAddingOption(true)}
-              >
-                <PlusIcon size={13} />
-                Adicionar item
-              </Button>
-            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full gap-1.5 border-dashed"
+              onClick={() => setAddingOption(true)}
+            >
+              <PlusIcon size={13} />
+              Adicionar item
+            </Button>
+
+            <OptionDialog
+              open={addingOption}
+              onOpenChange={setAddingOption}
+              initial={defaultOptionForm()}
+              title="Cadastrar Novo Adicional"
+              description={`Adicione um novo item ou complemento ao grupo "${group.name}".`}
+              submitLabel="Cadastrar Item"
+              onSubmit={handleAddOption}
+              isPending={isPendingOption}
+            />
           </div>
         )}
       </div>
@@ -880,15 +952,15 @@ export function ProductOptionsManager({
   const handleAddGroup = (data: GroupFormState) => {
     const fd = new FormData();
     fd.set("productId", productId);
-    fd.set("name", data.name);
+    fd.set("name", data.name.trim());
     fd.set("minOptions", data.minOptions);
     fd.set("maxOptions", data.maxOptions);
-    fd.set("displayOrder", String(groups.length));
+    fd.set("displayOrder", data.displayOrder || "0");
     startTransition(async () => {
       await createProductOptionGroupAction(slug, fd);
       setAddingGroup(false);
       handleRefresh();
-      toast.success("Grupo criado.");
+      toast.success("Grupo cadastrado com sucesso!");
     });
   };
 
@@ -935,7 +1007,7 @@ export function ProductOptionsManager({
       <GroupDialog
         open={addingGroup}
         onOpenChange={setAddingGroup}
-        initial={{ ...defaultGroupForm(), displayOrder: String(groups.length) }}
+        initial={defaultGroupForm()}
         title="Cadastrar Novo Grupo de Adicionais"
         description="Cadastre um novo grupo de adicionais para este produto."
         submitLabel="Cadastrar Grupo"

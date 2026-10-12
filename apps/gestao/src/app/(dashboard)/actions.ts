@@ -1553,28 +1553,87 @@ export const generateProductAiAction = async (
   const restaurant = await getRestaurantOrThrow(slug);
 
   const [aiSettings] = await db
-    .select({ openaiApiKey: aiSettingsTable.openaiApiKey })
+    .select({
+      aiProvider: aiSettingsTable.aiProvider,
+      geminiApiKey: aiSettingsTable.geminiApiKey,
+      groqApiKey: aiSettingsTable.groqApiKey,
+      openaiApiKey: aiSettingsTable.openaiApiKey,
+    })
     .from(aiSettingsTable)
     .where(eq(aiSettingsTable.restaurantId, restaurant.id))
     .limit(1);
 
-  if (!aiSettings?.openaiApiKey) {
-    return { error: "Configure a chave da OpenAI em Inteligência Artificial para usar este recurso." };
+  const geminiKey =
+    aiSettings?.geminiApiKey ||
+    process.env.GEMINI_API_KEY ||
+    process.env.GOOGLE_API_KEY ||
+    "";
+  const groqKey =
+    aiSettings?.groqApiKey ||
+    process.env.GROQ_API_KEY ||
+    "";
+  const openaiKey =
+    aiSettings?.openaiApiKey ||
+    process.env.OPENAI_API_KEY ||
+    "";
+
+  interface ProviderCandidate {
+    name: string;
+    apiKey: string;
+    baseURL?: string;
+    models: string[];
   }
 
-  try {
-    const openai = new OpenAI({ apiKey: aiSettings.openaiApiKey });
+  const candidateMap: Record<string, ProviderCandidate | null> = {
+    GOOGLE_GEMINI: geminiKey
+      ? {
+          name: "Google Gemini",
+          apiKey: geminiKey,
+          baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+          models: ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash"],
+        }
+      : null,
+    GROQ: groqKey
+      ? {
+          name: "Groq",
+          apiKey: groqKey,
+          baseURL: "https://api.groq.com/openai/v1",
+          models: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
+        }
+      : null,
+    OPENAI: openaiKey
+      ? {
+          name: "OpenAI",
+          apiKey: openaiKey,
+          models: ["gpt-4o-mini", "gpt-4o"],
+        }
+      : null,
+  };
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "system",
-          content: `Você é um especialista em gastronomia e copywriting para menus de restaurantes.
-Responda SOMENTE em JSON com este formato exato:
+  const selectedProvider = (aiSettings?.aiProvider || "GOOGLE_GEMINI").toUpperCase();
+  const providerList: ProviderCandidate[] = [];
+
+  if (candidateMap[selectedProvider]) {
+    providerList.push(candidateMap[selectedProvider]!);
+  }
+
+  for (const [key, conf] of Object.entries(candidateMap)) {
+    if (key !== selectedProvider && conf) {
+      providerList.push(conf);
+    }
+  }
+
+  if (providerList.length === 0) {
+    return {
+      error:
+        "Nenhuma chave de IA configurada. Acesse a aba Inteligência Artificial e configure sua chave do Google Gemini, Groq ou OpenAI.",
+    };
+  }
+
+  const systemPrompt = `Você é um especialista em gastronomia e copywriting para menus de restaurantes.
+Responda EXCLUSIVAMENTE um objeto JSON válido (sem tags markdown, sem blocos de código com crases, sem texto antes ou depois) no formato exato:
 {
-  "description": "descrição gourmet vendedora em até 2 frases",
+  "description": "descrição gourmet vendedora e atraente em até 2 frases",
   "nutrition": {
     "calories": 0,
     "carbs": 0,
@@ -1584,23 +1643,52 @@ Responda SOMENTE em JSON com este formato exato:
     "sodium": 0
   }
 }
-Os valores nutricionais são por porção individual e devem ser números inteiros aproximados.`,
-        },
-        {
-          role: "user",
-          content: `Produto: "${productName}" — Categoria: "${categoryName}". Gere a descrição e a tabela nutricional aproximada.`,
-        },
-      ],
+Os valores nutricionais são estimativas por porção individual e devem ser números inteiros.`;
+
+  const userPrompt = `Produto: "${productName}" — Categoria: "${categoryName}". Gere a descrição e a tabela nutricional aproximada.`;
+
+  let lastError = "";
+
+  for (const provider of providerList) {
+    const client = new OpenAI({
+      apiKey: provider.apiKey,
+      baseURL: provider.baseURL,
+      timeout: 15000,
     });
 
-    const content = response.choices[0]?.message?.content;
-    if (!content) return { error: "Resposta vazia da IA." };
+    for (const model of provider.models) {
+      try {
+        const response = await client.chat.completions.create({
+          model,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          temperature: 0.7,
+        });
 
-    const parsed = JSON.parse(content) as AiProductGenerationResult;
-    return parsed;
-  } catch {
-    return { error: "Erro ao comunicar com a IA. Verifique sua chave de API." };
+        const raw = response.choices[0]?.message?.content?.trim();
+        if (!raw) continue;
+
+        const cleaned = raw
+          .replace(/^```(?:json)?\s*/i, "")
+          .replace(/\s*```$/i, "")
+          .trim();
+
+        const parsed = JSON.parse(cleaned) as AiProductGenerationResult;
+        if (parsed && typeof parsed === "object" && parsed.description) {
+          return parsed;
+        }
+      } catch (err) {
+        lastError = err instanceof Error ? err.message : String(err);
+        console.warn(`[generateProductAiAction] Falha com ${provider.name} (${model}):`, lastError);
+      }
+    }
   }
+
+  return {
+    error: `Erro ao comunicar com a IA (${providerList[0]?.name || "IA"}). Verifique suas chaves de API nas configurações.`,
+  };
 };
 
 // ─── Registro de Perdas (InventoryLoss) ──────────────────────────────────────

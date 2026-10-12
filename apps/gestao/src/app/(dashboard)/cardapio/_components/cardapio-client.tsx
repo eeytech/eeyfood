@@ -409,13 +409,13 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
         open={editProduct !== null}
         onOpenChange={(open) => !open && setEditProduct(null)}
       >
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto border-slate-200 bg-white shadow-2xl">
+        <DialogContent className="max-h-[90vh] sm:max-w-2xl overflow-y-auto border-slate-200 bg-white shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold text-slate-900">
-              Editar produto
+            <DialogTitle className="text-lg font-bold text-slate-900">
+              Editar Produto
             </DialogTitle>
-            <DialogDescription className="text-slate-500">
-              {editProduct?.name}
+            <DialogDescription className="text-xs text-slate-500">
+              Atualize as informações, preços, ficha técnica e adicionais de {editProduct?.name}.
             </DialogDescription>
           </DialogHeader>
           {editProduct && (
@@ -425,6 +425,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
               categories={cardapio.categories}
               defaultValues={editProduct}
               onSuccess={() => setEditProduct(null)}
+              onCancel={() => setEditProduct(null)}
             />
           )}
         </DialogContent>
@@ -432,19 +433,20 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
 
       {/* ── Dialog: Criar Produto ────────────────────────── */}
       <Dialog open={createProductOpen} onOpenChange={setCreateProductOpen}>
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto border-slate-200 bg-white shadow-2xl">
+        <DialogContent className="max-h-[90vh] sm:max-w-2xl overflow-y-auto border-slate-200 bg-white shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold text-slate-900">
-              Novo produto
+            <DialogTitle className="text-lg font-bold text-slate-900">
+              Cadastrar Novo Produto
             </DialogTitle>
-            <DialogDescription className="text-slate-500">
-              Cadastre um novo item no cardápio do seu restaurante.
+            <DialogDescription className="text-xs text-slate-500">
+              Cadastre um novo item no cardápio com preços, estoque e dados fiscais.
             </DialogDescription>
           </DialogHeader>
           <ProductForm
             slug={slug}
             categories={cardapio.categories}
             onSuccess={() => setCreateProductOpen(false)}
+            onCancel={() => setCreateProductOpen(false)}
           />
         </DialogContent>
       </Dialog>
