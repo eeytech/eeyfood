@@ -24,6 +24,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import type { CategoriaComProdutos } from "@/lib/admin-queries";
+import { cn } from "@/lib/utils";
 import type { Product } from "@fsw/db";
 
 import { ProductOptionsManager } from "./product-options-manager";
@@ -85,6 +86,10 @@ function ProductFields({
   );
   const [isActive, setIsActive] = useState(defaultValues?.isActive ?? true);
 
+  const [imageUrl, setImageUrl] = useState(defaultValues?.imageUrl ?? "");
+  const [hasImageFile, setHasImageFile] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   const [ncm, setNcm] = useState(defaultValues?.ncm ?? "");
   const [cfop, setCfop] = useState(defaultValues?.cfop ?? "");
   const [csosn, setCsosn] = useState(defaultValues?.csosn ?? "");
@@ -128,7 +133,10 @@ function ProductFields({
         toast.error(result.error);
         return;
       }
-      if (result.description) setDescription(result.description);
+      if (result.description) {
+        setDescription(result.description);
+        setErrors((prev) => ({ ...prev, description: "" }));
+      }
       if (result.nutrition) {
         setNutritionValues({
           calories: result.nutrition.calories ?? "",
@@ -146,17 +154,51 @@ function ProductFields({
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    const newErrors: Record<string, string> = {};
+
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      newErrors.name = "Informe o nome do produto.";
+    } else if (trimmedName.length < 2) {
+      newErrors.name = "O nome deve ter no mínimo 2 caracteres.";
+    }
+
+    const trimmedDesc = description.trim();
+    if (!trimmedDesc) {
+      newErrors.description = "Informe a descrição do produto.";
+    } else if (trimmedDesc.length < 10) {
+      newErrors.description = "A descrição deve ter no mínimo 10 caracteres.";
+    }
+
+    const numericPrice = parseCurrencyToRawNumber(price);
+    if (!price || numericPrice <= 0) {
+      newErrors.price = "Informe um preço de venda válido (maior que R$ 0,00).";
+    }
+
     if (!categoryId) {
-      toast.error("Selecione uma categoria para o produto.");
+      newErrors.categoryId = "Selecione uma categoria para o produto.";
+    }
+
+    // Se for produto novo, exige imagem (URL ou arquivo anexado)
+    if (!defaultValues && !imageUrl.trim() && !hasImageFile) {
+      newErrors.image = "A imagem do produto é obrigatória (informe uma URL ou envie uma foto).";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      const firstError = Object.values(newErrors)[0];
+      toast.error(firstError || "Por favor, preencha todos os campos obrigatórios.");
       return;
     }
+
+    setErrors({});
 
     const form = e.currentTarget;
     const formData = new FormData(form);
 
-    formData.set("name", name.trim());
-    formData.set("description", description.trim());
-    formData.set("price", String(parseCurrencyToRawNumber(price)));
+    formData.set("name", trimmedName);
+    formData.set("description", trimmedDesc);
+    formData.set("price", String(numericPrice));
     formData.set("costPrice", String(parseCurrencyToRawNumber(costPrice)));
     formData.set("menuCategoryId", categoryId);
     formData.set("trackInventory", trackInventory ? "true" : "false");
@@ -164,6 +206,9 @@ function ProductFields({
     formData.set("ncm", ncm);
     formData.set("cfop", cfop);
     formData.set("csosn", csosn);
+    if (imageUrl.trim()) {
+      formData.set("imageUrl", imageUrl.trim());
+    }
 
     for (const [key, val] of Object.entries(foodBadges)) {
       formData.set(key, val ? "true" : "false");
@@ -181,28 +226,38 @@ function ProductFields({
           toast.success("Produto cadastrado com sucesso!");
         }
         onSuccess?.();
-      } catch {
-        toast.error("Erro ao salvar produto.");
+      } catch (err: unknown) {
+        const errorMsg =
+          err instanceof Error ? err.message : "Erro ao salvar produto.";
+        toast.error(errorMsg);
       }
     });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} noValidate className="space-y-4">
       {/* Nome do Produto */}
       <div className="space-y-1.5">
         <Label htmlFor="prod-name" className="text-xs font-semibold text-slate-700">
-          Nome do produto
+          Nome do produto <span className="text-rose-500">*</span>
         </Label>
         <Input
           id="prod-name"
           name="name"
           placeholder="Ex.: Combo Big Burger Artesanal"
           value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          className="h-9 text-xs"
+          onChange={(e) => {
+            setName(e.target.value);
+            if (errors.name) setErrors((prev) => ({ ...prev, name: "" }));
+          }}
+          className={cn(
+            "h-9 text-xs transition-colors",
+            errors.name && "border-rose-500 focus-visible:ring-rose-400 bg-rose-50/20",
+          )}
         />
+        {errors.name && (
+          <p className="text-[11px] font-medium text-rose-500">{errors.name}</p>
+        )}
       </div>
 
       {/* Descrição e Botão Gerar com IA */}
@@ -212,7 +267,7 @@ function ProductFields({
             htmlFor="prod-description"
             className="text-xs font-semibold text-slate-700"
           >
-            Descrição
+            Descrição <span className="text-rose-500">*</span>
           </Label>
           <Button
             type="button"
@@ -233,29 +288,45 @@ function ProductFields({
         <Textarea
           id="prod-description"
           name="description"
-          placeholder="Descreva o produto, ingredientes principais e sabor para o cliente..."
+          placeholder="Descreva o produto, ingredientes principais e sabor para o cliente (mínimo 10 caracteres)..."
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          className="min-h-[80px] text-xs resize-y"
-          required
+          onChange={(e) => {
+            setDescription(e.target.value);
+            if (errors.description) setErrors((prev) => ({ ...prev, description: "" }));
+          }}
+          className={cn(
+            "min-h-[80px] text-xs resize-y transition-colors",
+            errors.description && "border-rose-500 focus-visible:ring-rose-400 bg-rose-50/20",
+          )}
         />
+        {errors.description && (
+          <p className="text-[11px] font-medium text-rose-500">{errors.description}</p>
+        )}
       </div>
 
       {/* Preço de Venda e Preço de Custo */}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="prod-price" className="text-xs font-semibold text-slate-700">
-            Preço de venda
+            Preço de venda <span className="text-rose-500">*</span>
           </Label>
           <Input
             id="prod-price"
             name="price"
             value={price}
-            onChange={(e) => setPrice(formatCurrencyInput(e.target.value))}
+            onChange={(e) => {
+              setPrice(formatCurrencyInput(e.target.value));
+              if (errors.price) setErrors((prev) => ({ ...prev, price: "" }));
+            }}
             placeholder="R$ 0,00"
-            required
-            className="h-9 text-xs font-medium"
+            className={cn(
+              "h-9 text-xs font-medium transition-colors",
+              errors.price && "border-rose-500 focus-visible:ring-rose-400 bg-rose-50/20",
+            )}
           />
+          {errors.price && (
+            <p className="text-[11px] font-medium text-rose-500">{errors.price}</p>
+          )}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="prod-cost" className="text-xs font-semibold text-slate-700">
@@ -267,7 +338,6 @@ function ProductFields({
             value={costPrice}
             onChange={(e) => setCostPrice(formatCurrencyInput(e.target.value))}
             placeholder="R$ 0,00"
-            required
             className="h-9 text-xs"
           />
         </div>
@@ -280,10 +350,22 @@ function ProductFields({
             htmlFor="prod-category"
             className="text-xs font-semibold text-slate-700"
           >
-            Categoria
+            Categoria <span className="text-rose-500">*</span>
           </Label>
-          <Select value={categoryId} onValueChange={setCategoryId} required>
-            <SelectTrigger id="prod-category" className="h-9 text-xs rounded-md">
+          <Select
+            value={categoryId}
+            onValueChange={(val) => {
+              setCategoryId(val);
+              if (errors.categoryId) setErrors((prev) => ({ ...prev, categoryId: "" }));
+            }}
+          >
+            <SelectTrigger
+              id="prod-category"
+              className={cn(
+                "h-9 text-xs rounded-md transition-colors",
+                errors.categoryId && "border-rose-500 focus:ring-rose-400 bg-rose-50/20",
+              )}
+            >
               <SelectValue placeholder="Selecione uma categoria" />
             </SelectTrigger>
             <SelectContent>
@@ -294,6 +376,9 @@ function ProductFields({
               ))}
             </SelectContent>
           </Select>
+          {errors.categoryId && (
+            <p className="text-[11px] font-medium text-rose-500">{errors.categoryId}</p>
+          )}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="prod-sku" className="text-xs font-semibold text-slate-700">
@@ -355,37 +440,57 @@ function ProductFields({
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label
-            htmlFor="prod-image-url"
-            className="text-xs font-semibold text-slate-700"
-          >
-            URL da imagem
-          </Label>
-          <Input
-            id="prod-image-url"
-            name="imageUrl"
-            placeholder="https://..."
-            defaultValue={defaultValues?.imageUrl ?? ""}
-            className="h-9 text-xs"
-          />
+      <div className="space-y-1.5">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label
+              htmlFor="prod-image-url"
+              className="text-xs font-semibold text-slate-700"
+            >
+              URL da imagem {!defaultValues && <span className="text-rose-500">*</span>}
+            </Label>
+            <Input
+              id="prod-image-url"
+              name="imageUrl"
+              placeholder="https://..."
+              value={imageUrl}
+              onChange={(e) => {
+                setImageUrl(e.target.value);
+                if (errors.image) setErrors((prev) => ({ ...prev, image: "" }));
+              }}
+              className={cn(
+                "h-9 text-xs transition-colors",
+                errors.image && "border-rose-500 focus-visible:ring-rose-400 bg-rose-50/20",
+              )}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label
+              htmlFor="prod-image-file"
+              className="text-xs font-semibold text-slate-700"
+            >
+              {defaultValues ? "Substituir por arquivo" : "Ou upload de arquivo"} {!defaultValues && !imageUrl.trim() && <span className="text-rose-500">*</span>}
+            </Label>
+            <Input
+              id="prod-image-file"
+              name="imageFile"
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                setHasImageFile(Boolean(file));
+                if (errors.image) setErrors((prev) => ({ ...prev, image: "" }));
+              }}
+              className={cn(
+                "h-9 text-xs file:text-xs file:py-0 transition-colors",
+                errors.image && "border-rose-500 bg-rose-50/20",
+              )}
+            />
+          </div>
         </div>
-        <div className="space-y-1.5">
-          <Label
-            htmlFor="prod-image-file"
-            className="text-xs font-semibold text-slate-700"
-          >
-            {defaultValues ? "Substituir por arquivo" : "Upload de arquivo"}
-          </Label>
-          <Input
-            id="prod-image-file"
-            name="imageFile"
-            type="file"
-            accept="image/*"
-            className="h-9 text-xs file:text-xs file:py-0"
-          />
-        </div>
+        {errors.image && (
+          <p className="text-[11px] font-medium text-rose-500">{errors.image}</p>
+        )}
       </div>
 
       {/* Estoque Inicial e Alerta */}

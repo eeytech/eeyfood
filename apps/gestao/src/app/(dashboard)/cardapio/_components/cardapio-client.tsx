@@ -409,7 +409,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
         open={editProduct !== null}
         onOpenChange={(open) => !open && setEditProduct(null)}
       >
-        <DialogContent className="max-h-[90vh] sm:max-w-2xl overflow-y-auto border-slate-200 bg-white shadow-2xl">
+        <DialogContent className="max-h-[90vh] sm:max-w-2xl overflow-y-auto border-slate-200 bg-white shadow-2xl no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-slate-900">
               Editar Produto
@@ -433,7 +433,7 @@ export function CardapioClient({ slug, cardapio }: CardapioClientProps) {
 
       {/* ── Dialog: Criar Produto ────────────────────────── */}
       <Dialog open={createProductOpen} onOpenChange={setCreateProductOpen}>
-        <DialogContent className="max-h-[90vh] sm:max-w-2xl overflow-y-auto border-slate-200 bg-white shadow-2xl">
+        <DialogContent className="max-h-[90vh] sm:max-w-2xl overflow-y-auto border-slate-200 bg-white shadow-2xl no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-slate-900">
               Cadastrar Novo Produto

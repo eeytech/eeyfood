@@ -207,8 +207,11 @@ export const createCategoryAction = async (slug: string, formData: FormData) => 
   });
 
   if (!parsedData.success) {
+    const errorMsg =
+      parsedData.error.issues.map((i) => i.message).join(", ") ||
+      "Falha ao validar categoria.";
     console.error("Falha ao validar categoria.", parsedData.error.flatten());
-    return;
+    throw new Error(errorMsg);
   }
 
   await db.insert(menuCategoriesTable).values({
@@ -237,8 +240,11 @@ export const updateCategoryAction = async (slug: string, formData: FormData) => 
   });
 
   if (!parsedData.success) {
+    const errorMsg =
+      parsedData.error.issues.map((i) => i.message).join(", ") ||
+      "Falha ao validar atualização de categoria.";
     console.error("Falha ao validar atualização de categoria.", parsedData.error.flatten());
-    return;
+    throw new Error(errorMsg);
   }
 
   await db
@@ -343,13 +349,16 @@ export const createProductAction = async (slug: string, formData: FormData) => {
   });
 
   if (!parsedData.success) {
+    const errorMsg =
+      parsedData.error.issues.map((i) => i.message).join(", ") ||
+      "Falha ao validar produto.";
     console.error("Falha ao validar produto.", parsedData.error.flatten());
-    return;
+    throw new Error(errorMsg);
   }
 
   if (!parsedData.data.imageUrl) {
     console.error("Falha ao validar produto.", "Imagem obrigatória.");
-    return;
+    throw new Error("A imagem do produto é obrigatória (informe uma URL ou faça upload de um arquivo).");
   }
 
   const nutritionInfo = buildNutritionInfo(parsedData.data);
@@ -429,13 +438,16 @@ export const updateProductAction = async (slug: string, formData: FormData) => {
   });
 
   if (!parsedData.success) {
+    const errorMsg =
+      parsedData.error.issues.map((i) => i.message).join(", ") ||
+      "Falha ao validar atualização de produto.";
     console.error("Falha ao validar atualização de produto.", parsedData.error.flatten());
-    return;
+    throw new Error(errorMsg);
   }
 
   if (!parsedData.data.imageUrl) {
     console.error("Falha ao validar atualização de produto.", "Imagem obrigatória.");
-    return;
+    throw new Error("A imagem do produto é obrigatória.");
   }
 
   const nutritionInfo = buildNutritionInfo(parsedData.data);

@@ -342,13 +342,13 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
       {/* ── Metric Cards ────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         {/* Card 1: Total de Mesas */}
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-primary/40 hover:shadow-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Total de Mesas
               </span>
-              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
+              <div className="rounded-xl border border-primary/20 bg-primary/10 p-2 text-primary">
                 <LayoutGridIcon size={16} />
               </div>
             </div>
@@ -362,13 +362,13 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
         </Card>
 
         {/* Card 2: Capacidade do Salão */}
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-primary/40 hover:shadow-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Capacidade Total
               </span>
-              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
+              <div className="rounded-xl border border-primary/20 bg-primary/10 p-2 text-primary">
                 <UsersIcon size={16} />
               </div>
             </div>
@@ -383,17 +383,17 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
         </Card>
 
         {/* Card 3: Mesas Ativas */}
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-primary/40 hover:shadow-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Mesas Ativas
               </span>
-              <div className="rounded-lg bg-emerald-100 p-1.5 text-emerald-700">
+              <div className="rounded-xl border border-primary/20 bg-primary/10 p-2 text-primary">
                 <CheckCircle2Icon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-emerald-700">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {activeCount}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -403,20 +403,13 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
         </Card>
 
         {/* Card 4: Status Operacional */}
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-primary/40 hover:shadow-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Status Salão
               </span>
-              <div
-                className={cn(
-                  "rounded-lg p-1.5",
-                  inactiveCount > 0
-                    ? "bg-amber-100 text-amber-700"
-                    : "bg-emerald-100 text-emerald-700",
-                )}
-              >
+              <div className="rounded-xl border border-primary/20 bg-primary/10 p-2 text-primary">
                 {inactiveCount > 0 ? (
                   <AlertCircleIcon size={16} />
                 ) : (
@@ -424,13 +417,8 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
                 )}
               </div>
             </div>
-            <p
-              className={cn(
-                "mt-2 font-display text-2xl font-bold",
-                inactiveCount > 0 ? "text-amber-700" : "text-emerald-700",
-              )}
-            >
-              {inactiveCount > 0 ? inactiveCount : "100%"}
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
+              {inactiveCount > 0 ? `${inactiveCount} inativas` : "100% ativas"}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
               {inactiveCount > 0
@@ -578,7 +566,7 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
               <Button
                 size="sm"
                 onClick={handleOpenCreate}
-                className="mt-4 gap-1.5 rounded-full bg-slate-900 text-xs font-semibold text-white hover:bg-slate-800"
+                className="mt-4 gap-1.5 rounded-full bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
               >
                 <PlusIcon size={14} />
                 Cadastrar primeira mesa
@@ -622,8 +610,8 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
                         {/* Mesa */}
                         <TableCell className="py-3.5">
                           <div className="flex items-center gap-3">
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-100 font-display text-xs font-bold text-slate-700 shadow-xs">
-                              <LayoutGridIcon size={16} className="text-slate-600" />
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 font-display text-xs font-bold text-primary shadow-xs">
+                              <LayoutGridIcon size={16} className="text-primary" />
                             </div>
                             <div className="min-w-0">
                               <p className="truncate text-sm font-semibold text-slate-900">
@@ -639,8 +627,8 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
 
                         {/* Capacidade */}
                         <TableCell className="py-3.5">
-                          <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200/80 bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-800 transition-colors">
-                            <UsersIcon size={12} className="shrink-0 text-indigo-600" />
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary transition-colors">
+                            <UsersIcon size={12} className="shrink-0 text-primary" />
                             {table.seats} {table.seats === 1 ? "lugar" : "lugares"}
                           </span>
                         </TableCell>
@@ -668,13 +656,13 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
                                   table.name,
                                 )
                               }
-                              className="data-[state=checked]:bg-emerald-600 data-[state=unchecked]:bg-slate-200"
+                              className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
                             />
                             <span
                               className={cn(
                                 "text-xs font-medium",
                                 table.isActive
-                                  ? "text-emerald-700"
+                                  ? "text-primary font-semibold"
                                   : "text-slate-400",
                               )}
                             >
@@ -767,8 +755,8 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
                   <div key={table.id} className="space-y-3 p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-2.5">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-100 font-display text-xs font-bold text-slate-700">
-                          <LayoutGridIcon size={16} className="text-slate-600" />
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 font-display text-xs font-bold text-primary">
+                          <LayoutGridIcon size={16} className="text-primary" />
                         </div>
                         <div>
                           <p className="text-sm font-semibold text-slate-900">
@@ -849,8 +837,8 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
                     </div>
 
                     <div className="flex items-center justify-between pt-1">
-                      <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200/80 bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-800">
-                        <UsersIcon size={11} />
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                        <UsersIcon size={11} className="shrink-0 text-primary" />
                         {table.seats} {table.seats === 1 ? "lugar" : "lugares"}
                       </span>
 
@@ -859,7 +847,7 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
                           className={cn(
                             "text-xs font-medium",
                             table.isActive
-                              ? "text-emerald-700"
+                              ? "text-primary font-semibold"
                               : "text-slate-400",
                           )}
                         >
@@ -875,7 +863,7 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
                               table.name,
                             )
                           }
-                          className="data-[state=checked]:bg-emerald-600 data-[state=unchecked]:bg-slate-200"
+                          className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
                         />
                       </div>
                     </div>
@@ -990,7 +978,7 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
         <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-md">
           <DialogHeader>
             <div className="flex items-center gap-2">
-              <div className="rounded-xl bg-slate-100 p-2 text-slate-900">
+              <div className="rounded-xl border border-primary/20 bg-primary/10 p-2 text-primary">
                 <PlusIcon size={20} />
               </div>
               <div>
@@ -1080,7 +1068,7 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
               <Switch
                 checked={createIsActive}
                 onCheckedChange={setCreateIsActive}
-                className="data-[state=checked]:bg-emerald-600 data-[state=unchecked]:bg-slate-200"
+                className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
               />
             </div>
 
@@ -1096,7 +1084,7 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
               <Button
                 type="submit"
                 disabled={isPending}
-                className="rounded-full bg-slate-900 px-5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
+                className="rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 disabled:opacity-50"
               >
                 {isPending && (
                   <LoaderCircleIcon size={14} className="mr-1.5 animate-spin" />
@@ -1118,7 +1106,7 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
         <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-md">
           <DialogHeader>
             <div className="flex items-center gap-2">
-              <div className="rounded-xl bg-slate-100 p-2 text-slate-900">
+              <div className="rounded-xl border border-primary/20 bg-primary/10 p-2 text-primary">
                 <PencilIcon size={20} />
               </div>
               <div>
@@ -1207,7 +1195,7 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
               <Switch
                 checked={editIsActive}
                 onCheckedChange={setEditIsActive}
-                className="data-[state=checked]:bg-emerald-600 data-[state=unchecked]:bg-slate-200"
+                className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
               />
             </div>
 
@@ -1223,7 +1211,7 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
               <Button
                 type="submit"
                 disabled={isPending}
-                className="rounded-full bg-slate-900 px-5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
+                className="rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 disabled:opacity-50"
               >
                 {isPending && (
                   <LoaderCircleIcon size={14} className="mr-1.5 animate-spin" />
@@ -1261,7 +1249,7 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
         <DialogContent className="border-slate-200 bg-white sm:max-w-md shadow-2xl">
           <DialogHeader>
             <div className="flex items-center gap-2">
-              <div className="rounded-xl bg-indigo-100 p-2 text-indigo-700">
+              <div className="rounded-xl border border-primary/20 bg-primary/10 p-2 text-primary">
                 <QrCodeIcon size={20} />
               </div>
               <div>
