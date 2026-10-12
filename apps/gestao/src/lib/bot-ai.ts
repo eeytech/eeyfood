@@ -40,11 +40,6 @@ const GROQ_CACHE_TTL = 1000 * 60 * 30; // 30 minutos
 
 // Modelos oficiais de produção ativos da Groq (atualizados para 2026)
 const DEFAULT_GROQ_MODELS = [
-  "openai/gpt-oss-20b",
-  "openai/gpt-oss-120b",
-  "qwen/qwen3.8-27b",
-  "meta-llama/llama-4-scout-17b-16e-instruct",
-  "meta-llama/llama-4-maverick-17b-128e-instruct",
   "llama-3.3-70b-versatile",
   "llama-3.1-8b-instant",
 ];
@@ -80,10 +75,6 @@ async function getAvailableGroqModels(apiKey: string): Promise<string[]> {
 
     if (available.length > 0) {
       const preferred = [
-        "openai/gpt-oss-20b",
-        "openai/gpt-oss-120b",
-        "qwen/qwen3.8-27b",
-        "meta-llama/llama-4-scout-17b-16e-instruct",
         "llama-3.3-70b-versatile",
         "llama-3.1-8b-instant",
       ];
@@ -428,7 +419,7 @@ export const processarMensagemBot = async ({
               itemCount: cart.itemCount,
             });
           }
-        } catch (jsonErr) {
+        } catch {
           toolResult = JSON.stringify({ erro: "Formato de parâmetros inválido." });
         }
       }

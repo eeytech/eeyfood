@@ -14,7 +14,7 @@ import {
   UserIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { toast } from "sonner";
 
 import { reativarBotAction } from "@/app/(dashboard)/ai-actions";

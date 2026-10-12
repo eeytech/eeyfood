@@ -10,7 +10,17 @@ import {
   reativarTodosClientes,
 } from "@fsw/db";
 import { revalidatePath } from "next/cache";
+import OpenAI from "openai";
 import { z } from "zod";
+
+export type TestAiKeyResult = {
+  success: boolean;
+  provider: "GOOGLE_GEMINI" | "GROQ" | "OPENAI";
+  message?: string;
+  error?: string;
+  modelTested?: string;
+  responseTimeMs?: number;
+};
 
 import { getBooleanValue, getStringValue } from "@/lib/admin-form-utils";
 import { sincronizarWebhookAction } from "./ai/whatsapp-actions";
@@ -123,3 +133,178 @@ export const reativarTodosClientesAction = async (slug: string) => {
   revalidatePath(`/${slug}/ai`);
   revalidatePath("/ai");
 };
+
+export const testAiProviderKeyAction = async (
+  provider: "GOOGLE_GEMINI" | "GROQ" | "OPENAI",
+  apiKey: string,
+): Promise<TestAiKeyResult> => {
+  const cleanedKey = (apiKey || "").trim().replace(/^["']|["']$/g, "");
+  if (!cleanedKey) {
+    return {
+      success: false,
+      provider,
+      error: "Por favor, digite ou cole sua chave de API antes de testar.",
+    };
+  }
+
+  const startTime = Date.now();
+
+  try {
+    if (provider === "GROQ") {
+      const client = new OpenAI({
+        apiKey: cleanedKey,
+        baseURL: "https://api.groq.com/openai/v1",
+        timeout: 10000,
+      });
+
+      let modelTested = "llama-3.1-8b-instant";
+      try {
+        await client.chat.completions.create({
+          model: modelTested,
+          messages: [{ role: "user", content: "Diga apenas: OK" }],
+          max_tokens: 5,
+          temperature: 0,
+        });
+      } catch {
+        // Fallback para llama-3.3-70b-versatile
+        modelTested = "llama-3.3-70b-versatile";
+        await client.chat.completions.create({
+          model: modelTested,
+          messages: [{ role: "user", content: "Diga apenas: OK" }],
+          max_tokens: 5,
+          temperature: 0,
+        });
+      }
+
+      const responseTimeMs = Date.now() - startTime;
+      return {
+        success: true,
+        provider: "GROQ",
+        modelTested,
+        responseTimeMs,
+        message: `Chave da Groq válida! Conexão estabelecida com sucesso com o modelo ${modelTested} (${(responseTimeMs / 1000).toFixed(2)}s).`,
+      };
+    }
+
+    if (provider === "GOOGLE_GEMINI") {
+      const client = new OpenAI({
+        apiKey: cleanedKey,
+        baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+        timeout: 10000,
+      });
+
+      let modelTested = "gemini-2.0-flash";
+      try {
+        await client.chat.completions.create({
+          model: modelTested,
+          messages: [{ role: "user", content: "Diga apenas: OK" }],
+          max_tokens: 5,
+          temperature: 0,
+        });
+      } catch {
+        modelTested = "gemini-1.5-flash";
+        await client.chat.completions.create({
+          model: modelTested,
+          messages: [{ role: "user", content: "Diga apenas: OK" }],
+          max_tokens: 5,
+          temperature: 0,
+        });
+      }
+
+      const responseTimeMs = Date.now() - startTime;
+      return {
+        success: true,
+        provider: "GOOGLE_GEMINI",
+        modelTested,
+        responseTimeMs,
+        message: `Chave do Gemini válida! Conexão estabelecida com sucesso com o modelo ${modelTested} (${(responseTimeMs / 1000).toFixed(2)}s).`,
+      };
+    }
+
+    if (provider === "OPENAI") {
+      const client = new OpenAI({
+        apiKey: cleanedKey,
+        timeout: 10000,
+      });
+
+      const modelTested = "gpt-4o-mini";
+      await client.chat.completions.create({
+        model: modelTested,
+        messages: [{ role: "user", content: "Diga apenas: OK" }],
+        max_tokens: 5,
+        temperature: 0,
+      });
+
+      const responseTimeMs = Date.now() - startTime;
+      return {
+        success: true,
+        provider: "OPENAI",
+        modelTested,
+        responseTimeMs,
+        message: `Chave da OpenAI válida! Conexão estabelecida com sucesso com o modelo ${modelTested} (${(responseTimeMs / 1000).toFixed(2)}s).`,
+      };
+    }
+
+    return {
+      success: false,
+      provider,
+      error: "Provedor desconhecido.",
+    };
+  } catch (err: unknown) {
+    const rawMsg = err instanceof Error ? err.message : String(err);
+    let friendly = rawMsg;
+
+    if (provider === "GROQ") {
+      if (
+        rawMsg.includes("401") ||
+        rawMsg.toLowerCase().includes("invalid api key") ||
+        rawMsg.toLowerCase().includes("invalid_api_key")
+      ) {
+        friendly =
+          "Chave da Groq inválida ou revogada (Erro 401). Verifique a chave no console https://console.groq.com/keys.";
+      } else if (
+        rawMsg.includes("429") ||
+        rawMsg.toLowerCase().includes("rate limit") ||
+        rawMsg.toLowerCase().includes("quota")
+      ) {
+        friendly =
+          "Limite de requisições excedido na Groq (Erro 429). Aguarde alguns instantes.";
+      }
+    } else if (provider === "GOOGLE_GEMINI") {
+      if (
+        rawMsg.toLowerCase().includes("api_key_invalid") ||
+        rawMsg.includes("400")
+      ) {
+        friendly =
+          "Chave de API do Google Gemini inválida. Obtenha uma chave em https://aistudio.google.com/app/apikey.";
+      } else if (rawMsg.includes("403")) {
+        friendly =
+          "Acesso negado (Erro 403). Verifique se a API do Gemini está habilitada para esta chave.";
+      } else if (rawMsg.includes("429")) {
+        friendly =
+          "Limite de requisições por minuto atingido no Gemini (Erro 429). Aguarde alguns instantes.";
+      }
+    } else if (provider === "OPENAI") {
+      if (
+        rawMsg.includes("401") ||
+        rawMsg.toLowerCase().includes("invalid_api_key")
+      ) {
+        friendly =
+          "Chave da OpenAI inválida (Erro 401). Verifique sua chave secreta na plataforma OpenAI.";
+      } else if (
+        rawMsg.toLowerCase().includes("insufficient_quota") ||
+        rawMsg.includes("429")
+      ) {
+        friendly =
+          "Créditos insuficientes ou quota excedida na OpenAI (Erro 429). Reabasteça créditos pré-pagos na OpenAI.";
+      }
+    }
+
+    return {
+      success: false,
+      provider,
+      error: friendly,
+    };
+  }
+};
+

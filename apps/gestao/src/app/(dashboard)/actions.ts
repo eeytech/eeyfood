@@ -11,7 +11,7 @@ import {
   listarPerdasGestao,
 } from "@/lib/admin-queries";
 import type { InventoryItemType, UnitOfMeasure } from "@fsw/db";
-import { aiSettingsTable, and, buscarRestaurantePorSlug, db, eq, financialCategoriesTable, financialTransactionsTable, inventoryBatchesTable, inventoryItemsTable, inventoryLossesTable, menuCategoriesTable, operatingHoursTable, productOptionGroupsTable, productOptionsTable, productToOptionGroupsTable, productsTable, purchaseInvoicesTable, recipeItemsTable, restaurantsTable, stockMovementsTable, suppliersTable } from "@fsw/db";
+import { aiSettingsTable, and, db, eq, financialCategoriesTable, financialTransactionsTable, inventoryBatchesTable, inventoryItemsTable, inventoryLossesTable, menuCategoriesTable, operatingHoursTable, productOptionGroupsTable, productOptionsTable, productToOptionGroupsTable, productsTable, purchaseInvoicesTable, recipeItemsTable, restaurantsTable, stockMovementsTable, suppliersTable } from "@fsw/db";
 import type { InventoryItem, InventoryLossReason, RecipeItem, RestaurantStatus } from "@fsw/db";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
@@ -1563,19 +1563,20 @@ export const generateProductAiAction = async (
     .where(eq(aiSettingsTable.restaurantId, restaurant.id))
     .limit(1);
 
-  const geminiKey =
+  const cleanKey = (key?: string | null) =>
+    (key || "").trim().replace(/^["']|["']$/g, "");
+
+  const geminiKey = cleanKey(
     aiSettings?.geminiApiKey ||
-    process.env.GEMINI_API_KEY ||
-    process.env.GOOGLE_API_KEY ||
-    "";
-  const groqKey =
-    aiSettings?.groqApiKey ||
-    process.env.GROQ_API_KEY ||
-    "";
-  const openaiKey =
-    aiSettings?.openaiApiKey ||
-    process.env.OPENAI_API_KEY ||
-    "";
+      process.env.GEMINI_API_KEY ||
+      process.env.GOOGLE_API_KEY,
+  );
+  const groqKey = cleanKey(
+    aiSettings?.groqApiKey || process.env.GROQ_API_KEY,
+  );
+  const openaiKey = cleanKey(
+    aiSettings?.openaiApiKey || process.env.OPENAI_API_KEY,
+  );
 
   interface ProviderCandidate {
     name: string;
@@ -1590,7 +1591,7 @@ export const generateProductAiAction = async (
           name: "Google Gemini",
           apiKey: geminiKey,
           baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
-          models: ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash"],
+          models: ["gemini-2.0-flash", "gemini-1.5-flash"],
         }
       : null,
     GROQ: groqKey
@@ -1598,7 +1599,7 @@ export const generateProductAiAction = async (
           name: "Groq",
           apiKey: groqKey,
           baseURL: "https://api.groq.com/openai/v1",
-          models: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
+          models: ["llama-3.1-8b-instant", "llama-3.3-70b-versatile"],
         }
       : null,
     OPENAI: openaiKey
@@ -1658,26 +1659,56 @@ Os valores nutricionais são estimativas por porção individual e devem ser nú
 
     for (const model of provider.models) {
       try {
+        const isJsonMode = provider.name === "Groq" || provider.name === "OpenAI";
         const response = await client.chat.completions.create({
           model,
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
           ],
+          ...(isJsonMode ? { response_format: { type: "json_object" as const } } : {}),
           temperature: 0.7,
         });
 
         const raw = response.choices[0]?.message?.content?.trim();
         if (!raw) continue;
 
-        const cleaned = raw
-          .replace(/^```(?:json)?\s*/i, "")
-          .replace(/\s*```$/i, "")
-          .trim();
+        let parsed: {
+          description?: string;
+          nutrition?: Record<string, unknown>;
+        } | null = null;
+        try {
+          const cleaned = raw
+            .replace(/^```(?:json)?\s*/i, "")
+            .replace(/\s*```$/i, "")
+            .trim();
+          parsed = JSON.parse(cleaned);
+        } catch {
+          const match = raw.match(/\{[\s\S]*\}/);
+          if (match) {
+            try {
+              parsed = JSON.parse(match[0]);
+            } catch {
+              // falha no parse
+            }
+          }
+        }
 
-        const parsed = JSON.parse(cleaned) as AiProductGenerationResult;
         if (parsed && typeof parsed === "object" && parsed.description) {
-          return parsed;
+          return {
+            description: String(parsed.description).trim(),
+            nutrition:
+              parsed.nutrition && typeof parsed.nutrition === "object"
+                ? {
+                    calories: Number(parsed.nutrition.calories) || 0,
+                    carbs: Number(parsed.nutrition.carbs) || 0,
+                    protein: Number(parsed.nutrition.protein) || 0,
+                    fat: Number(parsed.nutrition.fat) || 0,
+                    fiber: Number(parsed.nutrition.fiber) || 0,
+                    sodium: Number(parsed.nutrition.sodium) || 0,
+                  }
+                : undefined,
+          };
         }
       } catch (err) {
         lastError = err instanceof Error ? err.message : String(err);
@@ -1687,7 +1718,9 @@ Os valores nutricionais são estimativas por porção individual e devem ser nú
   }
 
   return {
-    error: `Erro ao comunicar com a IA (${providerList[0]?.name || "IA"}). Verifique suas chaves de API nas configurações.`,
+    error: lastError
+      ? `Erro ao comunicar com a IA (${providerList[0]?.name || "IA"}): ${lastError}`
+      : `Erro ao comunicar com a IA (${providerList[0]?.name || "IA"}). Verifique suas chaves de API nas configurações.`,
   };
 };
 
