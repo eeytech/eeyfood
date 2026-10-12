@@ -222,7 +222,7 @@ function RecipeItemRow({
                 className="cursor-pointer gap-2 text-xs font-semibold text-rose-600 focus:bg-rose-50 focus:text-rose-700 hover:bg-rose-50"
               >
                 <Trash2Icon size={13} />
-                <span>Remover item</span>
+                <span>Excluir item</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -241,7 +241,7 @@ function RecipeItemRow({
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
         onConfirm={handleRemove}
-        title="Remover ingrediente?"
+        title="Excluir ingrediente"
         description={`Deseja remover "${item.inventoryItem.name}" da ficha técnica deste produto?`}
         isPending={isPending}
       />

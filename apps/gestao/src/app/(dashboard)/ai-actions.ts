@@ -152,28 +152,75 @@ export const testAiProviderKeyAction = async (
 
   try {
     if (provider === "GOOGLE_GEMINI") {
-      const client = new OpenAI({
-        apiKey: cleanedKey,
-        baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
-        timeout: 10000,
-      });
+      if (cleanedKey.startsWith("...") || cleanedKey.length < 25) {
+        return {
+          success: false,
+          provider: "GOOGLE_GEMINI",
+          error:
+            "A chave informada está incompleta (" +
+            cleanedKey +
+            "). Você precisa copiar a chave inteira no Google AI Studio (ela começa com 'AIzaSy...' e tem cerca de 39 caracteres). Clique no ícone de cópia ao lado da chave.",
+        };
+      }
 
       let modelTested = "gemini-2.0-flash";
-      try {
-        await client.chat.completions.create({
-          model: modelTested,
-          messages: [{ role: "user", content: "Diga apenas: OK" }],
-          max_tokens: 5,
-          temperature: 0,
-        });
-      } catch {
-        modelTested = "gemini-1.5-flash";
-        await client.chat.completions.create({
-          model: modelTested,
-          messages: [{ role: "user", content: "Diga apenas: OK" }],
-          max_tokens: 5,
-          temperature: 0,
-        });
+      let connected = false;
+
+      // 1. Tenta via endpoint OpenAI-compatible
+      for (const m of ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash"]) {
+        try {
+          const client = new OpenAI({
+            apiKey: cleanedKey,
+            baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+            timeout: 8000,
+          });
+          await client.chat.completions.create({
+            model: m,
+            messages: [{ role: "user", content: "Diga apenas: OK" }],
+            max_tokens: 5,
+            temperature: 0,
+          });
+          modelTested = m;
+          connected = true;
+          break;
+        } catch {
+          // tenta próximo
+        }
+      }
+
+      // 2. Se OpenAI endpoint retornar 404, tenta endpoint REST nativo do Google
+      if (!connected) {
+        for (const m of ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash"]) {
+          try {
+            const res = await fetch(
+              `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${cleanedKey}`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  contents: [{ parts: [{ text: "Diga apenas: OK" }] }],
+                }),
+              }
+            );
+            if (res.ok) {
+              modelTested = m;
+              connected = true;
+              break;
+            } else if (res.status === 400) {
+              const data = await res.json().catch(() => null);
+              const errMsg = data?.error?.message || "Chave de API do Google Gemini inválida.";
+              return { success: false, provider: "GOOGLE_GEMINI", error: errMsg };
+            }
+          } catch {
+            // tenta próximo
+          }
+        }
+      }
+
+      if (!connected) {
+        throw new Error(
+          "Modelos do Gemini ainda não sincronizados (Erro 404). Se você acabou de criar esta chave no Google AI Studio, o Google leva cerca de 1 a 2 minutos para propagar a chave para os servidores de IA. Aguarde um instante e clique em Testar novamente."
+        );
       }
 
       const responseTimeMs = Date.now() - startTime;
@@ -226,6 +273,9 @@ export const testAiProviderKeyAction = async (
       ) {
         friendly =
           "Chave de API do Google Gemini inválida. Obtenha uma chave em https://aistudio.google.com/app/apikey.";
+      } else if (rawMsg.includes("404")) {
+        friendly =
+          "Modelos do Gemini ainda não sincronizados (Erro 404). Se você acabou de criar a chave, aguarde 1 a 2 minutos para o Google propagar as permissões e tente novamente.";
       } else if (rawMsg.includes("403")) {
         friendly =
           "Acesso negado (Erro 403). Verifique se a API do Gemini está habilitada para esta chave.";

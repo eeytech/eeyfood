@@ -48,6 +48,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { GrupoAdicionalComOpcoes } from "@/lib/admin-queries";
 import type { ProductOption, ProductOptionGroup } from "@fsw/db";
 
@@ -763,9 +770,9 @@ function GroupCard({
                 <DropdownMenuItem
                   onClick={() => setConfirmUnlink(true)}
                   disabled={isPendingGroup}
-                  className="cursor-pointer gap-2 text-xs font-semibold text-amber-600 hover:bg-amber-50 focus:bg-amber-50"
+                  className="cursor-pointer gap-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
                 >
-                  <UnlinkIcon size={13} />
+                  <UnlinkIcon size={13} className="text-primary" />
                   <span>Desvincular produto</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -869,107 +876,159 @@ function GroupCard({
   );
 }
 
-function LinkGroupSelector({
+function LinkExistingGroupDialog({
+  open,
+  onOpenChange,
   slug,
   productId,
-  linkedGroupIds: linkedGroupIds,
-  onLink,
-  onCancel,
+  linkedGroupIds,
+  onSuccess,
 }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   slug: string;
   productId: string;
   linkedGroupIds: Set<string>;
-  onLink: () => void;
-  onCancel: () => void;
+  onSuccess: () => void;
 }) {
   const [allGroups, setAllGroups] = useState<GrupoAdicionalComOpcoes[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState("");
+  const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
-    fetchRestaurantOptionGroupsAction(slug)
-      .then((groups) => {
-        setAllGroups(groups);
-      })
-      .catch((err) => {
-        console.error("Erro ao carregar grupos do restaurante:", err);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, [slug]);
+    if (open) {
+      setLoading(true);
+      setSelectedId("");
+      setError("");
+      fetchRestaurantOptionGroupsAction(slug)
+        .then((groups) => {
+          setAllGroups(groups);
+        })
+        .catch((err) => {
+          console.error("Erro ao carregar grupos do restaurante:", err);
+          toast.error("Não foi possível carregar os grupos de adicionais.");
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    }
+  }, [open, slug]);
 
   const available = allGroups.filter((g) => !linkedGroupIds.has(g.id));
 
-  const handleLink = () => {
-    if (!selectedId) return;
+  const handleLink = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedId) {
+      setError("Selecione um grupo de adicionais para vincular.");
+      toast.error("Por favor, preencha todos os campos obrigatórios.");
+      return;
+    }
     const fd = new FormData();
     fd.set("productId", productId);
     fd.set("groupId", selectedId);
     startTransition(async () => {
       await linkOptionGroupToProductAction(slug, fd);
-      onLink();
-      toast.success("Grupo vinculado ao produto.");
+      onOpenChange(false);
+      onSuccess();
+      toast.success("Grupo de adicionais vinculado com sucesso!");
     });
   };
 
-  if (loading) {
-    return (
-      <div className="rounded-xl border bg-slate-50 p-4 text-center text-sm text-muted-foreground">
-        Carregando grupos...
-      </div>
-    );
-  }
-
-  if (available.length === 0) {
-    return (
-      <div className="space-y-2 rounded-xl border bg-slate-50 p-4">
-        <p className="text-sm text-muted-foreground">
-          Todos os grupos globais já estão vinculados a este produto.
-        </p>
-        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-          Fechar
-        </Button>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-3 rounded-xl border bg-slate-50 p-4">
-      <p className="text-sm font-medium">Vincular grupo existente</p>
-      <select
-        value={selectedId}
-        onChange={(e) => setSelectedId(e.target.value)}
-        className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-      >
-        <option value="">Selecione um grupo...</option>
-        {available.map((g) => (
-          <option key={g.id} value={g.id}>
-            {g.name} ({g.options.length} itens)
-          </option>
-        ))}
-      </select>
-      <div className="flex justify-end gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={onCancel}
-          disabled={isPending}
-        >
-          Cancelar
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          onClick={handleLink}
-          disabled={isPending || !selectedId}
-        >
-          {isPending ? "Vinculando..." : "Vincular"}
-        </Button>
-      </div>
-    </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[480px]">
+        <form onSubmit={handleLink} noValidate>
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-slate-900">
+              Vincular Grupo Existente
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Selecione um grupo de adicionais global já cadastrado para vincular a este produto.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            {loading ? (
+              <div className="py-8 text-center text-xs text-muted-foreground">
+                <Loader2Icon size={18} className="mx-auto mb-2 animate-spin text-primary" />
+                Carregando grupos de adicionais...
+              </div>
+            ) : available.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/50 p-6 text-center">
+                <p className="text-xs text-slate-600">
+                  {allGroups.length === 0
+                    ? "Nenhum grupo global cadastrado. Crie um novo grupo para começar."
+                    : "Todos os grupos existentes já estão vinculados a este produto."}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <Label htmlFor="link-group-select" className="text-xs font-semibold text-slate-700">
+                  Grupo de adicionais
+                </Label>
+                <Select
+                  value={selectedId}
+                  onValueChange={(val) => {
+                    setSelectedId(val);
+                    setError("");
+                  }}
+                >
+                  <SelectTrigger
+                    id="link-group-select"
+                    className={cn(
+                      "h-10 text-xs transition-colors",
+                      error && "border-rose-500 bg-rose-50/20 focus:ring-rose-500"
+                    )}
+                  >
+                    <SelectValue placeholder="Selecione um grupo para vincular..." />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+                    {available.map((g) => (
+                      <SelectItem key={g.id} value={g.id} className="text-xs">
+                        <span className="font-semibold text-slate-800">{g.name}</span>
+                        <span className="ml-2 text-slate-400">
+                          ({g.options.length} {g.options.length === 1 ? "adicional" : "adicionais"})
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {error && (
+                  <p className="text-[11px] font-medium text-rose-500">{error}</p>
+                )}
+                <p className="text-[10px] text-slate-400">
+                  As opções e preços do grupo serão adicionados à página deste produto.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isPending}
+              className="h-9 text-xs"
+            >
+              Cancelar
+            </Button>
+            {available.length > 0 && (
+              <Button
+                type="submit"
+                disabled={isPending}
+                className="h-9 gap-1.5 bg-primary text-xs font-semibold text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/25"
+              >
+                {isPending && <Loader2Icon size={14} className="animate-spin" />}
+                Vincular Grupo
+              </Button>
+            )}
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -1032,7 +1091,7 @@ export function ProductOptionsManager({
 
   return (
     <div className="space-y-3">
-      {groups.length === 0 && !addingGroup && !linkingGroup && (
+      {groups.length === 0 && !addingGroup && (
         <p className="py-6 text-center text-sm text-muted-foreground">
           Nenhum grupo de adicionais vinculado.
         </p>
@@ -1048,16 +1107,6 @@ export function ProductOptionsManager({
         />
       ))}
 
-      {linkingGroup && (
-        <LinkGroupSelector
-          slug={slug}
-          productId={productId}
-          linkedGroupIds={linkedGroupIds}
-          onLink={() => { setLinkingGroup(false); handleRefresh(); }}
-          onCancel={() => setLinkingGroup(false)}
-        />
-      )}
-
       <GroupDialog
         open={addingGroup}
         onOpenChange={setAddingGroup}
@@ -1069,28 +1118,35 @@ export function ProductOptionsManager({
         isPending={isPending}
       />
 
-      {!linkingGroup && (
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            className="flex-1 gap-2 border-dashed"
-            onClick={() => setAddingGroup(true)}
-          >
-            <PlusIcon size={14} />
-            Novo grupo
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="flex-1 gap-2 border-dashed"
-            onClick={() => setLinkingGroup(true)}
-          >
-            <LinkIcon size={14} />
-            Vincular grupo existente
-          </Button>
-        </div>
-      )}
+      <LinkExistingGroupDialog
+        open={linkingGroup}
+        onOpenChange={setLinkingGroup}
+        slug={slug}
+        productId={productId}
+        linkedGroupIds={linkedGroupIds}
+        onSuccess={handleRefresh}
+      />
+
+      <div className="flex gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          className="flex-1 gap-2 border-dashed"
+          onClick={() => setAddingGroup(true)}
+        >
+          <PlusIcon size={14} />
+          Novo grupo
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="flex-1 gap-2 border-dashed"
+          onClick={() => setLinkingGroup(true)}
+        >
+          <LinkIcon size={14} />
+          Vincular grupo existente
+        </Button>
+      </div>
     </div>
   );
 }

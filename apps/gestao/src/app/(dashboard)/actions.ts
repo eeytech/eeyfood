@@ -1718,6 +1718,57 @@ Os valores nutricionais são estimativas por porção individual e devem ser nú
     }
   }
 
+  // Fallback nativo REST do Google Gemini caso a camada OpenAI tenha falhado/404
+  if (geminiKey) {
+    for (const m of ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash"]) {
+      try {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${geminiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
+              generationConfig: {
+                temperature: 0.7,
+                responseMimeType: "application/json",
+              },
+            }),
+          }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+          if (raw) {
+            const cleaned = raw
+              .replace(/^```(?:json)?\s*/i, "")
+              .replace(/\s*```$/i, "")
+              .trim();
+            const parsed = JSON.parse(cleaned);
+            if (parsed && typeof parsed === "object" && parsed.description) {
+              return {
+                description: String(parsed.description).trim(),
+                nutrition:
+                  parsed.nutrition && typeof parsed.nutrition === "object"
+                    ? {
+                        calories: Number(parsed.nutrition.calories) || 0,
+                        carbs: Number(parsed.nutrition.carbs) || 0,
+                        protein: Number(parsed.nutrition.protein) || 0,
+                        fat: Number(parsed.nutrition.fat) || 0,
+                        fiber: Number(parsed.nutrition.fiber) || 0,
+                        sodium: Number(parsed.nutrition.sodium) || 0,
+                      }
+                    : undefined,
+              };
+            }
+          }
+        }
+      } catch {
+        // segue
+      }
+    }
+  }
+
   return {
     error: lastError
       ? `Erro ao comunicar com a IA (${providerList[0]?.name || "IA"}): ${lastError}`

@@ -134,8 +134,8 @@ const CartProductItem = ({ product, variant = "sheet" }: CartItemProps) => {
               ? "h-7 w-7 bg-slate-100 text-slate-500 hover:bg-rose-50 hover:text-rose-600 active:scale-90"
               : "h-6 w-6 bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 active:bg-rose-50 active:text-rose-600 sm:h-7 sm:w-7"
           )}
-          title="Remover item"
-          aria-label={`Remover ${product.name} do pedido`}
+          title="Excluir item"
+          aria-label={`Excluir ${product.name} do pedido`}
         >
           <TrashIcon size={14} />
         </button>
