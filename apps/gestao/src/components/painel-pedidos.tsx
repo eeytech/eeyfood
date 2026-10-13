@@ -1692,13 +1692,22 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                                 <h3 className="min-w-0 flex-1 font-bold text-sm text-slate-900 tracking-tight truncate">
                                   {order.customerName}
                                 </h3>
-                                <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700 border border-slate-200/60">
-                                  {order.consumptionMethod === "DELIVERY"
-                                    ? "🛵 Entrega"
-                                    : order.consumptionMethod === "DINE_IN"
-                                      ? "🍽️ Salão"
-                                      : "🛍️ Para levar"}
-                                </span>
+                                <span
+                                    className={cn(
+                                      "shrink-0 rounded-md px-2 py-0.5 text-[10px] font-semibold border",
+                                      order.consumptionMethod === "DELIVERY"
+                                        ? "bg-sky-50 text-sky-700 border-sky-200/70"
+                                        : order.consumptionMethod === "DINE_IN"
+                                          ? "bg-purple-50 text-purple-700 border-purple-200/70"
+                                          : "bg-slate-100 text-slate-700 border-slate-200/70",
+                                    )}
+                                  >
+                                    {order.consumptionMethod === "DELIVERY"
+                                      ? "Entrega"
+                                      : order.consumptionMethod === "DINE_IN"
+                                        ? "Salão"
+                                        : "Para levar"}
+                                  </span>
                               </div>
 
                               {/* Telefone do cliente se houver */}
@@ -1743,28 +1752,45 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                                 <span className="text-[11px] font-medium text-slate-600">
                                   {getPaymentLabel(order.paymentMethod)}
                                 </span>
-                                <span
-                                  className={cn(
-                                    "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold border",
-                                    order.paymentStatus === "PAID"
-                                      ? "bg-emerald-50 text-emerald-700 border-emerald-200/80"
-                                      : order.paymentStatus === "FAILED" || order.paymentStatus === "CANCELLED"
-                                        ? "bg-rose-50 text-rose-700 border-rose-200/80"
-                                        : "bg-amber-50 text-amber-700 border-amber-200/80",
-                                  )}
-                                >
+                                {isOfflinePayment && order.paymentStatus !== "PAID" ? (
+                                  <button
+                                    type="button"
+                                    disabled={isLoading}
+                                    onClick={() =>
+                                      handleOrderPatch(order.id, {
+                                        paymentStatus: "PAID",
+                                      })
+                                    }
+                                    className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold border border-amber-300 bg-amber-100/90 text-amber-900 hover:bg-amber-200 transition-colors shadow-2xs cursor-pointer"
+                                    title="Clique para confirmar recebimento do pagamento"
+                                  >
+                                    <CreditCardIcon size={10} className="shrink-0 text-amber-800" />
+                                    <span>Confirmar pgto</span>
+                                  </button>
+                                ) : (
                                   <span
                                     className={cn(
-                                      "h-1.5 w-1.5 rounded-full",
+                                      "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold border",
                                       order.paymentStatus === "PAID"
-                                        ? "bg-emerald-500"
+                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200/80"
                                         : order.paymentStatus === "FAILED" || order.paymentStatus === "CANCELLED"
-                                          ? "bg-rose-500"
-                                          : "bg-amber-500 animate-pulse",
+                                          ? "bg-rose-50 text-rose-700 border-rose-200/80"
+                                          : "bg-amber-50 text-amber-700 border-amber-200/80",
                                     )}
-                                  />
-                                  {order.paymentStatus === "PAID" ? "Pago" : order.paymentStatus === "FAILED" ? "Falhou" : "Pendente"}
-                                </span>
+                                  >
+                                    <span
+                                      className={cn(
+                                        "h-1.5 w-1.5 rounded-full",
+                                        order.paymentStatus === "PAID"
+                                          ? "bg-emerald-500"
+                                          : order.paymentStatus === "FAILED" || order.paymentStatus === "CANCELLED"
+                                            ? "bg-rose-500"
+                                            : "bg-amber-500 animate-pulse",
+                                      )}
+                                    />
+                                    {order.paymentStatus === "PAID" ? "Pago" : order.paymentStatus === "FAILED" ? "Falhou" : "Pendente"}
+                                  </span>
+                                )}
                               </div>
                             </div>
 
@@ -1853,93 +1879,76 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                               )}
                             </div>
 
-                            {/* Rodapé de Ações Padronizado */}
-                            <div className="space-y-1.5 pt-1.5 border-t border-slate-100">
-                              {/* Botão de confirmação de pagamento para vendas pendentes presenciais */}
-                              {isOfflinePayment && order.paymentStatus !== "PAID" && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-8 w-full rounded-lg border-amber-300 bg-amber-50/80 text-amber-900 hover:bg-amber-100 hover:text-amber-950 font-semibold text-xs gap-1.5 shadow-2xs transition-all"
-                                  disabled={isLoading}
-                                  onClick={() =>
-                                    handleOrderPatch(order.id, {
-                                      paymentStatus: "PAID",
-                                    })
-                                  }
-                                >
-                                  {isLoading ? (
-                                    <Loader2Icon className="animate-spin shrink-0" size={12} />
-                                  ) : (
-                                    <CreditCardIcon size={13} className="text-amber-700 shrink-0" />
+                            {/* Rodapé de Ações: Proporcional e Compacto (sem botões esticados) */}
+                            {(previousStatus || nextStatus || !["FINISHED", "CANCELLED"].includes(order.status)) && (
+                              <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                                {/* Lado Esquerdo: Ação de Voltar etapa */}
+                                <div>
+                                  {previousStatus && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7.5 px-2.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 text-xs font-medium gap-1 transition-colors"
+                                      disabled={isLoading}
+                                      onClick={() =>
+                                        handleOrderPatch(order.id, {
+                                          status: previousStatus,
+                                        })
+                                      }
+                                      title="Retornar etapa anterior"
+                                    >
+                                      <ArrowLeftIcon size={12} className="shrink-0" />
+                                      <span>Voltar</span>
+                                    </Button>
                                   )}
-                                  <span>Confirmar recebimento do pagamento</span>
-                                </Button>
-                              )}
+                                </div>
 
-                              {/* Linha de navegação entre etapas */}
-                              <div className="flex items-center gap-1.5 w-full">
-                                {previousStatus && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 px-2.5 rounded-lg border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 text-xs font-medium gap-1 shrink-0 shadow-2xs"
-                                    disabled={isLoading}
-                                    onClick={() =>
-                                      handleOrderPatch(order.id, {
-                                        status: previousStatus,
-                                      })
-                                    }
-                                    title="Retornar etapa anterior"
-                                  >
-                                    <ArrowLeftIcon size={12} className="shrink-0" />
-                                    <span className="hidden sm:inline">Voltar</span>
-                                  </Button>
-                                )}
+                                {/* Lado Direito: Ações compactas alinhadas (Cancelar e Avançar) */}
+                                <div className="flex items-center gap-1.5 ml-auto">
+                                  {!["FINISHED", "CANCELLED"].includes(order.status) && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7.5 w-7.5 rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                                      disabled={isLoading}
+                                      onClick={() =>
+                                        handleOrderPatch(order.id, {
+                                          status: "CANCELLED",
+                                        })
+                                      }
+                                      title="Cancelar pedido"
+                                    >
+                                      <XCircleIcon size={14} />
+                                    </Button>
+                                  )}
 
-                                {nextStatus && (
-                                  <Button
-                                    size="sm"
-                                    className={cn(
-                                      "h-8 flex-1 rounded-lg text-xs font-semibold shadow-xs transition-all gap-1.5 justify-center min-w-0",
-                                      column.theme.advanceButtonClass,
-                                    )}
-                                    disabled={isLoading}
-                                    onClick={() =>
-                                      handleOrderPatch(order.id, {
-                                        status: nextStatus,
-                                      })
-                                    }
-                                  >
-                                    {isLoading ? (
-                                      <Loader2Icon className="animate-spin shrink-0" size={12} />
-                                    ) : (
-                                      <>
-                                        <span className="truncate">{getNextStatusLabel(order)}</span>
-                                        <ArrowRightIcon size={12} className="shrink-0" />
-                                      </>
-                                    )}
-                                  </Button>
-                                )}
-
-                                {!["FINISHED", "CANCELLED"].includes(order.status) && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 rounded-lg shrink-0 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
-                                    disabled={isLoading}
-                                    onClick={() =>
-                                      handleOrderPatch(order.id, {
-                                        status: "CANCELLED",
-                                      })
-                                    }
-                                    title="Cancelar pedido"
-                                  >
-                                    <XCircleIcon size={15} />
-                                  </Button>
-                                )}
+                                  {nextStatus && (
+                                    <Button
+                                      size="sm"
+                                      className={cn(
+                                        "h-7.5 px-3.5 rounded-lg text-xs font-semibold shadow-xs transition-all gap-1.5 shrink-0",
+                                        column.theme.advanceButtonClass,
+                                      )}
+                                      disabled={isLoading}
+                                      onClick={() =>
+                                        handleOrderPatch(order.id, {
+                                          status: nextStatus,
+                                        })
+                                      }
+                                    >
+                                      {isLoading ? (
+                                        <Loader2Icon className="animate-spin shrink-0" size={12} />
+                                      ) : (
+                                        <>
+                                          <span>{getNextStatusLabel(order)}</span>
+                                          <ArrowRightIcon size={12} className="shrink-0" />
+                                        </>
+                                      )}
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
-                            </div>
+                            )}
                           </div>
                         </Card>
                       );
