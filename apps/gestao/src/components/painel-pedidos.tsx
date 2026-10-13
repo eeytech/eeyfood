@@ -13,6 +13,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ClockIcon,
+  CreditCardIcon,
   InboxIcon,
   Loader2Icon,
   MapPinIcon,
@@ -418,27 +419,48 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
   const [autoPrintEnabled, setAutoPrintEnabled] = useState(false);
   const [autoPrintMode, setAutoPrintMode] = useState<"DELIVERY" | "PRODUCTION" | "BOTH">("DELIVERY");
 
+  // Refs para evitar problemas de stale closure em callbacks assíncronos e WebSocket
+  const autoPrintEnabledRef = useRef(autoPrintEnabled);
+  const autoPrintModeRef = useRef(autoPrintMode);
+  const knownOrderIdsRef = useRef<Set<number>>(
+    new Set(initialOrders.map((o) => o.id))
+  );
+
+  useEffect(() => {
+    autoPrintEnabledRef.current = autoPrintEnabled;
+  }, [autoPrintEnabled]);
+
+  useEffect(() => {
+    autoPrintModeRef.current = autoPrintMode;
+  }, [autoPrintMode]);
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const savedAutoPrint = localStorage.getItem("eey_autoprint_enabled");
       if (savedAutoPrint !== null) {
-        setAutoPrintEnabled(savedAutoPrint === "true");
+        const isEnabled = savedAutoPrint === "true";
+        setAutoPrintEnabled(isEnabled);
+        autoPrintEnabledRef.current = isEnabled;
       }
       const savedMode = localStorage.getItem("eey_autoprint_mode");
       if (savedMode) {
-        setAutoPrintMode(savedMode as "DELIVERY" | "PRODUCTION" | "BOTH");
+        const mode = savedMode as "DELIVERY" | "PRODUCTION" | "BOTH";
+        setAutoPrintMode(mode);
+        autoPrintModeRef.current = mode;
       }
     }
   }, []);
 
   const handleToggleAutoPrint = (enabled: boolean) => {
     setAutoPrintEnabled(enabled);
+    autoPrintEnabledRef.current = enabled;
     localStorage.setItem("eey_autoprint_enabled", String(enabled));
     toast.info(enabled ? "Auto-impressão de novos pedidos ativada!" : "Auto-impressão desativada.");
   };
 
   const handleChangeAutoPrintMode = (mode: "DELIVERY" | "PRODUCTION" | "BOTH") => {
     setAutoPrintMode(mode);
+    autoPrintModeRef.current = mode;
     localStorage.setItem("eey_autoprint_mode", mode);
     toast.success(`Via de impressão definida: ${mode === "DELIVERY" ? "Entrega" : mode === "PRODUCTION" ? "Cozinha" : "Ambas as Vias"}`);
   };
@@ -453,39 +475,75 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
   })();
 
   const syncOrderById = async (orderId: number) => {
-    const response = await fetch(`/api/pedidos/${String(orderId)}`, {
-      cache: "no-store",
-    });
+    try {
+      const response = await fetch(`/api/pedidos/${String(orderId)}`, {
+        cache: "no-store",
+      });
 
-    if (!response.ok) return;
+      if (!response.ok) return;
 
-    const order = (await response.json()) as PedidoRecebimento;
+      const order = (await response.json()) as PedidoRecebimento;
 
-    setOrders((currentOrders) => {
-      if (!currentOrders.some((currentOrder) => currentOrder.id === order.id)) {
-        // Novo pedido detectado em tempo real
+      const isNewOrder = !knownOrderIdsRef.current.has(order.id);
+      if (isNewOrder) {
+        knownOrderIdsRef.current.add(order.id);
+
         try {
           soundNotifier.playNewOrder();
         } catch { /* ignore */ }
 
-        if (autoPrintEnabled) {
+        if (autoPrintEnabledRef.current) {
           setTimeout(() => {
-            if (autoPrintMode === "BOTH") {
-              handlePrint(order, "PRODUCTION");
-              setTimeout(() => handlePrint(order, "DELIVERY"), 600);
-            } else {
-              handlePrint(order, autoPrintMode);
-            }
+            handlePrint(order, autoPrintModeRef.current);
           }, 400);
         }
-
-        return [order, ...currentOrders];
       }
 
-      return currentOrders.map((currentOrder) =>
-        currentOrder.id === order.id ? order : currentOrder,
-      );
-    });
+      setOrders((currentOrders) => {
+        const exists = currentOrders.some((currentOrder) => currentOrder.id === order.id);
+        if (!exists) {
+          return [order, ...currentOrders];
+        }
+        return currentOrders.map((currentOrder) =>
+          currentOrder.id === order.id ? order : currentOrder,
+        );
+      });
+    } catch (err) {
+      console.error("[PainelPedidos] Falha ao sincronizar pedido:", err);
+    }
+  };
+
+  // Sincronização geral de fallback (se o socket oscilar ou desconectar)
+  const syncAllOrders = async () => {
+    try {
+      const response = await fetch(`/api/pedidos?slug=${encodeURIComponent(slug)}`, {
+        cache: "no-store",
+      });
+      if (!response.ok) return;
+      const data = (await response.json()) as PedidoRecebimento[];
+      if (!Array.isArray(data)) return;
+
+      let hasNewOrder = false;
+      for (const order of data) {
+        if (!knownOrderIdsRef.current.has(order.id)) {
+          knownOrderIdsRef.current.add(order.id);
+          hasNewOrder = true;
+          if (autoPrintEnabledRef.current) {
+            handlePrint(order, autoPrintModeRef.current);
+          }
+        }
+      }
+
+      if (hasNewOrder) {
+        try {
+          soundNotifier.playNewOrder();
+        } catch { /* ignore */ }
+      }
+
+      setOrders(data);
+    } catch {
+      // ignore
+    }
   };
 
   useEffect(() => {
@@ -533,6 +591,18 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, websocketUrl]);
+
+  // Polling automático de segurança para conexão instável
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!socketConnected) {
+        void syncAllOrders();
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [socketConnected, slug]);
 
   const handleOrderPatch = async (
     orderId: number,
@@ -607,217 +677,286 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
     });
   };
 
-  const handlePrint = (
-    order: PedidoRecebimento,
-    type: "PRODUCTION" | "DELIVERY",
-  ) => {
-    const iframe = document.createElement("iframe");
-    iframe.style.position = "absolute";
-    iframe.style.top = "-9999px";
-    iframe.style.left = "-9999px";
-    document.body.appendChild(iframe);
+  const renderReceiptSection = (order: PedidoRecebimento, isProduction: boolean) => {
+    const optionCounts = (item: (typeof order.orderProducts)[number]) => {
+      const counts = new Map<string, { name: string; count: number }>();
+      if (item.orderProductOptions) {
+        for (const opt of item.orderProductOptions) {
+          const key = opt.productOptionId || opt.nameSnapshot;
+          const existing = counts.get(key);
+          if (existing) {
+            existing.count += 1;
+          } else {
+            counts.set(key, { name: opt.nameSnapshot, count: 1 });
+          }
+        }
+      }
+      return Array.from(counts.values())
+        .map(
+          (opt) =>
+            `<div style="font-size: 10px; margin-left: 6px; color: #222;">• ${opt.count > 1 ? `${opt.count}x ` : ""}${opt.name}</div>`,
+        )
+        .join("");
+    };
 
-    const isProduction = type === "PRODUCTION";
+    return `
+      <div class="receipt-section">
+        <div class="text-center mb-4">
+          <h1 class="text-lg font-bold uppercase">${order.restaurant.name}</h1>
+          ${!isProduction ? `<p style="font-size: 10px;">CNPJ: 00.000.000/0001-00</p>` : ""}
+          <div class="border-t my-2"></div>
+          <h2 class="font-bold">${isProduction ? "CUPOM DE PRODUÇÃO" : "CUPOM DE ENTREGA"}</h2>
+          <p class="text-xl font-bold">PEDIDO #${order.id}</p>
+        </div>
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Impressão Pedido #${order.id}</title>
-          <style>
-            @page { margin: 0; size: 80mm auto; }
-            body {
-              margin: 0;
-              padding: 4mm;
-              width: 72mm;
-              font-family: monospace;
-              font-size: 12px;
-              line-height: 1.2;
-              color: black;
+        ${
+          !isProduction
+            ? `
+          <div class="mb-4">
+            <p><span class="font-bold">CLIENTE:</span> ${order.customerName}</p>
+            <p><span class="font-bold">TEL:</span> ${order.customerPhone}</p>
+            <p><span class="font-bold">DATA:</span> ${formatDateTime(order.createdAt)}</p>
+            <p><span class="font-bold">MÉTODO:</span> ${
+              order.consumptionMethod === "DELIVERY"
+                ? "ENTREGA"
+                : order.consumptionMethod === "DINE_IN"
+                  ? "SALÃO"
+                  : "PARA LEVAR"
+            }</p>
+            ${
+              order.consumptionMethod === "DELIVERY" && order.deliveryAddress
+                ? `<p><span class="font-bold">ENDEREÇO:</span> ${order.deliveryAddress}</p>`
+                : ""
             }
-            .text-center { text-align: center; }
-            .text-xl { font-size: 18px; }
-            .text-lg { font-size: 16px; }
-            .font-bold { font-weight: bold; }
-            .uppercase { text-transform: uppercase; }
-            .border-t { border-top: 1px dashed black; }
-            .my-2 { margin-top: 8px; margin-bottom: 8px; }
-            .mb-4 { margin-bottom: 16px; }
-            .flex { display: flex; }
-            .justify-between { justify-content: space-between; }
-            .italic { font-style: italic; }
-            .h-20 { height: 80px; }
-          </style>
-        </head>
-        <body>
-          <div class="text-center mb-4">
-            <h1 class="text-lg font-bold uppercase">${order.restaurant.name}</h1>
-            ${!isProduction ? `<p style="font-size: 10px;">CNPJ: 00.000.000/0001-00</p>` : ""}
-            <div class="border-t my-2"></div>
-            <h2 class="font-bold">${isProduction ? "CUPOM DE PRODUÇÃO" : "CUPOM DE ENTREGA"}</h2>
-            <p class="text-xl font-bold">PEDIDO #${order.id}</p>
+            ${order.notes ? `<p class="italic"><span class="font-bold">OBS:</span> ${order.notes}</p>` : ""}
           </div>
+        `
+            : ""
+        }
 
-          ${
-            !isProduction
-              ? `
-            <div class="mb-4">
-              <p><span class="font-bold">CLIENTE:</span> ${order.customerName}</p>
-              <p><span class="font-bold">TEL:</span> ${order.customerPhone}</p>
-              <p><span class="font-bold">DATA:</span> ${formatDateTime(order.createdAt)}</p>
-              <p><span class="font-bold">MÉTODO:</span> ${
-                order.consumptionMethod === "DELIVERY"
-                  ? "ENTREGA"
-                  : order.consumptionMethod === "DINE_IN"
-                    ? "SALÃO"
-                    : "PARA LEVAR"
-              }</p>
-              ${order.notes ? `<p class="italic"><span class="font-bold">OBS:</span> ${order.notes}</p>` : ""}
-            </div>
-          `
-              : ""
-          }
+        ${
+          isProduction && order.notes
+            ? `
+          <div class="mb-4" style="border: 1px solid black; padding: 4px;">
+            <p class="font-bold">OBSERVAÇÕES DO PEDIDO:</p>
+            <p>${order.notes}</p>
+          </div>
+        `
+            : ""
+        }
 
-          ${
-            isProduction && order.notes
-              ? `
-            <div class="mb-4" style="border: 1px solid black; padding: 4px;">
-              <p class="font-bold">OBSERVAÇÕES DO PEDIDO:</p>
-              <p>${order.notes}</p>
+        <div class="border-t my-2"></div>
+
+        <div class="mb-4">
+          <div class="flex justify-between font-bold">
+            <span>ITEM</span>
+            <span>QTD</span>
+          </div>
+          ${order.orderProducts
+            .map(
+              (item) => `
+            <div class="flex justify-between" style="margin-top: 4px;">
+              <span class="font-bold">${item.productNameSnapshot || item.product.name}</span>
+              <span>${item.quantity}x</span>
             </div>
-          `
-              : ""
-          }
+            ${optionCounts(item)}
+            ${item.notes ? `<div style="font-size: 10px; font-style: italic; margin-left: 6px; margin-bottom: 2px;">- Obs: ${item.notes}</div>` : ""}
+          `,
+            )
+            .join("")}
+        </div>
+
+        ${
+          !isProduction
+            ? `
+          <div class="border-t my-2"></div>
+          <div style="gap: 4px; display: flex; flex-direction: column;">
+            <div class="flex justify-between">
+              <span>SUBTOTAL</span>
+              <span>${formatCurrency(order.subtotal)}</span>
+            </div>
+            ${
+              order.deliveryFee > 0
+                ? `
+              <div class="flex justify-between">
+                <span>TAXA ENTREGA</span>
+                <span>${formatCurrency(order.deliveryFee)}</span>
+              </div>
+            `
+                : ""
+            }
+            ${
+              order.discountAmount > 0
+                ? `
+              <div class="flex justify-between">
+                <span>DESCONTO</span>
+                <span>-${formatCurrency(order.discountAmount)}</span>
+              </div>
+            `
+                : ""
+            }
+            <div class="flex justify-between font-bold text-lg" style="padding-top: 4px;">
+              <span>TOTAL</span>
+              <span>${formatCurrency(order.total)}</span>
+            </div>
+          </div>
 
           <div class="border-t my-2"></div>
 
           <div class="mb-4">
-            <div class="flex justify-between font-bold">
-              <span>ITEM</span>
-              <span>QTD</span>
-            </div>
-            ${order.orderProducts
-              .map(
-                (item) => {
-                  const optionCounts = new Map<string, { name: string; count: number }>();
-                  if (item.orderProductOptions) {
-                    for (const opt of item.orderProductOptions) {
-                      const key = opt.productOptionId || opt.nameSnapshot;
-                      const existing = optionCounts.get(key);
-                      if (existing) {
-                        existing.count += 1;
-                      } else {
-                        optionCounts.set(key, { name: opt.nameSnapshot, count: 1 });
-                      }
-                    }
-                  }
-                  const optionsHtml = Array.from(optionCounts.values())
-                    .map(
-                      (opt) =>
-                        `<div style="font-size: 10px; margin-left: 6px; color: #222;">• ${opt.count > 1 ? `${opt.count}x ` : ""}${opt.name}</div>`,
-                    )
-                    .join("");
-
-                  return `
-              <div class="flex justify-between" style="margin-top: 4px;">
-                <span class="font-bold">${item.productNameSnapshot || item.product.name}</span>
-                <span>${item.quantity}x</span>
-              </div>
-              ${optionsHtml}
-              ${item.notes ? `<div style="font-size: 10px; font-style: italic; margin-left: 6px; margin-bottom: 2px;">- Obs: ${item.notes}</div>` : ""}
-            `;
-                },
-              )
-              .join("")}
+            ${
+              order.marketplaceType
+                ? `<p><span class="font-bold">CANAL:</span> ${order.marketplaceType === "KEETA" ? "KEETA BRASIL" : order.marketplaceType} ${order.marketplaceOrderId ? `(#${order.marketplaceOrderId})` : ""}</p>`
+                : ""
+            }
+            <p><span class="font-bold">PAGAMENTO:</span> ${
+              order.paymentMethod === "DINHEIRO"
+                ? "DINHEIRO"
+                : order.paymentMethod === "CARTAO_PRESENCIAL"
+                  ? "CARTÃO (PRESENCIAL)"
+                  : order.paymentMethod === "PIX"
+                    ? "PIX"
+                    : "ONLINE"
+            }</p>
+            <p><span class="font-bold">STATUS:</span> ${order.paymentStatus === "PAID" ? "PAGO" : "PENDENTE"}</p>
+            ${
+              order.paymentMethod === "DINHEIRO" && order.changeFor
+                ? `
+              <p class="font-bold">TROCO PARA: ${formatCurrency(order.changeFor)}</p>
+            `
+                : ""
+            }
           </div>
+        `
+            : ""
+        }
 
-          ${
-            !isProduction
-              ? `
-            <div class="border-t my-2"></div>
-            <div style="gap: 4px; display: flex; flex-direction: column;">
-              <div class="flex justify-between">
-                <span>SUBTOTAL</span>
-                <span>${formatCurrency(order.subtotal)}</span>
-              </div>
-              ${
-                order.deliveryFee > 0
-                  ? `
-                <div class="flex justify-between">
-                  <span>TAXA ENTREGA</span>
-                  <span>${formatCurrency(order.deliveryFee)}</span>
-                </div>
-              `
-                  : ""
-              }
-              ${
-                order.discountAmount > 0
-                  ? `
-                <div class="flex justify-between">
-                  <span>DESCONTO</span>
-                  <span>-${formatCurrency(order.discountAmount)}</span>
-                </div>
-              `
-                  : ""
-              }
-              <div class="flex justify-between font-bold text-lg" style="padding-top: 4px;">
-                <span>TOTAL</span>
-                <span>${formatCurrency(order.total)}</span>
-              </div>
-            </div>
-
-            <div class="border-t my-2"></div>
-
-            <div class="mb-4">
-              ${
-                order.marketplaceType
-                  ? `<p><span class="font-bold">CANAL:</span> ${order.marketplaceType === "KEETA" ? "KEETA BRASIL" : order.marketplaceType} ${order.marketplaceOrderId ? `(#${order.marketplaceOrderId})` : ""}</p>`
-                  : ""
-              }
-              <p><span class="font-bold">PAGAMENTO:</span> ${
-                order.paymentMethod === "DINHEIRO"
-                  ? "DINHEIRO"
-                  : order.paymentMethod === "CARTAO_PRESENCIAL"
-                    ? "CARTÃO (PRESENCIAL)"
-                    : order.paymentMethod === "PIX"
-                      ? "PIX"
-                      : "ONLINE"
-              }</p>
-              <p><span class="font-bold">STATUS:</span> ${order.paymentStatus === "PAID" ? "PAGO" : "PENDENTE"}</p>
-              ${
-                order.paymentMethod === "DINHEIRO" && order.changeFor
-                  ? `
-                <p class="font-bold">TROCO PARA: ${formatCurrency(order.changeFor)}</p>
-              `
-                  : ""
-              }
-            </div>
-          `
-              : ""
-          }
-
-          <div class="text-center h-20" style="margin-top: 20px; font-size: 10px;">
-            <p>Obrigado pela preferência!</p>
-            <p>www.eeyfood.com.br</p>
-          </div>
-        </body>
-      </html>
+        <div class="text-center h-20" style="margin-top: 20px; font-size: 10px;">
+          <p>Obrigado pela preferência!</p>
+          <p>www.eeyfood.com.br</p>
+        </div>
+      </div>
     `;
+  };
 
-    const doc = iframe.contentWindow?.document ?? iframe.contentDocument;
-    if (doc) {
+  const handlePrint = (
+    order: PedidoRecebimento,
+    type: "PRODUCTION" | "DELIVERY" | "BOTH",
+  ) => {
+    try {
+      const iframe = document.createElement("iframe");
+      iframe.style.position = "fixed";
+      iframe.style.right = "0";
+      iframe.style.bottom = "0";
+      iframe.style.width = "0";
+      iframe.style.height = "0";
+      iframe.style.border = "none";
+      iframe.setAttribute("aria-hidden", "true");
+      document.body.appendChild(iframe);
+
+      const contentHtml =
+        type === "PRODUCTION"
+          ? renderReceiptSection(order, true)
+          : type === "DELIVERY"
+            ? renderReceiptSection(order, false)
+            : `
+              ${renderReceiptSection(order, true)}
+              <div style="page-break-after: always; break-after: page; border-top: 2px dashed black; margin: 24px 0; padding-top: 8px; text-align: center; font-size: 10px; font-weight: bold;">
+                ✂ - - - - - - CORTE AQUI - - - - - - ✂
+              </div>
+              ${renderReceiptSection(order, false)}
+            `;
+
+      const html = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Impressão Pedido #${order.id}</title>
+            <style>
+              @page { margin: 0; size: 80mm auto; }
+              body {
+                margin: 0;
+                padding: 4mm;
+                width: 72mm;
+                font-family: monospace;
+                font-size: 12px;
+                line-height: 1.2;
+                color: black;
+              }
+              @media print {
+                .receipt-section {
+                  page-break-inside: avoid;
+                }
+              }
+              .text-center { text-align: center; }
+              .text-xl { font-size: 18px; }
+              .text-lg { font-size: 16px; }
+              .font-bold { font-weight: bold; }
+              .uppercase { text-transform: uppercase; }
+              .border-t { border-top: 1px dashed black; }
+              .my-2 { margin-top: 8px; margin-bottom: 8px; }
+              .mb-4 { margin-bottom: 16px; }
+              .flex { display: flex; }
+              .justify-between { justify-content: space-between; }
+              .italic { font-style: italic; }
+              .h-20 { height: 60px; }
+            </style>
+          </head>
+          <body>
+            ${contentHtml}
+          </body>
+        </html>
+      `;
+
+      const doc = iframe.contentWindow?.document ?? iframe.contentDocument;
+      if (!doc) {
+        if (iframe.parentNode) document.body.removeChild(iframe);
+        return;
+      }
+
       doc.open();
       doc.write(html);
       doc.close();
 
-      setTimeout(() => {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-
+      let cleanedUp = false;
+      const cleanup = () => {
+        if (cleanedUp) return;
+        cleanedUp = true;
         setTimeout(() => {
-          document.body.removeChild(iframe);
-        }, 1000);
-      }, 500);
+          try {
+            if (iframe.parentNode) {
+              document.body.removeChild(iframe);
+            }
+          } catch {
+            // ignore
+          }
+        }, 1500);
+      };
+
+      iframe.contentWindow?.addEventListener("afterprint", cleanup);
+      setTimeout(cleanup, 60000);
+
+      setTimeout(() => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch (err) {
+          console.error("[Auto-Print] Erro ao disparar impressão:", err);
+          cleanup();
+        }
+      }, 350);
+    } catch (err) {
+      console.error("[Auto-Print] Falha geral ao imprimir:", err);
+    }
+  };
+
+  const handleTestPrint = () => {
+    const targetOrder = orders[0];
+    if (targetOrder) {
+      handlePrint(targetOrder, autoPrintModeRef.current);
+      toast.success("Disparando impressão de teste!");
+    } else {
+      toast.info("Nenhum pedido na lista para testar impressão.");
     }
   };
 
@@ -1083,6 +1222,14 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                       )}
                     </DropdownMenuItem>
                   </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleTestPrint}
+                    className="text-xs cursor-pointer font-medium text-slate-700 hover:bg-slate-100 flex items-center gap-1.5"
+                  >
+                    <PrinterIcon size={13} className="text-slate-500" />
+                    <span>Testar Impressão</span>
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
 
@@ -1479,205 +1626,241 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                         <Card
                           key={order.id}
                           className={cn(
-                            "border border-slate-200/90 bg-white/95 shadow-xs transition-all duration-200 hover:shadow-md w-full min-w-0",
+                            "border border-slate-200/90 bg-white shadow-xs transition-all duration-200 hover:shadow-md rounded-xl w-full min-w-0 overflow-hidden",
                             column.theme.cardBorderLeft,
                             column.theme.cardHoverBorder,
                           )}
                         >
-                          <CardHeader className="space-y-2.5 p-3.5 pb-2">
-                            {/* Linha 1: ID, Impressão e Status de Pagamento */}
+                          <div className="p-3.5 space-y-2.5">
+                            {/* Linha 1: ID, Marketplace, Impressão e Horário */}
                             <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
                                 <span
                                   className={cn(
-                                    "rounded-md px-2 py-0.5 font-mono text-[11px] font-bold shadow-2xs",
+                                    "rounded-md px-2 py-0.5 font-mono text-[11px] font-bold tracking-tight shadow-2xs shrink-0",
                                     column.theme.idBadgeClass,
                                   )}
                                 >
                                   #{String(order.id)}
                                 </span>
+
                                 {order.marketplaceType && (
                                   <span
                                     className={cn(
-                                      "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold shadow-2xs",
-                                      order.marketplaceType === "IFOOD" && "bg-red-100 text-red-700 border border-red-200",
-                                      order.marketplaceType === "RAPPI" && "bg-orange-100 text-orange-700 border border-orange-200",
-                                      order.marketplaceType === "KEETA" && "bg-amber-400 text-slate-950 border border-amber-500 font-extrabold",
-                                      order.marketplaceType === "NINETY_NINE_FOOD" && "bg-yellow-100 text-yellow-800 border border-yellow-300",
+                                      "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold shadow-2xs shrink-0",
+                                      order.marketplaceType === "IFOOD" && "bg-red-500 text-white shadow-2xs",
+                                      order.marketplaceType === "RAPPI" && "bg-orange-500 text-white shadow-2xs",
+                                      order.marketplaceType === "KEETA" && "bg-amber-400 text-slate-950 font-extrabold shadow-2xs",
+                                      order.marketplaceType === "NINETY_NINE_FOOD" && "bg-yellow-400 text-slate-950 shadow-2xs",
                                     )}
                                   >
                                     {order.marketplaceType === "KEETA" ? "Keeta" : order.marketplaceType === "IFOOD" ? "iFood" : order.marketplaceType === "RAPPI" ? "Rappi" : "99Food"}
                                   </span>
                                 )}
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
-                                  onClick={() =>
-                                    handlePrint(order, "PRODUCTION")
-                                  }
-                                  title="Imprimir Cozinha"
-                                >
-                                  <PrinterIcon size={12} />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
-                                  onClick={() =>
-                                    handlePrint(order, "DELIVERY")
-                                  }
-                                  title="Imprimir Cupom"
-                                >
-                                  <ReceiptTextIcon size={12} />
-                                </Button>
+
+                                {/* Ações de Impressão compactas e agrupadas */}
+                                <div className="flex items-center rounded-md border border-slate-200/70 bg-slate-50/80 p-0.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => handlePrint(order, "PRODUCTION")}
+                                    className="h-5 w-5 rounded flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-white transition-colors"
+                                    title="Imprimir Cozinha"
+                                  >
+                                    <PrinterIcon size={11} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handlePrint(order, "DELIVERY")}
+                                    className="h-5 w-5 rounded flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-white transition-colors"
+                                    title="Imprimir Cupom"
+                                  >
+                                    <ReceiptTextIcon size={11} />
+                                  </button>
+                                </div>
                               </div>
 
-                              <Badge
-                                variant={getPaymentStatusVariant(
-                                  order.paymentStatus,
-                                )}
-                                className="px-2 py-0.5 text-[10px] font-bold"
-                              >
-                                {getPaymentStatusLabel(order.paymentStatus)}
-                              </Badge>
+                              {/* Horário de criação */}
+                              <span className="text-[11px] font-medium text-slate-400 shrink-0 flex items-center gap-1">
+                                <ClockIcon size={11} className="text-slate-400" />
+                                {formatDateTime(order.createdAt)}
+                              </span>
                             </div>
 
                             {/* Linha 2: Nome do cliente e Método de consumo */}
-                            <div className="flex items-start justify-between gap-2 pt-0.5">
-                              <p className="min-w-0 flex-1 font-display text-sm font-bold text-slate-900 leading-snug break-words">
-                                {order.customerName}
-                              </p>
-                              <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
-                                {getConsumptionLabel(order.consumptionMethod)}
-                              </span>
-                            </div>
-
-                            {/* Prévia do endereço para entregas */}
-                            {order.consumptionMethod === "DELIVERY" && order.deliveryAddress && (
-                              <p className="flex items-center gap-1 text-[11px] text-slate-600 line-clamp-1 break-words">
-                                <MapPinIcon size={11} className="shrink-0 text-slate-400" />
-                                <span className="truncate">{order.deliveryAddress}</span>
-                              </p>
-                            )}
-
-                            {/* Linha 3: Metadados (Horário, Total, Método e Entregador) */}
-                            <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-xs">
-                              <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">
-                                <ClockIcon size={10} className="text-slate-400" />
-                                {formatDateTime(order.createdAt)}
-                              </span>
-
-                              <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-900">
-                                {formatCurrency(order.total)}
-                              </span>
-
-                              <Badge
-                                variant={getPaymentMethodVariant(
-                                  order.paymentMethod,
-                                  order.paymentStatus,
-                                )}
-                                className="px-2 py-0.5 text-[10px]"
-                              >
-                                {getPaymentLabel(order.paymentMethod)}
-                              </Badge>
-
-                              {order.courier && (
-                                <span className="inline-flex items-center gap-1 rounded-md border border-cyan-200/80 bg-cyan-50 px-2 py-0.5 text-[11px] font-medium text-cyan-800">
-                                  <BikeIcon size={11} />
-                                  <span className="truncate max-w-[90px]">{order.courier.name}</span>
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between gap-2">
+                                <h3 className="min-w-0 flex-1 font-bold text-sm text-slate-900 tracking-tight truncate">
+                                  {order.customerName}
+                                </h3>
+                                <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700 border border-slate-200/60">
+                                  {order.consumptionMethod === "DELIVERY"
+                                    ? "🛵 Entrega"
+                                    : order.consumptionMethod === "DINE_IN"
+                                      ? "🍽️ Salão"
+                                      : "🛍️ Para levar"}
                                 </span>
+                              </div>
+
+                              {/* Telefone do cliente se houver */}
+                              {order.customerPhone && (
+                                <p className="text-[11px] text-slate-500 font-mono">
+                                  {order.customerPhone}
+                                </p>
+                              )}
+
+                              {/* Endereço de entrega se houver */}
+                              {order.consumptionMethod === "DELIVERY" && order.deliveryAddress && (
+                                <p className="flex items-center gap-1 text-[11px] text-slate-600 line-clamp-1 break-words">
+                                  <MapPinIcon size={11} className="shrink-0 text-slate-400" />
+                                  <span className="truncate">{order.deliveryAddress}</span>
+                                </p>
+                              )}
+
+                              {/* Entregador atribuído se houver */}
+                              {order.courier && (
+                                <p className="flex items-center gap-1 text-[11px] text-cyan-800 font-medium bg-cyan-50 border border-cyan-200/60 rounded px-1.5 py-0.5 w-fit">
+                                  <BikeIcon size={11} />
+                                  <span>Entregador: {order.courier.name}</span>
+                                </p>
                               )}
                             </div>
 
-                            {/* Seção retrátil de itens */}
-                            <button
-                              type="button"
-                              onClick={() => toggleOrderExpanded(order.id)}
-                              className="flex w-full items-center justify-between pt-1 text-xs font-medium text-slate-500 transition hover:text-slate-800"
-                            >
-                              <span>
-                                Ver itens ({order.orderProducts.length})
-                              </span>
-                              <ChevronDownIcon
-                                size={14}
-                                className={cn(
-                                  "transition-transform duration-200",
-                                  isExpanded ? "rotate-180" : "",
-                                )}
-                              />
-                            </button>
+                            {/* Faixa Financeira & Pagamento Unificada */}
+                            <div className="flex items-center justify-between gap-2 rounded-lg bg-slate-50/90 border border-slate-100 px-2.5 py-1.5 text-xs">
+                              <div className="flex items-baseline gap-1.5 min-w-0">
+                                <span className="text-[11px] font-medium text-slate-400 shrink-0">Total:</span>
+                                <span className="text-sm font-bold text-slate-900 font-mono shrink-0">
+                                  {formatCurrency(order.total)}
+                                </span>
+                                {order.paymentMethod === "DINHEIRO" && order.changeFor ? (
+                                  <span className="text-[10px] text-amber-700 font-medium truncate">
+                                    (Troco p/ {formatCurrency(order.changeFor)})
+                                  </span>
+                                ) : null}
+                              </div>
 
-                            {isExpanded && (
-                              <div className="space-y-1.5 pt-1">
-                                {order.orderProducts.map((orderProduct) => (
-                                  <div
-                                    key={orderProduct.id}
-                                    className="flex items-start justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50/70 p-2 text-xs"
-                                  >
-                                    <div className="min-w-0 flex-1">
-                                      <p className="font-semibold text-slate-900 leading-snug break-words">
-                                        {orderProduct.productNameSnapshot || orderProduct.product.name}
-                                      </p>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <span className="text-[11px] font-medium text-slate-600">
+                                  {getPaymentLabel(order.paymentMethod)}
+                                </span>
+                                <span
+                                  className={cn(
+                                    "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold border",
+                                    order.paymentStatus === "PAID"
+                                      ? "bg-emerald-50 text-emerald-700 border-emerald-200/80"
+                                      : order.paymentStatus === "FAILED" || order.paymentStatus === "CANCELLED"
+                                        ? "bg-rose-50 text-rose-700 border-rose-200/80"
+                                        : "bg-amber-50 text-amber-700 border-amber-200/80",
+                                  )}
+                                >
+                                  <span
+                                    className={cn(
+                                      "h-1.5 w-1.5 rounded-full",
+                                      order.paymentStatus === "PAID"
+                                        ? "bg-emerald-500"
+                                        : order.paymentStatus === "FAILED" || order.paymentStatus === "CANCELLED"
+                                          ? "bg-rose-500"
+                                          : "bg-amber-500 animate-pulse",
+                                    )}
+                                  />
+                                  {order.paymentStatus === "PAID" ? "Pago" : order.paymentStatus === "FAILED" ? "Falhou" : "Pendente"}
+                                </span>
+                              </div>
+                            </div>
 
-                                      {/* Opções selecionadas */}
-                                      {orderProduct.orderProductOptions && orderProduct.orderProductOptions.length > 0 && (
-                                        <div className="mt-1 flex flex-col gap-0.5 text-[11px] text-slate-600">
-                                          {(() => {
-                                            const counts = new Map<string, { name: string; count: number }>();
-                                            for (const opt of orderProduct.orderProductOptions) {
-                                              const key = opt.productOptionId || opt.nameSnapshot;
-                                              const existing = counts.get(key);
-                                              if (existing) {
-                                                existing.count += 1;
-                                              } else {
-                                                counts.set(key, { name: opt.nameSnapshot, count: 1 });
-                                              }
-                                            }
-
-                                            return Array.from(counts.entries()).map(([key, item]) => (
-                                              <p key={key} className="break-words leading-tight">
-                                                • {item.count > 1 ? `${item.count}x ` : ""}{item.name}
-                                              </p>
-                                            ));
-                                          })()}
-                                        </div>
-                                      )}
-
-                                      {orderProduct.notes && (
-                                        <p className="mt-1 inline-block rounded bg-amber-50 px-1.5 py-0.5 text-[10px] italic text-amber-800 border border-amber-200/60 break-words">
-                                          Obs: {orderProduct.notes}
-                                        </p>
-                                      )}
-                                    </div>
-                                    <span className="ml-1.5 shrink-0 rounded bg-white px-1.5 py-0.5 text-[11px] font-bold text-slate-800 border border-slate-200">
-                                      {String(orderProduct.quantity)}×
-                                    </span>
-                                  </div>
-                                ))}
+                            {/* Observação Geral do Pedido */}
+                            {order.notes && (
+                              <div className="rounded-lg bg-amber-50/70 border border-amber-200/60 p-2 text-xs text-amber-900 space-y-0.5">
+                                <p className="font-bold text-[10px] uppercase tracking-wider text-amber-800">
+                                  Observação do cliente:
+                                </p>
+                                <p className="text-[11px] italic leading-tight text-amber-950/90 break-words">
+                                  {order.notes}
+                                </p>
                               </div>
                             )}
-                          </CardHeader>
 
-                          <CardContent className="space-y-2 p-3.5 pt-0">
-                            {order.paymentMethod === "DINHEIRO" &&
-                            order.changeFor ? (
-                              <div className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5">
-                                <div className="flex items-center gap-1.5 text-amber-900">
-                                  <BadgeDollarSignIcon size={13} className="shrink-0" />
-                                  <p className="text-xs font-semibold">
-                                    Troco para {formatCurrency(order.changeFor)}
-                                  </p>
+                            {/* Seção retrátil de itens */}
+                            <div className="pt-0.5">
+                              <button
+                                type="button"
+                                onClick={() => toggleOrderExpanded(order.id)}
+                                className="flex w-full items-center justify-between py-1 text-xs font-semibold text-slate-600 transition hover:text-slate-900"
+                              >
+                                <span className="flex items-center gap-1.5">
+                                  <span>Itens do pedido</span>
+                                  <span className="rounded-full bg-slate-100 px-1.5 py-0.2 text-[10px] font-bold text-slate-600 border border-slate-200/60">
+                                    {order.orderProducts.length}
+                                  </span>
+                                </span>
+                                <ChevronDownIcon
+                                  size={14}
+                                  className={cn(
+                                    "text-slate-400 transition-transform duration-200",
+                                    isExpanded ? "rotate-180" : "",
+                                  )}
+                                />
+                              </button>
+
+                              {isExpanded && (
+                                <div className="space-y-1.5 pt-1">
+                                  {order.orderProducts.map((orderProduct) => (
+                                    <div
+                                      key={orderProduct.id}
+                                      className="flex items-start justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50/80 p-2 text-xs"
+                                    >
+                                      <div className="min-w-0 flex-1">
+                                        <p className="font-semibold text-slate-900 leading-snug break-words">
+                                          {orderProduct.productNameSnapshot || orderProduct.product.name}
+                                        </p>
+
+                                        {/* Opções selecionadas */}
+                                        {orderProduct.orderProductOptions && orderProduct.orderProductOptions.length > 0 && (
+                                          <div className="mt-1 flex flex-col gap-0.5 text-[11px] text-slate-600">
+                                            {(() => {
+                                              const counts = new Map<string, { name: string; count: number }>();
+                                              for (const opt of orderProduct.orderProductOptions) {
+                                                const key = opt.productOptionId || opt.nameSnapshot;
+                                                const existing = counts.get(key);
+                                                if (existing) {
+                                                  existing.count += 1;
+                                                } else {
+                                                  counts.set(key, { name: opt.nameSnapshot, count: 1 });
+                                                }
+                                              }
+
+                                              return Array.from(counts.entries()).map(([key, item]) => (
+                                                <p key={key} className="break-words leading-tight text-slate-500">
+                                                  • {item.count > 1 ? `${item.count}x ` : ""}{item.name}
+                                                </p>
+                                              ));
+                                            })()}
+                                          </div>
+                                        )}
+
+                                        {orderProduct.notes && (
+                                          <p className="mt-1 inline-block rounded bg-amber-50 px-1.5 py-0.5 text-[10px] italic text-amber-800 border border-amber-200/60 break-words">
+                                            Obs: {orderProduct.notes}
+                                          </p>
+                                        )}
+                                      </div>
+                                      <span className="ml-1.5 shrink-0 rounded bg-white px-1.5 py-0.5 text-[11px] font-bold text-slate-800 border border-slate-200 shadow-2xs">
+                                        {String(orderProduct.quantity)}×
+                                      </span>
+                                    </div>
+                                  ))}
                                 </div>
-                              </div>
-                            ) : null}
+                              )}
+                            </div>
 
-                            <div className="space-y-1.5 rounded-xl border border-slate-100 bg-slate-50/80 p-2">
-                              {isOfflinePayment &&
-                              order.paymentStatus !== "PAID" ? (
+                            {/* Rodapé de Ações Padronizado */}
+                            <div className="space-y-1.5 pt-1.5 border-t border-slate-100">
+                              {/* Botão de confirmação de pagamento para vendas pendentes presenciais */}
+                              {isOfflinePayment && order.paymentStatus !== "PAID" && (
                                 <Button
+                                  variant="outline"
                                   size="sm"
-                                  className="h-8 w-full text-xs font-semibold"
+                                  className="h-8 w-full rounded-lg border-amber-300 bg-amber-50/80 text-amber-900 hover:bg-amber-100 hover:text-amber-950 font-semibold text-xs gap-1.5 shadow-2xs transition-all"
                                   disabled={isLoading}
                                   onClick={() =>
                                     handleOrderPatch(order.id, {
@@ -1686,38 +1869,39 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                                   }
                                 >
                                   {isLoading ? (
-                                    <Loader2Icon
-                                      className="mr-1.5 animate-spin"
-                                      size={12}
-                                    />
-                                  ) : null}
-                                  Confirmar pagamento
+                                    <Loader2Icon className="animate-spin shrink-0" size={12} />
+                                  ) : (
+                                    <CreditCardIcon size={13} className="text-amber-700 shrink-0" />
+                                  )}
+                                  <span>Confirmar recebimento do pagamento</span>
                                 </Button>
-                              ) : null}
+                              )}
 
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                {previousStatus ? (
+                              {/* Linha de navegação entre etapas */}
+                              <div className="flex items-center gap-1.5 w-full">
+                                {previousStatus && (
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="h-8 flex-1 text-xs px-2 font-medium min-w-0"
+                                    className="h-8 px-2.5 rounded-lg border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 text-xs font-medium gap-1 shrink-0 shadow-2xs"
                                     disabled={isLoading}
                                     onClick={() =>
                                       handleOrderPatch(order.id, {
                                         status: previousStatus,
                                       })
                                     }
+                                    title="Retornar etapa anterior"
                                   >
-                                    <ArrowLeftIcon size={12} className="mr-1 shrink-0" />
-                                    <span className="truncate">Voltar</span>
+                                    <ArrowLeftIcon size={12} className="shrink-0" />
+                                    <span className="hidden sm:inline">Voltar</span>
                                   </Button>
-                                ) : null}
+                                )}
 
-                                {nextStatus ? (
+                                {nextStatus && (
                                   <Button
                                     size="sm"
                                     className={cn(
-                                      "h-8 flex-1 text-xs px-2 font-semibold shadow-xs transition-all min-w-0",
+                                      "h-8 flex-1 rounded-lg text-xs font-semibold shadow-xs transition-all gap-1.5 justify-center min-w-0",
                                       column.theme.advanceButtonClass,
                                     )}
                                     disabled={isLoading}
@@ -1727,18 +1911,22 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                                       })
                                     }
                                   >
-                                    <ArrowRightIcon size={12} className="mr-1 shrink-0" />
-                                    <span className="truncate">{getNextStatusLabel(order)}</span>
+                                    {isLoading ? (
+                                      <Loader2Icon className="animate-spin shrink-0" size={12} />
+                                    ) : (
+                                      <>
+                                        <span className="truncate">{getNextStatusLabel(order)}</span>
+                                        <ArrowRightIcon size={12} className="shrink-0" />
+                                      </>
+                                    )}
                                   </Button>
-                                ) : null}
+                                )}
 
-                                {!["FINISHED", "CANCELLED"].includes(
-                                  order.status,
-                                ) ? (
+                                {!["FINISHED", "CANCELLED"].includes(order.status) && (
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 shrink-0 text-rose-500 hover:bg-rose-50 hover:text-rose-600"
+                                    className="h-8 w-8 rounded-lg shrink-0 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
                                     disabled={isLoading}
                                     onClick={() =>
                                       handleOrderPatch(order.id, {
@@ -1749,10 +1937,10 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                                   >
                                     <XCircleIcon size={15} />
                                   </Button>
-                                ) : null}
+                                )}
                               </div>
                             </div>
-                          </CardContent>
+                          </div>
                         </Card>
                       );
                     })
