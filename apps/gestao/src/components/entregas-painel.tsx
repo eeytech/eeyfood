@@ -4,8 +4,11 @@ import type { Courier, OrderStatus, PedidoRecebimento } from "@fsw/db";
 import {
   BadgeDollarSignIcon,
   BikeIcon,
+  CalendarIcon,
   CheckCircle2Icon,
   ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   ClockIcon,
   ExternalLinkIcon,
   Loader2Icon,
@@ -32,6 +35,7 @@ import { logoutAction } from "@/lib/auth/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Dialog,
   DialogContent,
@@ -49,6 +53,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useTheme } from "@/components/theme-provider";
 import { soundNotifier } from "@/lib/sound-notifications";
 import { cn } from "@/lib/utils";
 
@@ -62,6 +67,7 @@ interface EntregasPainelProps {
 }
 
 type TabFiltro = "PRONTOS" | "EM_ROTA" | "COZINHA" | "CONCLUIDOS" | "TODOS";
+type DateFilterPreset = "ALL" | "TODAY" | "LAST_7_DAYS" | "CUSTOM";
 
 export default function EntregasPainel({
   slug,
@@ -71,6 +77,8 @@ export default function EntregasPainel({
   isDedicatedMode,
   userName,
 }: EntregasPainelProps) {
+  const { currentThemeConfig } = useTheme();
+
   const [orders, setOrders] = useState<PedidoRecebimento[]>(initialOrders);
   const [couriers, setCouriers] = useState<Courier[]>(initialCouriers);
   const [socketConnected, setSocketConnected] = useState(false);
@@ -82,6 +90,15 @@ export default function EntregasPainel({
   const [activeTab, setActiveTab] = useState<TabFiltro>("PRONTOS");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCourierFilter, setSelectedCourierFilter] = useState<string>("ALL");
+
+  // Filtro de Datas
+  const [dateFilterPreset, setDateFilterPreset] = useState<DateFilterPreset>("ALL");
+  const [customStartDate, setCustomStartDate] = useState<string>("");
+  const [customEndDate, setCustomEndDate] = useState<string>("");
+
+  // Paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(6);
 
   // Modal de Despacho
   const [orderToDispatch, setOrderToDispatch] = useState<PedidoRecebimento | null>(null);
@@ -120,31 +137,68 @@ export default function EntregasPainel({
     );
   }, [orders]);
 
-  // Contadores de métricas
+  // Pedidos de entrega filtrados por data para base dos cards e abas
+  const dateFilteredOrders = useMemo(() => {
+    return deliveryOrders.filter((order) => {
+      if (dateFilterPreset === "TODAY") {
+        const today = new Date();
+        const orderDate = new Date(order.createdAt);
+        return (
+          orderDate.getFullYear() === today.getFullYear() &&
+          orderDate.getMonth() === today.getMonth() &&
+          orderDate.getDate() === today.getDate()
+        );
+      }
+
+      if (dateFilterPreset === "LAST_7_DAYS") {
+        const past7 = new Date();
+        past7.setDate(past7.getDate() - 7);
+        past7.setHours(0, 0, 0, 0);
+        const orderDate = new Date(order.createdAt);
+        return orderDate >= past7;
+      }
+
+      if (dateFilterPreset === "CUSTOM") {
+        const orderDate = new Date(order.createdAt);
+        if (customStartDate) {
+          const start = new Date(`${customStartDate}T00:00:00`);
+          if (orderDate < start) return false;
+        }
+        if (customEndDate) {
+          const end = new Date(`${customEndDate}T23:59:59`);
+          if (orderDate > end) return false;
+        }
+      }
+
+      return true; // "ALL"
+    });
+  }, [deliveryOrders, dateFilterPreset, customStartDate, customEndDate]);
+
+  // Contadores de métricas baseados no filtro de período
   const prontosParaColeta = useMemo(
-    () => deliveryOrders.filter((o) => o.status === "READY_FOR_PICKUP"),
-    [deliveryOrders],
+    () => dateFilteredOrders.filter((o) => o.status === "READY_FOR_PICKUP"),
+    [dateFilteredOrders],
   );
   const emRotaDeEntrega = useMemo(
-    () => deliveryOrders.filter((o) => o.status === "OUT_FOR_DELIVERY"),
-    [deliveryOrders],
+    () => dateFilteredOrders.filter((o) => o.status === "OUT_FOR_DELIVERY"),
+    [dateFilteredOrders],
   );
   const entreguesHoje = useMemo(
-    () => deliveryOrders.filter((o) => o.status === "FINISHED"),
-    [deliveryOrders],
+    () => dateFilteredOrders.filter((o) => o.status === "FINISHED"),
+    [dateFilteredOrders],
   );
   const emPreparo = useMemo(
-    () => deliveryOrders.filter((o) => ["PENDING", "IN_PREPARATION"].includes(o.status)),
-    [deliveryOrders],
+    () => dateFilteredOrders.filter((o) => ["PENDING", "IN_PREPARATION"].includes(o.status)),
+    [dateFilteredOrders],
   );
   const motoboysAtivos = useMemo(
     () => couriers.filter((c) => c.isActive),
     [couriers],
   );
 
-  // Filtragem de pedidos
+  // Filtragem completa de pedidos (Aba + Entregador + Busca + Data)
   const filteredOrders = useMemo(() => {
-    return deliveryOrders.filter((order) => {
+    return dateFilteredOrders.filter((order) => {
       // Filtro por aba
       if (activeTab === "PRONTOS" && order.status !== "READY_FOR_PICKUP") return false;
       if (activeTab === "EM_ROTA" && order.status !== "OUT_FOR_DELIVERY") return false;
@@ -182,7 +236,21 @@ export default function EntregasPainel({
 
       return true;
     });
-  }, [deliveryOrders, activeTab, selectedCourierFilter, searchQuery]);
+  }, [dateFilteredOrders, activeTab, selectedCourierFilter, searchQuery]);
+
+  // Resetar página quando filtros mudarem
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, searchQuery, selectedCourierFilter, dateFilterPreset, customStartDate, customEndDate, pageSize]);
+
+  // Paginação dos pedidos
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
+  const paginatedOrders = useMemo(() => {
+    const start = (safeCurrentPage - 1) * pageSize;
+    return filteredOrders.slice(start, start + pageSize);
+  }, [filteredOrders, safeCurrentPage, pageSize]);
 
   // Sincronização via WebSocket e API
   const syncOrderById = async (orderId: number) => {
@@ -560,26 +628,33 @@ export default function EntregasPainel({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Badge
-            variant={isOnline ? "success" : "danger"}
-            className="h-9 gap-1.5 px-3.5 rounded-full text-xs font-semibold shadow-xs"
-          >
+          {/* Status badge seguindo a cor do tema */}
+          {isOnline ? (
             <span
-              className={cn(
-                "h-2 w-2 rounded-full",
-                socketConnected
-                  ? "bg-emerald-500 animate-pulse"
-                  : lastSyncOk
-                    ? "bg-emerald-500"
-                    : "bg-rose-500 animate-ping",
-              )}
-            />
-            {socketConnected
-              ? "Expedição em tempo real"
-              : lastSyncOk
-                ? "Expedição sincronizada"
-                : "Reconectando..."}
-          </Badge>
+              className="inline-flex h-9 items-center gap-1.5 px-3.5 rounded-full text-xs font-semibold border transition-all shadow-xs"
+              style={{
+                color: currentThemeConfig.hex,
+                borderColor: `${currentThemeConfig.hex}40`,
+                backgroundColor: `${currentThemeConfig.hex}15`,
+              }}
+            >
+              <span
+                className="h-2 w-2 rounded-full animate-pulse"
+                style={{ backgroundColor: currentThemeConfig.hex }}
+              />
+              <span>
+                {socketConnected ? "Expedição em tempo real" : "Expedição sincronizada"}
+              </span>
+            </span>
+          ) : (
+            <Badge
+              variant="danger"
+              className="h-9 gap-1.5 px-3.5 rounded-full text-xs font-semibold shadow-xs"
+            >
+              <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping" />
+              <span>Reconectando...</span>
+            </Badge>
+          )}
 
           <Button
             variant="outline"
@@ -636,19 +711,33 @@ export default function EntregasPainel({
         </div>
       </div>
 
-      {/* ── KPI Metrics Grid ────────────────────────────── */}
+      {/* ── KPI Metrics Grid Seguindo a Cor do Theme ───── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-        <Card className="border-slate-200/80 bg-white shadow-xs transition-all hover:border-amber-300 hover:shadow-sm">
+        {/* Card 1: Aguardando Coleta */}
+        <Card
+          className="border-slate-200/80 bg-white shadow-xs transition-all hover:shadow-sm"
+          style={{ borderColor: `${currentThemeConfig.hex}30` }}
+        >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Aguardando Coleta
               </span>
-              <div className="rounded-xl bg-amber-100 p-2 text-amber-700">
+              <div
+                className="rounded-xl border p-2 transition-colors"
+                style={{
+                  backgroundColor: `${currentThemeConfig.hex}15`,
+                  color: currentThemeConfig.hex,
+                  borderColor: `${currentThemeConfig.hex}35`,
+                }}
+              >
                 <PackageCheckIcon size={16} />
               </div>
             </div>
-            <p className="mt-2.5 font-display text-2xl sm:text-3xl font-bold text-amber-700">
+            <p
+              className="mt-2.5 font-display text-2xl sm:text-3xl font-bold transition-colors"
+              style={{ color: currentThemeConfig.hex }}
+            >
               {prontosParaColeta.length}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -657,17 +746,31 @@ export default function EntregasPainel({
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/80 bg-white shadow-xs transition-all hover:border-primary/40 hover:shadow-sm">
+        {/* Card 2: Em Rota na Rua */}
+        <Card
+          className="border-slate-200/80 bg-white shadow-xs transition-all hover:shadow-sm"
+          style={{ borderColor: `${currentThemeConfig.hex}30` }}
+        >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Em Rota na Rua
               </span>
-              <div className="rounded-xl bg-primary/10 p-2 text-primary">
+              <div
+                className="rounded-xl border p-2 transition-colors"
+                style={{
+                  backgroundColor: `${currentThemeConfig.hex}15`,
+                  color: currentThemeConfig.hex,
+                  borderColor: `${currentThemeConfig.hex}35`,
+                }}
+              >
                 <BikeIcon size={16} />
               </div>
             </div>
-            <p className="mt-2.5 font-display text-2xl sm:text-3xl font-bold text-primary">
+            <p
+              className="mt-2.5 font-display text-2xl sm:text-3xl font-bold transition-colors"
+              style={{ color: currentThemeConfig.hex }}
+            >
               {emRotaDeEntrega.length}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -676,17 +779,31 @@ export default function EntregasPainel({
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/80 bg-white shadow-xs transition-all hover:border-emerald-300 hover:shadow-sm">
+        {/* Card 3: Entregues Hoje / No Período */}
+        <Card
+          className="border-slate-200/80 bg-white shadow-xs transition-all hover:shadow-sm"
+          style={{ borderColor: `${currentThemeConfig.hex}30` }}
+        >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Entregues Hoje
+                {dateFilterPreset === "TODAY" ? "Entregues Hoje" : "Entregues no Período"}
               </span>
-              <div className="rounded-xl bg-emerald-100 p-2 text-emerald-700">
+              <div
+                className="rounded-xl border p-2 transition-colors"
+                style={{
+                  backgroundColor: `${currentThemeConfig.hex}15`,
+                  color: currentThemeConfig.hex,
+                  borderColor: `${currentThemeConfig.hex}35`,
+                }}
+              >
                 <CheckCircle2Icon size={16} />
               </div>
             </div>
-            <p className="mt-2.5 font-display text-2xl sm:text-3xl font-bold text-emerald-700">
+            <p
+              className="mt-2.5 font-display text-2xl sm:text-3xl font-bold transition-colors"
+              style={{ color: currentThemeConfig.hex }}
+            >
               {entreguesHoje.length}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -695,17 +812,31 @@ export default function EntregasPainel({
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/80 bg-white shadow-xs transition-all hover:border-primary/40 hover:shadow-sm">
+        {/* Card 4: Motoboys Ativos */}
+        <Card
+          className="border-slate-200/80 bg-white shadow-xs transition-all hover:shadow-sm"
+          style={{ borderColor: `${currentThemeConfig.hex}30` }}
+        >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Motoboys Ativos
               </span>
-              <div className="rounded-xl bg-primary/10 p-2 text-primary">
+              <div
+                className="rounded-xl border p-2 transition-colors"
+                style={{
+                  backgroundColor: `${currentThemeConfig.hex}15`,
+                  color: currentThemeConfig.hex,
+                  borderColor: `${currentThemeConfig.hex}35`,
+                }}
+              >
                 <UsersIcon size={16} />
               </div>
             </div>
-            <p className="mt-2.5 font-display text-2xl sm:text-3xl font-bold text-primary">
+            <p
+              className="mt-2.5 font-display text-2xl sm:text-3xl font-bold transition-colors"
+              style={{ color: currentThemeConfig.hex }}
+            >
               {motoboysAtivos.length}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -715,74 +846,75 @@ export default function EntregasPainel({
         </Card>
       </div>
 
-      {/* ── Barra de Abas e Filtros ─────────────────── */}
+      {/* ── Barra de Abas e Filtros (com Filtro de Datas) ── */}
       <Card className="border-slate-200/80 bg-white shadow-xs">
-        <CardContent className="p-3.5 sm:p-4 space-y-3">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            {/* Abas */}
-            <div className="overflow-x-auto pb-1 lg:pb-0 no-scrollbar">
-              <Tabs
-                value={activeTab}
-                onValueChange={(v) => setActiveTab(v as TabFiltro)}
-                className="w-auto"
-              >
-                <TabsList className="h-10 p-1 bg-slate-100/90 rounded-xl">
-                  <TabsTrigger
-                    value="PRONTOS"
-                    className="group text-xs sm:text-sm gap-1.5 rounded-lg px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs transition-all font-medium"
-                  >
-                    <span>Prontos p/ Coleta</span>
-                    <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-700 group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground">
-                      {prontosParaColeta.length}
-                    </span>
-                  </TabsTrigger>
+        <CardContent className="p-3.5 sm:p-4 space-y-3.5">
+          {/* Linha 1: Abas de Status */}
+          <div className="overflow-x-auto pb-1 no-scrollbar">
+            <Tabs
+              value={activeTab}
+              onValueChange={(v) => setActiveTab(v as TabFiltro)}
+              className="w-auto"
+            >
+              <TabsList className="h-10 p-1 bg-slate-100/90 rounded-xl">
+                <TabsTrigger
+                  value="PRONTOS"
+                  className="group text-xs sm:text-sm gap-1.5 rounded-lg px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs transition-all font-medium"
+                >
+                  <span>Prontos p/ Coleta</span>
+                  <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-700 group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground">
+                    {prontosParaColeta.length}
+                  </span>
+                </TabsTrigger>
 
-                  <TabsTrigger
-                    value="EM_ROTA"
-                    className="group text-xs sm:text-sm gap-1.5 rounded-lg px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs transition-all font-medium"
-                  >
-                    <span>Em Rota</span>
-                    <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-700 group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground">
-                      {emRotaDeEntrega.length}
-                    </span>
-                  </TabsTrigger>
+                <TabsTrigger
+                  value="EM_ROTA"
+                  className="group text-xs sm:text-sm gap-1.5 rounded-lg px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs transition-all font-medium"
+                >
+                  <span>Em Rota</span>
+                  <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-700 group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground">
+                    {emRotaDeEntrega.length}
+                  </span>
+                </TabsTrigger>
 
-                  <TabsTrigger
-                    value="COZINHA"
-                    className="group text-xs sm:text-sm gap-1.5 rounded-lg px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs transition-all font-medium"
-                  >
-                    <span>Na Cozinha</span>
-                    <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-700 group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground">
-                      {emPreparo.length}
-                    </span>
-                  </TabsTrigger>
+                <TabsTrigger
+                  value="COZINHA"
+                  className="group text-xs sm:text-sm gap-1.5 rounded-lg px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs transition-all font-medium"
+                >
+                  <span>Na Cozinha</span>
+                  <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-700 group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground">
+                    {emPreparo.length}
+                  </span>
+                </TabsTrigger>
 
-                  <TabsTrigger
-                    value="CONCLUIDOS"
-                    className="group text-xs sm:text-sm gap-1.5 rounded-lg px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs transition-all font-medium"
-                  >
-                    <span>Concluídos</span>
-                    <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-700 group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground">
-                      {entreguesHoje.length}
-                    </span>
-                  </TabsTrigger>
+                <TabsTrigger
+                  value="CONCLUIDOS"
+                  className="group text-xs sm:text-sm gap-1.5 rounded-lg px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs transition-all font-medium"
+                >
+                  <span>Concluídos</span>
+                  <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-700 group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground">
+                    {entreguesHoje.length}
+                  </span>
+                </TabsTrigger>
 
-                  <TabsTrigger
-                    value="TODOS"
-                    className="group text-xs sm:text-sm gap-1.5 rounded-lg px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs transition-all font-medium"
-                  >
-                    <span>Todos</span>
-                    <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-700 group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground">
-                      {deliveryOrders.length}
-                    </span>
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
+                <TabsTrigger
+                  value="TODOS"
+                  className="group text-xs sm:text-sm gap-1.5 rounded-lg px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs transition-all font-medium"
+                >
+                  <span>Todos</span>
+                  <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-700 group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground">
+                    {dateFilteredOrders.length}
+                  </span>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
 
-            {/* Busca & Filtro de Motoboy */}
+          {/* Linha 2: Busca, Entregador e Filtro de Datas */}
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pt-2.5 border-t border-slate-100">
+            {/* Esquerda: Busca & Filtro de Motoboy */}
             <div className="flex flex-col sm:flex-row items-center gap-2">
-              <div className="relative w-full sm:w-64">
+              <div className="relative w-full sm:w-60">
                 <SearchIcon
                   size={15}
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
@@ -824,6 +956,115 @@ export default function EntregasPainel({
                 </Select>
               </div>
             </div>
+
+            {/* Direita: Filtro de Datas com Presets e DatePickers */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50/80 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDateFilterPreset("ALL");
+                    setCustomStartDate("");
+                    setCustomEndDate("");
+                  }}
+                  className={cn(
+                    "rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors",
+                    dateFilterPreset === "ALL"
+                      ? "bg-white shadow-xs font-semibold"
+                      : "text-slate-600 hover:text-slate-900",
+                  )}
+                  style={
+                    dateFilterPreset === "ALL"
+                      ? { color: currentThemeConfig.hex }
+                      : undefined
+                  }
+                >
+                  Todos
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDateFilterPreset("TODAY");
+                    setCustomStartDate("");
+                    setCustomEndDate("");
+                  }}
+                  className={cn(
+                    "rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors",
+                    dateFilterPreset === "TODAY"
+                      ? "bg-white shadow-xs font-semibold"
+                      : "text-slate-600 hover:text-slate-900",
+                  )}
+                  style={
+                    dateFilterPreset === "TODAY"
+                      ? { color: currentThemeConfig.hex }
+                      : undefined
+                  }
+                >
+                  Hoje
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDateFilterPreset("LAST_7_DAYS");
+                    setCustomStartDate("");
+                    setCustomEndDate("");
+                  }}
+                  className={cn(
+                    "rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors",
+                    dateFilterPreset === "LAST_7_DAYS"
+                      ? "bg-white shadow-xs font-semibold"
+                      : "text-slate-600 hover:text-slate-900",
+                  )}
+                  style={
+                    dateFilterPreset === "LAST_7_DAYS"
+                      ? { color: currentThemeConfig.hex }
+                      : undefined
+                  }
+                >
+                  7 dias
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDateFilterPreset("CUSTOM")}
+                  className={cn(
+                    "rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors",
+                    dateFilterPreset === "CUSTOM"
+                      ? "bg-white shadow-xs font-semibold"
+                      : "text-slate-600 hover:text-slate-900",
+                  )}
+                  style={
+                    dateFilterPreset === "CUSTOM"
+                      ? { color: currentThemeConfig.hex }
+                      : undefined
+                  }
+                >
+                  Período
+                </button>
+              </div>
+
+              {dateFilterPreset === "CUSTOM" && (
+                <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50/70 p-1">
+                  <DatePicker
+                    value={customStartDate}
+                    onChange={(_, str) => setCustomStartDate(str)}
+                    buttonClassName="h-8 rounded-lg border-0 bg-white text-xs font-medium text-slate-700 shadow-xs hover:bg-slate-50 px-2.5 min-w-[110px]"
+                    placeholder="Data de"
+                    clearable
+                  />
+                  <span className="text-xs text-slate-400">até</span>
+                  <DatePicker
+                    value={customEndDate}
+                    onChange={(_, str) => setCustomEndDate(str)}
+                    buttonClassName="h-8 rounded-lg border-0 bg-white text-xs font-medium text-slate-700 shadow-xs hover:bg-slate-50 px-2.5 min-w-[110px]"
+                    placeholder="Data até"
+                    clearable
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -831,21 +1072,28 @@ export default function EntregasPainel({
       {/* ── Grid de Pedidos de Entrega ──────────────── */}
       {filteredOrders.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white/70 p-12 text-center">
-          <div className="rounded-2xl bg-primary/10 p-3.5 text-primary">
+          <div
+            className="rounded-2xl p-3.5 transition-colors border"
+            style={{
+              backgroundColor: `${currentThemeConfig.hex}15`,
+              color: currentThemeConfig.hex,
+              borderColor: `${currentThemeConfig.hex}30`,
+            }}
+          >
             <TruckIcon size={28} />
           </div>
           <h3 className="mt-3 font-display text-base font-semibold text-slate-900">
             Nenhum pedido de entrega encontrado
           </h3>
           <p className="mt-1 max-w-sm text-xs text-slate-500">
-            {searchQuery || selectedCourierFilter !== "ALL"
-              ? "Tente ajustar os filtros ou o termo de busca para localizar o pedido."
+            {searchQuery || selectedCourierFilter !== "ALL" || dateFilterPreset !== "ALL"
+              ? "Tente ajustar os filtros, período ou o termo de busca para localizar o pedido."
               : "Quando novos pedidos de delivery forem realizados, eles aparecerão aqui automaticamente."}
           </p>
         </div>
       ) : (
         <div className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
-          {filteredOrders.map((order) => {
+          {paginatedOrders.map((order) => {
             const isReady = order.status === "READY_FOR_PICKUP";
             const isOut = order.status === "OUT_FOR_DELIVERY";
             const isDone = order.status === "FINISHED";
@@ -872,6 +1120,11 @@ export default function EntregasPainel({
                   isOut && "border-primary/40 bg-primary/[0.02]",
                   isDone && "border-emerald-200/80 bg-emerald-50/15",
                 )}
+                style={
+                  isOut
+                    ? { borderColor: `${currentThemeConfig.hex}40` }
+                    : undefined
+                }
               >
                 <CardHeader className="space-y-2 p-3.5 pb-2.5">
                   {/* Linha 1: ID, status e impressão */}
@@ -905,9 +1158,17 @@ export default function EntregasPainel({
                         className={cn(
                           "px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full",
                           isReady && "bg-amber-100 text-amber-900 border-amber-300",
-                          isOut && "bg-primary/10 text-primary border-primary/25",
                           isDone && "bg-emerald-100 text-emerald-900 border-emerald-300",
                         )}
+                        style={
+                          isOut
+                            ? {
+                                backgroundColor: `${currentThemeConfig.hex}15`,
+                                color: currentThemeConfig.hex,
+                                borderColor: `${currentThemeConfig.hex}35`,
+                              }
+                            : undefined
+                        }
                       >
                         {isReady
                           ? "Pronto na Expedição"
@@ -965,7 +1226,8 @@ export default function EntregasPainel({
                       <div className="flex items-start gap-1.5 min-w-0 flex-1">
                         <MapPinIcon
                           size={14}
-                          className="mt-0.5 shrink-0 text-primary"
+                          className="mt-0.5 shrink-0"
+                          style={{ color: currentThemeConfig.hex }}
                         />
                         <p className="font-medium text-slate-800 leading-snug break-words">
                           {order.deliveryAddress || "Endereço não informado"}
@@ -1093,7 +1355,11 @@ export default function EntregasPainel({
                   {/* Entregador atribuído */}
                   <div className="flex items-center justify-between gap-2 rounded-xl border border-slate-200/80 bg-slate-50 p-2 text-xs">
                     <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                      <BikeIcon size={14} className="text-primary shrink-0" />
+                      <BikeIcon
+                        size={14}
+                        className="shrink-0"
+                        style={{ color: currentThemeConfig.hex }}
+                      />
                       <span className="text-slate-500">Entregador:</span>
                       <span className="font-bold text-slate-900 truncate">
                         {order.courier?.name ?? "Nenhum atribuído"}
@@ -1108,7 +1374,8 @@ export default function EntregasPainel({
                           setOrderToDispatch(order);
                           setDispatchCourierId(order.courierId ?? "");
                         }}
-                        className="h-7 text-xs font-semibold text-primary hover:text-primary/80"
+                        className="h-7 text-xs font-semibold hover:opacity-80"
+                        style={{ color: currentThemeConfig.hex }}
                       >
                         Trocar
                       </Button>
@@ -1174,6 +1441,89 @@ export default function EntregasPainel({
             );
           })}
         </div>
+      )}
+
+      {/* ── Paginação ──────────────────────────────── */}
+      {filteredOrders.length > 0 && (
+        <Card className="border-slate-200/80 bg-white shadow-xs">
+          <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 sm:px-4">
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <span>
+                Mostrando{" "}
+                <strong className="font-semibold text-slate-900">
+                  {Math.min((safeCurrentPage - 1) * pageSize + 1, filteredOrders.length)}
+                </strong>{" "}
+                a{" "}
+                <strong className="font-semibold text-slate-900">
+                  {Math.min(safeCurrentPage * pageSize, filteredOrders.length)}
+                </strong>{" "}
+                de{" "}
+                <strong className="font-semibold text-slate-900">
+                  {filteredOrders.length}
+                </strong>{" "}
+                pedidos de entrega
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {/* Itens por página */}
+              <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                <span className="hidden sm:inline">Exibir:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => setPageSize(Number(e.target.value))}
+                  className="h-8 rounded-lg border border-slate-200 bg-slate-50/80 px-2 text-xs font-semibold text-slate-700 outline-none focus:border-primary/40 focus:bg-white"
+                >
+                  <option value={6}>6 por pág.</option>
+                  <option value={12}>12 por pág.</option>
+                  <option value={18}>18 por pág.</option>
+                  <option value={24}>24 por pág.</option>
+                </select>
+              </div>
+
+              {/* Controles de página */}
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={safeCurrentPage <= 1}
+                  className="h-8 w-8 p-0 rounded-lg border-slate-200 text-slate-700 disabled:opacity-40"
+                  title="Página anterior"
+                >
+                  <ChevronLeftIcon size={14} />
+                </Button>
+
+                <div className="flex items-center gap-1 px-1.5">
+                  <span className="text-xs font-medium text-slate-600">
+                    Página{" "}
+                    <strong
+                      className="font-semibold"
+                      style={{ color: currentThemeConfig.hex }}
+                    >
+                      {safeCurrentPage}
+                    </strong>{" "}
+                    de{" "}
+                    <strong className="font-semibold text-slate-900">
+                      {totalPages}
+                    </strong>
+                  </span>
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safeCurrentPage >= totalPages}
+                  className="h-8 w-8 p-0 rounded-lg border-slate-200 text-slate-700 disabled:opacity-40"
+                  title="Próxima página"
+                >
+                  <ChevronRightIcon size={14} />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

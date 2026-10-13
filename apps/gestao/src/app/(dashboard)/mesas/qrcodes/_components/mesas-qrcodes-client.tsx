@@ -394,7 +394,14 @@ export function MesasQrCodesClient({
           logging: false,
           backgroundColor: "#ffffff",
           imageTimeout: 15000,
+          scrollX: 0,
+          scrollY: 0,
           onclone: (_clonedDoc: Document, clonedEl: HTMLElement) => {
+            const clonedZoom = _clonedDoc.getElementById("qrcodes-preview-zoom-wrapper");
+            if (clonedZoom) {
+              clonedZoom.style.transform = "none";
+              clonedZoom.style.transition = "none";
+            }
             clonedEl.style.transform = "none";
             clonedEl.style.boxShadow = "none";
             clonedEl.style.margin = "0";
@@ -402,9 +409,8 @@ export function MesasQrCodesClient({
             clonedEl.style.height = "297mm";
             clonedEl.style.maxHeight = "297mm";
             clonedEl.style.boxSizing = "border-box";
-            clonedEl.style.overflow = "hidden";
             clonedEl.querySelectorAll<HTMLElement>(".no-print").forEach((el) => {
-              el.style.display = "none";
+              el.remove();
             });
           },
         });
@@ -494,10 +500,10 @@ export function MesasQrCodesClient({
               ? "bg-white text-slate-900 border-stone-300"
               : "bg-white text-slate-900",
           // Size variations
-          gridDistribution === "4_PER_PAGE" && "h-full",
-          gridDistribution === "2_PER_PAGE" && "h-full",
+          gridDistribution === "4_PER_PAGE" && "p-3.5 h-full",
+          gridDistribution === "2_PER_PAGE" && "p-6 h-full",
           gridDistribution === "1_PER_PAGE" && "p-10 justify-around h-full",
-          gridDistribution === "6_PER_PAGE" && "p-3 h-full",
+          gridDistribution === "6_PER_PAGE" && "p-2.5 h-full",
         )}
       >
         {/* Cut Guide Scissors Indicator */}
@@ -509,20 +515,24 @@ export function MesasQrCodesClient({
         )}
 
         {/* ── Top Branding ──────────────────────── */}
-        <div className="w-full flex flex-col items-center gap-1.5 pt-1">
+        <div className="w-full flex flex-col items-center gap-1 pt-0.5 shrink-0">
           {showLogo && restaurant.avatarImageUrl && (
             <div
               className={cn(
                 "overflow-hidden rounded-xl border border-black/10 shadow-xs shrink-0",
-                gridDistribution === "6_PER_PAGE" ? "h-8 w-8" : "h-11 w-11",
+                gridDistribution === "6_PER_PAGE"
+                  ? "h-7 w-7"
+                  : gridDistribution === "4_PER_PAGE"
+                    ? "h-9 w-9"
+                    : "h-11 w-11",
               )}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={restaurant.avatarImageUrl}
                 alt={restaurant.name}
-                width={44}
-                height={44}
+                width={gridDistribution === "4_PER_PAGE" ? 36 : 44}
+                height={gridDistribution === "4_PER_PAGE" ? 36 : 44}
                 loading="eager"
                 decoding="sync"
                 crossOrigin="anonymous"
@@ -534,8 +544,12 @@ export function MesasQrCodesClient({
           {showRestaurantName && (
             <span
               className={cn(
-                "font-bold uppercase tracking-wider opacity-80",
-                gridDistribution === "6_PER_PAGE" ? "text-[10px]" : "text-xs",
+                "font-bold uppercase tracking-wider opacity-80 leading-tight",
+                gridDistribution === "6_PER_PAGE"
+                  ? "text-[9px]"
+                  : gridDistribution === "4_PER_PAGE"
+                    ? "text-[11px]"
+                    : "text-xs",
               )}
             >
               {restaurant.name}
@@ -545,16 +559,24 @@ export function MesasQrCodesClient({
           {/* Table Number Pill Banner */}
           <div
             className={cn(
-              "mt-1 rounded-full text-white shadow-sm flex items-center gap-1.5",
-              gridDistribution === "6_PER_PAGE" ? "px-3 py-0.5" : "px-4 py-1",
+              "mt-0.5 rounded-full text-white shadow-sm flex items-center gap-1.5 shrink-0",
+              gridDistribution === "6_PER_PAGE"
+                ? "px-2.5 py-0.5"
+                : gridDistribution === "4_PER_PAGE"
+                  ? "px-3.5 py-0.5"
+                  : "px-4 py-1",
             )}
             style={{ backgroundColor: primaryColor }}
           >
-            <UtensilsIcon size={gridDistribution === "6_PER_PAGE" ? 11 : 13} />
+            <UtensilsIcon size={gridDistribution === "6_PER_PAGE" ? 10 : 12} />
             <span
               className={cn(
                 "font-extrabold uppercase tracking-wide",
-                gridDistribution === "6_PER_PAGE" ? "text-xs" : "text-sm",
+                gridDistribution === "6_PER_PAGE"
+                  ? "text-[11px]"
+                  : gridDistribution === "4_PER_PAGE"
+                    ? "text-xs"
+                    : "text-sm",
               )}
             >
               {table.name}
@@ -564,7 +586,7 @@ export function MesasQrCodesClient({
 
         {/* Fold Guide for Tent Foldable Template */}
         {template === "TENT_FOLDABLE" && (
-          <div className="w-full flex items-center gap-2 my-2 text-[9px] text-slate-400 font-mono">
+          <div className="w-full flex items-center gap-2 my-1 text-[8.5px] text-slate-400 font-mono shrink-0">
             <span className="h-px bg-slate-300 flex-1 border-t border-dashed" />
             <span>✂️ Linha de Dobra</span>
             <span className="h-px bg-slate-300 flex-1 border-t border-dashed" />
@@ -572,11 +594,15 @@ export function MesasQrCodesClient({
         )}
 
         {/* ── Center: QR Code ────────────────────── */}
-        <div className="my-2.5 flex flex-col items-center">
+        <div className="my-1 flex flex-col items-center shrink-0">
           <div
             className={cn(
               "rounded-2xl bg-white border border-slate-200/80 shadow-md",
-              gridDistribution === "6_PER_PAGE" ? "p-1.5" : "p-2.5",
+              gridDistribution === "6_PER_PAGE"
+                ? "p-1.5"
+                : gridDistribution === "4_PER_PAGE"
+                  ? "p-2"
+                  : "p-2.5",
             )}
           >
             <QRCodeSVG
@@ -587,67 +613,81 @@ export function MesasQrCodesClient({
                   : gridDistribution === "2_PER_PAGE"
                     ? 150
                     : gridDistribution === "6_PER_PAGE"
-                      ? 95
-                      : 130
+                      ? 85
+                      : 116
               }
               level="H"
             />
           </div>
 
-          <p
-            className={cn(
-              "mt-2 font-bold tracking-tight max-w-[200px] leading-tight",
-              gridDistribution === "6_PER_PAGE" ? "text-[10px]" : "text-[11px]",
-            )}
-          >
-            {callToAction}
-          </p>
+          {callToAction && (
+            <p
+              className={cn(
+                "mt-1.5 mb-0.5 font-bold tracking-tight text-center max-w-[260px] leading-snug",
+                gridDistribution === "6_PER_PAGE"
+                  ? "text-[9.5px]"
+                  : gridDistribution === "4_PER_PAGE"
+                    ? "text-[10.5px]"
+                    : "text-xs",
+              )}
+            >
+              {callToAction}
+            </p>
+          )}
 
           {/* 3 Step Instruction Icons */}
           {showInstructions && (
             <div
               className={cn(
-                "mt-1.5 flex items-center justify-center gap-2 opacity-75",
-                gridDistribution === "6_PER_PAGE" ? "text-[8px]" : "text-[9px]",
+                "mt-0.5 flex items-center justify-center gap-2 opacity-75 whitespace-nowrap",
+                gridDistribution === "6_PER_PAGE" ? "text-[8px]" : "text-[8.5px]",
               )}
             >
-              <span className="flex items-center gap-1">
-                <SmartphoneIcon size={11} /> 1. Aponte
+              <span className="inline-flex items-center gap-1">
+                <SmartphoneIcon size={10} className="shrink-0" /> 1. Aponte
               </span>
               <span>•</span>
-              <span className="flex items-center gap-1">
-                <UtensilsIcon size={11} /> 2. Escolha
+              <span className="inline-flex items-center gap-1">
+                <UtensilsIcon size={10} className="shrink-0" /> 2. Escolha
               </span>
               <span>•</span>
-              <span className="flex items-center gap-1">
-                <CheckIcon size={11} /> 3. Peça
+              <span className="inline-flex items-center gap-1">
+                <CheckIcon size={10} className="shrink-0" /> 3. Peça
               </span>
             </div>
           )}
         </div>
 
         {/* ── Bottom: Wi-Fi & Courtesy Footer ───── */}
-        <div className="w-full flex flex-col items-center gap-1 pb-1">
+        <div className="w-full flex flex-col items-center gap-1 pb-0.5 shrink-0">
           {showWifi && (wifiSsid || wifiPassword) && (
             <div
               className={cn(
-                "flex items-center justify-center gap-2 rounded-lg border border-current/15 px-2.5 py-1 opacity-80 max-w-full",
-                gridDistribution === "6_PER_PAGE" ? "text-[8px]" : "text-[9px]",
+                "flex items-center justify-center gap-2 rounded-lg border border-current/15 px-3 py-1 opacity-85 w-full max-w-[92%]",
+                gridDistribution === "6_PER_PAGE" ? "text-[8px]" : "text-[8.5px]",
               )}
             >
-              <WifiIcon size={11} className="shrink-0" />
-              <span className="truncate">
-                Wi-Fi: <strong className="font-semibold">{wifiSsid}</strong>
-                {wifiPassword && ` • Senha: ${wifiPassword}`}
-              </span>
+              <WifiIcon size={11} className="shrink-0 text-current" />
+              <div className="flex flex-col items-center justify-center text-center leading-tight">
+                {wifiSsid && (
+                  <span className="truncate max-w-[220px]">
+                    Wi-Fi: <strong className="font-semibold">{wifiSsid}</strong>
+                  </span>
+                )}
+                {wifiPassword && (
+                  <span className="truncate max-w-[220px]">
+                    Senha: <strong className="font-semibold">{wifiPassword}</strong>
+                  </span>
+                )}
+              </div>
             </div>
           )}
 
           {subtext && (
             <span
               className={cn(
-                "opacity-60 font-medium",
-                gridDistribution === "6_PER_PAGE" ? "text-[8px]" : "text-[9px]",
+                "opacity-60 font-medium leading-tight",
+                gridDistribution === "6_PER_PAGE" ? "text-[8px]" : "text-[8.5px]",
               )}
             >
               {subtext}
@@ -655,7 +695,7 @@ export function MesasQrCodesClient({
           )}
 
           {/* Card Hover Action Buttons (No Print) */}
-          <div className="no-print mt-2 flex items-center gap-1 pt-1 border-t border-slate-100 w-full justify-center">
+          <div className="no-print mt-1.5 flex items-center gap-1 pt-1 border-t border-slate-100 w-full justify-center">
             <Button
               type="button"
               variant="ghost"
