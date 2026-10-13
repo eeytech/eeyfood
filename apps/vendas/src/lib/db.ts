@@ -47,5 +47,6 @@ export {
   editarEnderecoCliente,
   validarBeneficiosPedido,
   geocodeAddress,
+  notificarStatusWhatsAppPedido,
 } from "@fsw/db";
-export type { EditarEnderecoClienteInput } from "@fsw/db";
+export type { EditarEnderecoClienteInput, NotificarWhatsAppStatusInput } from "@fsw/db";

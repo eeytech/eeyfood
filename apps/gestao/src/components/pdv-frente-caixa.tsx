@@ -1285,15 +1285,16 @@ const PdvFrenteCaixa = ({
         </div>
       </div>
 
-      {/* ── Metric Cards (matching usuarios-client standard) ── */}
+      {/* ── Metric Cards (following the system theme) ── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+        {/* Card 1: Carrinho Atual */}
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-primary/40 hover:shadow-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">
                 Carrinho Atual
               </span>
-              <div className="rounded-lg bg-primary/10 p-1.5 text-primary shrink-0">
+              <div className="rounded-xl border border-primary/20 bg-primary/10 p-2 text-primary shrink-0">
                 <ShoppingCartIcon size={16} />
               </div>
             </div>
@@ -1306,17 +1307,18 @@ const PdvFrenteCaixa = ({
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+        {/* Card 2: Regra de Pizza */}
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-primary/40 hover:shadow-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">
                 Regra de Pizza
               </span>
-              <div className="rounded-lg bg-amber-100 p-1.5 text-amber-700 shrink-0">
+              <div className="rounded-xl border border-primary/20 bg-primary/10 p-2 text-primary shrink-0">
                 <ChefHatIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-lg font-bold text-slate-900">
+            <p className="mt-2 font-display text-2xl font-bold text-primary truncate">
               {pizzaPricingRule === "MAX" ? "Maior Valor" : "Média dos Sabores"}
             </p>
             <p className="mt-0.5 text-xs text-slate-500 truncate">
@@ -1325,18 +1327,19 @@ const PdvFrenteCaixa = ({
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+        {/* Card 3: Balança Serial */}
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-primary/40 hover:shadow-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">
                 Balança Serial
               </span>
-              <div className="rounded-lg bg-slate-100 p-1.5 text-slate-700 shrink-0">
+              <div className="rounded-xl border border-primary/20 bg-primary/10 p-2 text-primary shrink-0">
                 <ScaleIcon size={16} />
               </div>
             </div>
             <div className="mt-2 flex items-center justify-between gap-2">
-              <span className="font-display text-2xl font-bold text-slate-900">
+              <span className="font-display text-2xl font-bold text-primary">
                 {capturedWeight !== null ? `${capturedWeight.toFixed(3)} kg` : "—"}
               </span>
               <Button
@@ -1345,7 +1348,7 @@ const PdvFrenteCaixa = ({
                 variant="outline"
                 onClick={handleCaptureScaleWeight}
                 disabled={scaleStatus === "requesting" || scaleStatus === "reading"}
-                className="h-7 px-2 text-[11px] font-semibold gap-1 border-slate-300 hover:bg-slate-100 text-slate-800"
+                className="h-7 px-2.5 text-[11px] font-semibold gap-1 rounded-full border-primary/30 text-primary hover:bg-primary/10 transition-colors"
               >
                 {scaleStatus === "requesting" || scaleStatus === "reading" ? "Pesando..." : "Capturar"}
               </Button>
@@ -1360,17 +1363,18 @@ const PdvFrenteCaixa = ({
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+        {/* Card 4: Conexão */}
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-primary/40 hover:shadow-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">
                 Conexão
               </span>
-              <div className="rounded-lg bg-emerald-100 p-1.5 text-emerald-700 shrink-0">
-                <CheckCircle2Icon size={16} />
+              <div className="rounded-xl border border-primary/20 bg-primary/10 p-2 text-primary shrink-0">
+                {isOffline ? <WifiOffIcon size={16} /> : <CheckCircle2Icon size={16} />}
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-emerald-700">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {isOffline ? "Offline" : "100% Online"}
             </p>
             <p className="mt-0.5 text-xs text-slate-500 truncate">
@@ -2295,22 +2299,35 @@ const PdvFrenteCaixa = ({
       <Dialog open={isShiftModalOpen} onOpenChange={setIsShiftModalOpen}>
         <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-md">
           <DialogHeader>
-            <div className="flex items-center gap-2">
-              <div className="rounded-xl bg-slate-100 p-2 text-slate-900">
-                <ClockIcon size={20} />
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-sm shadow-primary/10">
+                <ClockIcon size={22} />
               </div>
               <div>
                 <DialogTitle className="font-display text-lg font-bold text-slate-900">
                   Abertura de Turno de Caixa
                 </DialogTitle>
                 <DialogDescription className="text-xs text-slate-500">
-                  Identifique o operador e informe o valor de fundo de troco inicial.
+                  Identifique o operador responsável e informe o fundo de troco inicial.
                 </DialogDescription>
               </div>
             </div>
           </DialogHeader>
 
           <form onSubmit={handleOpenShiftSubmit} className="space-y-4 pt-2">
+            {/* Informational helper banner */}
+            <div className="flex items-start gap-2.5 rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-slate-600">
+              <InfoIcon size={16} className="text-primary shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-slate-900 leading-tight">
+                  Controle & Auditoria de Caixa
+                </p>
+                <p className="text-[11px] text-slate-500 leading-tight mt-0.5">
+                  O valor inicial cadastrado será considerado no cálculo do dinheiro esperado no momento do fechamento.
+                </p>
+              </div>
+            </div>
+
             <div className="space-y-1.5">
               <Label htmlFor="shift-operator" className="text-xs font-semibold text-slate-700">
                 Nome do Operador *
@@ -2318,32 +2335,63 @@ const PdvFrenteCaixa = ({
               <Input
                 id="shift-operator"
                 required
-                placeholder="Ex.: Matheus"
+                placeholder="Ex.: Carlos Operador"
                 value={shiftOperatorName}
                 onChange={(e) => setShiftOperatorName(e.target.value)}
-                className="h-10 rounded-xl border-slate-200 text-sm"
+                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="shift-opening-amount" className="text-xs font-semibold text-slate-700">
-                Fundo de Caixa Inicial (R$) *
-              </Label>
-              <Input
-                id="shift-opening-amount"
-                required
-                placeholder="0,00"
-                value={shiftOpeningAmount}
-                onChange={(e) => setShiftOpeningAmount(e.target.value)}
-                className="h-10 rounded-xl border-slate-200 text-sm"
-              />
+              <div className="flex items-center justify-between">
+                <Label htmlFor="shift-opening-amount" className="text-xs font-semibold text-slate-700">
+                  Fundo de Caixa Inicial (Troco) *
+                </Label>
+                <span className="text-[11px] text-slate-400">Moedas e cédulas na gaveta</span>
+              </div>
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                  R$
+                </span>
+                <Input
+                  id="shift-opening-amount"
+                  required
+                  placeholder="0,00"
+                  value={shiftOpeningAmount}
+                  onChange={(e) => setShiftOpeningAmount(e.target.value)}
+                  className="h-10 pl-9 rounded-xl border-slate-200 bg-white text-sm font-semibold text-slate-900 focus:border-primary"
+                />
+              </div>
+
+              {/* Quick Preset Buttons */}
+              <div className="flex items-center gap-1.5 pt-1 flex-wrap">
+                <span className="text-[10px] text-slate-400 font-medium">Valores rápidos:</span>
+                {[50, 100, 150, 200, 300].map((val) => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => setShiftOpeningAmount(val.toFixed(2).replace(".", ","))}
+                    className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-600 hover:bg-primary/10 hover:border-primary/30 hover:text-primary transition-colors"
+                  >
+                    R$ {val}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <DialogFooter className="gap-2 pt-2">
               <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsShiftModalOpen(false)}
+                className="rounded-full border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-100"
+              >
+                Cancelar
+              </Button>
+              <Button
                 type="submit"
                 disabled={isShiftOpening || !shiftOperatorName.trim()}
-                className="w-full rounded-full bg-slate-900 px-5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
+                className="rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 disabled:opacity-50"
               >
                 {isShiftOpening && <LoaderCircleIcon size={14} className="mr-1.5 animate-spin" />}
                 {isShiftOpening ? "Abrindo Turno..." : "Confirmar Abertura de Turno"}

@@ -6,6 +6,7 @@ import {
   QrCodeIcon,
   ShieldCheckIcon,
   ShoppingCartIcon,
+  TruckIcon,
 } from "lucide-react";
 import { notFound } from "next/navigation";
 
@@ -78,6 +79,25 @@ export default async function WhatsAppPage({ params }: PageProps) {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-4 sm:p-5 space-y-3">
+              <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-3.5 transition-colors hover:bg-primary/10">
+                <div className="rounded-lg bg-primary/10 p-2 text-primary shrink-0">
+                  <TruckIcon size={16} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-bold text-slate-900">
+                      Notificações Automáticas de Etapas do Pedido
+                    </p>
+                    <Badge variant="outline" className="border-emerald-500/30 bg-emerald-50 text-[10px] font-semibold text-emerald-700">
+                      Tempo Real
+                    </Badge>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-600 leading-relaxed">
+                    Seus clientes recebem mensagens automáticas no WhatsApp conforme o pedido evolui: <b>Recebido</b>, <b>Em Preparação</b>, <b>Pronto para Retirada</b>, <b>Saiu para Entrega (com mapa ao vivo)</b> e <b>Finalizado</b>.
+                  </p>
+                </div>
+              </div>
+
               <div className="flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-3.5 transition-colors hover:bg-slate-50">
                 <div className="rounded-lg bg-primary/10 p-2 text-primary shrink-0">
                   <MegaphoneIcon size={16} />

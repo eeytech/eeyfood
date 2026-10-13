@@ -28,6 +28,10 @@ import {
   SearchIcon,
   UsersRoundIcon,
   UtensilsCrossedIcon,
+  CheckCircle2Icon,
+  InfoIcon,
+  UserIcon,
+  XIcon,
 } from "lucide-react";
 import {
   useCallback,
@@ -39,6 +43,7 @@ import {
   useTransition,
 } from "react";
 import { io } from "socket.io-client";
+import { toast } from "sonner";
 
 import {
   abrirComandaAvulsaAction,
@@ -62,9 +67,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import {
   Dialog,
@@ -74,6 +76,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import {
@@ -83,10 +92,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+
+// ─── Interfaces ───────────────────────────────────────────────────────────────
 
 interface ProdutoComanda {
   id: string;
@@ -112,14 +121,11 @@ interface ComandaDigitalProps {
   isDedicatedMode?: boolean;
 }
 
-interface FeedbackState {
-  type: "success" | "error";
-  message: string;
-}
-
-type TableFilter = "TODAS" | "LIVRES" | "OCUPADAS";
+type TableFilter = "TODAS" | "LIVRES" | "OCUPADAS" | "RESERVADAS";
 type MainView = "MESAS" | "COMANDAS_AVULSAS";
-type SalonView = "LISTA" | "MAPA";
+type SalonView = "GRADE" | "MAPA";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -137,43 +143,7 @@ const formatTime = (value: Date | string) =>
     new Date(value),
   );
 
-const getMesaColor = (mesa: MesaComanda, reservedTableIds: Set<string>) => {
-  if (mesa.currentOrder) {
-    const order = mesa.currentOrder;
-    if (order.paymentStatus === "PAID" || order.status === "FINISHED") {
-      return "border-emerald-400 bg-emerald-50";
-    }
-    if (order.total > 0 && order.orderProducts.length > 0) {
-      return "border-blue-400 bg-blue-50";
-    }
-    return "border-amber-400 bg-amber-50";
-  }
-  if (reservedTableIds.has(mesa.table.id)) {
-    return "border-orange-400 bg-orange-50";
-  }
-  return "border-slate-200 bg-white";
-};
-
-const getMesaStatusLabel = (mesa: MesaComanda, reservedTableIds: Set<string>) => {
-  if (mesa.currentOrder) {
-    if (mesa.currentOrder.paymentStatus === "PAID") return "Fechando";
-    return "Ocupada";
-  }
-  if (reservedTableIds.has(mesa.table.id)) return "Reservada";
-  return "Livre";
-};
-
-const getMesaStatusBadgeVariant = (
-  mesa: MesaComanda,
-  reservedTableIds: Set<string>,
-): "secondary" | "warning" | "success" | "danger" => {
-  if (mesa.currentOrder) {
-    if (mesa.currentOrder.paymentStatus === "PAID") return "success";
-    return "warning";
-  }
-  if (reservedTableIds.has(mesa.table.id)) return "danger";
-  return "secondary";
-};
+// ─── Componente Principal ─────────────────────────────────────────────────────
 
 const ComandaDigital = ({
   slug,
@@ -184,63 +154,59 @@ const ComandaDigital = ({
   initialQueue = [],
   initialComandasAvulsas = [],
   userName,
+  userRole,
+  isDedicatedMode = false,
 }: ComandaDigitalProps) => {
-  // ── Table / view state ──────────────────────────────────────────────────
+  // ── Estado de Mesas e Visualização ──────────────────────────────────────────
   const [tables, setTables] = useState(initialTables);
-  const [selectedTableId, setSelectedTableId] = useState(initialTables[0]?.table.id ?? "");
-  const [tableFilter, setTableFilter] = useState<TableFilter>("TODAS");
   const [mainView, setMainView] = useState<MainView>("MESAS");
-  const [salonView, setSalonView] = useState<SalonView>("LISTA");
+  const [salonView, setSalonView] = useState<SalonView>("GRADE");
+  const [tableFilter, setTableFilter] = useState<TableFilter>("TODAS");
+  const [tableSearch, setTableSearch] = useState("");
 
-  // ── Mobile App Navigation state ─────────────────────────────────────────
-  const [mobileScreen, setMobileScreen] = useState<"SALON" | "DETAIL">("SALON");
-  const [mobileDetailTab, setMobileDetailTab] = useState<"CARDAPIO" | "ITEMS">("CARDAPIO");
-  const [socketConnected, setSocketConnected] = useState(false);
-  const [recentlyAddedId, setRecentlyAddedId] = useState<string | null>(null);
-  const [mobileSearchTable, setMobileSearchTable] = useState("");
+  // ── Sheet / Drawer de Comanda Aberta ─────────────────────────────────────────
+  const [selectedMesaId, setSelectedMesaId] = useState<string | null>(null);
+  const [selectedAvulsaId, setSelectedAvulsaId] = useState<string | null>(null);
+  const [sheetTab, setSheetTab] = useState<"CARDAPIO" | "CONTA">("CARDAPIO");
 
-  // ── Waiters / reservations / queue / avulsas ────────────────────────────
+  // ── Fila de Espera e Reservas ───────────────────────────────────────────────
   const [reservations, setReservations] = useState<TableReservation[]>(initialReservations);
   const [queue, setQueue] = useState<WaitingQueueEntry[]>(initialQueue);
   const [comandasAvulsas, setComandasAvulsas] = useState<ComandaAvulsaComPedido[]>(
     initialComandasAvulsas,
   );
-  const [selectedAvulsaId, setSelectedAvulsaId] = useState<string | null>(null);
 
-  // ── Drawer / side panel state ───────────────────────────────────────────
   const [isFilaOpen, setIsFilaOpen] = useState(false);
   const [isReservasOpen, setIsReservasOpen] = useState(false);
 
-  // ── Product search ──────────────────────────────────────────────────────
+  // ── Produtos e Busca ────────────────────────────────────────────────────────
   const [selectedProductCategory, setSelectedProductCategory] = useState("TODOS");
   const [searchValue, setSearchValue] = useState("");
+  const [recentlyAddedId, setRecentlyAddedId] = useState<string | null>(null);
 
-  // ── Opening ────────────────────────────────────────────────────────────
+  // ── Abertura e Formulários ──────────────────────────────────────────────────
   const [openingCustomerName, setOpeningCustomerName] = useState("");
+  const [avulsaCustomerName, setAvulsaCustomerName] = useState("");
+  const [avulsaBarcode, setAvulsaBarcode] = useState("");
+  const [avulsaBarcodeInput, setAvulsaBarcodeInput] = useState("");
 
-  // ── Feedback ───────────────────────────────────────────────────────────
-  const [feedback, setFeedback] = useState<FeedbackState | null>(null);
-  const [isPending, startTransition] = useTransition();
-
-  // ── Transfer dialog ────────────────────────────────────────────────────
+  // ── Diálogos de Mesa ────────────────────────────────────────────────────────
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [targetTableId, setTargetTableId] = useState("");
 
-  // ── Item transfer modal ─────────────────────────────────────────────────
   const [isItemTransferOpen, setIsItemTransferOpen] = useState(false);
   const [itemTransferTargetOrderId, setItemTransferTargetOrderId] = useState<number | null>(null);
   const [itemTransferSelectedIds, setItemTransferSelectedIds] = useState(new Set<string>());
 
-  // ── Table merge dialog ──────────────────────────────────────────────────
   const [isMergeOpen, setIsMergeOpen] = useState(false);
   const [mergeSecondaryOrderId, setMergeSecondaryOrderId] = useState<number | null>(null);
 
-  // ── Division / partial payment ─────────────────────────────────────────
+  // ── Divisão e Pagamento Parcial ─────────────────────────────────────────────
   const [divisaoPessoas, setDivisaoPessoas] = useState(1);
   const [selectedItemIds, setSelectedItemIds] = useState(new Set<string>());
   const [paidAmount, setPaidAmount] = useState(0);
 
-  // ── Reserva form ───────────────────────────────────────────────────────
+  // ── Formulários Fila / Reserva ──────────────────────────────────────────────
   const [reservaForm, setReservaForm] = useState({
     customerName: "",
     customerPhone: "",
@@ -249,21 +215,18 @@ const ComandaDigital = ({
     diningTableId: "",
     notes: "",
   });
-
-  // ── Fila form ──────────────────────────────────────────────────────────
   const [filaForm, setFilaForm] = useState({ customerName: "", partySize: 2 });
   const [filaErrors, setFilaErrors] = useState<Record<string, string>>({});
   const [reservaErrors, setReservaErrors] = useState<Record<string, string>>({});
 
-  // ── Avulsa form ────────────────────────────────────────────────────────
-  const [avulsaCustomerName, setAvulsaCustomerName] = useState("");
-  const [avulsaBarcode, setAvulsaBarcode] = useState("");
-  const [avulsaBarcodeInput, setAvulsaBarcodeInput] = useState("");
+  // ── Conexão e Transição ─────────────────────────────────────────────────────
+  const [socketConnected, setSocketConnected] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const deferredSearchValue = useDeferredValue(searchValue);
   const websocketUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL ?? "http://localhost:4000";
 
-  // ── Derived state ───────────────────────────────────────────────────────
+  // ── Dados Derivados ─────────────────────────────────────────────────────────
   const todayReservations = useMemo(() => {
     const today = new Date();
     return reservations.filter((r) => {
@@ -283,14 +246,14 @@ const ComandaDigital = ({
       new Set(
         todayReservations
           .map((r) => r.diningTableId)
-          .filter((id): id is string => !!id),
+          .filter((id): id is string => Boolean(id)),
       ),
     [todayReservations],
   );
 
   const selectedMesa = useMemo(
-    () => tables.find((m) => m.table.id === selectedTableId) ?? null,
-    [selectedTableId, tables],
+    () => tables.find((m) => m.table.id === selectedMesaId) ?? null,
+    [selectedMesaId, tables],
   );
 
   const selectedAvulsa = useMemo(
@@ -301,24 +264,28 @@ const ComandaDigital = ({
   const occupiedTables = tables.filter((m) => m.currentOrder).length;
   const freeTables = tables.length - occupiedTables;
 
-  const displayedTables = useMemo(() => {
-    if (tableFilter === "LIVRES") return tables.filter((m) => !m.currentOrder);
-    if (tableFilter === "OCUPADAS") return tables.filter((m) => m.currentOrder);
-    return tables;
-  }, [tables, tableFilter]);
+  const filteredTables = useMemo(() => {
+    let list = tables;
 
-  const mobileFilteredTables = useMemo(() => {
-    let list = displayedTables;
-    if (mobileSearchTable.trim()) {
-      const q = mobileSearchTable.toLowerCase().trim();
+    if (tableFilter === "LIVRES") {
+      list = list.filter((m) => !m.currentOrder);
+    } else if (tableFilter === "OCUPADAS") {
+      list = list.filter((m) => Boolean(m.currentOrder));
+    } else if (tableFilter === "RESERVADAS") {
+      list = list.filter((m) => reservedTableIds.has(m.table.id));
+    }
+
+    if (tableSearch.trim()) {
+      const q = tableSearch.toLowerCase().trim();
       list = list.filter(
         (m) =>
           m.table.name.toLowerCase().includes(q) ||
           m.currentOrder?.customerName?.toLowerCase().includes(q),
       );
     }
+
     return list;
-  }, [displayedTables, mobileSearchTable]);
+  }, [tables, tableFilter, tableSearch, reservedTableIds]);
 
   const filteredAvulsas = useMemo(() => {
     if (!avulsaBarcodeInput.trim()) return comandasAvulsas;
@@ -353,9 +320,6 @@ const ComandaDigital = ({
     });
   }, [deferredSearchValue, products, selectedProductCategory]);
 
-  const selectedOrderItemsCount =
-    selectedMesa?.currentOrder?.orderProducts.reduce((a, i) => a + i.quantity, 0) ?? 0;
-
   const transferTargetTables = useMemo(
     () => tables.filter((m) => !m.currentOrder && m.table.id !== selectedMesa?.table.id),
     [tables, selectedMesa?.table.id],
@@ -371,40 +335,39 @@ const ComandaDigital = ({
     [tables, selectedMesa?.table.id],
   );
 
-  const orderTotal = selectedMesa?.currentOrder?.total ?? 0;
+  const activeOrder = selectedMesa?.currentOrder ?? selectedAvulsa?.order ?? null;
+  const orderTotal = activeOrder?.total ?? 0;
   const remainingAmount = Math.max(Number((orderTotal - paidAmount).toFixed(2)), 0);
 
   const selectedItemsTotal = useMemo(
     () =>
-      selectedMesa?.currentOrder?.orderProducts
+      activeOrder?.orderProducts
         .filter((item) => selectedItemIds.has(item.id))
         .reduce((acc, item) => acc + item.lineTotal, 0) ?? 0,
-    [selectedMesa?.currentOrder?.orderProducts, selectedItemIds],
+    [activeOrder?.orderProducts, selectedItemIds],
   );
 
   const valorPorPessoa =
     divisaoPessoas > 0 ? Number((remainingAmount / divisaoPessoas).toFixed(2)) : remainingAmount;
 
-  // ── Active order id for partial payment tracking ────────────────────────
-  const activeOrderId = selectedMesa?.currentOrder?.id;
-
+  // ── Buscar Pagamento Parcial ────────────────────────────────────────────────
   useEffect(() => {
     setSelectedItemIds(new Set());
     setDivisaoPessoas(1);
-    if (!activeOrderId) {
+    if (!activeOrder?.id) {
       setPaidAmount(0);
       return;
     }
     let cancelled = false;
-    void buscarPagamentosParciaisAction(activeOrderId).then(({ totalPago }) => {
+    void buscarPagamentosParciaisAction(activeOrder.id).then(({ totalPago }) => {
       if (!cancelled) setPaidAmount(totalPago);
     });
     return () => {
       cancelled = true;
     };
-  }, [activeOrderId]);
+  }, [activeOrder?.id]);
 
-  // ── WebSocket sync ─────────────────────────────────────────────────────
+  // ── WebSocket Live Sync ─────────────────────────────────────────────────────
   const syncTables = useCallback(async () => {
     const res = await fetch(`/api/comandas/${slug}`, { cache: "no-store" });
     if (!res.ok) return;
@@ -438,12 +401,14 @@ const ComandaDigital = ({
     };
   }, [slug, syncTables, websocketUrl]);
 
-  // ── Barcode scanner for avulsas ─────────────────────────────────────────
+  // ── Barcode scanner listener para avulsas ───────────────────────────────────
   const barcodeRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (mainView === "COMANDAS_AVULSAS" && e.key === "Enter" && avulsaBarcodeInput) {
-        const found = comandasAvulsas.find((c) => c.barcode === avulsaBarcodeInput);
+        const found = comandasAvulsas.find(
+          (c) => c.barcode === avulsaBarcodeInput || String(c.numero) === avulsaBarcodeInput,
+        );
         if (found) {
           setSelectedAvulsaId(found.id);
         }
@@ -454,7 +419,7 @@ const ComandaDigital = ({
     return () => window.removeEventListener("keydown", handler);
   }, [avulsaBarcodeInput, comandasAvulsas, mainView]);
 
-  // ── Local optimistic helpers ────────────────────────────────────────────
+  // ── Funções de Apoio Otimistas ──────────────────────────────────────────────
   const updateMesaOrder = (updatedOrder: PedidoRecebimento) => {
     setTables((current) =>
       current.map((m) =>
@@ -489,10 +454,9 @@ const ComandaDigital = ({
     });
   };
 
-  // ── Action handlers ────────────────────────────────────────────────────
+  // ── Ações Operacionais ──────────────────────────────────────────────────────
   const handleOpenTable = () => {
     if (!selectedMesa) return;
-    setFeedback(null);
     startTransition(async () => {
       try {
         const order = await abrirMesaAction({
@@ -502,13 +466,10 @@ const ComandaDigital = ({
         });
         updateMesaOrder(order);
         setOpeningCustomerName("");
-        setFeedback({ type: "success", message: `${selectedMesa.table.name} aberta com sucesso!` });
-        setMobileDetailTab("CARDAPIO");
+        toast.success(`${selectedMesa.table.name} aberta com sucesso!`);
+        setSheetTab("CARDAPIO");
       } catch (e) {
-        setFeedback({
-          type: "error",
-          message: e instanceof Error ? e.message : "Erro ao abrir mesa.",
-        });
+        toast.error(e instanceof Error ? e.message : "Erro ao abrir mesa.");
       }
     });
   };
@@ -516,12 +477,11 @@ const ComandaDigital = ({
   const handleAddProduct = (productId: string) => {
     const order = selectedMesa?.currentOrder ?? selectedAvulsa?.order;
     if (!order) return;
-    setFeedback(null);
     setRecentlyAddedId(productId);
-    setTimeout(() => setRecentlyAddedId(null), 1000);
+    setTimeout(() => setRecentlyAddedId(null), 900);
 
     if (typeof window !== "undefined" && "vibrate" in navigator) {
-      navigator.vibrate?.(40);
+      navigator.vibrate?.(35);
     }
 
     startTransition(async () => {
@@ -538,15 +498,9 @@ const ComandaDigital = ({
           );
         }
         const prod = products.find((p) => p.id === productId);
-        setFeedback({
-          type: "success",
-          message: `${prod?.name ?? "Item"} lançado na comanda!`,
-        });
+        toast.success(`${prod?.name ?? "Item"} adicionado à comanda!`);
       } catch (e) {
-        setFeedback({
-          type: "error",
-          message: e instanceof Error ? e.message : "Erro ao lançar item.",
-        });
+        toast.error(e instanceof Error ? e.message : "Erro ao lançar item.");
       }
     });
   };
@@ -555,7 +509,6 @@ const ComandaDigital = ({
     paymentMethod: Extract<PaymentMethod, "DINHEIRO" | "CARTAO_PRESENCIAL">,
   ) => {
     if (!selectedMesa?.currentOrder) return;
-    setFeedback(null);
     startTransition(async () => {
       try {
         const order = await fecharComandaAction({
@@ -566,16 +519,12 @@ const ComandaDigital = ({
         updateMesaOrder(order);
         setPaidAmount(0);
         setSelectedItemIds(new Set());
-        setFeedback({
-          type: "success",
-          message: `Conta da ${selectedMesa.table.name} encerrada — ${formatCurrency(order.total)}.`,
-        });
-        setMobileScreen("SALON");
+        toast.success(
+          `Conta da ${selectedMesa.table.name} encerrada — ${formatCurrency(order.total)}.`,
+        );
+        setSelectedMesaId(null);
       } catch (e) {
-        setFeedback({
-          type: "error",
-          message: e instanceof Error ? e.message : "Erro ao fechar conta.",
-        });
+        toast.error(e instanceof Error ? e.message : "Erro ao fechar conta.");
       }
     });
   };
@@ -584,7 +533,6 @@ const ComandaDigital = ({
     paymentMethod: Extract<PaymentMethod, "DINHEIRO" | "CARTAO_PRESENCIAL">,
   ) => {
     if (!selectedAvulsa?.order) return;
-    setFeedback(null);
     startTransition(async () => {
       try {
         await fecharComandaAvulsaAction({
@@ -594,25 +542,21 @@ const ComandaDigital = ({
           paymentMethod,
         });
         setComandasAvulsas((prev) => prev.filter((c) => c.id !== selectedAvulsaId));
+        toast.success(`Comanda #${selectedAvulsa.numero} encerrada com sucesso.`);
         setSelectedAvulsaId(null);
-        setFeedback({ type: "success", message: "Comanda avulsa encerrada com sucesso." });
-        setMobileScreen("SALON");
       } catch (e) {
-        setFeedback({
-          type: "error",
-          message: e instanceof Error ? e.message : "Erro ao fechar comanda.",
-        });
+        toast.error(e instanceof Error ? e.message : "Erro ao fechar comanda avulsa.");
       }
     });
   };
 
   const handleTransferirMesa = () => {
     if (!selectedMesa?.currentOrder || !targetTableId) return;
-    setFeedback(null);
     const orderId = selectedMesa.currentOrder.id;
     const oldTableId = selectedMesa.table.id;
     const newTableName =
       tables.find((m) => m.table.id === targetTableId)?.table.name ?? "nova mesa";
+
     startTransition(async () => {
       try {
         const updated = await transferirMesaAction({ slug, orderId, novoTableId: targetTableId });
@@ -623,15 +567,12 @@ const ComandaDigital = ({
             return m;
           }),
         );
-        setSelectedTableId(targetTableId);
+        setSelectedMesaId(targetTableId);
         setIsTransferOpen(false);
         setTargetTableId("");
-        setFeedback({ type: "success", message: `Comanda transferida para ${newTableName}.` });
+        toast.success(`Comanda transferida para ${newTableName}.`);
       } catch (e) {
-        setFeedback({
-          type: "error",
-          message: e instanceof Error ? e.message : "Erro ao transferir.",
-        });
+        toast.error(e instanceof Error ? e.message : "Erro ao transferir mesa.");
       }
     });
   };
@@ -639,7 +580,6 @@ const ComandaDigital = ({
   const handleItemTransfer = () => {
     if (!selectedMesa?.currentOrder || !itemTransferTargetOrderId || itemTransferSelectedIds.size === 0)
       return;
-    setFeedback(null);
     startTransition(async () => {
       try {
         const result = await transferirItensComandaAction({
@@ -653,19 +593,15 @@ const ComandaDigital = ({
         setIsItemTransferOpen(false);
         setItemTransferSelectedIds(new Set());
         setItemTransferTargetOrderId(null);
-        setFeedback({ type: "success", message: "Itens transferidos com sucesso." });
+        toast.success("Itens transferidos com sucesso.");
       } catch (e) {
-        setFeedback({
-          type: "error",
-          message: e instanceof Error ? e.message : "Erro ao transferir itens.",
-        });
+        toast.error(e instanceof Error ? e.message : "Erro ao transferir itens.");
       }
     });
   };
 
   const handleUnirMesas = () => {
     if (!selectedMesa?.currentOrder || !mergeSecondaryOrderId) return;
-    setFeedback(null);
     startTransition(async () => {
       try {
         const updated = await unirMesasAction({
@@ -677,12 +613,9 @@ const ComandaDigital = ({
         await syncTables();
         setIsMergeOpen(false);
         setMergeSecondaryOrderId(null);
-        setFeedback({ type: "success", message: "Mesas unidas. Todos os itens estao na mesa atual." });
+        toast.success(`Mesas unidas com sucesso na ${selectedMesa.table.name}!`);
       } catch (e) {
-        setFeedback({
-          type: "error",
-          message: e instanceof Error ? e.message : "Erro ao unir mesas.",
-        });
+        toast.error(e instanceof Error ? e.message : "Erro ao unir mesas.");
       }
     });
   };
@@ -690,10 +623,10 @@ const ComandaDigital = ({
   const handlePagamentoParcial = (
     paymentMethod: Extract<PaymentMethod, "DINHEIRO" | "CARTAO_PRESENCIAL">,
   ) => {
-    if (!selectedMesa?.currentOrder || selectedItemsTotal <= 0) return;
-    setFeedback(null);
-    const orderId = selectedMesa.currentOrder.id;
+    if (!activeOrder || selectedItemsTotal <= 0) return;
+    const orderId = activeOrder.id;
     const amount = Number(selectedItemsTotal.toFixed(2));
+
     startTransition(async () => {
       try {
         const result = await registrarPagamentoParcialAction({
@@ -704,38 +637,25 @@ const ComandaDigital = ({
         });
         setPaidAmount((prev) => Number((prev + result.amountPaid).toFixed(2)));
         setSelectedItemIds(new Set());
-        setFeedback({
-          type: "success",
-          message: `Pagamento parcial de ${formatCurrency(result.amountPaid)} registrado.`,
-        });
+        toast.success(`Pagamento parcial de ${formatCurrency(result.amountPaid)} registrado!`);
       } catch (e) {
-        setFeedback({
-          type: "error",
-          message: e instanceof Error ? e.message : "Erro ao registrar pagamento parcial.",
-        });
+        toast.error(e instanceof Error ? e.message : "Erro ao registrar pagamento parcial.");
       }
     });
   };
 
   const handleCriarReserva = () => {
     const newErrors: Record<string, string> = {};
-    if (!reservaForm.customerName.trim()) {
-      newErrors.customerName = "Informe o nome do cliente.";
-    }
-    if (!reservaForm.scheduledFor) {
-      newErrors.scheduledFor = "Selecione a data e horário da reserva.";
-    }
-    if (!reservaForm.partySize || reservaForm.partySize < 1) {
-      newErrors.partySize = "Informe a quantidade de pessoas.";
-    }
+    if (!reservaForm.customerName.trim()) newErrors.customerName = "Informe o nome do cliente.";
+    if (!reservaForm.scheduledFor) newErrors.scheduledFor = "Selecione a data e horário.";
+    if (!reservaForm.partySize || reservaForm.partySize < 1) newErrors.partySize = "Informe a quantidade.";
+
     if (Object.keys(newErrors).length > 0) {
       setReservaErrors(newErrors);
-      const firstError = Object.values(newErrors)[0];
-      toast.error(firstError || "Por favor, preencha todos os campos obrigatórios.");
+      toast.error("Preencha os campos obrigatórios da reserva.");
       return;
     }
 
-    setFeedback(null);
     startTransition(async () => {
       try {
         const reserva = await criarReservaAction({
@@ -757,35 +677,25 @@ const ComandaDigital = ({
           notes: "",
         });
         setReservaErrors({});
+        setIsReservasOpen(false);
         toast.success("Reserva cadastrada com sucesso!");
-        setFeedback({ type: "success", message: "Reserva criada com sucesso." });
       } catch (e) {
-        const msg = e instanceof Error ? e.message : "Erro ao criar reserva.";
-        toast.error(msg);
-        setFeedback({
-          type: "error",
-          message: msg,
-        });
+        toast.error(e instanceof Error ? e.message : "Erro ao cadastrar reserva.");
       }
     });
   };
 
   const handleAdicionarFila = () => {
     const newErrors: Record<string, string> = {};
-    if (!filaForm.customerName.trim()) {
-      newErrors.customerName = "Informe o nome do cliente.";
-    }
-    if (!filaForm.partySize || filaForm.partySize < 1) {
-      newErrors.partySize = "Informe a quantidade de pessoas.";
-    }
+    if (!filaForm.customerName.trim()) newErrors.customerName = "Informe o nome do cliente.";
+    if (!filaForm.partySize || filaForm.partySize < 1) newErrors.partySize = "Informe a quantidade.";
+
     if (Object.keys(newErrors).length > 0) {
       setFilaErrors(newErrors);
-      const firstError = Object.values(newErrors)[0];
-      toast.error(firstError || "Por favor, preencha todos os campos obrigatórios.");
+      toast.error("Preencha os campos obrigatórios da fila.");
       return;
     }
 
-    setFeedback(null);
     startTransition(async () => {
       try {
         const entry = await adicionarClienteFilaAction({
@@ -796,15 +706,9 @@ const ComandaDigital = ({
         setQueue((prev) => [...prev, entry]);
         setFilaForm({ customerName: "", partySize: 2 });
         setFilaErrors({});
-        toast.success(`${filaForm.customerName.trim()} adicionado(a) à fila!`);
-        setFeedback({ type: "success", message: `${filaForm.customerName} adicionado(a) a fila.` });
+        toast.success(`${entry.customerName} adicionado(a) à fila!`);
       } catch (e) {
-        const msg = e instanceof Error ? e.message : "Erro ao adicionar a fila.";
-        toast.error(msg);
-        setFeedback({
-          type: "error",
-          message: msg,
-        });
+        toast.error(e instanceof Error ? e.message : "Erro ao adicionar à fila.");
       }
     });
   };
@@ -815,19 +719,15 @@ const ComandaDigital = ({
         await atualizarStatusFilaAction({ slug, entryId, status: "SEATED", diningTableId: tableId });
         setQueue((prev) => prev.filter((e) => e.id !== entryId));
         setIsFilaOpen(false);
-        setSelectedTableId(tableId);
-        setFeedback({ type: "success", message: "Cliente acomodado. Abra a mesa para iniciar a comanda." });
+        setSelectedMesaId(tableId);
+        toast.success("Cliente acomodado na mesa selecionada.");
       } catch (e) {
-        setFeedback({
-          type: "error",
-          message: e instanceof Error ? e.message : "Erro ao acomodar cliente.",
-        });
+        toast.error(e instanceof Error ? e.message : "Erro ao acomodar cliente.");
       }
     });
   };
 
   const handleAbrirComandaAvulsa = () => {
-    setFeedback(null);
     startTransition(async () => {
       try {
         const result = await abrirComandaAvulsaAction({
@@ -844,162 +744,60 @@ const ComandaDigital = ({
         }
         setAvulsaCustomerName("");
         setAvulsaBarcode("");
-        setFeedback({
-          type: "success",
-          message: `Comanda #${result.comanda?.numero} aberta.`,
-        });
+        toast.success(`Comanda #${result.comanda?.numero} aberta com sucesso!`);
       } catch (e) {
-        setFeedback({
-          type: "error",
-          message: e instanceof Error ? e.message : "Erro ao abrir comanda avulsa.",
-        });
+        toast.error(e instanceof Error ? e.message : "Erro ao abrir comanda avulsa.");
       }
     });
   };
 
-  // ── Product panel (shared between mesas and avulsas) ───────────────────
-  const ProductPanel = () => (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle>Lancar itens</CardTitle>
-        <CardDescription>Toque para enviar para a comanda.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="relative">
-          <SearchIcon
-            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
-            size={18}
-          />
-          <Input
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            placeholder="Buscar produto..."
-            className="pl-11"
-          />
-        </div>
-
-        <Tabs value={selectedProductCategory} onValueChange={setSelectedProductCategory}>
-          <TabsList className="h-auto flex-wrap gap-1 bg-muted/60 p-1">
-            {productCategories.map((cat) => (
-              <TabsTrigger key={cat} value={cat} className="text-xs">
-                {cat}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-
-        {filteredProducts.length === 0 ? (
-          <div className="rounded-xl border border-dashed bg-slate-50 px-4 py-5 text-center">
-            <p className="text-sm font-medium text-slate-900">Nenhum produto encontrado</p>
-          </div>
-        ) : (
-          <Card className="overflow-hidden">
-            <div className="divide-y">
-              {filteredProducts.map((product) => (
-                <div
-                  key={product.id}
-                  className="flex items-center gap-3 px-4 py-2.5 transition hover:bg-slate-50/80"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-slate-900">{product.name}</p>
-                  </div>
-                  <Badge
-                    variant={
-                      product.trackInventory
-                        ? product.stockQuantity > 0
-                          ? "success"
-                          : "danger"
-                        : "secondary"
-                    }
-                    className="shrink-0 text-xs"
-                  >
-                    {product.trackInventory ? `Est. ${String(product.stockQuantity)}` : "Livre"}
-                  </Badge>
-                  <p className="w-20 shrink-0 text-right font-display text-sm font-semibold">
-                    {formatCurrency(product.price)}
-                  </p>
-                  <Button
-                    size="icon"
-                    className={`h-7 w-7 shrink-0 transition-all ${
-                      recentlyAddedId === product.id
-                        ? "bg-emerald-600 text-white"
-                        : ""
-                    }`}
-                    disabled={
-                      isPending || (product.trackInventory && product.stockQuantity <= 0)
-                    }
-                    onClick={() => handleAddProduct(product.id)}
-                  >
-                    {recentlyAddedId === product.id ? (
-                      <CheckIcon size={14} className="animate-in zoom-in" />
-                    ) : (
-                      <PlusIcon size={14} />
-                    )}
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
-      </CardContent>
-    </Card>
-  );
-
   return (
-    <section className="space-y-4">
-      {/* ── App Top Header (visível em mobile e em terminais dedicados) ── */}
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200/90 bg-white/95 px-3 py-2.5 sm:px-4 backdrop-blur-md shadow-xs -mx-3 -mt-3 sm:mx-0 sm:mt-0 sm:rounded-2xl">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm">
-            <UtensilsCrossedIcon size={18} />
+    <div className="space-y-6">
+      {/* ── Page Header (matching usuarios-client standard) ── */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm shadow-primary/25">
+            <UtensilsCrossedIcon size={22} />
           </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <h1 className="truncate font-display text-sm font-bold text-slate-900 sm:text-base leading-tight">
-                {restaurantName}
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
+                Comandas e Mesas
               </h1>
-              <span className="hidden sm:inline-block rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">
-                Comandas
-              </span>
-            </div>
-            <div className="flex items-center gap-2 text-[11px] text-slate-500">
-              <span className="flex items-center gap-1">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
                 <span
-                  className={`h-2 w-2 rounded-full ${
-                    socketConnected ? "bg-emerald-500 animate-pulse" : "bg-rose-400"
-                  }`}
+                  className={cn(
+                    "h-1.5 w-1.5 rounded-full",
+                    socketConnected ? "bg-emerald-600 animate-pulse" : "bg-amber-600",
+                  )}
                 />
-                <span
-                  className={
-                    socketConnected
-                      ? "font-medium text-emerald-700"
-                      : "font-medium text-rose-600"
-                  }
-                >
-                  {socketConnected ? "Ao vivo" : "Reconectando"}
-                </span>
+                {socketConnected ? "Ao Vivo" : "Sincronizando"}
               </span>
               {userName && (
-                <span className="truncate hidden sm:inline text-slate-400">
-                  · {userName}
+                <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+                  <UserIcon size={12} className="text-slate-400" />
+                  {userName}
                 </span>
               )}
             </div>
+            <p className="text-sm text-slate-500">
+              Lançamentos ágeis de comandas, mesas do salão, divisão de contas e fila de espera.
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
+        {/* Header Action Buttons */}
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setIsFilaOpen(true)}
-            className="h-8 gap-1 rounded-lg border-slate-200 px-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-            title="Fila de espera"
+            className="h-10 gap-2 rounded-full border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-all"
           >
-            <ClockIcon size={13} className="text-amber-600" />
-            <span className="hidden md:inline">Fila</span>
+            <ClockIcon size={14} className="text-primary" />
+            <span>Fila de Espera</span>
             {queue.length > 0 && (
-              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white">
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary/10 text-primary text-[11px] font-bold px-1.5">
                 {queue.length}
               </span>
             )}
@@ -1009,578 +807,832 @@ const ComandaDigital = ({
             variant="outline"
             size="sm"
             onClick={() => setIsReservasOpen(true)}
-            className="h-8 gap-1 rounded-lg border-slate-200 px-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-            title="Reservas do dia"
+            className="h-10 gap-2 rounded-full border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-all"
           >
-            <UsersRoundIcon size={13} className="text-blue-600" />
-            <span className="hidden md:inline">Reservas</span>
+            <UsersRoundIcon size={14} className="text-primary" />
+            <span>Reservas</span>
             {todayReservations.length > 0 && (
-              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white">
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary/10 text-primary text-[11px] font-bold px-1.5">
                 {todayReservations.length}
               </span>
             )}
           </Button>
 
-          {/* Sair / Logout button */}
+          {(isDedicatedMode || userRole === "WAITER") && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                if (window.confirm("Deseja sair do terminal de comandas?")) {
+                  await logoutAction();
+                }
+              }}
+              className="h-10 gap-1.5 rounded-full border-rose-200 bg-rose-50 px-4 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition-all"
+            >
+              <LogOutIcon size={14} />
+              <span>Sair</span>
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Metric Cards (following the system theme) ── */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+        {/* Card 1: Mesas Livres */}
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-primary/40 hover:shadow-md">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">
+                Mesas Livres
+              </span>
+              <div className="rounded-xl border border-primary/20 bg-primary/10 p-2 text-primary shrink-0">
+                <LayoutGridIcon size={16} />
+              </div>
+            </div>
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
+              {freeTables}
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500 truncate">
+              Prontas para atendimento
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Card 2: Mesas Ocupadas */}
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-primary/40 hover:shadow-md">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">
+                Mesas Ocupadas
+              </span>
+              <div className="rounded-xl border border-primary/20 bg-primary/10 p-2 text-primary shrink-0">
+                <CheckCircle2Icon size={16} />
+              </div>
+            </div>
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
+              {occupiedTables}
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500 truncate">
+              Comandas ativas no salão
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Card 3: Comandas Avulsas */}
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-primary/40 hover:shadow-md">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">
+                Comandas Avulsas
+              </span>
+              <div className="rounded-xl border border-primary/20 bg-primary/10 p-2 text-primary shrink-0">
+                <QrCodeIcon size={16} />
+              </div>
+            </div>
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
+              {comandasAvulsas.length}
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500 truncate">
+              Balcão e avulsas ativas
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Card 4: Fila de Espera */}
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-primary/40 hover:shadow-md">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">
+                Fila de Espera
+              </span>
+              <div className="rounded-xl border border-primary/20 bg-primary/10 p-2 text-primary shrink-0">
+                <UsersRoundIcon size={16} />
+              </div>
+            </div>
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
+              {queue.length}
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500 truncate">
+              {queue.length === 1 ? "Cliente aguardando" : "Clientes aguardando"}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── Sub-Tabs Navigation (Salão vs Comandas Avulsas) ── */}
+      <div className="flex items-center justify-between border-b border-slate-200 pb-0">
+        <div className="flex">
           <button
             type="button"
-            title="Desconectar do terminal de comandas"
-            onClick={async () => {
-              if (window.confirm("Deseja desconectar e sair do painel de comandas?")) {
-                await logoutAction();
-              }
-            }}
-            className="flex h-8 items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition-colors active:scale-95 cursor-pointer"
+            onClick={() => setMainView("MESAS")}
+            className={cn(
+              "flex items-center gap-2 border-b-2 px-5 py-3 text-sm font-semibold transition-all",
+              mainView === "MESAS"
+                ? "border-primary text-primary"
+                : "border-transparent text-slate-500 hover:text-slate-800",
+            )}
           >
-            <LogOutIcon size={13} />
-            <span className="hidden sm:inline">Sair</span>
+            <LayoutGridIcon size={16} />
+            <span>Mesas do Salão</span>
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 font-medium">
+              {tables.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMainView("COMANDAS_AVULSAS")}
+            className={cn(
+              "flex items-center gap-2 border-b-2 px-5 py-3 text-sm font-semibold transition-all",
+              mainView === "COMANDAS_AVULSAS"
+                ? "border-primary text-primary"
+                : "border-transparent text-slate-500 hover:text-slate-800",
+            )}
+          >
+            <QrCodeIcon size={16} />
+            <span>Comandas Avulsas</span>
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary font-medium">
+              {comandasAvulsas.length}
+            </span>
           </button>
         </div>
-      </header>
+      </div>
 
-      {/* ── MOBILE APP VIEW (< xl) ── */}
-      <div className="xl:hidden space-y-3 pb-24">
-        {mobileScreen === "SALON" ? (
-          /* ── MOBILE SALON SCREEN ── */
-          <div className="space-y-3">
-            {/* View Switcher: Mesas vs Comandas Avulsas */}
-            <div className="flex rounded-xl bg-slate-200/80 p-1">
-              <button
-                type="button"
-                onClick={() => setMainView("MESAS")}
-                className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold transition-all ${
-                  mainView === "MESAS"
-                    ? "bg-white text-slate-900 shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                <LayoutGridIcon size={14} />
-                <span>Mesas ({tables.length})</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setMainView("COMANDAS_AVULSAS")}
-                className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold transition-all ${
-                  mainView === "COMANDAS_AVULSAS"
-                    ? "bg-white text-slate-900 shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                <QrCodeIcon size={14} />
-                <span>Avulsas ({comandasAvulsas.length})</span>
-              </button>
-            </div>
-
-            {mainView === "MESAS" ? (
-              <div className="space-y-3">
-                {/* Status Filter Chips & Table Search */}
-                <div className="space-y-2">
-                  <div className="relative">
-                    <SearchIcon
-                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                      size={15}
-                    />
-                    <Input
-                      value={mobileSearchTable}
-                      onChange={(e) => setMobileSearchTable(e.target.value)}
-                      placeholder="Buscar mesa ou cliente..."
-                      className="h-10 pl-9 rounded-xl border-slate-200 bg-white text-sm"
-                    />
-                    {mobileSearchTable && (
-                      <button
-                        type="button"
-                        onClick={() => setMobileSearchTable("")}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold"
-                      >
-                        ✕
-                      </button>
+      {/* ── Conteúdo Principal: Mesas do Salão ── */}
+      {mainView === "MESAS" && (
+        <div className="space-y-4">
+          {/* Toolbar de Controle de Mesas */}
+          <Card className="border-slate-200/80 bg-white shadow-sm">
+            <CardContent className="p-3.5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              {/* Filtro em Pílulas */}
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                {(
+                  [
+                    { id: "TODAS", label: `Todas (${tables.length})` },
+                    { id: "LIVRES", label: `Livres (${freeTables})` },
+                    { id: "OCUPADAS", label: `Ocupadas (${occupiedTables})` },
+                    { id: "RESERVADAS", label: `Reservadas (${reservedTableIds.size})` },
+                  ] as Array<{ id: TableFilter; label: string }>
+                ).map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setTableFilter(tab.id)}
+                    className={cn(
+                      "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all",
+                      tableFilter === tab.id
+                        ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200/80",
                     )}
-                  </div>
-
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
-                    <button
-                      type="button"
-                      onClick={() => setTableFilter("TODAS")}
-                      className={`shrink-0 rounded-full px-3 py-1 font-semibold transition-all ${
-                        tableFilter === "TODAS"
-                          ? "bg-slate-900 text-white shadow-xs"
-                          : "bg-white text-slate-600 border border-slate-200"
-                      }`}
-                    >
-                      Todas ({tables.length})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTableFilter("LIVRES")}
-                      className={`shrink-0 rounded-full px-3 py-1 font-semibold transition-all ${
-                        tableFilter === "LIVRES"
-                          ? "bg-emerald-600 text-white shadow-xs"
-                          : "bg-white text-emerald-700 border border-emerald-200"
-                      }`}
-                    >
-                      Livres ({freeTables})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTableFilter("OCUPADAS")}
-                      className={`shrink-0 rounded-full px-3 py-1 font-semibold transition-all ${
-                        tableFilter === "OCUPADAS"
-                          ? "bg-blue-600 text-white shadow-xs"
-                          : "bg-white text-blue-700 border border-blue-200"
-                      }`}
-                    >
-                      Ocupadas ({occupiedTables})
-                    </button>
-                  </div>
-                </div>
-
-                {/* Mobile Tables Grid */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  {mobileFilteredTables.map((mesa) => {
-                    const isOccupied = !!mesa.currentOrder;
-                    const orderItemCount =
-                      mesa.currentOrder?.orderProducts?.reduce(
-                        (acc, i) => acc + i.quantity,
-                        0,
-                      ) ?? 0;
-
-                    return (
-                      <button
-                        key={mesa.table.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedTableId(mesa.table.id);
-                          setMobileScreen("DETAIL");
-                          if (isOccupied) {
-                            setMobileDetailTab("ITEMS");
-                          } else {
-                            setMobileDetailTab("CARDAPIO");
-                          }
-                        }}
-                        className={`relative flex min-h-[110px] flex-col justify-between rounded-2xl border-2 p-3 text-left transition-all active:scale-[0.98] ${
-                          isOccupied
-                            ? "border-blue-400/90 bg-blue-50/60 shadow-xs"
-                            : "border-slate-200/90 bg-white shadow-xs hover:border-slate-300"
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-1">
-                          <div>
-                            <p className="font-display text-base font-bold text-slate-900 leading-tight">
-                              {mesa.table.name}
-                            </p>
-                            <p className="text-[10px] text-slate-500 font-medium">
-                              {mesa.table.seats} lug.
-                            </p>
-                          </div>
-                          <Badge
-                            variant={getMesaStatusBadgeVariant(mesa, reservedTableIds)}
-                            className="text-[10px] px-1.5 py-0.5 shrink-0"
-                          >
-                            {getMesaStatusLabel(mesa, reservedTableIds)}
-                          </Badge>
-                        </div>
-
-                        <div className="mt-2 border-t border-slate-100 pt-1.5">
-                          {mesa.currentOrder ? (
-                            <div>
-                              {mesa.currentOrder.customerName && (
-                                <p className="truncate text-xs font-semibold text-slate-800">
-                                  {mesa.currentOrder.customerName}
-                                </p>
-                              )}
-                              <div className="flex items-center justify-between">
-                                <span className="text-[11px] text-slate-500">
-                                  {orderItemCount} {orderItemCount === 1 ? "item" : "itens"}
-                                </span>
-                                <span className="font-display text-sm font-bold text-blue-700">
-                                  {formatCurrency(mesa.currentOrder.total)}
-                                </span>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-1 text-xs font-medium text-emerald-600">
-                              <PlusIcon size={13} />
-                              <span>Toque p/ abrir</span>
-                            </div>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {mobileFilteredTables.length === 0 && (
-                  <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-8 text-center">
-                    <p className="text-sm font-medium text-slate-600">Nenhuma mesa encontrada.</p>
-                  </div>
-                )}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
               </div>
-            ) : (
-              /* Comandas Avulsas View */
-              <div className="space-y-3">
-                {/* Barcode Search / Number Input */}
-                <div className="relative">
-                  <QrCodeIcon
-                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                    size={16}
+
+              {/* Busca e Alternador de Vista (Grade / Mapa) */}
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1 sm:w-64">
+                  <SearchIcon
+                    size={14}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
                   />
                   <Input
-                    ref={barcodeRef}
-                    value={avulsaBarcodeInput}
-                    onChange={(e) => setAvulsaBarcodeInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        const found = comandasAvulsas.find(
-                          (c) =>
-                            c.barcode === avulsaBarcodeInput ||
-                            String(c.numero) === avulsaBarcodeInput,
-                        );
-                        if (found) {
-                          setSelectedAvulsaId(found.id);
-                          setMobileScreen("DETAIL");
-                        }
-                        setAvulsaBarcodeInput("");
-                      }
-                    }}
-                    placeholder="Número ou código de barras..."
-                    className="h-10 pl-9 rounded-xl border-slate-200 bg-white text-sm"
+                    placeholder="Buscar mesa ou cliente..."
+                    value={tableSearch}
+                    onChange={(e) => setTableSearch(e.target.value)}
+                    className="h-9 rounded-xl border-slate-200 bg-slate-50/70 pl-8 pr-8 text-xs focus:bg-white"
                   />
+                  {tableSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setTableSearch("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      <XIcon size={12} />
+                    </button>
+                  )}
                 </div>
 
-                {/* Quick Open Form Card */}
-                <Card className="rounded-2xl border-slate-200 bg-white">
-                  <CardHeader className="p-3 pb-2">
-                    <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      Abrir Nova Comanda Avulsa
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-3 pt-0 space-y-2">
-                    <Input
-                      value={avulsaCustomerName}
-                      onChange={(e) => setAvulsaCustomerName(e.target.value)}
-                      placeholder="Nome do cliente (opcional)"
-                      className="h-9 text-xs rounded-xl"
-                    />
-                    <Input
-                      value={avulsaBarcode}
-                      onChange={(e) => setAvulsaBarcode(e.target.value)}
-                      placeholder="Código/Cartão (opcional)"
-                      className="h-9 text-xs rounded-xl"
-                    />
+                <div className="flex rounded-xl border border-slate-200 bg-slate-50 p-0.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setSalonView("GRADE")}
+                    className={cn(
+                      "flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all",
+                      salonView === "GRADE"
+                        ? "bg-white text-slate-900 shadow-xs"
+                        : "text-slate-500 hover:text-slate-700",
+                    )}
+                    title="Visualização em Grade"
+                  >
+                    <LayoutGridIcon size={13} />
+                    <span className="hidden sm:inline">Grade</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSalonView("MAPA")}
+                    className={cn(
+                      "flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all",
+                      salonView === "MAPA"
+                        ? "bg-white text-slate-900 shadow-xs"
+                        : "text-slate-500 hover:text-slate-700",
+                    )}
+                    title="Mapa Visual do Salão"
+                  >
+                    <MapIcon size={13} />
+                    <span className="hidden sm:inline">Mapa</span>
+                  </button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Modo Mapa Visual */}
+          {salonView === "MAPA" ? (
+            <Card className="border-slate-200/80 bg-white shadow-sm overflow-hidden">
+              <CardContent className="p-4">
+                <div
+                  className="relative overflow-auto rounded-2xl border border-slate-200 bg-slate-50/50 p-4"
+                  style={{ minHeight: "360px" }}
+                >
+                  <div className="relative" style={{ width: "720px", height: "450px" }}>
+                    {filteredTables.map((mesa) => {
+                      const isOccupied = Boolean(mesa.currentOrder);
+                      const isReserved = reservedTableIds.has(mesa.table.id);
+                      const isClosing = mesa.currentOrder?.paymentStatus === "PAID";
+                      const x =
+                        mesa.table.positionX ?? (mesa.table.displayOrder * 90) % 640 + 20;
+                      const y =
+                        mesa.table.positionY ??
+                        Math.floor((mesa.table.displayOrder * 90) / 640) * 100 + 20;
+
+                      return (
+                        <button
+                          key={mesa.table.id}
+                          type="button"
+                          onClick={() => setSelectedMesaId(mesa.table.id)}
+                          style={{ left: x, top: y }}
+                          className={cn(
+                            "absolute flex h-20 w-20 flex-col items-center justify-center rounded-2xl border-2 p-1.5 text-xs font-semibold shadow-xs transition-all hover:scale-105 active:scale-95 cursor-pointer",
+                            isClosing
+                              ? "border-emerald-500 bg-emerald-50 text-emerald-900"
+                              : isOccupied
+                                ? "border-primary bg-primary/5 text-primary shadow-sm"
+                                : isReserved
+                                  ? "border-amber-400 bg-amber-50 text-amber-900"
+                                  : "border-slate-200 bg-white text-slate-700 hover:border-slate-300",
+                          )}
+                        >
+                          <span className="truncate text-xs font-bold leading-tight">
+                            {mesa.table.name}
+                          </span>
+                          {mesa.currentOrder ? (
+                            <span className="mt-1 font-display text-[11px] font-bold text-primary leading-tight">
+                              {formatCurrency(mesa.currentOrder.total)}
+                            </span>
+                          ) : (
+                            <span className="mt-0.5 text-[10px] text-slate-400 font-normal">
+                              Livre
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            /* Modo Grade Prática de Mesas */
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-6">
+              {filteredTables.map((mesa) => {
+                const isOccupied = Boolean(mesa.currentOrder);
+                const isReserved = reservedTableIds.has(mesa.table.id);
+                const isClosing = mesa.currentOrder?.paymentStatus === "PAID";
+                const itemCount =
+                  mesa.currentOrder?.orderProducts.reduce((acc, p) => acc + p.quantity, 0) ?? 0;
+
+                return (
+                  <div
+                    key={mesa.table.id}
+                    onClick={() => setSelectedMesaId(mesa.table.id)}
+                    className={cn(
+                      "group relative flex flex-col justify-between rounded-2xl border p-3.5 shadow-sm transition-all cursor-pointer hover:shadow-md active:scale-[0.99]",
+                      isClosing
+                        ? "border-emerald-300 bg-emerald-50/40 hover:border-emerald-400"
+                        : isOccupied
+                          ? "border-primary/50 bg-primary/[0.02] hover:border-primary ring-1 ring-primary/20"
+                          : isReserved
+                            ? "border-amber-300 bg-amber-50/40 hover:border-amber-400"
+                            : "border-slate-200/90 bg-white hover:border-slate-300",
+                    )}
+                  >
+                    <div>
+                      {/* Top Header of Table Card */}
+                      <div className="flex items-center justify-between gap-1.5">
+                        <span className="font-display text-base font-bold text-slate-900 group-hover:text-primary transition-colors">
+                          {mesa.table.name}
+                        </span>
+                        <span
+                          className={cn(
+                            "rounded-full px-2 py-0.5 text-[10px] font-semibold shrink-0 border",
+                            isClosing
+                              ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                              : isOccupied
+                                ? "bg-primary/10 text-primary border-primary/20"
+                                : isReserved
+                                  ? "bg-amber-100 text-amber-800 border-amber-200"
+                                  : "bg-slate-100 text-slate-600 border-slate-200",
+                          )}
+                        >
+                          {isClosing
+                            ? "Fechando"
+                            : isOccupied
+                              ? "Ocupada"
+                              : isReserved
+                                ? "Reservada"
+                                : "Livre"}
+                        </span>
+                      </div>
+
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        {mesa.table.seats} lugares
+                      </p>
+
+                      {/* Middle Table Information */}
+                      <div className="my-3 min-h-[42px]">
+                        {isOccupied && mesa.currentOrder ? (
+                          <div className="space-y-0.5">
+                            <p className="text-xs font-semibold text-slate-800 truncate">
+                              {mesa.currentOrder.customerName || "Em atendimento"}
+                            </p>
+                            <span className="inline-block text-[10px] text-slate-500">
+                              {itemCount} {itemCount === 1 ? "item lançado" : "itens lançados"}
+                            </span>
+                          </div>
+                        ) : isReserved ? (
+                          <p className="text-[11px] text-amber-700 font-medium">
+                            Reserva agendada hoje
+                          </p>
+                        ) : (
+                          <p className="text-[11px] text-slate-400 italic">
+                            Disponível para atendimento
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Bottom Action / Total of Table */}
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                      {isOccupied && mesa.currentOrder ? (
+                        <>
+                          <div>
+                            <span className="text-[9px] text-slate-400 uppercase tracking-wide block">
+                              Total
+                            </span>
+                            <span className="font-display text-sm font-bold text-primary">
+                              {formatCurrency(mesa.currentOrder.total)}
+                            </span>
+                          </div>
+                          <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all">
+                            Gerenciar
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-[11px] font-semibold text-slate-500 group-hover:text-primary flex items-center gap-1 transition-colors">
+                          <PlusIcon size={12} />
+                          <span>Abrir Mesa</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {filteredTables.length === 0 && (
+            <Card className="border-slate-200/80 bg-white shadow-sm p-12 text-center">
+              <LayoutGridIcon size={32} className="mx-auto text-slate-300 mb-2" />
+              <p className="text-sm font-semibold text-slate-700">Nenhuma mesa encontrada</p>
+              <p className="text-xs text-slate-500 mt-1">
+                Tente ajustar os termos da busca ou selecionar outro filtro acima.
+              </p>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* ── Conteúdo Principal: Comandas Avulsas ── */}
+      {mainView === "COMANDAS_AVULSAS" && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+            {/* Formulário Compacto de Abertura e Leitor de Barras (4 cols) */}
+            <div className="space-y-4 lg:col-span-4">
+              <Card className="border-slate-200/80 bg-white shadow-sm">
+                <CardContent className="p-4 space-y-4">
+                  <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+                    <div className="rounded-xl bg-primary/10 p-2 text-primary">
+                      <QrCodeIcon size={16} />
+                    </div>
+                    <div>
+                      <h2 className="font-display text-sm font-bold text-slate-900">
+                        Nova Comanda Avulsa
+                      </h2>
+                      <p className="text-xs text-slate-500">
+                        Abra com cartão físico ou número sequencial
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Leitor Rápido de Código de Barras */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="avulsa-quick-barcode" className="text-xs font-semibold text-slate-700">
+                      Bipar Cartão / Código de Barras
+                    </Label>
+                    <div className="relative">
+                      <QrCodeIcon
+                        size={15}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                      />
+                      <Input
+                        id="avulsa-quick-barcode"
+                        ref={barcodeRef}
+                        value={avulsaBarcodeInput}
+                        onChange={(e) => setAvulsaBarcodeInput(e.target.value)}
+                        placeholder="Número ou bipe o cartão..."
+                        className="h-10 pl-9 rounded-xl border-slate-200 text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Formulário de Abertura */}
+                  <div className="space-y-3 pt-2 border-t border-slate-100">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="avulsa-name" className="text-xs font-semibold text-slate-700">
+                        Nome do Cliente (Opcional)
+                      </Label>
+                      <Input
+                        id="avulsa-name"
+                        value={avulsaCustomerName}
+                        onChange={(e) => setAvulsaCustomerName(e.target.value)}
+                        placeholder="Ex.: Lucas Balcão"
+                        className="h-10 rounded-xl border-slate-200 text-xs"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="avulsa-card-number" className="text-xs font-semibold text-slate-700">
+                        Código do Cartão / Comanda
+                      </Label>
+                      <Input
+                        id="avulsa-card-number"
+                        value={avulsaBarcode}
+                        onChange={(e) => setAvulsaBarcode(e.target.value)}
+                        placeholder="Ex.: 042"
+                        className="h-10 rounded-xl border-slate-200 text-xs"
+                      />
+                    </div>
+
                     <Button
-                      size="sm"
-                      className="w-full h-9 rounded-xl text-xs font-semibold"
-                      disabled={isPending}
+                      type="button"
                       onClick={handleAbrirComandaAvulsa}
+                      disabled={isPending}
+                      className="w-full h-10 rounded-full bg-primary text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90"
                     >
                       {isPending ? (
-                        <Loader2Icon className="animate-spin" size={14} />
+                        <Loader2Icon size={14} className="animate-spin mr-1.5" />
                       ) : (
-                        <PlusIcon size={14} />
+                        <PlusIcon size={14} className="mr-1.5" />
                       )}
-                      <span>Abrir Comanda</span>
+                      <span>Abrir Nova Comanda</span>
                     </Button>
-                  </CardContent>
-                </Card>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
-                {/* Active Avulsas Cards */}
-                <div className="space-y-2">
-                  {filteredAvulsas.map((comanda) => {
-                    const itemCount =
-                      comanda.order?.orderProducts?.reduce(
-                        (a, b) => a + b.quantity,
-                        0,
-                      ) ?? 0;
-                    return (
-                      <button
-                        key={comanda.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedAvulsaId(comanda.id);
-                          setMobileScreen("DETAIL");
-                        }}
-                        className="w-full flex items-center justify-between rounded-2xl border-2 border-slate-200 bg-white p-3.5 text-left shadow-xs transition-all active:scale-[0.98]"
-                      >
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-display text-base font-bold text-slate-900">
-                              Comanda #{comanda.numero}
-                            </span>
-                            <Badge variant="warning" className="text-[10px]">
-                              Ativa
-                            </Badge>
-                          </div>
-                          {comanda.customerName && (
-                            <p className="text-xs text-slate-600 font-medium mt-0.5">
-                              {comanda.customerName}
-                            </p>
-                          )}
+            {/* Lista / Grade de Comandas Avulsas Ativas (8 cols) */}
+            <div className="lg:col-span-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {filteredAvulsas.map((comanda) => {
+                  const itemCount =
+                    comanda.order?.orderProducts.reduce((acc, p) => acc + p.quantity, 0) ?? 0;
+
+                  return (
+                    <div
+                      key={comanda.id}
+                      onClick={() => setSelectedAvulsaId(comanda.id)}
+                      className="group relative flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-sm transition-all cursor-pointer hover:border-primary/50 hover:shadow-md"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-1.5">
+                          <span className="font-display text-base font-bold text-slate-900 group-hover:text-primary transition-colors">
+                            Comanda #{comanda.numero}
+                          </span>
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary border border-primary/20">
+                            Ativa
+                          </span>
+                        </div>
+
+                        <div className="my-2 space-y-0.5">
+                          <p className="text-xs font-medium text-slate-700 truncate">
+                            {comanda.customerName || "Cliente do Balcão"}
+                          </p>
                           {comanda.barcode && (
-                            <p className="text-[10px] text-slate-400">
+                            <p className="text-[10px] text-slate-400 font-mono">
                               Cód: {comanda.barcode}
                             </p>
                           )}
+                          <p className="text-[10px] text-slate-500">
+                            {itemCount} {itemCount === 1 ? "item lançado" : "itens lançados"}
+                          </p>
                         </div>
-                        <div className="text-right">
-                          <p className="font-display text-base font-bold text-amber-600">
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                        <div>
+                          <span className="text-[9px] text-slate-400 uppercase tracking-wide block">
+                            Total
+                          </span>
+                          <span className="font-display text-sm font-bold text-primary">
                             {formatCurrency(comanda.order?.total ?? 0)}
-                          </p>
-                          <p className="text-[11px] text-slate-500 font-medium">
-                            {itemCount} {itemCount === 1 ? "item" : "itens"}
-                          </p>
+                          </span>
                         </div>
-                      </button>
-                    );
-                  })}
-
-                  {filteredAvulsas.length === 0 && (
-                    <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-8 text-center">
-                      <p className="text-sm font-medium text-slate-600">
-                        Nenhuma comanda avulsa ativa.
-                      </p>
+                        <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all">
+                          Gerenciar
+                        </span>
+                      </div>
                     </div>
-                  )}
-                </div>
+                  );
+                })}
               </div>
-            )}
+
+              {filteredAvulsas.length === 0 && (
+                <Card className="border-slate-200/80 bg-white shadow-sm p-12 text-center">
+                  <QrCodeIcon size={32} className="mx-auto text-slate-300 mb-2" />
+                  <p className="text-sm font-semibold text-slate-700">
+                    Nenhuma comanda avulsa ativa
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Abra uma comanda avulsa pelo formulário ao lado para começar a lançar itens.
+                  </p>
+                </Card>
+              )}
+            </div>
           </div>
-        ) : (
-          /* ── MOBILE DETAIL SCREEN (Operação da Mesa / Comanda) ── */
-          <div className="space-y-3">
-            {/* Top Detail Navigation Bar */}
-            <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-2.5 shadow-xs">
-              <button
-                type="button"
-                onClick={() => setMobileScreen("SALON")}
-                className="flex items-center gap-1 rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-800 active:bg-slate-200 transition-colors"
-              >
-                <ChevronLeftIcon size={16} />
-                <span>Salão</span>
-              </button>
+        </div>
+      )}
 
-              <div className="text-center">
-                <h2 className="font-display text-base font-bold text-slate-900 leading-tight">
-                  {mainView === "MESAS"
-                    ? selectedMesa?.table.name ?? "Mesa"
-                    : `Comanda #${selectedAvulsa?.numero ?? ""}`}
-                </h2>
-                <p className="text-[11px] text-slate-500 font-medium truncate max-w-[150px]">
-                  {mainView === "MESAS"
-                    ? selectedMesa?.currentOrder?.customerName ||
-                      (selectedMesa?.currentOrder ? "Em atendimento" : "Mesa livre")
-                    : selectedAvulsa?.customerName || "Avulsa"}
-                </p>
-              </div>
-
-              <div className="flex items-center gap-1">
-                {mainView === "MESAS" && selectedMesa?.currentOrder && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 gap-1 rounded-xl text-xs px-2.5"
-                    onClick={() => {
-                      setTargetTableId("");
-                      setIsTransferOpen(true);
-                    }}
-                    title="Transferir mesa"
-                  >
-                    <ArrowLeftRightIcon size={13} />
-                    <span className="hidden sm:inline">Transferir</span>
-                  </Button>
-                )}
+      {/* ── Sheet / Drawer Lateral de Gestão da Comanda (Mesa ou Avulsa) ── */}
+      <Sheet
+        open={Boolean(selectedMesaId || selectedAvulsaId)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedMesaId(null);
+            setSelectedAvulsaId(null);
+          }
+        }}
+      >
+        <SheetContent
+          side="right"
+          className="w-full sm:max-w-xl md:max-w-2xl overflow-y-auto p-0 border-l border-slate-200 bg-white"
+        >
+          {/* Header do Sheet */}
+          <div className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 p-4 backdrop-blur-md">
+            <div className="flex items-center justify-between pr-8">
+              <div className="flex items-center gap-2.5">
+                <div className="rounded-xl bg-primary/10 p-2 text-primary">
+                  {selectedMesa ? <LayoutGridIcon size={18} /> : <QrCodeIcon size={18} />}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-display text-lg font-bold text-slate-900 leading-tight">
+                      {selectedMesa ? selectedMesa.table.name : `Comanda #${selectedAvulsa?.numero}`}
+                    </h2>
+                    <span
+                      className={cn(
+                        "rounded-full px-2 py-0.5 text-[10px] font-semibold border",
+                        activeOrder
+                          ? "bg-primary/10 text-primary border-primary/20"
+                          : "bg-slate-100 text-slate-600 border-slate-200",
+                      )}
+                    >
+                      {activeOrder ? "Em Atendimento" : "Mesa Livre"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    {activeOrder?.customerName
+                      ? `Cliente: ${activeOrder.customerName}`
+                      : selectedMesa
+                        ? `${selectedMesa.table.seats} lugares no salão`
+                        : "Comanda de balcão"}
+                  </p>
+                </div>
               </div>
             </div>
 
-            {/* DETAIL CONTENT: Mesa Livre vs Mesa em Aberto */}
-            {mainView === "MESAS" && !selectedMesa?.currentOrder ? (
-              /* Abertura de Mesa */
-              <Card className="rounded-2xl border-slate-200 bg-white">
-                <CardHeader className="p-4 pb-2">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">Mesa Livre</Badge>
-                    <span className="text-xs text-slate-500 font-medium">
-                      {selectedMesa?.table.seats} lugares
-                    </span>
-                  </div>
-                  <CardTitle className="mt-2 text-lg font-bold text-slate-900">
-                    Abrir comanda na {selectedMesa?.table.name}
-                  </CardTitle>
-                  <CardDescription className="text-xs text-slate-500">
-                    Informe o nome do cliente ou referência para iniciar o atendimento.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-4 pt-2 space-y-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-700">
-                      Nome do cliente / Identificação
-                    </label>
-                    <Input
-                      value={openingCustomerName}
-                      onChange={(e) => setOpeningCustomerName(e.target.value)}
-                      placeholder="Ex.: Lucas, Mesa Família, Aniversário..."
-                      className="h-11 rounded-xl text-sm"
-                      autoFocus
-                    />
-                  </div>
+            {/* Ações da Mesa (Transferência, Unir) */}
+            {selectedMesa && selectedMesa.currentOrder && (
+              <div className="flex items-center gap-1.5 pt-3 flex-wrap">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsTransferOpen(true)}
+                  className="h-7 text-[11px] gap-1 rounded-full border-slate-200 font-medium text-slate-700 hover:bg-slate-100"
+                >
+                  <ArrowLeftRightIcon size={12} />
+                  <span>Transferir Mesa</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsItemTransferOpen(true)}
+                  className="h-7 text-[11px] gap-1 rounded-full border-slate-200 font-medium text-slate-700 hover:bg-slate-100"
+                >
+                  <ScissorsIcon size={12} />
+                  <span>Transferir Itens</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsMergeOpen(true)}
+                  className="h-7 text-[11px] gap-1 rounded-full border-slate-200 font-medium text-slate-700 hover:bg-slate-100"
+                >
+                  <GitMergeIcon size={12} />
+                  <span>Unir Mesas</span>
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <div className="p-4 space-y-4">
+            {/* Caso a mesa esteja livre, formulário de abertura */}
+            {selectedMesa && !selectedMesa.currentOrder ? (
+              <Card className="border-slate-200/80 bg-white shadow-sm p-6 text-center space-y-4">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                  <LayoutGridIcon size={24} />
+                </div>
+                <div>
+                  <h3 className="font-display text-base font-bold text-slate-900">
+                    Abrir {selectedMesa.table.name}
+                  </h3>
+                  <p className="text-xs text-slate-500 max-w-xs mx-auto mt-0.5">
+                    Informe o nome do cliente ou referência para iniciar os lançamentos.
+                  </p>
+                </div>
+
+                <div className="max-w-sm mx-auto space-y-2">
+                  <Input
+                    value={openingCustomerName}
+                    onChange={(e) => setOpeningCustomerName(e.target.value)}
+                    placeholder="Nome do cliente (ex.: Família Silva)"
+                    className="h-10 rounded-xl border-slate-200 text-xs text-center"
+                  />
                   <Button
-                    disabled={isPending}
                     onClick={handleOpenTable}
-                    className="w-full h-11 rounded-xl font-semibold text-sm shadow-sm"
+                    disabled={isPending}
+                    className="w-full h-10 rounded-full bg-primary text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90"
                   >
                     {isPending ? (
-                      <>
-                        <Loader2Icon className="animate-spin" size={16} />
-                        <span>Abrindo mesa...</span>
-                      </>
+                      <Loader2Icon size={14} className="animate-spin mr-1.5" />
                     ) : (
-                      <>
-                        <PlusIcon size={16} />
-                        <span>Abrir Comanda e Lançar Itens</span>
-                      </>
+                      <PlusIcon size={14} className="mr-1.5" />
                     )}
+                    <span>Abrir Mesa e Iniciar Comanda</span>
                   </Button>
-                </CardContent>
+                </div>
               </Card>
             ) : (
-              /* Mesa ou Comanda com Pedido Ativo */
-              <div className="space-y-3">
-                {/* Segmented Switcher: Cardápio & Lançar vs Conta */}
-                <div className="flex rounded-xl bg-slate-200/80 p-1">
+              /* Mesa ou Comanda Avulsa Aberta */
+              <div className="space-y-4">
+                {/* Abas da Comanda: Cardápio (Lançar) vs Conta da Mesa */}
+                <div className="flex rounded-xl bg-slate-100 p-1">
                   <button
                     type="button"
-                    onClick={() => setMobileDetailTab("CARDAPIO")}
-                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold transition-all ${
-                      mobileDetailTab === "CARDAPIO"
+                    onClick={() => setSheetTab("CARDAPIO")}
+                    className={cn(
+                      "flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all",
+                      sheetTab === "CARDAPIO"
                         ? "bg-white text-slate-900 shadow-xs"
-                        : "text-slate-600 hover:text-slate-900"
-                    }`}
+                        : "text-slate-600 hover:text-slate-900",
+                    )}
                   >
-                    <PlusIcon size={14} />
-                    <span>Lançar Itens</span>
+                    <UtensilsCrossedIcon size={13} />
+                    <span>Lançar Produtos</span>
                   </button>
+
                   <button
                     type="button"
-                    onClick={() => setMobileDetailTab("ITEMS")}
-                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold transition-all ${
-                      mobileDetailTab === "ITEMS"
+                    onClick={() => setSheetTab("CONTA")}
+                    className={cn(
+                      "flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all",
+                      sheetTab === "CONTA"
                         ? "bg-white text-slate-900 shadow-xs"
-                        : "text-slate-600 hover:text-slate-900"
-                    }`}
+                        : "text-slate-600 hover:text-slate-900",
+                    )}
                   >
-                    <ReceiptTextIcon size={14} />
-                    <span>
-                      Ver Conta (
-                      {mainView === "MESAS"
-                        ? selectedMesa?.currentOrder?.orderProducts?.reduce(
-                            (a, b) => a + b.quantity,
-                            0,
-                          ) ?? 0
-                        : selectedAvulsa?.order?.orderProducts?.reduce(
-                            (a, b) => a + b.quantity,
-                            0,
-                          ) ?? 0}
-                      )
+                    <ReceiptTextIcon size={13} />
+                    <span>Conta da Mesa</span>
+                    <span className="rounded-full bg-primary/10 text-primary px-1.5 py-0.2 text-[10px] font-bold">
+                      {activeOrder?.orderProducts.reduce((acc, p) => acc + p.quantity, 0) ?? 0}
                     </span>
                   </button>
                 </div>
 
-                {mobileDetailTab === "CARDAPIO" ? (
-                  /* Mobile Product Launcher */
-                  <div className="space-y-2.5">
-                    {/* Search & Category Pills */}
-                    <div className="space-y-2">
-                      <div className="relative">
-                        <SearchIcon
-                          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                          size={15}
-                        />
-                        <Input
-                          value={searchValue}
-                          onChange={(e) => setSearchValue(e.target.value)}
-                          placeholder="Buscar produto no cardápio..."
-                          className="h-10 pl-9 rounded-xl border-slate-200 bg-white text-sm"
-                        />
-                        {searchValue && (
-                          <button
-                            type="button"
-                            onClick={() => setSearchValue("")}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold"
-                          >
-                            ✕
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
-                        {productCategories.map((cat) => (
-                          <button
-                            key={cat}
-                            type="button"
-                            onClick={() => setSelectedProductCategory(cat)}
-                            className={`shrink-0 rounded-full px-3 py-1 font-semibold transition-all ${
-                              selectedProductCategory === cat
-                                ? "bg-slate-900 text-white shadow-xs"
-                                : "bg-white text-slate-700 border border-slate-200"
-                            }`}
-                          >
-                            {cat}
-                          </button>
-                        ))}
-                      </div>
+                {/* Aba de Lançamento de Produtos */}
+                {sheetTab === "CARDAPIO" && (
+                  <div className="space-y-3">
+                    {/* Barra de Pesquisa de Produto */}
+                    <div className="relative">
+                      <SearchIcon
+                        size={14}
+                        className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                      />
+                      <Input
+                        placeholder="Buscar produto no cardápio..."
+                        value={searchValue}
+                        onChange={(e) => setSearchValue(e.target.value)}
+                        className="h-10 pl-9 pr-8 rounded-xl border-slate-200 bg-slate-50/70 text-xs focus:bg-white"
+                      />
+                      {searchValue && (
+                        <button
+                          type="button"
+                          onClick={() => setSearchValue("")}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        >
+                          <XIcon size={12} />
+                        </button>
+                      )}
                     </div>
 
-                    {/* Products List for Thumb Tap */}
-                    <div className="space-y-2">
+                    {/* Carrossel de Categorias */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                      {productCategories.map((cat) => (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => setSelectedProductCategory(cat)}
+                          className={cn(
+                            "shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-all",
+                            selectedProductCategory === cat
+                              ? "bg-primary text-primary-foreground shadow-xs"
+                              : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+                          )}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Lista de Produtos */}
+                    <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1">
                       {filteredProducts.map((product) => {
                         const isRecentlyAdded = recentlyAddedId === product.id;
                         return (
                           <div
                             key={product.id}
-                            className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200/90 bg-white p-3 shadow-xs transition-all"
+                            className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white p-3 shadow-xs transition-all hover:border-slate-300"
                           >
                             <div className="min-w-0 flex-1">
-                              <p className="font-semibold text-sm text-slate-900 leading-tight">
+                              <p className="font-semibold text-xs text-slate-900 leading-tight">
                                 {product.name}
                               </p>
                               {product.description && (
-                                <p className="mt-0.5 line-clamp-1 text-xs text-slate-500">
+                                <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
                                   {product.description}
                                 </p>
                               )}
                               <div className="mt-1 flex items-center gap-2">
-                                <span className="font-display text-sm font-bold text-slate-900">
+                                <span className="font-display text-xs font-bold text-slate-900">
                                   {formatCurrency(product.price)}
                                 </span>
                                 {product.trackInventory && (
-                                  <Badge
-                                    variant={
-                                      product.stockQuantity > 0 ? "success" : "danger"
-                                    }
-                                    className="text-[10px] px-1.5 py-0"
-                                  >
+                                  <span className="rounded bg-slate-100 px-1.5 py-0.2 text-[10px] font-medium text-slate-600">
                                     Est. {product.stockQuantity}
-                                  </Badge>
+                                  </span>
                                 )}
                               </div>
                             </div>
 
                             <Button
                               size="icon"
-                              className={`h-10 w-10 shrink-0 rounded-xl transition-all active:scale-90 ${
-                                isRecentlyAdded
-                                  ? "bg-emerald-600 text-white"
-                                  : "bg-slate-900 text-white hover:bg-slate-800"
-                              }`}
                               disabled={
-                                isPending ||
-                                (product.trackInventory && product.stockQuantity <= 0)
+                                isPending || (product.trackInventory && product.stockQuantity <= 0)
                               }
                               onClick={() => handleAddProduct(product.id)}
+                              className={cn(
+                                "h-9 w-9 shrink-0 rounded-xl transition-all active:scale-90",
+                                isRecentlyAdded
+                                  ? "bg-emerald-600 text-white"
+                                  : "bg-primary text-primary-foreground hover:bg-primary/90",
+                              )}
                             >
                               {isRecentlyAdded ? (
-                                <CheckIcon size={18} className="animate-in zoom-in" />
+                                <CheckIcon size={16} className="animate-in zoom-in" />
                               ) : (
-                                <PlusIcon size={18} />
+                                <PlusIcon size={16} />
                               )}
                             </Button>
                           </div>
@@ -1589,1332 +1641,270 @@ const ComandaDigital = ({
 
                       {filteredProducts.length === 0 && (
                         <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-8 text-center">
-                          <p className="text-sm font-medium text-slate-600">
-                            Nenhum produto encontrado.
-                          </p>
+                          <p className="text-xs text-slate-500">Nenhum produto encontrado.</p>
                         </div>
                       )}
                     </div>
                   </div>
-                ) : (
-                  /* Mobile Conta da Mesa / Fechamento */
-                  <div className="space-y-3">
-                    {/* Items List */}
-                    <Card className="rounded-2xl border-slate-200 bg-white">
-                      <CardHeader className="p-3 pb-2">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-sm font-bold text-slate-900">
-                            Itens Lançados
-                          </CardTitle>
-                          <span className="text-xs text-slate-500 font-medium">
-                            Toque para marcar divisão
+                )}
+
+                {/* Aba de Conta & Fechamento */}
+                {sheetTab === "CONTA" && (
+                  <div className="space-y-4">
+                    {/* Lista de Itens Lançados */}
+                    <Card className="border-slate-200/80 bg-white shadow-sm">
+                      <CardContent className="p-3.5 space-y-2.5">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                          <span className="text-xs font-bold text-slate-900">
+                            Itens Lançados na Comanda
+                          </span>
+                          <span className="text-[11px] text-slate-500">
+                            Marque para pagar avulso
                           </span>
                         </div>
-                      </CardHeader>
-                      <CardContent className="p-3 pt-0 space-y-2">
-                        {mainView === "MESAS" ? (
-                          selectedMesa?.currentOrder?.orderProducts.length === 0 ? (
-                            <div className="rounded-xl border border-dashed bg-slate-50 p-4 text-center">
-                              <p className="text-xs font-medium text-slate-500">
-                                Nenhum item lançado ainda.
-                              </p>
-                            </div>
-                          ) : (
-                            selectedMesa?.currentOrder?.orderProducts.map((item) => (
-                              <div
-                                key={item.id}
-                                className={`flex items-center gap-2.5 rounded-xl border p-2.5 transition-all ${
-                                  selectedItemIds.has(item.id)
-                                    ? "border-amber-300 bg-amber-50/70"
-                                    : "border-slate-100 bg-slate-50/80"
-                                }`}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={selectedItemIds.has(item.id)}
-                                  onChange={() => toggleSelectedItem(item.id)}
-                                  className="h-4 w-4 shrink-0 rounded accent-amber-500"
-                                />
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-xs font-semibold text-slate-900 leading-tight">
-                                    {item.productNameSnapshot || item.product.name}
-                                  </p>
-                                  <p className="text-[11px] text-slate-500">
-                                    {item.quantity} × {formatCurrency(item.price)}
-                                  </p>
-                                  {item.notes && (
-                                    <p className="text-[10px] italic text-amber-700">
-                                      {item.notes}
-                                    </p>
-                                  )}
-                                </div>
-                                <p className="shrink-0 font-display text-xs font-bold text-slate-900">
-                                  {formatCurrency(item.lineTotal)}
-                                </p>
-                              </div>
-                            ))
-                          )
+
+                        {!activeOrder || activeOrder.orderProducts.length === 0 ? (
+                          <div className="py-8 text-center text-slate-400 space-y-1">
+                            <ReceiptTextIcon size={24} className="mx-auto text-slate-300" />
+                            <p className="text-xs">Nenhum item lançado ainda.</p>
+                          </div>
                         ) : (
-                          /* Avulsa items */
-                          !selectedAvulsa?.order ||
-                          selectedAvulsa.order.orderProducts.length === 0 ? (
-                            <div className="rounded-xl border border-dashed bg-slate-50 p-4 text-center">
-                              <p className="text-xs font-medium text-slate-500">
-                                Nenhum item lançado.
-                              </p>
-                            </div>
-                          ) : (
-                            selectedAvulsa.order.orderProducts.map((item) => (
-                              <div
-                                key={item.id}
-                                className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/80 p-2.5"
-                              >
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-xs font-semibold text-slate-900">
-                                    {item.productNameSnapshot || item.product.name}
-                                  </p>
-                                  <p className="text-[11px] text-slate-500">
-                                    {item.quantity} × {formatCurrency(item.price)}
-                                  </p>
+                          <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                            {activeOrder.orderProducts.map((item) => {
+                              const isChecked = selectedItemIds.has(item.id);
+                              return (
+                                <div
+                                  key={item.id}
+                                  onClick={() => toggleSelectedItem(item.id)}
+                                  className={cn(
+                                    "flex items-center gap-2.5 rounded-xl border p-2.5 cursor-pointer transition-all",
+                                    isChecked
+                                      ? "border-primary bg-primary/[0.04]"
+                                      : "border-slate-100 bg-slate-50/50 hover:bg-slate-50",
+                                  )}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => toggleSelectedItem(item.id)}
+                                    className="h-4 w-4 rounded accent-primary cursor-pointer shrink-0"
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-xs font-semibold text-slate-900 leading-tight">
+                                      {item.productNameSnapshot || item.product.name}
+                                    </p>
+                                    <p className="text-[11px] text-slate-500">
+                                      {item.quantity} × {formatCurrency(item.price)}
+                                    </p>
+                                    {item.notes && (
+                                      <p className="text-[10px] italic text-slate-500">
+                                        Obs: {item.notes}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <span className="font-display text-xs font-bold text-slate-900 shrink-0">
+                                    {formatCurrency(item.lineTotal)}
+                                  </span>
                                 </div>
-                                <p className="shrink-0 font-display text-xs font-bold text-slate-900">
-                                  {formatCurrency(item.lineTotal)}
-                                </p>
-                              </div>
-                            ))
-                          )
+                              );
+                            })}
+                          </div>
                         )}
                       </CardContent>
                     </Card>
 
-                    {/* Divisão de Conta & Pagamento Parcial (Mesas) */}
-                    {mainView === "MESAS" &&
-                      selectedMesa?.currentOrder &&
-                      selectedMesa.currentOrder.orderProducts.length > 0 && (
-                        <Card className="rounded-2xl border-slate-200 bg-white">
-                          <CardHeader className="p-3 pb-2">
-                            <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                              Divisão de Conta
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="p-3 pt-0 space-y-3">
-                            <div className="flex items-center justify-between rounded-xl bg-slate-50 p-2.5">
-                              <span className="text-xs text-slate-700 font-medium">
-                                Dividir por:
+                    {/* Divisão de Conta Simplificada */}
+                    {activeOrder && activeOrder.orderProducts.length > 0 && (
+                      <Card className="border-slate-200/80 bg-white shadow-sm">
+                        <CardContent className="p-3.5 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="text-xs font-bold text-slate-900 block">
+                                Divisão de Conta
                               </span>
-                              <div className="flex items-center gap-2">
+                              <span className="text-[11px] text-slate-500">
+                                Dividir saldo entre pessoas
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              {[1, 2, 3, 4].map((num) => (
                                 <button
+                                  key={num}
                                   type="button"
-                                  onClick={() =>
-                                    setDivisaoPessoas((p) => Math.max(1, p - 1))
-                                  }
-                                  className="flex h-7 w-7 items-center justify-center rounded-lg bg-white border border-slate-200 font-bold"
+                                  onClick={() => setDivisaoPessoas(num)}
+                                  className={cn(
+                                    "flex h-7 w-7 items-center justify-center rounded-lg border text-xs font-bold transition-all",
+                                    divisaoPessoas === num
+                                      ? "border-primary bg-primary text-primary-foreground shadow-xs"
+                                      : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100",
+                                  )}
                                 >
-                                  -
+                                  {num}x
                                 </button>
-                                <span className="font-display text-sm font-bold text-slate-900 w-6 text-center">
-                                  {divisaoPessoas}
+                              ))}
+                            </div>
+                          </div>
+
+                          {divisaoPessoas > 1 && (
+                            <div className="rounded-xl border border-primary/20 bg-primary/5 p-2.5 flex items-center justify-between text-xs">
+                              <span className="text-slate-600 font-medium">
+                                Valor por pessoa ({divisaoPessoas}x):
+                              </span>
+                              <span className="font-display text-sm font-bold text-primary">
+                                {formatCurrency(valorPorPessoa)}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Pagamento Parcial de Itens Selecionados */}
+                          {selectedItemIds.size > 0 && (
+                            <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-2.5 flex items-center justify-between">
+                              <div>
+                                <span className="text-xs font-bold text-amber-900 block">
+                                  {selectedItemIds.size} item(s) selecionado(s)
                                 </span>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setDivisaoPessoas((p) => Math.min(30, p + 1))
-                                  }
-                                  className="flex h-7 w-7 items-center justify-center rounded-lg bg-white border border-slate-200 font-bold"
+                                <span className="text-[11px] text-amber-700 font-semibold">
+                                  Total: {formatCurrency(selectedItemsTotal)}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <Button
+                                  size="sm"
+                                  disabled={isPending}
+                                  onClick={() => handlePagamentoParcial("DINHEIRO")}
+                                  className="h-7 text-[11px] font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg"
                                 >
-                                  +
-                                </button>
-                                <span className="font-display text-xs font-bold text-slate-900 ml-2">
-                                  {formatCurrency(valorPorPessoa)} / pessoa
-                                </span>
+                                  Pagar Dinheiro
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  disabled={isPending}
+                                  onClick={() => handlePagamentoParcial("CARTAO_PRESENCIAL")}
+                                  className="h-7 text-[11px] font-semibold bg-slate-900 hover:bg-slate-800 text-white rounded-lg"
+                                >
+                                  Pagar Cartão
+                                </Button>
                               </div>
                             </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
 
-                            {selectedItemIds.size > 0 && (
-                              <div className="rounded-xl border border-amber-200 bg-amber-50 p-2.5 space-y-2">
-                                <div className="flex items-center justify-between text-xs font-semibold text-amber-900">
-                                  <span>{selectedItemIds.size} itens marcados:</span>
-                                  <span>{formatCurrency(selectedItemsTotal)}</span>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                  <Button
-                                    size="sm"
-                                    className="h-8 text-xs font-semibold"
-                                    disabled={isPending}
-                                    onClick={() => handlePagamentoParcial("DINHEIRO")}
-                                  >
-                                    <BanknoteIcon size={13} />
-                                    <span>Parcial Dinheiro</span>
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-8 text-xs font-semibold"
-                                    disabled={isPending}
-                                    onClick={() =>
-                                      handlePagamentoParcial("CARTAO_PRESENCIAL")
-                                    }
-                                  >
-                                    <CreditCardIcon size={13} />
-                                    <span>Parcial Cartão</span>
-                                  </Button>
-                                </div>
-                              </div>
-                            )}
-                          </CardContent>
-                        </Card>
-                      )}
-
-                    {/* Resumo de Pagamento e Fechamento */}
-                    <Card className="rounded-2xl border-slate-200 bg-slate-950 text-white">
+                    {/* Resumo Financeiro & Fechamento Total */}
+                    <Card className="border-slate-200/80 bg-white shadow-sm">
                       <CardContent className="p-4 space-y-3">
-                        <div className="flex items-center justify-between text-xs text-slate-300">
-                          <span>Total da Conta:</span>
-                          <span className="font-display text-lg font-bold text-white">
-                            {formatCurrency(
-                              mainView === "MESAS"
-                                ? selectedMesa?.currentOrder?.total ?? 0
-                                : selectedAvulsa?.order?.total ?? 0,
-                            )}
-                          </span>
-                        </div>
-                        {paidAmount > 0 && (
-                          <div className="flex items-center justify-between text-xs text-emerald-400">
-                            <span>Já pago anteriormente:</span>
-                            <span className="font-display font-semibold">
-                              {formatCurrency(paidAmount)}
+                        <div className="space-y-1.5 text-xs text-slate-600">
+                          <div className="flex justify-between">
+                            <span>Total Geral</span>
+                            <span className="font-semibold text-slate-900">
+                              {formatCurrency(orderTotal)}
                             </span>
                           </div>
-                        )}
-                        {paidAmount > 0 && (
-                          <div className="flex items-center justify-between text-xs font-bold text-amber-300 border-t border-white/10 pt-2">
-                            <span>Saldo Restante:</span>
-                            <span className="font-display text-base">
+                          {paidAmount > 0 && (
+                            <div className="flex justify-between text-emerald-700 font-medium">
+                              <span>Valor Já Pago</span>
+                              <span>-{formatCurrency(paidAmount)}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between items-center pt-2 border-t border-slate-100 text-slate-900 font-bold text-sm">
+                            <span>Saldo a Pagar</span>
+                            <span className="font-display text-lg text-primary">
                               {formatCurrency(remainingAmount)}
                             </span>
                           </div>
-                        )}
+                        </div>
 
+                        {/* Botões de Fechamento */}
                         <div className="grid grid-cols-2 gap-2 pt-1">
                           <Button
-                            disabled={isPending}
+                            disabled={isPending || !activeOrder || remainingAmount <= 0}
                             onClick={() =>
-                              mainView === "MESAS"
+                              selectedMesa
                                 ? handleCloseBill("DINHEIRO")
                                 : handleCloseAvulsaBill("DINHEIRO")
                             }
-                            className="h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-semibold text-xs"
+                            className="h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs gap-1.5 shadow-sm"
                           >
-                            <BanknoteIcon size={15} />
-                            <span>Fechar Dinheiro</span>
+                            <BanknoteIcon size={16} />
+                            <span>Fechar em Dinheiro</span>
                           </Button>
+
                           <Button
-                            disabled={isPending}
-                            variant="outline"
+                            disabled={isPending || !activeOrder || remainingAmount <= 0}
                             onClick={() =>
-                              mainView === "MESAS"
+                              selectedMesa
                                 ? handleCloseBill("CARTAO_PRESENCIAL")
                                 : handleCloseAvulsaBill("CARTAO_PRESENCIAL")
                             }
-                            className="h-10 rounded-xl border-white/20 bg-white/10 text-white hover:bg-white/20 font-semibold text-xs"
+                            className="h-11 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs gap-1.5 shadow-sm"
                           >
-                            <CreditCardIcon size={15} />
-                            <span>Fechar Cartão</span>
+                            <CreditCardIcon size={16} />
+                            <span>Fechar no Cartão</span>
                           </Button>
                         </div>
                       </CardContent>
                     </Card>
                   </div>
                 )}
-
-                {/* Sticky Mobile Bottom Bar */}
-                <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-slate-200/90 bg-white/95 p-3 shadow-lg backdrop-blur-md pb-safe">
-                  <div className="flex items-center justify-between gap-3 max-w-md mx-auto">
-                    <div>
-                      <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">
-                        Total
-                      </span>
-                      <p className="font-display text-lg font-bold text-slate-900 leading-none">
-                        {formatCurrency(
-                          mainView === "MESAS"
-                            ? selectedMesa?.currentOrder?.total ?? 0
-                            : selectedAvulsa?.order?.total ?? 0,
-                        )}
-                      </p>
-                    </div>
-
-                    {mobileDetailTab === "CARDAPIO" ? (
-                      <Button
-                        onClick={() => setMobileDetailTab("ITEMS")}
-                        className="h-10 gap-2 rounded-xl bg-slate-900 px-4 text-xs font-semibold text-white shadow-sm active:scale-95"
-                      >
-                        <ReceiptTextIcon size={15} />
-                        <span>
-                          Ver Conta (
-                          {mainView === "MESAS"
-                            ? selectedMesa?.currentOrder?.orderProducts?.reduce(
-                                (a, b) => a + b.quantity,
-                                0,
-                              ) ?? 0
-                            : selectedAvulsa?.order?.orderProducts?.reduce(
-                                (a, b) => a + b.quantity,
-                                0,
-                              ) ?? 0}
-                          )
-                        </span>
-                      </Button>
-                    ) : (
-                      <Button
-                        onClick={() => setMobileDetailTab("CARDAPIO")}
-                        className="h-10 gap-2 rounded-xl bg-amber-500 px-4 text-xs font-semibold text-slate-950 shadow-sm active:scale-95 hover:bg-amber-400"
-                      >
-                        <PlusIcon size={15} />
-                        <span>Lançar Mais Itens</span>
-                      </Button>
-                    )}
-                  </div>
-                </div>
               </div>
             )}
           </div>
-        )}
-      </div>
+        </SheetContent>
+      </Sheet>
 
-      {/* ── DESKTOP VIEW (xl and up) ── */}
-      <div className="hidden xl:block space-y-4">
-      {/* ── Page header ─────────────────────────────────────────────── */}
-      <Card className="border-white/80 bg-white/85">
-        <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <Badge className="w-fit" variant="secondary">
-              Comanda digital
-            </Badge>
-            <CardTitle className="mt-2 font-display text-xl">
-              Salao de {restaurantName}
-            </CardTitle>
-            <CardDescription>
-              Controle de mesas, comandas avulsas e fila de espera em tempo real.
-            </CardDescription>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={() => setIsFilaOpen(true)}>
-              <ClockIcon size={14} />
-              Fila de espera
-              {queue.length > 0 && (
-                <Badge variant="warning" className="ml-1 text-xs">
-                  {queue.length}
-                </Badge>
-              )}
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setIsReservasOpen(true)}>
-              <UsersRoundIcon size={14} />
-              Reservas
-              {todayReservations.length > 0 && (
-                <Badge variant="danger" className="ml-1 text-xs">
-                  {todayReservations.length}
-                </Badge>
-              )}
-            </Button>
-          </div>
-        </CardHeader>
-      </Card>
-
-      {/* ── Stats row ───────────────────────────────────────────────── */}
-      <div className="grid gap-2 sm:grid-cols-4">
-        <Card className="bg-white">
-          <CardContent className="p-3">
-            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Mesas livres</p>
-            <p className="mt-1 font-display text-xl">{String(freeTables)}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-slate-950 text-white">
-          <CardContent className="p-3">
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Mesas ocupadas</p>
-            <p className="mt-1 font-display text-xl">{String(occupiedTables)}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-amber-50">
-          <CardContent className="p-3">
-            <p className="text-xs uppercase tracking-[0.18em] text-amber-700">Itens na mesa</p>
-            <p className="mt-1 font-display text-xl">{String(selectedOrderItemsCount)}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-orange-50">
-          <CardContent className="p-3">
-            <p className="text-xs uppercase tracking-[0.18em] text-orange-700">Na fila</p>
-            <p className="mt-1 font-display text-xl">{String(queue.length)}</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* ── Main view tabs ──────────────────────────────────────────── */}
-      <Tabs value={mainView} onValueChange={(v) => setMainView(v as MainView)}>
-        <TabsList>
-          <TabsTrigger value="MESAS" className="gap-1.5">
-            <LayoutGridIcon size={14} />
-            Mesas
-          </TabsTrigger>
-          <TabsTrigger value="COMANDAS_AVULSAS" className="gap-1.5">
-            <QrCodeIcon size={14} />
-            Comandas avulsas
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
-
-      {mainView === "MESAS" ? (
-        <div className="grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)]">
-          {/* ── Table list / map sidebar ────────────────────────────── */}
-          <Card className="xl:sticky xl:top-4 xl:self-start">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle>Mesas</CardTitle>
-                <div className="flex gap-1">
-                  <Button
-                    variant={salonView === "LISTA" ? "default" : "ghost"}
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => setSalonView("LISTA")}
-                    title="Lista"
-                  >
-                    <ListIcon size={14} />
-                  </Button>
-                  <Button
-                    variant={salonView === "MAPA" ? "default" : "ghost"}
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => setSalonView("MAPA")}
-                    title="Mapa"
-                  >
-                    <MapIcon size={14} />
-                  </Button>
-                </div>
-              </div>
-              <CardDescription>Toque em uma mesa para operar.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Tabs
-                value={tableFilter}
-                onValueChange={(v) => setTableFilter(v as TableFilter)}
-              >
-                <TabsList className="w-full">
-                  <TabsTrigger value="TODAS" className="flex-1 text-xs">
-                    Todas ({String(tables.length)})
-                  </TabsTrigger>
-                  <TabsTrigger value="LIVRES" className="flex-1 text-xs">
-                    Livres ({String(freeTables)})
-                  </TabsTrigger>
-                  <TabsTrigger value="OCUPADAS" className="flex-1 text-xs">
-                    Ocupadas ({String(occupiedTables)})
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-
-              {/* ── Color legend ──────────────────────────────────── */}
-              <div className="flex flex-wrap gap-2 text-xs">
-                <span className="flex items-center gap-1">
-                  <span className="h-3 w-3 rounded-sm border border-slate-200 bg-white" />
-                  Livre
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="h-3 w-3 rounded-sm border border-blue-400 bg-blue-50" />
-                  Ocupada
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="h-3 w-3 rounded-sm border border-amber-400 bg-amber-50" />
-                  Aguard. pedido
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="h-3 w-3 rounded-sm border border-orange-400 bg-orange-50" />
-                  Reservada
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="h-3 w-3 rounded-sm border border-emerald-400 bg-emerald-50" />
-                  Fechando conta
-                </span>
-              </div>
-
-              {salonView === "MAPA" ? (
-                /* ── Map view ──────────────────────────────────────── */
-                <div
-                  className="relative overflow-auto rounded-xl border bg-slate-50"
-                  style={{ minHeight: "280px" }}
-                >
-                  <div className="relative" style={{ width: "600px", height: "400px" }}>
-                    {displayedTables.map((mesa) => {
-                      const colorClass = getMesaColor(mesa, reservedTableIds);
-                      const isSelected = selectedTableId === mesa.table.id;
-                      const x = (mesa.table.positionX ?? 0) || (mesa.table.displayOrder * 80) % 520 + 20;
-                      const y = (mesa.table.positionY ?? 0) || Math.floor((mesa.table.displayOrder * 80) / 520) * 90 + 20;
-                      return (
-                        <button
-                          key={mesa.table.id}
-                          type="button"
-                          onClick={() => setSelectedTableId(mesa.table.id)}
-                          style={{ left: x, top: y }}
-                          className={`absolute flex h-16 w-16 flex-col items-center justify-center rounded-xl border-2 text-xs font-medium transition ${colorClass} ${
-                            isSelected ? "ring-2 ring-primary ring-offset-1" : ""
-                          }`}
-                        >
-                          <span className="truncate text-[10px] font-bold leading-tight">
-                            {mesa.table.name}
-                          </span>
-                          {mesa.currentOrder && (
-                            <span className="text-[9px] leading-tight">
-                              {formatCurrency(mesa.currentOrder.total)}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                /* ── List view ─────────────────────────────────────── */
-                <div className="grid grid-cols-2 gap-2">
-                  {displayedTables.map((mesa) => {
-                    const colorClass = getMesaColor(mesa, reservedTableIds);
-                    return (
-                      <button
-                        key={mesa.table.id}
-                        type="button"
-                        onClick={() => setSelectedTableId(mesa.table.id)}
-                        className={`rounded-2xl border p-3 text-left transition ${colorClass} ${
-                          selectedTableId === mesa.table.id
-                            ? "ring-2 ring-primary ring-offset-1"
-                            : ""
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-1">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold">{mesa.table.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {String(mesa.table.seats)} lugares
-                            </p>
-                          </div>
-                          <Badge
-                            variant={getMesaStatusBadgeVariant(mesa, reservedTableIds)}
-                            className="shrink-0 text-xs"
-                          >
-                            {getMesaStatusLabel(mesa, reservedTableIds)}
-                          </Badge>
-                        </div>
-                        {mesa.currentOrder ? (
-                          <p className="mt-2 text-xs font-medium text-slate-900">
-                            {formatCurrency(mesa.currentOrder.total)}
-                          </p>
-                        ) : (
-                          <p className="mt-2 text-xs text-muted-foreground">Pronta para abrir</p>
-                        )}
-                      </button>
-                    );
-                  })}
-
-                  {displayedTables.length === 0 && (
-                    <div className="col-span-2 rounded-xl border border-dashed py-6 text-center">
-                      <p className="text-sm text-muted-foreground">Nenhuma mesa neste filtro.</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* ── Main panel ─────────────────────────────────────────── */}
-          <div className="space-y-4">
-            {selectedMesa ? (
-              <>
-                {/* Selected table header */}
-                <Card className="border-white/80 bg-slate-950 text-white">
-                  <CardHeader>
-                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                      <div>
-                        <Badge
-                          variant="secondary"
-                          className="w-fit bg-white/10 text-white"
-                        >
-                          {selectedMesa.currentOrder ? "Mesa em atendimento" : "Mesa livre"}
-                        </Badge>
-                        <CardTitle className="mt-2 font-display text-xl">
-                          {selectedMesa.table.name}
-                        </CardTitle>
-                        <CardDescription className="text-slate-300">
-                          {selectedMesa.currentOrder
-                            ? `Comanda aberta em ${formatDateTime(selectedMesa.currentOrder.createdAt)}`
-                            : "Abra a mesa para comecar a lancar itens."}
-                        </CardDescription>
-
-                        {selectedMesa.currentOrder && (
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="gap-1.5 border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-                              onClick={() => { setTargetTableId(""); setIsTransferOpen(true); }}
-                              disabled={isPending}
-                            >
-                              <ArrowLeftRightIcon size={13} />
-                              Transferir mesa
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="gap-1.5 border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-                              onClick={() => { setItemTransferSelectedIds(new Set()); setIsItemTransferOpen(true); }}
-                              disabled={isPending}
-                            >
-                              <ScissorsIcon size={13} />
-                              Transferir itens
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="gap-1.5 border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-                              onClick={() => { setMergeSecondaryOrderId(null); setIsMergeOpen(true); }}
-                              disabled={isPending}
-                            >
-                              <GitMergeIcon size={13} />
-                              Unir mesas
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
-                            Status
-                          </p>
-                          <p className="mt-1.5 text-sm font-medium text-white">
-                            {selectedMesa.currentOrder ? "Em aberto" : "Aguardando abertura"}
-                          </p>
-                        </div>
-                        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
-                            Total atual
-                          </p>
-                          <p className="mt-1 font-display text-xl font-semibold">
-                            {formatCurrency(selectedMesa.currentOrder?.total ?? 0)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </CardHeader>
-                </Card>
-
-                {!selectedMesa.currentOrder ? (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Abrir mesa</CardTitle>
-                      <CardDescription>Registre um nome e inicie a comanda.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="max-w-md">
-                        <label className="mb-2 block text-sm font-medium">
-                          Nome do cliente ou referencia
-                        </label>
-                        <Input
-                          value={openingCustomerName}
-                          onChange={(e) => setOpeningCustomerName(e.target.value)}
-                          placeholder="Ex.: Ana, familia Silva, aniversario"
-                        />
-                      </div>
-                      <Button disabled={isPending} onClick={handleOpenTable}>
-                        {isPending ? (
-                          <>
-                            <Loader2Icon className="animate-spin" size={16} />
-                            Abrindo...
-                          </>
-                        ) : (
-                          "Abrir comanda"
-                        )}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_340px]">
-                    <ProductPanel />
-
-                    {/* Bill panel */}
-                    <div className="space-y-4">
-                      <Card>
-                        <CardHeader className="pb-3">
-                          <CardTitle>Conta da mesa</CardTitle>
-                          <CardDescription>Itens lancados e opcoes de pagamento.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          <div className="rounded-lg border bg-slate-50 px-3 py-2">
-                            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                              Cliente
-                            </p>
-                            <p className="mt-0.5 text-sm font-medium text-slate-950">
-                              {selectedMesa.currentOrder.customerName}
-                            </p>
-                          </div>
-
-                          <div className="space-y-1.5">
-                            {selectedMesa.currentOrder.orderProducts.length === 0 ? (
-                              <div className="rounded-xl border border-dashed bg-slate-50 px-4 py-5 text-center">
-                                <p className="text-sm font-medium text-slate-900">
-                                  Nenhum item lancado ainda
-                                </p>
-                              </div>
-                            ) : (
-                              <>
-                                <p className="text-xs text-muted-foreground">
-                                  Marque itens para divisao parcial
-                                </p>
-                                {selectedMesa.currentOrder.orderProducts.map((item) => (
-                                  <div
-                                    key={item.id}
-                                    className={`flex items-center gap-2.5 rounded-lg border px-3 py-2 transition ${
-                                      selectedItemIds.has(item.id)
-                                        ? "border-amber-300 bg-amber-50"
-                                        : "border-border bg-slate-50/80"
-                                    }`}
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={selectedItemIds.has(item.id)}
-                                      onChange={() => toggleSelectedItem(item.id)}
-                                      disabled={isPending}
-                                      className="h-4 w-4 shrink-0 cursor-pointer rounded accent-amber-500"
-                                    />
-                                    <div className="min-w-0 flex-1">
-                                      <p className="text-sm font-medium text-slate-950">
-                                        {item.productNameSnapshot || item.product.name}
-                                      </p>
-                                      {item.orderProductOptions && item.orderProductOptions.length > 0 && (
-                                        <p className="text-[11px] text-slate-500">
-                                          {item.orderProductOptions.map((o) => o.nameSnapshot).join(", ")}
-                                        </p>
-                                      )}
-                                      <p className="text-xs text-muted-foreground">
-                                        {String(item.quantity)} × {formatCurrency(item.price)}
-                                      </p>
-                                      {item.notes && (
-                                        <p className="mt-0.5 text-xs italic text-amber-600/80">
-                                          {item.notes}
-                                        </p>
-                                      )}
-                                    </div>
-                                    <p className="shrink-0 text-sm font-semibold text-slate-950">
-                                      {formatCurrency(item.lineTotal)}
-                                    </p>
-                                  </div>
-                                ))}
-                              </>
-                            )}
-                          </div>
-
-                          <div className="rounded-xl border bg-slate-950 p-3 text-white">
-                            <div className="flex items-center justify-between text-xs text-slate-300">
-                              <span>Itens lancados</span>
-                              <span>{String(selectedOrderItemsCount)} unidades</span>
-                            </div>
-                            <div className="mt-1.5 flex items-center justify-between">
-                              <span className="text-sm font-medium">Total da conta</span>
-                              <span className="font-display text-xl font-semibold">
-                                {formatCurrency(selectedMesa.currentOrder.total)}
-                              </span>
-                            </div>
-                          </div>
-
-                          {selectedMesa.currentOrder.orderProducts.length > 0 && (
-                            <div className="space-y-3 rounded-xl border p-3">
-                              <div className="flex items-center gap-1.5">
-                                <ScissorsIcon size={13} className="text-muted-foreground" />
-                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                                  Opcoes de divisao
-                                </p>
-                              </div>
-
-                              <div>
-                                <label className="mb-1.5 block text-xs font-medium">
-                                  Dividir por pessoas
-                                </label>
-                                <div className="flex items-center gap-2">
-                                  <Input
-                                    type="number"
-                                    min={1}
-                                    max={50}
-                                    value={divisaoPessoas}
-                                    onChange={(e) =>
-                                      setDivisaoPessoas(Math.max(1, Number(e.target.value) || 1))
-                                    }
-                                    className="h-8 w-20 text-center"
-                                  />
-                                  <span className="text-xs text-muted-foreground">pessoas</span>
-                                  <span className="ml-auto text-sm font-semibold text-slate-900">
-                                    {formatCurrency(valorPorPessoa)} / pessoa
-                                  </span>
-                                </div>
-                              </div>
-
-                              {selectedItemIds.size > 0 ? (
-                                <div className="rounded-lg border border-amber-200 bg-amber-50 p-2.5">
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-xs font-medium text-amber-800">
-                                      {selectedItemIds.size} item(s) selecionado(s)
-                                    </span>
-                                    <span className="text-sm font-semibold text-amber-900">
-                                      {formatCurrency(selectedItemsTotal)}
-                                    </span>
-                                  </div>
-                                  <p className="mt-1 text-xs text-amber-700">
-                                    Registra pagamento parcial sem encerrar a comanda.
-                                  </p>
-                                  <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
-                                    <Button
-                                      size="sm"
-                                      disabled={isPending}
-                                      onClick={() => handlePagamentoParcial("DINHEIRO")}
-                                      className="gap-1.5"
-                                    >
-                                      <BanknoteIcon size={13} />
-                                      Parcial dinheiro
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      disabled={isPending}
-                                      onClick={() => handlePagamentoParcial("CARTAO_PRESENCIAL")}
-                                      className="gap-1.5"
-                                    >
-                                      <CreditCardIcon size={13} />
-                                      Parcial cartao
-                                    </Button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <p className="text-xs text-muted-foreground">
-                                  Marque itens acima para registrar um pagamento parcial.
-                                </p>
-                              )}
-                            </div>
-                          )}
-
-                          {paidAmount > 0 && (
-                            <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5">
-                              <div>
-                                <p className="text-xs font-medium text-emerald-800">Ja pago</p>
-                                <p className="font-display text-base font-semibold text-emerald-700">
-                                  {formatCurrency(paidAmount)}
-                                </p>
-                              </div>
-                              <div className="text-right">
-                                <p className="text-xs font-medium text-slate-700">
-                                  Saldo restante
-                                </p>
-                                <p className="font-display text-lg font-semibold text-slate-900">
-                                  {formatCurrency(remainingAmount)}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="grid gap-2 sm:grid-cols-2">
-                            <Button
-                              disabled={isPending}
-                              onClick={() => handleCloseBill("DINHEIRO")}
-                            >
-                              <BanknoteIcon size={15} />
-                              Fechar em dinheiro
-                            </Button>
-                            <Button
-                              disabled={isPending}
-                              variant="outline"
-                              onClick={() => handleCloseBill("CARTAO_PRESENCIAL")}
-                            >
-                              <CreditCardIcon size={15} />
-                              Fechar no cartao
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : (
-              <Card>
-                <CardContent className="flex min-h-[280px] flex-col items-center justify-center gap-3 p-6 text-center">
-                  <UsersRoundIcon className="text-slate-400" size={28} />
-                  <p className="font-medium text-slate-900">Nenhuma mesa cadastrada</p>
-                  <p className="text-sm text-muted-foreground">
-                    Cadastre mesas no banco para comecar a operar a comanda digital.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </div>
-      ) : (
-        /* ── Comandas Avulsas View ──────────────────────────────────── */
-        <div className="grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)]">
-          {/* Sidebar */}
-          <Card className="xl:sticky xl:top-4 xl:self-start">
-            <CardHeader className="pb-3">
-              <CardTitle>Comandas avulsas</CardTitle>
-              <CardDescription>
-                Digitar ou escanear o numero/codigo para abrir.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {/* Barcode / number lookup */}
-              <div className="relative">
-                <QrCodeIcon
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                  size={16}
-                />
-                <Input
-                  ref={barcodeRef}
-                  value={avulsaBarcodeInput}
-                  onChange={(e) => setAvulsaBarcodeInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      const found = comandasAvulsas.find(
-                        (c) =>
-                          c.barcode === avulsaBarcodeInput ||
-                          String(c.numero) === avulsaBarcodeInput,
-                      );
-                      if (found) setSelectedAvulsaId(found.id);
-                      setAvulsaBarcodeInput("");
-                    }
-                  }}
-                  placeholder="Numero ou codigo de barras..."
-                  className="pl-9"
-                />
-              </div>
-
-              {/* Open new avulsa */}
-              <div className="space-y-2 rounded-xl border p-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                  Nova comanda
-                </p>
-                <Input
-                  value={avulsaCustomerName}
-                  onChange={(e) => setAvulsaCustomerName(e.target.value)}
-                  placeholder="Nome do cliente (opcional)"
-                />
-                <Input
-                  value={avulsaBarcode}
-                  onChange={(e) => setAvulsaBarcode(e.target.value)}
-                  placeholder="Codigo de barras/QR (opcional)"
-                />
-                <Button
-                  size="sm"
-                  className="w-full"
-                  disabled={isPending}
-                  onClick={handleAbrirComandaAvulsa}
-                >
-                  {isPending ? <Loader2Icon className="animate-spin" size={14} /> : <PlusIcon size={14} />}
-                  Abrir comanda
-                </Button>
-              </div>
-
-              {/* Active avulsas list */}
-              <div className="space-y-1.5">
-                {comandasAvulsas.length === 0 ? (
-                  <p className="py-4 text-center text-sm text-muted-foreground">
-                    Nenhuma comanda avulsa ativa.
-                  </p>
-                ) : (
-                  comandasAvulsas.map((comanda) => (
-                    <button
-                      key={comanda.id}
-                      type="button"
-                      onClick={() => setSelectedAvulsaId(comanda.id)}
-                      className={`w-full rounded-xl border p-3 text-left transition ${
-                        selectedAvulsaId === comanda.id
-                          ? "border-primary bg-primary/5"
-                          : "border-border bg-background hover:bg-slate-50"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-semibold">Comanda #{comanda.numero}</p>
-                        <Badge variant="warning" className="text-xs">
-                          Ativa
-                        </Badge>
-                      </div>
-                      {comanda.customerName && (
-                        <p className="mt-0.5 text-xs text-muted-foreground">{comanda.customerName}</p>
-                      )}
-                      <p className="mt-1 text-sm font-medium">
-                        {formatCurrency(comanda.order?.total ?? 0)}
-                      </p>
-                    </button>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Avulsa detail */}
-          <div className="space-y-4">
-            {selectedAvulsa ? (
-              <>
-                <Card className="border-white/80 bg-slate-950 text-white">
-                  <CardHeader>
-                    <Badge variant="secondary" className="w-fit bg-white/10 text-white">
-                      Comanda avulsa
-                    </Badge>
-                    <CardTitle className="mt-2 font-display text-xl">
-                      Comanda #{selectedAvulsa.numero}
-                      {selectedAvulsa.customerName && ` — ${selectedAvulsa.customerName}`}
-                    </CardTitle>
-                    <CardDescription className="text-slate-300">
-                      Aberta em {formatDateTime(selectedAvulsa.createdAt)}
-                      {selectedAvulsa.barcode && ` · Codigo: ${selectedAvulsa.barcode}`}
-                    </CardDescription>
-                    <div className="mt-2 rounded-xl border border-white/10 bg-white/5 p-3 w-fit">
-                      <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Total</p>
-                      <p className="mt-1 font-display text-xl font-semibold">
-                        {formatCurrency(selectedAvulsa.order?.total ?? 0)}
-                      </p>
-                    </div>
-                  </CardHeader>
-                </Card>
-
-                <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_340px]">
-                  <ProductPanel />
-
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle>Itens da comanda</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {!selectedAvulsa.order || selectedAvulsa.order.orderProducts.length === 0 ? (
-                        <div className="rounded-xl border border-dashed bg-slate-50 px-4 py-5 text-center">
-                          <p className="text-sm font-medium text-slate-900">Nenhum item ainda</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-1.5">
-                          {selectedAvulsa.order.orderProducts.map((item) => (
-                            <div
-                              key={item.id}
-                              className="flex items-center gap-2.5 rounded-lg border bg-slate-50/80 px-3 py-2"
-                            >
-                              <div className="min-w-0 flex-1">
-                                <p className="text-sm font-medium">{item.productNameSnapshot || item.product.name}</p>
-                                {item.orderProductOptions && item.orderProductOptions.length > 0 && (
-                                  <p className="text-[11px] text-slate-500">
-                                    {item.orderProductOptions.map((o) => o.nameSnapshot).join(", ")}
-                                  </p>
-                                )}
-                                <p className="text-xs text-muted-foreground">
-                                  {String(item.quantity)} × {formatCurrency(item.price)}
-                                </p>
-                              </div>
-                              <p className="shrink-0 text-sm font-semibold">
-                                {formatCurrency(item.lineTotal)}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <Button
-                          disabled={isPending || !selectedAvulsa.order}
-                          onClick={() => handleCloseAvulsaBill("DINHEIRO")}
-                        >
-                          <BanknoteIcon size={15} />
-                          Fechar dinheiro
-                        </Button>
-                        <Button
-                          disabled={isPending || !selectedAvulsa.order}
-                          variant="outline"
-                          onClick={() => handleCloseAvulsaBill("CARTAO_PRESENCIAL")}
-                        >
-                          <CreditCardIcon size={15} />
-                          Fechar cartao
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </>
-            ) : (
-              <Card>
-                <CardContent className="flex min-h-[280px] flex-col items-center justify-center gap-3 p-6 text-center">
-                  <QrCodeIcon className="text-slate-400" size={28} />
-                  <p className="font-medium text-slate-900">Selecione ou abra uma comanda</p>
-                  <p className="text-sm text-muted-foreground">
-                    Escaneie o codigo ou abra uma nova comanda avulsa ao lado.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </div>
-      )}
-      </div>
-
-      {/* ── Feedback ────────────────────────────────────────────────── */}
-      {feedback && (
-        <div
-          className={`rounded-xl border px-3 py-2 text-sm ${
-            feedback.type === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-              : "border-rose-200 bg-rose-50 text-rose-900"
-          }`}
-        >
-          {feedback.message}
-        </div>
-      )}
-
-      {/* ── Transfer mesa dialog ─────────────────────────────────────── */}
-      <Dialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Transferir mesa inteira</DialogTitle>
-            <DialogDescription>
-              Move todos os itens e a comanda para outra mesa livre.
-            </DialogDescription>
-          </DialogHeader>
-          {transferTargetTables.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">
-              Nenhuma mesa livre disponivel.
-            </p>
-          ) : (
-            <Select value={targetTableId} onValueChange={setTargetTableId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a mesa destino..." />
-              </SelectTrigger>
-              <SelectContent>
-                {transferTargetTables.map((m) => (
-                  <SelectItem key={m.table.id} value={m.table.id}>
-                    {m.table.name} — {String(m.table.seats)} lugares
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsTransferOpen(false)} disabled={isPending}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleTransferirMesa}
-              disabled={!targetTableId || isPending || transferTargetTables.length === 0}
-            >
-              {isPending ? (
-                <>
-                  <Loader2Icon className="animate-spin" size={14} />
-                  Transferindo...
-                </>
-              ) : (
-                "Confirmar transferencia"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ── Item transfer dialog ────────────────────────────────────── */}
-      <Dialog open={isItemTransferOpen} onOpenChange={setIsItemTransferOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Transferir itens selecionados</DialogTitle>
-            <DialogDescription>
-              Selecione os itens e a mesa de destino. Os totais serao recalculados.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              Itens para transferir
-            </p>
-            <div className="max-h-48 space-y-1.5 overflow-y-auto">
-              {selectedMesa?.currentOrder?.orderProducts.map((item) => (
-                <div
-                  key={item.id}
-                  className={`flex cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2 transition ${
-                    itemTransferSelectedIds.has(item.id)
-                      ? "border-primary bg-primary/5"
-                      : "border-border"
-                  }`}
-                  onClick={() => toggleItemTransferSelection(item.id)}
-                >
-                  <input
-                    type="checkbox"
-                    checked={itemTransferSelectedIds.has(item.id)}
-                    onChange={() => toggleItemTransferSelection(item.id)}
-                    className="h-4 w-4 cursor-pointer"
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{item.product.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {String(item.quantity)} × {formatCurrency(item.price)}
-                    </p>
-                  </div>
-                  <p className="shrink-0 text-sm font-semibold">{formatCurrency(item.lineTotal)}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="space-y-1.5">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                Mesa / comanda destino
-              </p>
-              <Select
-                value={itemTransferTargetOrderId ? String(itemTransferTargetOrderId) : ""}
-                onValueChange={(v) => setItemTransferTargetOrderId(Number(v))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a mesa destino..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {tables
-                    .filter(
-                      (m) =>
-                        m.currentOrder &&
-                        m.table.id !== selectedMesa?.table.id,
-                    )
-                    .map((m) => (
-                      <SelectItem key={m.table.id} value={String(m.currentOrder!.id)}>
-                        {m.table.name} — {formatCurrency(m.currentOrder!.total)}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsItemTransferOpen(false)}
-              disabled={isPending}
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleItemTransfer}
-              disabled={
-                itemTransferSelectedIds.size === 0 ||
-                !itemTransferTargetOrderId ||
-                isPending
-              }
-            >
-              {isPending ? (
-                <Loader2Icon className="animate-spin" size={14} />
-              ) : (
-                `Transferir ${String(itemTransferSelectedIds.size)} item(s)`
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ── Merge tables dialog ─────────────────────────────────────── */}
-      <Dialog open={isMergeOpen} onOpenChange={setIsMergeOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Unir mesas</DialogTitle>
-            <DialogDescription>
-              Todos os itens da mesa selecionada serao movidos para {selectedMesa?.table.name}.
-              A mesa secundaria sera liberada.
-            </DialogDescription>
-          </DialogHeader>
-
-          {mergeTargetOrders.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">
-              Nenhuma outra mesa ocupada disponivel para unir.
-            </p>
-          ) : (
-            <Select
-              value={mergeSecondaryOrderId ? String(mergeSecondaryOrderId) : ""}
-              onValueChange={(v) => setMergeSecondaryOrderId(Number(v))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a mesa a incorporar..." />
-              </SelectTrigger>
-              <SelectContent>
-                {mergeTargetOrders.map((m) => (
-                  <SelectItem key={m.table.id} value={String(m.currentOrder!.id)}>
-                    {m.table.name} — {formatCurrency(m.currentOrder!.total)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsMergeOpen(false)} disabled={isPending}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleUnirMesas}
-              disabled={!mergeSecondaryOrderId || isPending || mergeTargetOrders.length === 0}
-            >
-              {isPending ? (
-                <>
-                  <Loader2Icon className="animate-spin" size={14} />
-                  Unindo...
-                </>
-              ) : (
-                "Confirmar uniao"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ── Fila de espera dialog ───────────────────────────────────── */}
+      {/* ── Dialog: Fila de Espera ── */}
       <Dialog open={isFilaOpen} onOpenChange={setIsFilaOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl">
-          <DialogHeader className="pb-3 border-b">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <UsersRoundIcon size={20} />
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl border-slate-200 bg-white text-slate-900 shadow-2xl">
+          <DialogHeader className="pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-sm shadow-primary/10">
+                <UsersRoundIcon size={22} />
               </div>
               <div>
-                <DialogTitle className="text-lg font-bold">Fila de Espera</DialogTitle>
-                <DialogDescription className="text-xs">
+                <DialogTitle className="font-display text-lg font-bold text-slate-900">
+                  Fila de Espera
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500">
                   Gerencie clientes aguardando uma mesa disponível no salão.
                 </DialogDescription>
               </div>
             </div>
           </DialogHeader>
 
-          <div className="mt-4 space-y-5">
-            {/* Form */}
-            <div className="space-y-3 rounded-xl border border-slate-200/80 bg-slate-50/50 p-4">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-600">
-                Adicionar à Fila
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="md:col-span-2 space-y-1.5">
-                  <Label htmlFor="fila-customer-name" className="text-xs font-semibold text-slate-700">
-                    Nome do cliente
+          <div className="space-y-4 pt-2">
+            {/* Formulário de Adicionar à Fila */}
+            <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3.5 space-y-3">
+              <span className="text-xs font-bold uppercase tracking-wide text-slate-700">
+                Adicionar Cliente à Fila
+              </span>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                <div className="md:col-span-2 space-y-1">
+                  <Label htmlFor="fila-nome" className="text-xs font-semibold text-slate-700">
+                    Nome do Cliente *
                   </Label>
                   <Input
-                    id="fila-customer-name"
+                    id="fila-nome"
                     value={filaForm.customerName}
                     onChange={(e) => {
                       setFilaForm((f) => ({ ...f, customerName: e.target.value }));
                       if (filaErrors.customerName) setFilaErrors((prev) => ({ ...prev, customerName: "" }));
                     }}
                     placeholder="Ex.: Carlos Silva"
-                    className={cn(
-                      "h-9 text-xs transition-colors bg-white",
-                      filaErrors.customerName && "border-rose-500 bg-rose-50/20 focus-visible:ring-rose-400",
-                    )}
+                    className="h-9 rounded-xl border-slate-200 bg-white text-xs"
                   />
                   {filaErrors.customerName && (
-                    <p className="text-[11px] font-medium text-rose-500">{filaErrors.customerName}</p>
+                    <p className="text-[10px] font-medium text-rose-500">{filaErrors.customerName}</p>
                   )}
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="fila-party-size" className="text-xs font-semibold text-slate-700">
-                    Pessoas
+                <div className="space-y-1">
+                  <Label htmlFor="fila-pessoas" className="text-xs font-semibold text-slate-700">
+                    Pessoas *
                   </Label>
                   <Input
-                    id="fila-party-size"
+                    id="fila-pessoas"
                     type="number"
                     min={1}
                     max={20}
@@ -2924,40 +1914,34 @@ const ComandaDigital = ({
                       setFilaForm((f) => ({ ...f, partySize: Math.max(1, val) }));
                       if (filaErrors.partySize) setFilaErrors((prev) => ({ ...prev, partySize: "" }));
                     }}
-                    className={cn(
-                      "h-9 text-xs transition-colors bg-white",
-                      filaErrors.partySize && "border-rose-500 bg-rose-50/20 focus-visible:ring-rose-400",
-                    )}
+                    className="h-9 rounded-xl border-slate-200 bg-white text-xs"
                   />
-                  {filaErrors.partySize && (
-                    <p className="text-[11px] font-medium text-rose-500">{filaErrors.partySize}</p>
-                  )}
                 </div>
               </div>
 
               <Button
-                size="sm"
-                className="w-full h-9 font-semibold"
-                disabled={isPending}
+                type="button"
                 onClick={handleAdicionarFila}
+                disabled={isPending}
+                className="w-full h-9 rounded-full bg-primary text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90"
               >
                 {isPending ? (
                   <Loader2Icon size={14} className="animate-spin mr-1.5" />
                 ) : (
                   <PlusIcon size={14} className="mr-1.5" />
                 )}
-                Adicionar à Fila
+                <span>Adicionar à Fila</span>
               </Button>
             </div>
 
-            {/* List */}
-            <div className="space-y-3">
+            {/* Lista de Clientes Aguardando */}
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-600">
-                  Clientes Aguardando ({queue.length})
-                </p>
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                  Clientes na Fila ({queue.length})
+                </span>
                 {freeTables > 0 && (
-                  <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  <span className="text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                     {freeTables} {freeTables === 1 ? "mesa livre" : "mesas livres"}
                   </span>
                 )}
@@ -2965,55 +1949,50 @@ const ComandaDigital = ({
 
               {queue.length === 0 ? (
                 <div className="py-8 text-center rounded-xl border border-dashed border-slate-200 bg-slate-50/50">
-                  <UsersRoundIcon size={28} className="mx-auto text-slate-400 mb-2 opacity-60" />
-                  <p className="text-sm font-semibold text-slate-700">Fila vazia</p>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Nenhum cliente aguardando mesa no momento.
-                  </p>
+                  <UsersRoundIcon size={28} className="mx-auto text-slate-400 mb-1 opacity-60" />
+                  <p className="text-xs font-semibold text-slate-700">Fila vazia</p>
+                  <p className="text-[11px] text-slate-500">Nenhum cliente aguardando mesa no momento.</p>
                 </div>
               ) : (
                 <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
                   {queue.map((entry) => (
                     <div
                       key={entry.id}
-                      className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-xs transition-all hover:border-slate-300"
+                      className="rounded-xl border border-slate-200 bg-white p-3 shadow-xs space-y-2"
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-start gap-2.5">
-                          <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-bold">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2">
+                          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary/10 text-primary border border-primary/20 text-[10px] font-bold">
                             #{entry.position}
                           </span>
                           <div>
-                            <p className="font-semibold text-sm text-slate-800">
-                              {entry.customerName}
-                            </p>
-                            <p className="text-xs text-slate-500 mt-0.5">
-                              {entry.partySize} {entry.partySize === 1 ? "pessoa" : "pessoas"} · Chegou às {formatTime(entry.arrivedAt)}
+                            <p className="font-semibold text-xs text-slate-800">{entry.customerName}</p>
+                            <p className="text-[11px] text-slate-500">
+                              {entry.partySize} {entry.partySize === 1 ? "pessoa" : "pessoas"} · Chegou às{" "}
+                              {formatTime(entry.arrivedAt)}
                             </p>
                           </div>
                         </div>
-                        <Badge variant="warning" className="text-xs font-medium shrink-0">
+                        <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 border border-amber-200">
                           Aguardando
-                        </Badge>
+                        </span>
                       </div>
 
                       {freeTables > 0 && (
-                        <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
-                          <span className="text-xs text-slate-500 font-medium">Acomodar na mesa:</span>
-                          <div className="flex flex-wrap gap-1.5">
+                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
+                          <span className="text-[11px] text-slate-500 font-medium">Acomodar na mesa:</span>
+                          <div className="flex flex-wrap gap-1">
                             {tables
                               .filter((m) => !m.currentOrder)
                               .map((m) => (
-                                <Button
+                                <button
                                   key={m.table.id}
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-7 px-2.5 text-xs font-medium border-primary/30 text-primary hover:bg-primary/10"
-                                  disabled={isPending}
+                                  type="button"
                                   onClick={() => handleAcomodarFila(entry.id, m.table.id)}
+                                  className="h-6 px-2 text-[10px] font-semibold rounded-lg border border-primary/30 bg-primary/5 text-primary hover:bg-primary hover:text-white transition-colors"
                                 >
                                   {m.table.name}
-                                </Button>
+                                </button>
                               ))}
                           </div>
                         </div>
@@ -3027,33 +2006,35 @@ const ComandaDigital = ({
         </DialogContent>
       </Dialog>
 
-      {/* ── Reservas dialog ─────────────────────────────────────────── */}
+      {/* ── Dialog: Reservas de Mesas ── */}
       <Dialog open={isReservasOpen} onOpenChange={setIsReservasOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl">
-          <DialogHeader className="pb-3 border-b">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <ClockIcon size={20} />
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl border-slate-200 bg-white text-slate-900 shadow-2xl">
+          <DialogHeader className="pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-sm shadow-primary/10">
+                <ClockIcon size={22} />
               </div>
               <div>
-                <DialogTitle className="text-lg font-bold">Reservas de Mesas</DialogTitle>
-                <DialogDescription className="text-xs">
+                <DialogTitle className="font-display text-lg font-bold text-slate-900">
+                  Reservas de Mesas
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500">
                   Agenda e controle de reservas do restaurante.
                 </DialogDescription>
               </div>
             </div>
           </DialogHeader>
 
-          <div className="mt-4 space-y-5">
-            {/* Form */}
-            <div className="space-y-3 rounded-xl border border-slate-200/80 bg-slate-50/50 p-4">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-600">
+          <div className="space-y-4 pt-2">
+            {/* Formulário de Nova Reserva */}
+            <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3.5 space-y-3">
+              <span className="text-xs font-bold uppercase tracking-wide text-slate-700">
                 Nova Reserva
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
+              </span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                <div className="space-y-1">
                   <Label htmlFor="reserva-name" className="text-xs font-semibold text-slate-700">
-                    Nome do cliente
+                    Nome do Cliente *
                   </Label>
                   <Input
                     id="reserva-name"
@@ -3063,32 +2044,26 @@ const ComandaDigital = ({
                       if (reservaErrors.customerName) setReservaErrors((prev) => ({ ...prev, customerName: "" }));
                     }}
                     placeholder="Ex.: Mariana Souza"
-                    className={cn(
-                      "h-9 text-xs transition-colors bg-white",
-                      reservaErrors.customerName && "border-rose-500 bg-rose-50/20 focus-visible:ring-rose-400",
-                    )}
+                    className="h-9 rounded-xl border-slate-200 bg-white text-xs"
                   />
-                  {reservaErrors.customerName && (
-                    <p className="text-[11px] font-medium text-rose-500">{reservaErrors.customerName}</p>
-                  )}
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <Label htmlFor="reserva-phone" className="text-xs font-semibold text-slate-700">
-                    Telefone de contato
+                    Telefone de Contato
                   </Label>
                   <Input
                     id="reserva-phone"
                     value={reservaForm.customerPhone}
                     onChange={(e) => setReservaForm((f) => ({ ...f, customerPhone: e.target.value }))}
                     placeholder="(00) 00000-0000"
-                    className="h-9 text-xs bg-white"
+                    className="h-9 rounded-xl border-slate-200 bg-white text-xs"
                   />
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <Label htmlFor="reserva-party-size" className="text-xs font-semibold text-slate-700">
-                    Quantidade de pessoas
+                    Pessoas *
                   </Label>
                   <Input
                     id="reserva-party-size"
@@ -3098,25 +2073,16 @@ const ComandaDigital = ({
                     value={reservaForm.partySize}
                     onChange={(e) => {
                       const val = Number(e.target.value);
-                      setReservaForm((f) => ({
-                        ...f,
-                        partySize: Math.max(1, val),
-                      }));
+                      setReservaForm((f) => ({ ...f, partySize: Math.max(1, val) }));
                       if (reservaErrors.partySize) setReservaErrors((prev) => ({ ...prev, partySize: "" }));
                     }}
-                    className={cn(
-                      "h-9 text-xs transition-colors bg-white",
-                      reservaErrors.partySize && "border-rose-500 bg-rose-50/20 focus-visible:ring-rose-400",
-                    )}
+                    className="h-9 rounded-xl border-slate-200 bg-white text-xs"
                   />
-                  {reservaErrors.partySize && (
-                    <p className="text-[11px] font-medium text-rose-500">{reservaErrors.partySize}</p>
-                  )}
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <Label htmlFor="reserva-datetime" className="text-xs font-semibold text-slate-700">
-                    Data e horário da reserva
+                    Data e Horário *
                   </Label>
                   <DatePicker
                     value={reservaForm.scheduledFor}
@@ -3125,39 +2091,33 @@ const ComandaDigital = ({
                       if (reservaErrors.scheduledFor) setReservaErrors((prev) => ({ ...prev, scheduledFor: "" }));
                     }}
                     withTime
-                    placeholder="Selecione data e horário"
-                    className={cn(
-                      "h-9 text-xs bg-white",
-                      reservaErrors.scheduledFor && "border-rose-500 ring-1 ring-rose-500",
-                    )}
+                    placeholder="Selecione data e hora"
+                    className="h-9 rounded-xl border-slate-200 bg-white text-xs"
                   />
-                  {reservaErrors.scheduledFor && (
-                    <p className="text-[11px] font-medium text-rose-500">{reservaErrors.scheduledFor}</p>
-                  )}
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <Label className="text-xs font-semibold text-slate-700">
-                    Mesa preferencial
+                    Mesa Preferencial (Opcional)
                   </Label>
                   <Select
                     value={reservaForm.diningTableId}
                     onValueChange={(v) => setReservaForm((f) => ({ ...f, diningTableId: v }))}
                   >
-                    <SelectTrigger className="h-9 text-xs bg-white">
-                      <SelectValue placeholder="Selecione a mesa (opcional)" />
+                    <SelectTrigger className="h-9 rounded-xl border-slate-200 bg-white text-xs">
+                      <SelectValue placeholder="Selecione a mesa..." />
                     </SelectTrigger>
                     <SelectContent>
                       {tables.map((m) => (
                         <SelectItem key={m.table.id} value={m.table.id}>
-                          {m.table.name} ({String(m.table.seats)} lugares)
+                          {m.table.name} ({m.table.seats} lugares)
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <Label htmlFor="reserva-notes" className="text-xs font-semibold text-slate-700">
                     Observações
                   </Label>
@@ -3166,39 +2126,37 @@ const ComandaDigital = ({
                     value={reservaForm.notes}
                     onChange={(e) => setReservaForm((f) => ({ ...f, notes: e.target.value }))}
                     placeholder="Ex.: Aniversário, perto da janela"
-                    className="h-9 text-xs bg-white"
+                    className="h-9 rounded-xl border-slate-200 bg-white text-xs"
                   />
                 </div>
               </div>
 
               <Button
-                size="sm"
-                className="w-full h-9 font-semibold"
-                disabled={isPending}
+                type="button"
                 onClick={handleCriarReserva}
+                disabled={isPending}
+                className="w-full h-9 rounded-full bg-primary text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90"
               >
                 {isPending ? (
                   <Loader2Icon size={14} className="animate-spin mr-1.5" />
                 ) : (
                   <PlusIcon size={14} className="mr-1.5" />
                 )}
-                Criar Reserva
+                <span>Criar Reserva</span>
               </Button>
             </div>
 
-            {/* List */}
-            <div className="space-y-3">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-600">
+            {/* Lista de Reservas Ativas */}
+            <div className="space-y-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
                 Reservas Cadastradas ({reservations.filter((r) => r.status !== "CANCELLED" && r.status !== "FINISHED").length})
-              </p>
+              </span>
 
               {reservations.filter((r) => r.status !== "CANCELLED" && r.status !== "FINISHED").length === 0 ? (
                 <div className="py-8 text-center rounded-xl border border-dashed border-slate-200 bg-slate-50/50">
-                  <ClockIcon size={28} className="mx-auto text-slate-400 mb-2 opacity-60" />
-                  <p className="text-sm font-semibold text-slate-700">Nenhuma reserva ativa</p>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Todas as reservas foram atendidas ou não há agendamentos.
-                  </p>
+                  <ClockIcon size={28} className="mx-auto text-slate-400 mb-1 opacity-60" />
+                  <p className="text-xs font-semibold text-slate-700">Nenhuma reserva ativa</p>
+                  <p className="text-[11px] text-slate-500">Todas as reservas foram atendidas ou não há agendamentos.</p>
                 </div>
               ) : (
                 <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
@@ -3207,47 +2165,39 @@ const ComandaDigital = ({
                     .map((r) => (
                       <div
                         key={r.id}
-                        className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-xs transition-all hover:border-slate-300"
+                        className="rounded-xl border border-slate-200 bg-white p-3 shadow-xs space-y-2"
                       >
-                        <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start justify-between gap-2">
                           <div>
-                            <p className="font-semibold text-sm text-slate-800">{r.customerName}</p>
-                            <p className="text-xs text-slate-500 mt-0.5">
+                            <p className="font-semibold text-xs text-slate-800">{r.customerName}</p>
+                            <p className="text-[11px] text-slate-500">
                               {r.partySize} {r.partySize === 1 ? "pessoa" : "pessoas"} · {formatDateTime(r.scheduledFor)}
                             </p>
                             {r.customerPhone && (
-                              <p className="text-xs text-slate-500 mt-0.5">Tel: {r.customerPhone}</p>
+                              <p className="text-[11px] text-slate-400">Tel: {r.customerPhone}</p>
                             )}
                             {r.notes && (
-                              <p className="mt-1 text-xs italic text-slate-600 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
-                                {r.notes}
+                              <p className="text-[10px] italic text-slate-600 mt-0.5">
+                                Obs: {r.notes}
                               </p>
                             )}
                           </div>
-                          <Badge
-                            variant={
+                          <span
+                            className={cn(
+                              "rounded-full px-2 py-0.5 text-[10px] font-semibold border",
                               r.status === "CONFIRMED"
-                                ? "success"
-                                : r.status === "PENDING"
-                                  ? "warning"
-                                  : "secondary"
-                            }
-                            className="shrink-0 text-xs font-medium"
+                                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                                : "bg-amber-50 text-amber-800 border-amber-200",
+                            )}
                           >
-                            {r.status === "CONFIRMED"
-                              ? "Confirmada"
-                              : r.status === "PENDING"
-                                ? "Pendente"
-                                : r.status}
-                          </Badge>
+                            {r.status === "CONFIRMED" ? "Confirmada" : "Pendente"}
+                          </span>
                         </div>
-                        <div className="mt-3 pt-2.5 border-t border-slate-100 flex justify-end gap-1.5">
+
+                        <div className="pt-2 border-t border-slate-100 flex justify-end gap-1.5">
                           {r.status === "PENDING" && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-7 text-xs font-medium border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-                              disabled={isPending}
+                            <button
+                              type="button"
                               onClick={async () => {
                                 await atualizarStatusReservaAction({
                                   slug,
@@ -3259,17 +2209,15 @@ const ComandaDigital = ({
                                     x.id === r.id ? { ...x, status: "CONFIRMED" as const } : x,
                                   ),
                                 );
-                                toast.success("Reserva confirmada com sucesso!");
+                                toast.success("Reserva confirmada!");
                               }}
+                              className="h-6 px-2.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-800 text-[11px] font-semibold hover:bg-emerald-100 transition-colors"
                             >
                               Confirmar
-                            </Button>
+                            </button>
                           )}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 text-xs font-medium text-rose-600 border-rose-200 hover:bg-rose-50"
-                            disabled={isPending}
+                          <button
+                            type="button"
                             onClick={async () => {
                               await atualizarStatusReservaAction({
                                 slug,
@@ -3283,9 +2231,10 @@ const ComandaDigital = ({
                               );
                               toast.info("Reserva cancelada.");
                             }}
+                            className="h-6 px-2.5 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 text-[11px] font-semibold hover:bg-rose-100 transition-colors"
                           >
                             Cancelar
-                          </Button>
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -3295,7 +2244,216 @@ const ComandaDigital = ({
           </div>
         </DialogContent>
       </Dialog>
-    </section>
+
+      {/* ── Dialog: Transferir Mesa Inteira ── */}
+      <Dialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>
+        <DialogContent className="max-w-sm rounded-2xl border-slate-200 bg-white text-slate-900 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-display text-base font-bold text-slate-900">
+              Transferir Mesa
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Move todos os itens e a comanda da mesa atual para outra mesa livre.
+            </DialogDescription>
+          </DialogHeader>
+
+          {transferTargetTables.length === 0 ? (
+            <p className="py-4 text-center text-xs text-slate-500">
+              Nenhuma outra mesa livre disponível no salão.
+            </p>
+          ) : (
+            <div className="space-y-1.5 pt-1">
+              <Label className="text-xs font-semibold text-slate-700">Mesa de Destino</Label>
+              <Select value={targetTableId} onValueChange={setTargetTableId}>
+                <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs">
+                  <SelectValue placeholder="Selecione a mesa destino..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {transferTargetTables.map((m) => (
+                    <SelectItem key={m.table.id} value={m.table.id}>
+                      {m.table.name} ({m.table.seats} lugares)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsTransferOpen(false)}
+              className="rounded-full border-slate-200 text-xs font-medium text-slate-700"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleTransferirMesa}
+              disabled={!targetTableId || isPending || transferTargetTables.length === 0}
+              className="rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90"
+            >
+              {isPending ? "Transferindo..." : "Confirmar Transferência"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Transferir Itens Selecionados ── */}
+      <Dialog open={isItemTransferOpen} onOpenChange={setIsItemTransferOpen}>
+        <DialogContent className="max-w-md rounded-2xl border-slate-200 bg-white text-slate-900 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-display text-base font-bold text-slate-900">
+              Transferir Itens Selecionados
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Mova itens específicos da comanda para outra mesa ocupada.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 pt-1">
+            <Label className="text-xs font-semibold text-slate-700">
+              Selecione os itens a transferir
+            </Label>
+            <div className="max-h-48 space-y-1.5 overflow-y-auto pr-1">
+              {selectedMesa?.currentOrder?.orderProducts.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => toggleItemTransferSelection(item.id)}
+                  className={cn(
+                    "flex items-center gap-2 rounded-xl border p-2 cursor-pointer transition-all",
+                    itemTransferSelectedIds.has(item.id)
+                      ? "border-primary bg-primary/5"
+                      : "border-slate-100 bg-slate-50/50 hover:bg-slate-50",
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    checked={itemTransferSelectedIds.has(item.id)}
+                    onChange={() => toggleItemTransferSelection(item.id)}
+                    className="h-4 w-4 rounded accent-primary cursor-pointer shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-slate-900 truncate">{item.product.name}</p>
+                    <p className="text-[11px] text-slate-500">
+                      {item.quantity} × {formatCurrency(item.price)}
+                    </p>
+                  </div>
+                  <span className="font-display text-xs font-bold text-slate-900 shrink-0">
+                    {formatCurrency(item.lineTotal)}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-1.5 pt-2 border-t border-slate-100">
+              <Label className="text-xs font-semibold text-slate-700">Mesa de Destino</Label>
+              <Select
+                value={itemTransferTargetOrderId ? String(itemTransferTargetOrderId) : ""}
+                onValueChange={(v) => setItemTransferTargetOrderId(Number(v))}
+              >
+                <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs">
+                  <SelectValue placeholder="Selecione a mesa destino..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {tables
+                    .filter((m) => m.currentOrder && m.table.id !== selectedMesa?.table.id)
+                    .map((m) => (
+                      <SelectItem key={m.table.id} value={String(m.currentOrder!.id)}>
+                        {m.table.name} — Total: {formatCurrency(m.currentOrder!.total)}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsItemTransferOpen(false)}
+              className="rounded-full border-slate-200 text-xs font-medium text-slate-700"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleItemTransfer}
+              disabled={
+                itemTransferSelectedIds.size === 0 || !itemTransferTargetOrderId || isPending
+              }
+              className="rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90"
+            >
+              {isPending
+                ? "Transferindo..."
+                : `Transferir ${itemTransferSelectedIds.size} item(s)`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Unir Mesas ── */}
+      <Dialog open={isMergeOpen} onOpenChange={setIsMergeOpen}>
+        <DialogContent className="max-w-sm rounded-2xl border-slate-200 bg-white text-slate-900 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-display text-base font-bold text-slate-900">
+              Unir Mesas
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Todos os itens da outra mesa serão agrupados na {selectedMesa?.table.name}. A mesa secundária
+              será liberada.
+            </DialogDescription>
+          </DialogHeader>
+
+          {mergeTargetOrders.length === 0 ? (
+            <p className="py-4 text-center text-xs text-slate-500">
+              Nenhuma outra mesa ocupada disponível para incorporar.
+            </p>
+          ) : (
+            <div className="space-y-1.5 pt-1">
+              <Label className="text-xs font-semibold text-slate-700">Mesa a Incorporar</Label>
+              <Select
+                value={mergeSecondaryOrderId ? String(mergeSecondaryOrderId) : ""}
+                onValueChange={(v) => setMergeSecondaryOrderId(Number(v))}
+              >
+                <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs">
+                  <SelectValue placeholder="Selecione a mesa..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {mergeTargetOrders.map((m) => (
+                    <SelectItem key={m.table.id} value={String(m.currentOrder!.id)}>
+                      {m.table.name} — Total: {formatCurrency(m.currentOrder!.total)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsMergeOpen(false)}
+              className="rounded-full border-slate-200 text-xs font-medium text-slate-700"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleUnirMesas}
+              disabled={!mergeSecondaryOrderId || isPending || mergeTargetOrders.length === 0}
+              className="rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90"
+            >
+              {isPending ? "Unindo..." : "Confirmar União"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 

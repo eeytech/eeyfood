@@ -9,6 +9,7 @@ import {
   db,
   eq,
   geocodeAddress,
+  notificarStatusWhatsAppPedido,
   ordersTable,
   salvarClienteCrm,
   salvarOuAtualizarEnderecoCliente,
@@ -204,6 +205,16 @@ export const createOrder = async (input: CreateOrderInput) => {
   }
   // Não bloqueia resposta ao cliente — falha silenciosa é aceitável aqui
   notificarNovoPedido({ orderId: order.id, restaurantSlug: input.slug });
+
+  // Notificar cliente via WhatsApp sobre o recebimento do pedido (PENDING)
+  notificarStatusWhatsAppPedido({
+    orderId: order.id,
+    restaurantSlug: input.slug,
+    status: "PENDING",
+    paymentStatus: order.paymentStatus,
+  }).catch((err) =>
+    console.warn(`[createOrder] Aviso ao enviar notificação WhatsApp do pedido #${order.id}:`, err),
+  );
 
   const numTotal = Number(order.total);
   const isFree = numTotal <= 0;

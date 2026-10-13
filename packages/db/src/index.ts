@@ -426,5 +426,8 @@ export type {
 } from "./types";
 export { geocodeAddress, cleanAddressForGeocoding } from "./geocoding";
 export type { GeocodedCoordinates } from "./geocoding";
-
-
+export {
+  notificarStatusWhatsAppPedido,
+  normalizeWhatsAppNumber,
+} from "./whatsapp-notifications";
+export type { NotificarWhatsAppStatusInput } from "./whatsapp-notifications";

@@ -37,6 +37,7 @@ import {
   getOptionalStringValue,
   getStringValue,
 } from "@/lib/admin-form-utils";
+import { notificarAtualizacaoPedido } from "@/lib/notificar-atualizacao-pedido";
 
 const courierSchema = z.object({
   name: z.string().trim().min(2, "Informe um nome válido."),
@@ -188,6 +189,14 @@ export const dispatchOrderAction = async (orderId: number, courierId: string) =>
   const result = await despacharPedido({ orderId, courierId });
 
   if (result) {
+    notificarAtualizacaoPedido({
+      orderId: result.id,
+      restaurantSlug: result.restaurantSlug,
+      status: "OUT_FOR_DELIVERY",
+    }).catch((err) =>
+      console.warn("[dispatchOrderAction] Aviso ao notificar atualização de pedido:", err),
+    );
+
     revalidatePath(`/${result.restaurantSlug}/pedidos`);
   }
 
@@ -544,6 +553,16 @@ export const despacharLoteAction = async (
     tripId = trip.id;
   } catch (err) {
     console.error("Erro ao registrar viagem do motoboy:", err);
+  }
+
+  for (const orderId of orderIds) {
+    notificarAtualizacaoPedido({
+      orderId,
+      restaurantSlug: slug,
+      status: "OUT_FOR_DELIVERY",
+    }).catch((err) =>
+      console.warn(`[despacharLoteAction] Erro ao notificar pedido #${orderId}:`, err),
+    );
   }
 
   revalidatePath(`/${slug}/pedidos`);
