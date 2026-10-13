@@ -825,16 +825,6 @@ export function MesasQrCodesClient({
 
         <div className="flex flex-wrap items-center gap-2">
           <Button
-            onClick={handleDownloadPdf}
-            disabled={isExportingPdf || displayedTables.length === 0}
-            variant="outline"
-            className="h-10 gap-2 rounded-full border-slate-300 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-          >
-            <DownloadIcon size={15} />
-            <span>{isExportingPdf ? "Gerando PDF..." : "Baixar PDF"}</span>
-          </Button>
-
-          <Button
             onClick={handlePrint}
             disabled={displayedTables.length === 0}
             className="h-10 gap-2 rounded-full px-5 text-sm font-semibold text-white shadow-sm transition-all hover:brightness-110 active:scale-95"

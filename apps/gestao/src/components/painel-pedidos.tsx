@@ -6,9 +6,12 @@ import {
   ArrowRightIcon,
   BadgeDollarSignIcon,
   BikeIcon,
+  CalendarIcon,
   CheckCircle2Icon,
   ChefHatIcon,
   ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   ClockIcon,
   InboxIcon,
   Loader2Icon,
@@ -20,9 +23,10 @@ import {
   XCircleIcon,
   XIcon,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { io } from "socket.io-client";
 
+import { useTheme } from "@/components/theme-provider";
 import { soundNotifier } from "@/lib/sound-notifications";
 import { dispatchOrderAction, getCouriersAction } from "@/app/(dashboard)/logistica-actions";
 import { Badge } from "@/components/ui/badge";
@@ -374,12 +378,35 @@ const getNextStatusLabel = (order: PedidoRecebimento): string => {
   return "Avançar";
 };
 
+const isSameCalendarDay = (date1: Date, date2: Date) => {
+  return (
+    date1.getFullYear() === date2.getFullYear() &&
+    date1.getMonth() === date2.getMonth() &&
+    date1.getDate() === date2.getDate()
+  );
+};
+
+type DateFilterType = "ALL" | "TODAY" | "YESTERDAY" | "LAST_7_DAYS" | "CUSTOM";
+
 const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
+  const { currentThemeConfig } = useTheme();
+  const boardContainerRef = useRef<HTMLDivElement>(null);
+
   const [orders, setOrders] = useState(initialOrders);
   const [socketConnected, setSocketConnected] = useState(false);
   const [loadingOrderIds, setLoadingOrderIds] = useState<number[]>([]);
   const [activeView, setActiveView] = useState<ActiveView>("PRODUCAO");
   const [expandedOrders, setExpandedOrders] = useState<Set<number>>(new Set());
+
+  // Filtro de data
+  const [dateFilter, setDateFilter] = useState<DateFilterType>("ALL");
+  const [customDate, setCustomDate] = useState<string>("");
+
+  const scrollBoard = (offset: number) => {
+    if (boardContainerRef.current) {
+      boardContainerRef.current.scrollBy({ left: offset, behavior: "smooth" });
+    }
+  };
 
   const [orderToDispatch, setOrderToDispatch] =
     useState<PedidoRecebimento | null>(null);
@@ -795,31 +822,105 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
   };
 
 
-  const countProducao = orders.filter((o) =>
-    VIEW_STATUSES.PRODUCAO.includes(o.status),
-  ).length;
-  const countLogistica = orders.filter((o) =>
-    VIEW_STATUSES.LOGISTICA.includes(o.status),
-  ).length;
-  const countHistorico = orders.filter((o) =>
-    VIEW_STATUSES.HISTORICO.includes(o.status),
-  ).length;
-  const countGeral = orders.length;
-
   const [searchQuery, setSearchQuery] = useState("");
 
+  const orderMatchesDate = (orderCreatedAt: Date | string) => {
+    if (dateFilter === "ALL") return true;
+
+    const orderDate = new Date(orderCreatedAt);
+    const now = new Date();
+
+    if (dateFilter === "TODAY") {
+      return isSameCalendarDay(orderDate, now);
+    }
+
+    if (dateFilter === "YESTERDAY") {
+      const yesterday = new Date(now);
+      yesterday.setDate(now.getDate() - 1);
+      return isSameCalendarDay(orderDate, yesterday);
+    }
+
+    if (dateFilter === "LAST_7_DAYS") {
+      const sevenDaysAgo = new Date(now);
+      sevenDaysAgo.setDate(now.getDate() - 7);
+      sevenDaysAgo.setHours(0, 0, 0, 0);
+      return orderDate >= sevenDaysAgo;
+    }
+
+    if (dateFilter === "CUSTOM" && customDate) {
+      const [y, m, d] = customDate.split("-").map(Number);
+      return (
+        orderDate.getFullYear() === y &&
+        orderDate.getMonth() === m - 1 &&
+        orderDate.getDate() === d
+      );
+    }
+
+    return true;
+  };
+
   const filteredOrders = useMemo(() => {
-    if (!searchQuery.trim()) return orders;
-    const q = searchQuery.toLowerCase().trim();
-    return orders.filter(
-      (order) =>
-        String(order.id).includes(q) ||
-        order.customerName.toLowerCase().includes(q) ||
-        (order.customerPhone && order.customerPhone.includes(q)) ||
-        (order.deliveryAddress &&
-          order.deliveryAddress.toLowerCase().includes(q)),
-    );
-  }, [orders, searchQuery]);
+    return orders.filter((order) => {
+      if (!orderMatchesDate(order.createdAt)) {
+        return false;
+      }
+
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const match =
+          String(order.id).includes(q) ||
+          order.customerName.toLowerCase().includes(q) ||
+          (order.customerPhone && order.customerPhone.includes(q)) ||
+          (order.deliveryAddress &&
+            order.deliveryAddress.toLowerCase().includes(q));
+        if (!match) return false;
+      }
+
+      return true;
+    });
+  }, [orders, dateFilter, customDate, searchQuery]);
+
+  const countToday = useMemo(() => {
+    const now = new Date();
+    return orders.filter((o) => isSameCalendarDay(new Date(o.createdAt), now)).length;
+  }, [orders]);
+
+  const countYesterday = useMemo(() => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    return orders.filter((o) => isSameCalendarDay(new Date(o.createdAt), yesterday)).length;
+  }, [orders]);
+
+  const countLast7Days = useMemo(() => {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+    return orders.filter((o) => new Date(o.createdAt) >= sevenDaysAgo).length;
+  }, [orders]);
+
+  const isDateFiltered = dateFilter !== "ALL";
+
+  const getDateFilterLabel = () => {
+    if (dateFilter === "TODAY") return `Hoje (${countToday})`;
+    if (dateFilter === "YESTERDAY") return `Ontem (${countYesterday})`;
+    if (dateFilter === "LAST_7_DAYS") return `Últimos 7 dias (${countLast7Days})`;
+    if (dateFilter === "CUSTOM" && customDate) {
+      const [y, m, d] = customDate.split("-");
+      return `${d}/${m}/${y}`;
+    }
+    return "Todas as datas";
+  };
+
+  const countProducao = filteredOrders.filter((o) =>
+    VIEW_STATUSES.PRODUCAO.includes(o.status),
+  ).length;
+  const countLogistica = filteredOrders.filter((o) =>
+    VIEW_STATUSES.LOGISTICA.includes(o.status),
+  ).length;
+  const countHistorico = filteredOrders.filter((o) =>
+    VIEW_STATUSES.HISTORICO.includes(o.status),
+  ).length;
+  const countGeral = filteredOrders.length;
 
   const activeStatuses = VIEW_STATUSES[activeView];
   const activeColumns = KANBAN_COLUMNS.filter((col) =>
@@ -894,7 +995,7 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
               </p>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-              {/* Botão de Configuração de Auto-Impressão */}
+              {/* Botão de Configuração de Auto-Impressão seguindo o Theme */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -902,14 +1003,27 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                     size="sm"
                     className={cn(
                       "h-8 gap-1.5 text-xs font-semibold rounded-lg border transition-all shadow-xs",
-                      autoPrintEnabled
-                        ? "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
-                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
+                      !autoPrintEnabled &&
+                        "border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
                     )}
+                    style={
+                      autoPrintEnabled
+                        ? {
+                            color: currentThemeConfig.hex,
+                            borderColor: `${currentThemeConfig.hex}60`,
+                            backgroundColor: `${currentThemeConfig.hex}15`,
+                          }
+                        : undefined
+                    }
                   >
                     <PrinterIcon
                       size={14}
-                      className={autoPrintEnabled ? "text-emerald-600" : "text-slate-400"}
+                      style={
+                        autoPrintEnabled
+                          ? { color: currentThemeConfig.hex }
+                          : undefined
+                      }
+                      className={!autoPrintEnabled ? "text-slate-400" : ""}
                     />
                     <span>
                       {autoPrintEnabled ? "Auto-Print Ativo" : "Auto-Print"}
@@ -940,7 +1054,9 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                       )}
                     >
                       <span>Via Entrega / Cliente</span>
-                      {autoPrintMode === "DELIVERY" && <span className="text-emerald-600">✓</span>}
+                      {autoPrintMode === "DELIVERY" && (
+                        <span style={{ color: currentThemeConfig.hex }}>✓</span>
+                      )}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => handleChangeAutoPrintMode("PRODUCTION")}
@@ -950,7 +1066,9 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                       )}
                     >
                       <span>Via Cozinha / Produção</span>
-                      {autoPrintMode === "PRODUCTION" && <span className="text-emerald-600">✓</span>}
+                      {autoPrintMode === "PRODUCTION" && (
+                        <span style={{ color: currentThemeConfig.hex }}>✓</span>
+                      )}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => handleChangeAutoPrintMode("BOTH")}
@@ -960,24 +1078,39 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                       )}
                     >
                       <span>Ambas (Cozinha + Entrega)</span>
-                      {autoPrintMode === "BOTH" && <span className="text-emerald-600">✓</span>}
+                      {autoPrintMode === "BOTH" && (
+                        <span style={{ color: currentThemeConfig.hex }}>✓</span>
+                      )}
                     </DropdownMenuItem>
                   </div>
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              <Badge
-                variant={socketConnected ? "success" : "danger"}
-                className="w-fit"
-              >
-                {socketConnected ? "Canal sincronizado" : "Reconectando"}
-              </Badge>
-              <span
-                className={cn(
-                  "h-3 w-3 animate-pulse rounded-full",
-                  socketConnected ? "bg-emerald-500" : "bg-rose-500",
-                )}
-              />
+              {/* Status badge de sincronização seguindo o Theme */}
+              {socketConnected ? (
+                <span
+                  className="inline-flex h-8 items-center gap-1.5 px-3 rounded-lg text-xs font-semibold border transition-all shadow-xs select-none"
+                  style={{
+                    color: currentThemeConfig.hex,
+                    borderColor: `${currentThemeConfig.hex}40`,
+                    backgroundColor: `${currentThemeConfig.hex}15`,
+                  }}
+                >
+                  <span
+                    className="h-2 w-2 rounded-full animate-pulse"
+                    style={{ backgroundColor: currentThemeConfig.hex }}
+                  />
+                  <span>Canal sincronizado</span>
+                </span>
+              ) : (
+                <Badge
+                  variant="danger"
+                  className="h-8 gap-1.5 px-3 rounded-lg text-xs font-semibold shadow-xs"
+                >
+                  <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping" />
+                  <span>Reconectando</span>
+                </Badge>
+              )}
             </div>
           </CardHeader>
         </Card>
@@ -1030,38 +1163,226 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
             </Tabs>
           </div>
 
-          <div className="relative w-full sm:w-64">
-            <SearchIcon
-              size={14}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-            />
-            <Input
-              placeholder="Buscar #id, cliente, endereço..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-9 rounded-xl border-slate-200 bg-white pl-8 pr-8 text-xs placeholder:text-slate-400 focus:bg-white"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap w-full sm:w-auto">
+            {/* Filtro de Data */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "h-9 gap-1.5 text-xs font-semibold rounded-xl border transition-all shadow-xs",
+                    !isDateFiltered &&
+                      "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                  )}
+                  style={
+                    isDateFiltered
+                      ? {
+                          color: currentThemeConfig.hex,
+                          borderColor: `${currentThemeConfig.hex}60`,
+                          backgroundColor: `${currentThemeConfig.hex}15`,
+                        }
+                      : undefined
+                  }
+                >
+                  <CalendarIcon
+                    size={14}
+                    style={
+                      isDateFiltered
+                        ? { color: currentThemeConfig.hex }
+                        : undefined
+                    }
+                    className={!isDateFiltered ? "text-slate-500" : ""}
+                  />
+                  <span>{getDateFilterLabel()}</span>
+                  <ChevronDownIcon size={12} className="opacity-60" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64 p-2 space-y-1.5">
+                <div className="px-2 py-1 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                  Filtrar por período
+                </div>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setDateFilter("TODAY");
+                    setCustomDate("");
+                  }}
+                  className={cn(
+                    "flex items-center justify-between text-xs cursor-pointer rounded-lg px-2.5 py-2",
+                    dateFilter === "TODAY" && "font-bold bg-slate-100/80 text-slate-900",
+                  )}
+                >
+                  <span>Hoje</span>
+                  <span className="text-[10px] rounded-full px-2 py-0.5 bg-slate-200/80 font-bold text-slate-700">
+                    {countToday}
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setDateFilter("YESTERDAY");
+                    setCustomDate("");
+                  }}
+                  className={cn(
+                    "flex items-center justify-between text-xs cursor-pointer rounded-lg px-2.5 py-2",
+                    dateFilter === "YESTERDAY" && "font-bold bg-slate-100/80 text-slate-900",
+                  )}
+                >
+                  <span>Ontem</span>
+                  <span className="text-[10px] rounded-full px-2 py-0.5 bg-slate-200/80 font-bold text-slate-700">
+                    {countYesterday}
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setDateFilter("LAST_7_DAYS");
+                    setCustomDate("");
+                  }}
+                  className={cn(
+                    "flex items-center justify-between text-xs cursor-pointer rounded-lg px-2.5 py-2",
+                    dateFilter === "LAST_7_DAYS" && "font-bold bg-slate-100/80 text-slate-900",
+                  )}
+                >
+                  <span>Últimos 7 dias</span>
+                  <span className="text-[10px] rounded-full px-2 py-0.5 bg-slate-200/80 font-bold text-slate-700">
+                    {countLast7Days}
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setDateFilter("ALL");
+                    setCustomDate("");
+                  }}
+                  className={cn(
+                    "flex items-center justify-between text-xs cursor-pointer rounded-lg px-2.5 py-2",
+                    dateFilter === "ALL" && "font-bold bg-slate-100/80 text-slate-900",
+                  )}
+                >
+                  <span>Todas as datas</span>
+                  <span className="text-[10px] rounded-full px-2 py-0.5 bg-slate-200/80 font-bold text-slate-700">
+                    {orders.length}
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <div className="p-1 space-y-1.5">
+                  <label className="text-[11px] font-medium text-slate-600 block">
+                    Data específica:
+                  </label>
+                  <Input
+                    type="date"
+                    value={customDate}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCustomDate(val);
+                      if (val) {
+                        setDateFilter("CUSTOM");
+                      } else {
+                        setDateFilter("ALL");
+                      }
+                    }}
+                    className="h-8 text-xs rounded-lg border-slate-200 bg-white"
+                  />
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {isDateFiltered && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 shrink-0 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                onClick={() => {
+                  setDateFilter("ALL");
+                  setCustomDate("");
+                }}
+                title="Limpar filtro de data"
               >
-                <XIcon size={12} />
-              </button>
+                <XIcon size={14} />
+              </Button>
             )}
+
+            {/* Barra de busca */}
+            <div className="relative w-full sm:w-60">
+              <SearchIcon
+                size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+              <Input
+                placeholder="Buscar #id, cliente, endereço..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-9 rounded-xl border-slate-200 bg-white pl-8 pr-8 text-xs placeholder:text-slate-400 focus:bg-white"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  <XIcon size={12} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className={isGeral ? "overflow-x-auto pb-4" : ""}>
+        {/* Banner de navegação e auxílio visual quando em Visão Geral */}
+        {isGeral && (
+          <div className="flex items-center justify-between text-xs text-slate-600 bg-white/95 border border-slate-200/90 px-3.5 py-2 rounded-xl shadow-xs">
+            <span className="flex items-center gap-2 font-medium">
+              <span
+                className="h-2 w-2 rounded-full animate-pulse"
+                style={{ backgroundColor: currentThemeConfig.hex }}
+              />
+              <span>
+                Visão geral completa (6 etapas) • Role horizontalmente ou use os botões para navegar
+              </span>
+            </span>
+            <div className="flex items-center gap-1.5">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 px-2.5 gap-1 rounded-lg text-xs font-semibold text-slate-700 hover:text-slate-900 border-slate-200 shadow-xs"
+                onClick={() => scrollBoard(-360)}
+                title="Rolar para a esquerda"
+              >
+                <ChevronLeftIcon size={13} />
+                <span className="hidden sm:inline">Anterior</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 px-2.5 gap-1 rounded-lg text-xs font-semibold text-slate-700 hover:text-slate-900 border-slate-200 shadow-xs"
+                onClick={() => scrollBoard(360)}
+                title="Rolar para a direita"
+              >
+                <span className="hidden sm:inline">Próxima</span>
+                <ChevronRightIcon size={13} />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Container horizontal com scrollbar estilizada e responsiva */}
+        <div
+          ref={boardContainerRef}
+          className={cn(
+            "w-full max-w-full overflow-x-auto pb-4 pt-1",
+            isGeral && "scroll-smooth",
+            "[&::-webkit-scrollbar]:h-2.5 [&::-webkit-scrollbar-track]:bg-slate-100 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-400 [scrollbar-width:thin] [scrollbar-color:#cbd5e1_#f1f5f9]",
+          )}
+        >
           <div
             className={cn(
-              "grid gap-4",
               isGeral
-                ? "min-w-[1600px] grid-cols-6"
-                : activeColumns.length === 2
-                  ? "grid-cols-1 md:grid-cols-2"
-                  : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+                ? "flex gap-4 min-w-max pb-1"
+                : cn(
+                    "grid gap-4",
+                    activeColumns.length === 2
+                      ? "grid-cols-1 md:grid-cols-2"
+                      : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+                  ),
             )}
           >
             {activeColumns.map((column) => {
@@ -1078,6 +1399,9 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                   key={column.status}
                   className={cn(
                     "flex h-full flex-col gap-3 rounded-2xl p-2.5 transition-colors border",
+                    isGeral
+                      ? "w-[330px] min-w-[330px] shrink-0"
+                      : "w-full min-w-0",
                     column.theme.columnBg,
                     column.theme.columnBorder,
                   )}
@@ -1133,10 +1457,10 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                       <CardContent className="flex min-h-[120px] flex-col items-center justify-center gap-1.5 p-4 text-center">
                         <ColumnIcon className={cn("opacity-70", column.theme.emptyIcon)} size={22} />
                         <p className="text-xs font-semibold text-slate-700">
-                          {searchQuery ? "Nenhum pedido filtrado" : "Nenhum pedido nesta etapa"}
+                          {searchQuery || isDateFiltered ? "Nenhum pedido encontrado" : "Nenhum pedido nesta etapa"}
                         </p>
                         <p className="text-[10px] text-slate-400">
-                          {searchQuery ? "Tente outro termo de busca" : column.description}
+                          {searchQuery || isDateFiltered ? "Tente alterar a busca ou o período selecionado" : column.description}
                         </p>
                       </CardContent>
                     </Card>
@@ -1155,7 +1479,7 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                         <Card
                           key={order.id}
                           className={cn(
-                            "border border-slate-200/90 bg-white/95 shadow-xs transition-all duration-200 hover:shadow-md",
+                            "border border-slate-200/90 bg-white/95 shadow-xs transition-all duration-200 hover:shadow-md w-full min-w-0",
                             column.theme.cardBorderLeft,
                             column.theme.cardHoverBorder,
                           )}
@@ -1371,12 +1695,12 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                                 </Button>
                               ) : null}
 
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-1.5 min-w-0">
                                 {previousStatus ? (
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="h-8 flex-1 text-xs px-2 font-medium"
+                                    className="h-8 flex-1 text-xs px-2 font-medium min-w-0"
                                     disabled={isLoading}
                                     onClick={() =>
                                       handleOrderPatch(order.id, {
@@ -1385,7 +1709,7 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                                     }
                                   >
                                     <ArrowLeftIcon size={12} className="mr-1 shrink-0" />
-                                    <span>Voltar</span>
+                                    <span className="truncate">Voltar</span>
                                   </Button>
                                 ) : null}
 
@@ -1393,7 +1717,7 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                                   <Button
                                     size="sm"
                                     className={cn(
-                                      "h-8 flex-1 text-xs px-2 font-semibold shadow-xs transition-all",
+                                      "h-8 flex-1 text-xs px-2 font-semibold shadow-xs transition-all min-w-0",
                                       column.theme.advanceButtonClass,
                                     )}
                                     disabled={isLoading}
@@ -1404,7 +1728,7 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                                     }
                                   >
                                     <ArrowRightIcon size={12} className="mr-1 shrink-0" />
-                                    <span>{getNextStatusLabel(order)}</span>
+                                    <span className="truncate">{getNextStatusLabel(order)}</span>
                                   </Button>
                                 ) : null}
 
