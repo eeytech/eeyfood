@@ -2,13 +2,18 @@
 
 import {
   BanknoteIcon,
+  BriefcaseIcon,
   CalendarIcon,
   CheckCircle2Icon,
   ChevronLeftIcon,
   ChevronRightIcon,
   ChevronsLeftIcon,
   ChevronsRightIcon,
+  CopyIcon,
+  ExternalLinkIcon,
   FilterXIcon,
+  HandCoinsIcon,
+  Loader2Icon,
   MoreHorizontalIcon,
   PencilIcon,
   PlusIcon,
@@ -17,11 +22,13 @@ import {
   TagIcon,
   Trash2Icon,
   TrendingDownIcon,
-  HandCoinsIcon,
-  Loader2Icon,
   TrendingUpIcon,
+  UserCheckIcon,
+  UsersIcon,
+  UserXIcon,
   XIcon,
 } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -29,6 +36,12 @@ import {
   fecharGorjetaGarcomAction,
   type GarcomMetricas,
 } from "@/app/(dashboard)/configuracoes/garcons-actions";
+import {
+  excluirPagamentoFuncionarioAction,
+  registrarPagamentoFuncionarioAction,
+  type FuncionarioMetricas,
+  type FuncionarioPagamentoItem,
+} from "@/app/(dashboard)/configuracoes/funcionarios-actions";
 import {
   createFinancialCategoryAction,
   createTransactionAction,
@@ -89,6 +102,8 @@ interface FinanceiroClientProps {
   transacoes: TransactionWithCategory[];
   categorias: FinancialCategory[];
   garcons?: GarcomMetricas[];
+  funcionarios?: FuncionarioMetricas[];
+  pagamentosFuncionarios?: FuncionarioPagamentoItem[];
   receitasPendentes: number;
   despesasPendentes: number;
 }
@@ -135,9 +150,29 @@ export function FinanceiroClient({
   transacoes,
   categorias,
   garcons = [],
+  funcionarios = [],
+  pagamentosFuncionarios = [],
   receitasPendentes,
   despesasPendentes,
 }: FinanceiroClientProps) {
+  // Main Tab (Transações vs Pagamento de Funcionários)
+  const [activeMainTab, setActiveMainTab] = useState<"TRANSACTIONS" | "EMPLOYEES">("TRANSACTIONS");
+
+  // Pagamento de Funcionários
+  const [employeePaymentModalOpen, setEmployeePaymentModalOpen] = useState(false);
+  const [selectedEmployeeForPayment, setSelectedEmployeeForPayment] = useState<FuncionarioMetricas | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState<string>("");
+  const [paymentType, setPaymentType] = useState<string>("SALARY");
+  const [paymentRefMonth, setPaymentRefMonth] = useState<string>(new Date().toISOString().slice(0, 7));
+  const [paymentMethod, setPaymentMethod] = useState<string>("PIX");
+  const [paymentLaunchExpense, setPaymentLaunchExpense] = useState<boolean>(true);
+  const [paymentNotes, setPaymentNotes] = useState<string>("");
+  const [deletingPaymentItem, setDeletingPaymentItem] = useState<FuncionarioPagamentoItem | null>(null);
+
+  // Filtros de Pagamentos de Funcionários
+  const [empSearch, setEmpSearch] = useState("");
+  const [empTypeFilter, setEmpTypeFilter] = useState("all");
+
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -332,6 +367,103 @@ export function FinanceiroClient({
       }
     });
   };
+
+  // ── Handlers de Pagamento de Funcionários ──
+  const handleOpenEmployeePayment = (f?: FuncionarioMetricas) => {
+    const target = f || funcionarios[0] || null;
+    setSelectedEmployeeForPayment(target);
+    setPaymentAmount(target ? String(target.funcionario.baseSalary || "") : "");
+    setPaymentType("SALARY");
+    setPaymentRefMonth(new Date().toISOString().slice(0, 7));
+    setPaymentMethod("PIX");
+    setPaymentLaunchExpense(true);
+    setPaymentNotes("");
+    setEmployeePaymentModalOpen(true);
+  };
+
+  const handleEmployeePaymentSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!selectedEmployeeForPayment) {
+      toast.error("Selecione um funcionário.");
+      return;
+    }
+    const val = parseFloat(paymentAmount.replace(",", "."));
+    if (isNaN(val) || val <= 0) {
+      toast.error("Informe um valor válido maior que zero.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.set("employeeId", selectedEmployeeForPayment.funcionario.id);
+    formData.set("amount", String(val));
+    formData.set("type", paymentType);
+    formData.set("referenceMonth", paymentRefMonth);
+    formData.set("paymentMethod", paymentMethod);
+    formData.set("launchExpense", String(paymentLaunchExpense));
+    formData.set("notes", paymentNotes);
+
+    startTransition(async () => {
+      try {
+        await registrarPagamentoFuncionarioAction(slug, formData);
+        toast.success(
+          `Pagamento de ${formatCurrency(val)} registrado para ${selectedEmployeeForPayment.funcionario.name}!`,
+        );
+        setEmployeePaymentModalOpen(false);
+      } catch (err: unknown) {
+        toast.error(
+          err instanceof Error ? err.message : "Erro ao processar pagamento.",
+        );
+      }
+    });
+  };
+
+  const handleConfirmDeleteEmployeePayment = () => {
+    if (!deletingPaymentItem) return;
+    startTransition(async () => {
+      try {
+        await excluirPagamentoFuncionarioAction(slug, deletingPaymentItem.id);
+        toast.success("Pagamento removido com sucesso.");
+        setDeletingPaymentItem(null);
+      } catch (err: unknown) {
+        toast.error(
+          err instanceof Error ? err.message : "Erro ao excluir pagamento.",
+        );
+      }
+    });
+  };
+
+  const handleCopyPix = (pixKey?: string | null) => {
+    if (!pixKey) return;
+    navigator.clipboard.writeText(pixKey);
+    toast.success("Chave Pix copiada!");
+  };
+
+  // Filtragem de Pagamentos de Funcionários
+  const filteredEmployeePayments = useMemo(() => {
+    return pagamentosFuncionarios.filter((p) => {
+      if (empTypeFilter !== "all" && p.type !== empTypeFilter) return false;
+      if (empSearch.trim()) {
+        const q = empSearch.toLowerCase().trim();
+        const matchesName = p.employeeName.toLowerCase().includes(q);
+        const matchesRole = p.employeeRole.toLowerCase().includes(q);
+        const matchesNotes = p.notes?.toLowerCase().includes(q);
+        if (!matchesName && !matchesRole && !matchesNotes) return false;
+      }
+      return true;
+    });
+  }, [pagamentosFuncionarios, empSearch, empTypeFilter]);
+
+  // Métricas de Folha no Financeiro
+  const totalFolhaBase = funcionarios
+    .filter((f) => f.funcionario.status === "ACTIVE")
+    .reduce((acc, f) => acc + Number(f.funcionario.baseSalary || 0), 0);
+
+  const nowYearMonth = new Date().toISOString().slice(0, 7);
+  const totalPagoMesAtual = pagamentosFuncionarios
+    .filter((p) => p.referenceMonth === nowYearMonth || new Date(p.paidAt).toISOString().startsWith(nowYearMonth))
+    .reduce((acc, p) => acc + p.amount, 0);
+
+  const totalHistoricoPago = pagamentosFuncionarios.reduce((acc, p) => acc + p.amount, 0);
 
   const netProjected = receitasPendentes - despesasPendentes;
 
@@ -632,6 +764,14 @@ export function FinanceiroClient({
         <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
+            onClick={() => handleOpenEmployeePayment()}
+            className="h-10 gap-1.5 rounded-full border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:text-slate-900"
+          >
+            <BanknoteIcon size={14} className="text-emerald-600" />
+            <span>Pagar Funcionário</span>
+          </Button>
+          <Button
+            variant="outline"
             onClick={() => handleOpenClosing()}
             className="h-10 gap-1.5 rounded-full border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:text-slate-900"
           >
@@ -745,7 +885,43 @@ export function FinanceiroClient({
         </Card>
       </div>
 
-      {/* ── Container da Tabela e Transações ── */}
+      {/* ── Sub-Tabs Navigation (Fluxo vs Pagamento de Funcionários) ────── */}
+      <div className="flex border-b border-slate-200">
+        <button
+          onClick={() => setActiveMainTab("TRANSACTIONS")}
+          className={cn(
+            "flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-semibold transition-all",
+            activeMainTab === "TRANSACTIONS"
+              ? "border-primary text-primary"
+              : "border-transparent text-slate-500 hover:text-slate-800",
+          )}
+        >
+          <ReceiptIcon size={16} />
+          <span>Fluxo de Caixa e Transações</span>
+          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 font-medium">
+            {transacoes.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveMainTab("EMPLOYEES")}
+          className={cn(
+            "flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-semibold transition-all",
+            activeMainTab === "EMPLOYEES"
+              ? "border-primary text-primary"
+              : "border-transparent text-slate-500 hover:text-slate-800",
+          )}
+        >
+          <UsersIcon size={16} />
+          <span>Pagamentos de Funcionários e Folha</span>
+          <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs text-purple-700 font-medium">
+            {pagamentosFuncionarios.length}
+          </span>
+        </button>
+      </div>
+
+      {activeMainTab === "TRANSACTIONS" ? (
+      /* ── Container da Tabela e Transações ── */
       <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
         {/* Filtros de Transações */}
         <div className="border-b border-slate-100 bg-slate-50/50 p-4">
@@ -1274,6 +1450,568 @@ export function FinanceiroClient({
           </TabsContent>
         </Tabs>
       </Card>
+      ) : (
+        /* ── Aba: Pagamentos de Funcionários e Folha ───────── */
+        <div className="space-y-6">
+          {/* ── Cards de Resumo da Folha ───────────────────── */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+            <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Folha Base Mensal
+                  </span>
+                  <div className="rounded-xl bg-purple-100 p-2 text-purple-700">
+                    <BanknoteIcon size={16} />
+                  </div>
+                </div>
+                <p className="mt-2 font-display text-2xl font-bold text-purple-700">
+                  {formatCurrency(totalFolhaBase)}
+                </p>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  {funcionarios.filter((f) => f.funcionario.status === "ACTIVE").length} colaboradores ativos
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Total Pago no Mês
+                  </span>
+                  <div className="rounded-xl bg-emerald-100 p-2 text-emerald-700">
+                    <CheckCircle2Icon size={16} />
+                  </div>
+                </div>
+                <p className="mt-2 font-display text-2xl font-bold text-emerald-700">
+                  {formatCurrency(totalPagoMesAtual)}
+                </p>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Liquidações do mês corrente
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Pagamentos Efetuados
+                  </span>
+                  <div className="rounded-xl bg-blue-100 p-2 text-blue-700">
+                    <ReceiptIcon size={16} />
+                  </div>
+                </div>
+                <p className="mt-2 font-display text-2xl font-bold text-blue-700">
+                  {pagamentosFuncionarios.length}
+                </p>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Total de recibos registrados
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Total Histórico Pago
+                  </span>
+                  <div className="rounded-xl bg-slate-100 p-2 text-slate-700">
+                    <TrendingDownIcon size={16} />
+                  </div>
+                </div>
+                <p className="mt-2 font-display text-2xl font-bold text-slate-800">
+                  {formatCurrency(totalHistoricoPago)}
+                </p>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Acumulado de repasses
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* ── Painel de Pagamentos e Lançamento de Folha ──── */}
+          <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+            {/* Header da Tabela com Filtros e Ações */}
+            <div className="border-b border-slate-100 bg-slate-50/50 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-1 items-center gap-2 max-w-md">
+                  <div className="relative flex-1">
+                    <SearchIcon
+                      size={15}
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                    />
+                    <Input
+                      placeholder="Buscar por colaborador ou observação..."
+                      value={empSearch}
+                      onChange={(e) => setEmpSearch(e.target.value)}
+                      className="h-9 rounded-xl border-slate-200 bg-white pl-9 text-xs focus:bg-white"
+                    />
+                    {empSearch && (
+                      <button
+                        onClick={() => setEmpSearch("")}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        <XIcon size={14} />
+                      </button>
+                    )}
+                  </div>
+
+                  <Select value={empTypeFilter} onValueChange={setEmpTypeFilter}>
+                    <SelectTrigger className="h-9 w-40 rounded-xl border-slate-200 bg-white text-xs">
+                      <SelectValue placeholder="Tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os Tipos</SelectItem>
+                      <SelectItem value="SALARY">Salário Mensal</SelectItem>
+                      <SelectItem value="ADVANCE">Vale / Adiantamento</SelectItem>
+                      <SelectItem value="DAILY">Diária / Avulso</SelectItem>
+                      <SelectItem value="BONUS">Bonificação</SelectItem>
+                      <SelectItem value="VACATION">Férias</SelectItem>
+                      <SelectItem value="THIRTEENTH">13º Salário</SelectItem>
+                      <SelectItem value="OTHER">Outros</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={() => handleOpenEmployeePayment()}
+                    className="h-9 gap-1.5 rounded-full bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-xs hover:bg-primary/90"
+                  >
+                    <PlusIcon size={14} />
+                    <span>Lançar Pagamento</span>
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Tabela de Pagamentos */}
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-slate-100 hover:bg-transparent">
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Colaborador
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Tipo / Mês Ref.
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Valor
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Chave Pix
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Forma / Data
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Caixa
+                    </TableHead>
+                    <TableHead className="text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Ações
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredEmployeePayments.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="py-12 text-center text-slate-500">
+                        <UserXIcon size={32} className="mx-auto mb-2 text-slate-300" />
+                        <p className="text-sm font-semibold text-slate-700">
+                          Nenhum pagamento registrado
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          Utilize o botão acima para lançar pagamentos de salários, vales ou adiantamentos.
+                        </p>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredEmployeePayments.map((p) => {
+                      const typeBadgeConfig: Record<string, { label: string; className: string }> = {
+                        SALARY: { label: "Salário Mensal", className: "bg-blue-100 text-blue-700" },
+                        ADVANCE: { label: "Adiantamento / Vale", className: "bg-amber-100 text-amber-700" },
+                        DAILY: { label: "Diária / Avulso", className: "bg-purple-100 text-purple-700" },
+                        BONUS: { label: "Bonificação", className: "bg-emerald-100 text-emerald-700" },
+                        VACATION: { label: "Férias", className: "bg-indigo-100 text-indigo-700" },
+                        THIRTEENTH: { label: "13º Salário", className: "bg-rose-100 text-rose-700" },
+                        OTHER: { label: "Outro", className: "bg-slate-100 text-slate-700" },
+                      };
+                      const badge = typeBadgeConfig[p.type] || { label: p.type, className: "bg-slate-100 text-slate-700" };
+
+                      return (
+                        <TableRow key={p.id} className="border-slate-100 hover:bg-slate-50/70">
+                          {/* Colaborador */}
+                          <TableCell>
+                            <div>
+                              <p className="text-xs font-bold text-slate-900">{p.employeeName}</p>
+                              <p className="text-[11px] text-slate-400">{p.employeeRole}</p>
+                            </div>
+                          </TableCell>
+
+                          {/* Tipo / Mês */}
+                          <TableCell>
+                            <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold", badge.className)}>
+                              {badge.label}
+                            </span>
+                            <p className="mt-0.5 text-[11px] text-slate-500">
+                              Ref: {p.referenceMonth}
+                            </p>
+                          </TableCell>
+
+                          {/* Valor */}
+                          <TableCell>
+                            <p className="text-xs font-bold text-slate-900">{formatCurrency(p.amount)}</p>
+                            {p.notes && <p className="max-w-[180px] truncate text-[10px] text-slate-400">{p.notes}</p>}
+                          </TableCell>
+
+                          {/* Chave Pix */}
+                          <TableCell>
+                            {p.employeePix ? (
+                              <button
+                                onClick={() => handleCopyPix(p.employeePix)}
+                                title="Copiar chave Pix"
+                                className="group inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-700 hover:border-primary/40 hover:text-primary transition-all"
+                              >
+                                <span className="max-w-[120px] truncate font-mono">{p.employeePix}</span>
+                                <CopyIcon size={11} className="text-slate-400 group-hover:text-primary" />
+                              </button>
+                            ) : (
+                              <span className="text-[11px] text-slate-400 italic">Não informada</span>
+                            )}
+                          </TableCell>
+
+                          {/* Forma / Data */}
+                          <TableCell>
+                            <p className="text-xs font-semibold text-slate-700">{p.paymentMethod}</p>
+                            <p className="text-[11px] text-slate-400">{formatDate(p.paidAt)}</p>
+                          </TableCell>
+
+                          {/* Caixa / Transação */}
+                          <TableCell>
+                            {p.financialTransactionId ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-200">
+                                <CheckCircle2Icon size={11} />
+                                <span>No Caixa</span>
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-slate-400">Avulso</span>
+                            )}
+                          </TableCell>
+
+                          {/* Ações */}
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setDeletingPaymentItem(p)}
+                              className="h-8 w-8 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600"
+                              title="Remover pagamento"
+                            >
+                              <Trash2Icon size={14} />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+
+          {/* ── Seção de Colaboradores e Ações Rápidas ──────── */}
+          <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h4 className="text-sm font-bold text-slate-900">
+                  Colaboradores Cadastrados
+                </h4>
+                <p className="text-xs text-slate-500">
+                  Clique em &quot;Pagar&quot; para liquidar proventos rapidamente via Pix ou dinheiro.
+                </p>
+              </div>
+              <Button
+                asChild
+                variant="outline"
+                className="h-8 gap-1.5 rounded-full text-xs font-semibold border-slate-200"
+              >
+                <Link href="/configuracoes/usuarios">
+                  <span>Gerenciar Funcionários</span>
+                  <ExternalLinkIcon size={12} />
+                </Link>
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {funcionarios.length === 0 ? (
+                <div className="col-span-full py-6 text-center text-xs text-slate-500">
+                  Nenhum funcionário cadastrado ainda.{" "}
+                  <Link href="/configuracoes/usuarios" className="font-semibold text-primary underline">
+                    Cadastrar na aba de funcionários
+                  </Link>
+                </div>
+              ) : (
+                funcionarios.map(({ funcionario, totalPagoMesAtual }) => (
+                  <div
+                    key={funcionario.id}
+                    className="flex items-center justify-between rounded-xl border border-slate-200/80 p-3 bg-slate-50/50 hover:bg-white hover:border-primary/40 transition-all"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <p className="truncate text-xs font-bold text-slate-900">{funcionario.name}</p>
+                        <span className="rounded-sm bg-primary/10 px-1.5 py-0.2 text-[10px] font-semibold text-primary">
+                          {funcionario.roleTitle}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[11px] text-slate-600">
+                        Base: <strong>{formatCurrency(Number(funcionario.baseSalary || 0))}</strong>
+                      </p>
+                      {funcionario.pixKey && (
+                        <p className="truncate text-[10px] text-slate-400 font-mono">
+                          Pix: {funcionario.pixKey}
+                        </p>
+                      )}
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => handleOpenEmployeePayment({
+                        funcionario,
+                        totalPagoMesAtual,
+                        totalPagoHistorico: 0,
+                        ultimoPagamento: null,
+                      })}
+                      className="h-8 rounded-full bg-emerald-600 px-3 text-xs font-semibold text-white shadow-xs hover:bg-emerald-700"
+                    >
+                      Pagar
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* ── Dialog: Pagar Funcionário / Folha ───────────────── */}
+      <Dialog open={employeePaymentModalOpen} onOpenChange={setEmployeePaymentModalOpen}>
+        <DialogContent className="max-w-lg rounded-3xl border-2 border-primary bg-white p-6 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold font-display text-primary">
+              Lançar Pagamento de Colaborador
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Registre a liquidação de salários, vales ou diárias com integração automática ao caixa.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleEmployeePaymentSubmit} className="space-y-4 pt-2">
+            {/* Seletor de Colaborador */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">
+                Selecione o Colaborador *
+              </Label>
+              <Select
+                value={selectedEmployeeForPayment?.funcionario.id}
+                onValueChange={(id) => {
+                  const found = funcionarios.find((f) => f.funcionario.id === id);
+                  if (found) {
+                    setSelectedEmployeeForPayment(found);
+                    setPaymentAmount(String(found.funcionario.baseSalary || ""));
+                  }
+                }}
+              >
+                <SelectTrigger className="h-10 rounded-xl border-slate-200 text-xs">
+                  <SelectValue placeholder="Selecione um funcionário..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {funcionarios.map(({ funcionario }) => (
+                    <SelectItem key={funcionario.id} value={funcionario.id}>
+                      {funcionario.name} — {funcionario.roleTitle} ({formatCurrency(Number(funcionario.baseSalary || 0))})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Info do Colaborador Selecionado + Chave Pix */}
+            {selectedEmployeeForPayment && (
+              <div className="rounded-2xl border border-primary/25 bg-primary/5 p-3.5 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-600">Salário Base Cadastrado:</span>
+                  <span className="font-bold text-slate-900">
+                    {formatCurrency(Number(selectedEmployeeForPayment.funcionario.baseSalary || 0))}
+                  </span>
+                </div>
+                {selectedEmployeeForPayment.funcionario.pixKey ? (
+                  <div className="flex items-center justify-between text-xs pt-1 border-t border-primary/10">
+                    <span className="text-slate-600">Chave Pix ({selectedEmployeeForPayment.funcionario.pixType}):</span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyPix(selectedEmployeeForPayment.funcionario.pixKey)}
+                      className="group flex items-center gap-1 font-mono font-semibold text-primary hover:underline"
+                    >
+                      <span className="max-w-[180px] truncate">{selectedEmployeeForPayment.funcionario.pixKey}</span>
+                      <CopyIcon size={12} />
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-amber-600">
+                    Aviso: Nenhuma chave Pix cadastrada para este colaborador.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Tipo de Pagamento e Mês Ref */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-slate-700">
+                  Tipo de Provento *
+                </Label>
+                <Select value={paymentType} onValueChange={setPaymentType}>
+                  <SelectTrigger className="h-10 rounded-xl border-slate-200 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="SALARY">Salário Mensal</SelectItem>
+                    <SelectItem value="ADVANCE">Adiantamento / Vale</SelectItem>
+                    <SelectItem value="DAILY">Diária / Por Turno</SelectItem>
+                    <SelectItem value="BONUS">Bonificação / Bônus</SelectItem>
+                    <SelectItem value="VACATION">Férias</SelectItem>
+                    <SelectItem value="THIRTEENTH">13º Salário</SelectItem>
+                    <SelectItem value="OTHER">Outro Provento</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="paymentRefMonth" className="text-xs font-semibold text-slate-700">
+                  Mês de Referência *
+                </Label>
+                <Input
+                  id="paymentRefMonth"
+                  type="month"
+                  value={paymentRefMonth}
+                  onChange={(e) => setPaymentRefMonth(e.target.value)}
+                  className="h-10 rounded-xl border-slate-200 text-xs"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Valor e Forma de Pagamento */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="paymentAmount" className="text-xs font-semibold text-slate-700">
+                  Valor a Pagar (R$) *
+                </Label>
+                <Input
+                  id="paymentAmount"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(e.target.value)}
+                  placeholder="0,00"
+                  className="h-10 rounded-xl border-slate-200 text-xs font-bold text-slate-900"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-slate-700">
+                  Forma de Pagamento
+                </Label>
+                <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                  <SelectTrigger className="h-10 rounded-xl border-slate-200 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PIX">Pix Transferência</SelectItem>
+                    <SelectItem value="TRANSFER">TED / DOC Bancário</SelectItem>
+                    <SelectItem value="CASH">Dinheiro em Espécie</SelectItem>
+                    <SelectItem value="OTHER">Cheque / Outro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Observações */}
+            <div className="space-y-1.5">
+              <Label htmlFor="paymentNotes" className="text-xs font-semibold text-slate-700">
+                Observações / Detalhes
+              </Label>
+              <Input
+                id="paymentNotes"
+                value={paymentNotes}
+                onChange={(e) => setPaymentNotes(e.target.value)}
+                placeholder="Ex: Adiantamento referente a 1ª quinzena de outubro"
+                className="h-10 rounded-xl border-slate-200 text-xs"
+              />
+            </div>
+
+            {/* Switch: Lançar Despesa no Caixa */}
+            <div className="flex items-center justify-between rounded-2xl border border-slate-200 p-3.5 bg-slate-50/50">
+              <div className="space-y-0.5">
+                <Label className="text-xs font-semibold text-slate-800">
+                  Lançar Despesa no Financeiro
+                </Label>
+                <p className="text-[11px] text-slate-500">
+                  Registra saída automática em Transações &gt; Categoria &quot;Folha de Pagamento&quot;.
+                </p>
+              </div>
+              <Switch
+                checked={paymentLaunchExpense}
+                onCheckedChange={setPaymentLaunchExpense}
+              />
+            </div>
+
+            <DialogFooter className="gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEmployeePaymentModalOpen(false)}
+                disabled={isPending}
+                className="h-10 rounded-full text-xs font-semibold"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={isPending || !selectedEmployeeForPayment}
+                className="h-10 gap-1.5 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-xs hover:bg-primary/90"
+              >
+                {isPending && <Loader2Icon size={14} className="animate-spin" />}
+                <span>Confirmar Pagamento</span>
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Confirmar Exclusão de Pagamento de Funcionário ── */}
+      <ConfirmDeleteDialog
+        open={Boolean(deletingPaymentItem)}
+        onOpenChange={(open) => {
+          if (!open) setDeletingPaymentItem(null);
+        }}
+        title="Excluir Pagamento"
+        description={
+          deletingPaymentItem ? (
+            <>
+              Tem certeza que deseja estornar o pagamento de{" "}
+              <strong>{formatCurrency(deletingPaymentItem.amount)}</strong> para{" "}
+              <strong>{deletingPaymentItem.employeeName}</strong>? Se houver lançamento de despesa no caixa vinculado, ele também será removido.
+            </>
+          ) : undefined
+        }
+        isPending={isPending}
+        onConfirm={handleConfirmDeleteEmployeePayment}
+      />
 
       {/* ── Dialog: Confirmar Exclusão de Transação ───────── */}
       <ConfirmDeleteDialog

@@ -79,6 +79,9 @@ import {
   aiCustomerHandoffTable,
   waitersTable,
   waiterStatusEnum,
+  employeesTable,
+  employeeStatusEnum,
+  employeePaymentsTable,
   commissionRulesTable,
   tipClosingsTable,
   tableReservationsTable,
@@ -309,6 +312,13 @@ export type NewCommissionRule = InferInsertModel<typeof commissionRulesTable>;
 
 export type TipClosing = InferSelectModel<typeof tipClosingsTable>;
 export type NewTipClosing = InferInsertModel<typeof tipClosingsTable>;
+
+export type Employee = InferSelectModel<typeof employeesTable>;
+export type NewEmployee = InferInsertModel<typeof employeesTable>;
+export type EmployeeStatus = (typeof employeeStatusEnum.enumValues)[number];
+
+export type EmployeePayment = InferSelectModel<typeof employeePaymentsTable>;
+export type NewEmployeePayment = InferInsertModel<typeof employeePaymentsTable>;
 
 export type TableReservation = InferSelectModel<typeof tableReservationsTable>;
 export type NewTableReservation = InferInsertModel<typeof tableReservationsTable>;

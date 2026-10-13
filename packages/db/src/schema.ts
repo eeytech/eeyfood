@@ -128,6 +128,7 @@ export const unitOfMeasureEnum = pgEnum("UnitOfMeasure", [
 ]);
 
 export const waiterStatusEnum = pgEnum("WaiterStatus", ["ACTIVE", "INACTIVE"]);
+export const employeeStatusEnum = pgEnum("EmployeeStatus", ["ACTIVE", "INACTIVE"]);
 
 export const reservationStatusEnum = pgEnum("ReservationStatus", [
   "PENDING",
@@ -281,6 +282,8 @@ export const restaurantsTable = pgTable("Restaurant", {
   acceptPix: boolean("acceptPix").default(true).notNull(),
   pixKey: text("pixKey"),
   pixMode: text("pixMode").default("QRCODE").notNull(),
+  acceptValeRefeicao: boolean("acceptValeRefeicao").default(false).notNull(),
+  acceptValeAlimentacao: boolean("acceptValeAlimentacao").default(false).notNull(),
   isCouponsEnabled: boolean("isCouponsEnabled").default(true).notNull(),
   isCashbackEnabled: boolean("isCashbackEnabled").default(true).notNull(),
   showOptionImages: boolean("showOptionImages").default(true).notNull(),
@@ -1194,6 +1197,54 @@ export const tipClosingsTable = pgTable("TipClosing", {
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
+export const employeesTable = pgTable("Employee", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  restaurantId: uuid("restaurantId")
+    .notNull()
+    .references(() => restaurantsTable.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  roleTitle: text("roleTitle").notNull(),
+  cpf: text("cpf"),
+  phone: text("phone"),
+  email: text("email"),
+  contractType: text("contractType").default("CLT").notNull(),
+  paymentFrequency: text("paymentFrequency").default("MONTHLY").notNull(),
+  baseSalary: money("baseSalary").default(0).notNull(),
+  pixType: text("pixType").default("CPF"),
+  pixKey: text("pixKey"),
+  bankName: text("bankName"),
+  bankAgency: text("bankAgency"),
+  bankAccount: text("bankAccount"),
+  hireDate: date("hireDate"),
+  status: employeeStatusEnum("status").default("ACTIVE").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export const employeePaymentsTable = pgTable("EmployeePayment", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  restaurantId: uuid("restaurantId")
+    .notNull()
+    .references(() => restaurantsTable.id, { onDelete: "cascade" }),
+  employeeId: uuid("employeeId")
+    .notNull()
+    .references(() => employeesTable.id, { onDelete: "cascade" }),
+  amount: money("amount").notNull(),
+  type: text("type").default("SALARY").notNull(),
+  referenceMonth: text("referenceMonth").notNull(),
+  paidAt: timestamp("paidAt").defaultNow().notNull(),
+  paymentMethod: text("paymentMethod").default("PIX").notNull(),
+  status: text("status").default("PAID").notNull(),
+  financialTransactionId: uuid("financialTransactionId").references(
+    () => financialTransactionsTable.id,
+    { onDelete: "set null" },
+  ),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
 export const tableReservationsTable = pgTable("TableReservation", {
   id: uuid("id").defaultRandom().primaryKey(),
   restaurantId: uuid("restaurantId")
@@ -1403,6 +1454,8 @@ export const restaurantsRelations = relations(
   ratings: many(orderRatingsTable),
   cashRegisterShifts: many(cashRegisterShiftsTable),
   waiters: many(waitersTable),
+  employees: many(employeesTable),
+  employeePayments: many(employeePaymentsTable),
   commissionRules: many(commissionRulesTable),
   tipClosings: many(tipClosingsTable),
   tableReservations: many(tableReservationsTable),
@@ -1875,6 +1928,29 @@ export const tipClosingsRelations = relations(tipClosingsTable, ({ one }) => ({
   waiter: one(waitersTable, {
     fields: [tipClosingsTable.waiterId],
     references: [waitersTable.id],
+  }),
+}));
+
+export const employeesRelations = relations(employeesTable, ({ one, many }) => ({
+  restaurant: one(restaurantsTable, {
+    fields: [employeesTable.restaurantId],
+    references: [restaurantsTable.id],
+  }),
+  payments: many(employeePaymentsTable),
+}));
+
+export const employeePaymentsRelations = relations(employeePaymentsTable, ({ one }) => ({
+  restaurant: one(restaurantsTable, {
+    fields: [employeePaymentsTable.restaurantId],
+    references: [restaurantsTable.id],
+  }),
+  employee: one(employeesTable, {
+    fields: [employeePaymentsTable.employeeId],
+    references: [employeesTable.id],
+  }),
+  financialTransaction: one(financialTransactionsTable, {
+    fields: [employeePaymentsTable.financialTransactionId],
+    references: [financialTransactionsTable.id],
   }),
 }));
 

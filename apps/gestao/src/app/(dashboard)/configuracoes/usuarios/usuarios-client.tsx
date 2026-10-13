@@ -4,6 +4,7 @@ import type { UserRole } from "@fsw/db";
 import {
   AlertCircleIcon,
   BikeIcon,
+  BriefcaseIcon,
   CheckCircle2Icon,
   ChefHatIcon,
   ChevronLeftIcon,
@@ -45,7 +46,9 @@ import {
   GarcomMetricas,
   TipClosingItem,
 } from "../garcons-actions";
+import { type FuncionarioMetricas } from "../funcionarios-actions";
 import { GarconsTab } from "./garcons-tab";
+import { FuncionariosTab } from "./funcionarios-tab";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
@@ -101,6 +104,11 @@ interface UsuariosClientProps {
     garcons: GarcomMetricas[];
     regraComissao: CommissionRuleData | null;
     fechamentos: TipClosingItem[];
+  };
+  funcionariosData?: {
+    funcionarios: FuncionarioMetricas[];
+    totalFolhaBase: number;
+    totalAtivos: number;
   };
   currentUserRole?: string;
 }
@@ -198,12 +206,13 @@ export function UsuariosClient({
   slug,
   users,
   garconsData,
+  funcionariosData,
   currentUserRole,
 }: UsuariosClientProps) {
   const [isPending, startTransition] = useTransition();
 
   // Sub-tabs
-  const [activeTab, setActiveTab] = useState<"USUARIOS" | "GARCONS">("USUARIOS");
+  const [activeTab, setActiveTab] = useState<"USUARIOS" | "GARCONS" | "FUNCIONARIOS">("USUARIOS");
 
   // Dialogs
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -218,6 +227,7 @@ export function UsuariosClient({
 
   const [deletingUser, setDeletingUser] = useState<UserItem | null>(null);
   const [isNewGarcomOpen, setIsNewGarcomOpen] = useState(false);
+  const [isNewFuncionarioOpen, setIsNewFuncionarioOpen] = useState(false);
 
   // Filters and search
   const [searchQuery, setSearchQuery] = useState("");
@@ -441,13 +451,21 @@ export function UsuariosClient({
             <UserPlusIcon size={16} />
             <span>Novo Usuário</span>
           </Button>
-        ) : (
+        ) : activeTab === "GARCONS" ? (
           <Button
             onClick={() => setIsNewGarcomOpen(true)}
             className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
           >
             <UserPlusIcon size={16} />
             <span>Novo Garçom</span>
+          </Button>
+        ) : (
+          <Button
+            onClick={() => setIsNewFuncionarioOpen(true)}
+            className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
+          >
+            <UserPlusIcon size={16} />
+            <span>Novo Funcionário</span>
           </Button>
         )}
       </div>
@@ -485,6 +503,22 @@ export function UsuariosClient({
             {garconsData?.garcons.length || 0}
           </span>
         </button>
+
+        <button
+          onClick={() => setActiveTab("FUNCIONARIOS")}
+          className={cn(
+            "flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-semibold transition-all",
+            activeTab === "FUNCIONARIOS"
+              ? "border-primary text-primary"
+              : "border-transparent text-slate-500 hover:text-slate-800",
+          )}
+        >
+          <BriefcaseIcon size={16} />
+          <span>Funcionários</span>
+          <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs text-purple-700 font-medium">
+            {funcionariosData?.funcionarios.length || 0}
+          </span>
+        </button>
       </div>
 
       {activeTab === "GARCONS" ? (
@@ -495,6 +529,13 @@ export function UsuariosClient({
           fechamentos={garconsData?.fechamentos || []}
           isNewGarcomOpen={isNewGarcomOpen}
           onNewGarcomOpenChange={setIsNewGarcomOpen}
+        />
+      ) : activeTab === "FUNCIONARIOS" ? (
+        <FuncionariosTab
+          slug={slug}
+          funcionarios={funcionariosData?.funcionarios || []}
+          isNewFuncionarioOpen={isNewFuncionarioOpen}
+          onNewFuncionarioOpenChange={setIsNewFuncionarioOpen}
         />
       ) : (
         <>

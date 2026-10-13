@@ -372,6 +372,7 @@ export interface FinalizarVendaPdvInput {
   changeFor?: number;
   shiftId?: string;
   serviceFeePercent?: number;
+  customerCpf?: string;
 }
 
 interface FinalizarVendaPdvResult {
@@ -392,9 +393,6 @@ export const buscarProdutoComOpcoesPdv = async (
   }
 };
 
-
-
-
 export const finalizarVendaPdv = async ({
   slug,
   customerName,
@@ -407,6 +405,7 @@ export const finalizarVendaPdv = async ({
   changeFor,
   shiftId,
   serviceFeePercent,
+  customerCpf,
 }: FinalizarVendaPdvInput): Promise<FinalizarVendaPdvResult> => {
   if (products.length === 0) {
     return {
@@ -415,10 +414,11 @@ export const finalizarVendaPdv = async ({
     };
   }
 
-  // Validar turno ativo quando shiftId é informado
-  if (shiftId) {
-    const restaurant = await buscarRestaurantePorSlug(slug);
-    if (restaurant) {
+  const restaurant = await buscarRestaurantePorSlug(slug);
+
+  // Validar ou auto-recuperar turno ativo
+  if (restaurant) {
+    if (shiftId) {
       const [shift] = await db
         .select({ id: cashRegisterShiftsTable.id, status: cashRegisterShiftsTable.status })
         .from(cashRegisterShiftsTable)
@@ -431,10 +431,44 @@ export const finalizarVendaPdv = async ({
         .limit(1);
 
       if (!shift || shift.status !== "OPEN") {
-        return {
-          success: false,
-          message: "O turno de caixa está fechado. Abra um novo turno para continuar vendendo.",
-        };
+        // Se o turno do id não está aberto ou não bateu, verifica se há outro turno aberto no restaurante
+        const [anyOpenShift] = await db
+          .select({ id: cashRegisterShiftsTable.id, status: cashRegisterShiftsTable.status })
+          .from(cashRegisterShiftsTable)
+          .where(
+            and(
+              eq(cashRegisterShiftsTable.restaurantId, restaurant.id),
+              eq(cashRegisterShiftsTable.status, "OPEN"),
+            ),
+          )
+          .orderBy(desc(cashRegisterShiftsTable.openedAt))
+          .limit(1);
+
+        if (anyOpenShift) {
+          shiftId = anyOpenShift.id;
+        } else {
+          return {
+            success: false,
+            message: "O turno de caixa está fechado. Abra um novo turno para continuar vendendo.",
+          };
+        }
+      }
+    } else {
+      // Se shiftId não veio na requisição, busca se há um turno aberto atualmente
+      const [anyOpenShift] = await db
+        .select({ id: cashRegisterShiftsTable.id })
+        .from(cashRegisterShiftsTable)
+        .where(
+          and(
+            eq(cashRegisterShiftsTable.restaurantId, restaurant.id),
+            eq(cashRegisterShiftsTable.status, "OPEN"),
+          ),
+        )
+        .orderBy(desc(cashRegisterShiftsTable.openedAt))
+        .limit(1);
+
+      if (anyOpenShift) {
+        shiftId = anyOpenShift.id;
       }
     }
   }
@@ -462,6 +496,7 @@ export const finalizarVendaPdv = async ({
 
     const updateData: Record<string, unknown> = { updatedAt: new Date() };
     if (shiftId) updateData.cashRegisterShiftId = shiftId;
+    if (customerCpf?.trim()) updateData.customerCpf = customerCpf.trim();
     if (serviceFeeAmount > 0) {
       updateData.serviceFeePercent = serviceFeePercent;
       updateData.serviceFeeAmount = serviceFeeAmount;

@@ -378,7 +378,36 @@ input[type="checkbox"] {
   background-color: hsl(var(--primary) / 0.06) !important;
 }
 
-[role="alert"]:not([class*="destructive"]):not([data-type="error"]):not([class*="bg-red-"]):not([class*="border-red-"]):not([class*="bg-amber-"]):not([class*="border-amber-"]) svg {
+/* ── Regras Globais: Todos os Popups, Dialogs e Alerts (Fundo Branco, Borda e Texto do Tema) ── */
+[role="alert"] {
+  background-color: #ffffff !important;
+  border: 2px solid hsl(var(--primary)) !important;
+  color: hsl(var(--primary)) !important;
+}
+
+[role="alert"] svg {
+  color: hsl(var(--primary)) !important;
+}
+
+[role="alert"] h5,
+[role="alert"] [class*="font-semibold"],
+[role="alert"] [class*="font-bold"],
+[role="alert"] [class*="font-medium"] {
+  color: hsl(var(--primary)) !important;
+}
+
+/* Modais e Popups Radix */
+div[role="dialog"][data-state],
+div[role="dialog"]:not([data-state="closed"]),
+[data-radix-popper-content-wrapper] [data-radix-popover-content] {
+  background-color: #ffffff !important;
+  border-color: hsl(var(--primary)) !important;
+}
+
+/* Títulos de Dialogs */
+div[role="dialog"] [class*="font-display"],
+div[role="dialog"] h2,
+div[role="dialog"] h3 {
   color: hsl(var(--primary)) !important;
 }
 
@@ -388,27 +417,25 @@ input[type="checkbox"] {
 }
 
 [data-sonner-toast] {
-  border-radius: 16px !important;
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.05) !important;
-  border-left: 5px solid hsl(var(--primary)) !important;
-}
-
-/* Info toasts adopt theme primary accent */
-[data-sonner-toast][data-type="info"] {
-  background-color: hsl(var(--primary) / 0.08) !important;
-  border-color: hsl(var(--primary) / 0.28) !important;
-  color: hsl(var(--foreground)) !important;
-}
-
-[data-sonner-toast][data-type="info"] [data-icon] {
+  border-radius: 18px !important;
+  box-shadow: 0 12px 35px -5px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.05) !important;
+  background-color: #ffffff !important;
+  border: 2px solid hsl(var(--primary)) !important;
   color: hsl(var(--primary)) !important;
 }
 
-/* Default / notification toasts */
-[data-sonner-toast][data-type="default"],
-[data-sonner-toast]:not([data-type]) {
-  background-color: #ffffff !important;
-  border-color: hsl(var(--primary) / 0.25) !important;
+[data-sonner-toast] [data-title] {
+  color: hsl(var(--primary)) !important;
+  font-weight: 700 !important;
+}
+
+[data-sonner-toast] [data-description] {
+  color: hsl(var(--primary)) !important;
+  opacity: 0.9 !important;
+}
+
+[data-sonner-toast] [data-icon] {
+  color: hsl(var(--primary)) !important;
 }
 
 /* Toast action button uses theme primary */
@@ -428,6 +455,10 @@ input[type="checkbox"] {
 }
 
 /* Toast close button */
+[data-sonner-toast] [data-close-button] {
+  color: hsl(var(--primary)) !important;
+}
+
 [data-sonner-toast] [data-close-button]:hover {
   color: hsl(var(--primary)) !important;
   background-color: hsl(var(--primary) / 0.1) !important;

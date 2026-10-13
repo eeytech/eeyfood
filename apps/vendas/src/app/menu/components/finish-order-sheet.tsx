@@ -852,6 +852,8 @@ export const FinishOrderSheet = ({
                         acceptPix={restaurant.acceptPix ?? true}
                         pixKey={restaurant.pixKey}
                         pixMode={restaurant.pixMode ?? "QRCODE"}
+                        acceptValeRefeicao={restaurant.acceptValeRefeicao ?? false}
+                        acceptValeAlimentacao={restaurant.acceptValeAlimentacao ?? false}
                         isOrderFree={checkoutSummary.total <= 0}
                       />
 

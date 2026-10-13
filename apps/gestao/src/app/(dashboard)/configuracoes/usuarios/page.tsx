@@ -5,12 +5,13 @@ import { buscarRestauranteParaGestao } from "@/lib/admin-queries";
 import { getSession } from "@/lib/auth/session";
 import { listarUsuariosAction } from "../usuarios-actions";
 import { listarGarconsComMetricasAction } from "../garcons-actions";
+import { listarFuncionariosAction } from "../funcionarios-actions";
 import { UsuariosClient } from "./usuarios-client";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Acessos | Gestão",
+  title: "Acessos e Equipe | Gestão",
 };
 
 interface UsuariosPageProps {
@@ -27,12 +28,17 @@ export default async function UsuariosPage({ params }: UsuariosPageProps) {
 
   const session = await getSession();
 
-  const [users, garconsData] = await Promise.all([
+  const [users, garconsData, funcionariosData] = await Promise.all([
     listarUsuariosAction(restaurant.slug),
     listarGarconsComMetricasAction(restaurant.slug).catch(() => ({
       garcons: [],
       regraComissao: null,
       fechamentos: [],
+    })),
+    listarFuncionariosAction(restaurant.slug).catch(() => ({
+      funcionarios: [],
+      totalFolhaBase: 0,
+      totalAtivos: 0,
     })),
   ]);
 
@@ -41,6 +47,7 @@ export default async function UsuariosPage({ params }: UsuariosPageProps) {
       slug={restaurant.slug}
       users={users}
       garconsData={garconsData}
+      funcionariosData={funcionariosData}
       currentUserRole={session?.role}
     />
   );

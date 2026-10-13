@@ -4,22 +4,16 @@ import type { VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const alertVariants = cva(
-  "relative w-full rounded-2xl border p-4 shadow-xs [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4",
+  "relative w-full rounded-2xl border-2 border-primary bg-white p-4 shadow-sm text-primary [&>svg]:text-primary [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4",
   {
     variants: {
       variant: {
-        default:
-          "border-primary/25 bg-primary/5 text-slate-900 [&>svg]:text-primary dark:text-slate-100",
-        primary:
-          "border-primary/30 bg-primary/10 text-slate-900 [&>svg]:text-primary dark:text-slate-100",
-        info:
-          "border-primary/25 bg-primary/5 text-slate-900 [&>svg]:text-primary",
-        warning:
-          "border-amber-300 bg-amber-50 text-amber-900 [&>svg]:text-amber-600",
-        success:
-          "border-emerald-300 bg-emerald-50 text-emerald-900 [&>svg]:text-emerald-600",
-        destructive:
-          "border-destructive/50 bg-destructive/5 text-destructive dark:border-destructive [&>svg]:text-destructive",
+        default: "border-primary bg-white text-primary [&>svg]:text-primary",
+        primary: "border-primary bg-white text-primary [&>svg]:text-primary",
+        info: "border-primary bg-white text-primary [&>svg]:text-primary",
+        warning: "border-primary bg-white text-primary [&>svg]:text-primary",
+        success: "border-primary bg-white text-primary [&>svg]:text-primary",
+        destructive: "border-primary bg-white text-primary [&>svg]:text-primary",
       },
     },
     defaultVariants: {
@@ -40,7 +34,7 @@ const AlertTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<H
   ({ className, ...props }, ref) => (
     <h5
       ref={ref}
-      className={cn("mb-1 font-medium leading-none tracking-tight", className)}
+      className={cn("mb-1 font-bold leading-none tracking-tight text-primary font-display", className)}
       {...props}
     />
   ),
@@ -51,7 +45,7 @@ const AlertDescription = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLParagraphElement>
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("text-sm [&_p]:leading-relaxed", className)} {...props} />
+  <div ref={ref} className={cn("text-sm leading-relaxed text-primary/90 font-medium [&_p]:leading-relaxed", className)} {...props} />
 ));
 AlertDescription.displayName = "AlertDescription";
 

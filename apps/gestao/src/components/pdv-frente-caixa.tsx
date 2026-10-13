@@ -158,6 +158,9 @@ interface PdvFrenteCaixaProps {
   scaleBaudRate: number;
   drawerPulseHex: string | null;
   initialPixKey?: string | null;
+  acceptPix?: boolean;
+  acceptValeRefeicao?: boolean;
+  acceptValeAlimentacao?: boolean;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -174,6 +177,37 @@ const formatDateTime = (value: Date | string) =>
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
+
+const formatCurrencyInputMask = (value: string | number): string => {
+  const digits = String(value).replace(/\D/g, "");
+  if (!digits) return "";
+  const num = Number(digits) / 100;
+  return num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
+const parseCurrencyInputValue = (value: string | number): number => {
+  if (typeof value === "number") return value;
+  const clean = String(value).replace(/\./g, "").replace(",", ".");
+  return parseFloat(clean) || 0;
+};
+
+const formatPhoneInputMask = (value: string): string => {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (!digits) return "";
+  if (digits.length <= 2) return `(${digits}`;
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+};
+
+const formatCpfInputMask = (value: string): string => {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (!digits) return "";
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+  if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+};
 
 const PAYMENT_LABELS: Record<PdvPaymentMethod, string> = {
   DINHEIRO: "Dinheiro",
@@ -254,13 +288,23 @@ const PdvFrenteCaixa = ({
   scaleBaudRate,
   drawerPulseHex,
   initialPixKey,
+  acceptPix = true,
+  acceptValeRefeicao = false,
+  acceptValeAlimentacao = false,
 }: PdvFrenteCaixaProps) => {
   // ── Shift state ────────────────────────────────────────────────────────────
   const [activeShift, setActiveShift] = useState<CashRegisterShift | null>(initialShift);
   const [isShiftModalOpen, setIsShiftModalOpen] = useState(!initialShift);
   const [shiftOperatorName, setShiftOperatorName] = useState("");
-  const [shiftOpeningAmount, setShiftOpeningAmount] = useState("0");
+  const [shiftOpeningAmount, setShiftOpeningAmount] = useState("0,00");
   const [isShiftOpening, setIsShiftOpening] = useState(false);
+
+  useEffect(() => {
+    if (initialShift) {
+      setActiveShift(initialShift);
+      setIsShiftModalOpen(false);
+    }
+  }, [initialShift]);
 
   // ── Fechamento de turno ────────────────────────────────────────────────────
   const [isFechamentoOpen, setIsFechamentoOpen] = useState(false);
@@ -296,8 +340,23 @@ const PdvFrenteCaixa = ({
   // ── Customer & payment ─────────────────────────────────────────────────────
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [customerCpf, setCustomerCpf] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PdvPaymentMethod>("DINHEIRO");
   const [receivedAmount, setReceivedAmount] = useState("");
+
+  const availablePaymentMethods = useMemo<PdvPaymentMethod[]>(() => {
+    const list: PdvPaymentMethod[] = ["DINHEIRO", "CARTAO_PRESENCIAL"];
+    if (acceptPix) list.push("PIX");
+    if (acceptValeRefeicao) list.push("VALE_REFEICAO");
+    if (acceptValeAlimentacao) list.push("VALE_ALIMENTACAO");
+    return list;
+  }, [acceptPix, acceptValeRefeicao, acceptValeAlimentacao]);
+
+  useEffect(() => {
+    if (!availablePaymentMethods.includes(paymentMethod)) {
+      setPaymentMethod(availablePaymentMethods[0] || "DINHEIRO");
+    }
+  }, [availablePaymentMethods, paymentMethod]);
 
   // ── Pix Modal ──────────────────────────────────────────────────────────────
   const [isPixModalOpen, setIsPixModalOpen] = useState(false);
@@ -466,7 +525,7 @@ const PdvFrenteCaixa = ({
     });
   }, [activePixKey, finalTotal, restaurantName]);
 
-  const receivedAmountNum = parseFloat(receivedAmount.replace(",", ".")) || 0;
+  const receivedAmountNum = parseCurrencyInputValue(receivedAmount);
   const change = round2(receivedAmountNum - finalTotal);
 
   const splitTotal = round2(paymentSplits.reduce((acc, s) => acc + s.amount, 0));
@@ -911,6 +970,7 @@ const PdvFrenteCaixa = ({
     setCartItems([]);
     setCustomerName("");
     setCustomerPhone("");
+    setCustomerCpf("");
     setPaymentMethod("DINHEIRO");
     setReceivedAmount("");
     setPaymentSplits([]);
@@ -1040,8 +1100,9 @@ const PdvFrenteCaixa = ({
 
     return {
       slug,
-      customerName,
-      customerPhone,
+      customerName: customerName.trim() || undefined,
+      customerPhone: customerPhone.trim() || undefined,
+      customerCpf: customerCpf.trim() || undefined,
       paymentMethod: primaryMethod as FinalizarVendaPdvInput["paymentMethod"],
       paymentSplits: isSplitMode ? paymentSplits : undefined,
       products: cartItems.map((item) => ({
@@ -1127,7 +1188,7 @@ const PdvFrenteCaixa = ({
     e.preventDefault();
     setIsShiftOpening(true);
 
-    const amount = parseFloat(shiftOpeningAmount.replace(",", ".")) || 0;
+    const amount = parseCurrencyInputValue(shiftOpeningAmount);
     const result = await abrirTurnoCaixa({
       slug,
       openedByUser: shiftOperatorName,
@@ -1158,7 +1219,7 @@ const PdvFrenteCaixa = ({
     setIsFechamentoLoading(false);
     if (result.success && result.summary) {
       setFechamentoSummary(result.summary);
-      setFechamentoActualAmount(result.summary.dinheiroEsperado.toFixed(2));
+      setFechamentoActualAmount(formatCurrencyInputMask(Math.round(result.summary.dinheiroEsperado * 100)));
     } else {
       toast.error(result.message || "Não foi possível carregar o resumo.");
     }
@@ -1168,7 +1229,7 @@ const PdvFrenteCaixa = ({
     if (!activeShift) return;
     setIsFechamentoLoading(true);
 
-    const actual = parseFloat(fechamentoActualAmount.replace(",", ".")) || 0;
+    const actual = parseCurrencyInputValue(fechamentoActualAmount);
     const result = await fecharTurnoCaixa({
       slug,
       shiftId: activeShift.id,
@@ -1193,7 +1254,7 @@ const PdvFrenteCaixa = ({
     if (!activeShift) return;
     setIsMovimentacaoLoading(true);
 
-    const amount = parseFloat(movimentacaoAmount.replace(",", ".")) || 0;
+    const amount = parseCurrencyInputValue(movimentacaoAmount);
     const result = await registrarMovimentacaoCaixa({
       slug,
       shiftId: activeShift.id,
@@ -1634,30 +1695,45 @@ const PdvFrenteCaixa = ({
                 )}
               </div>
 
-              {/* Customer and phone identification */}
-              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
-                <div className="space-y-1">
-                  <Label htmlFor="pdv-cust-name" className="text-[11px] font-semibold text-slate-700">
-                    Nome do Cliente
-                  </Label>
-                  <Input
-                    id="pdv-cust-name"
-                    placeholder="Ex: Carlos"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    className="h-8 rounded-lg border-slate-200 text-xs"
-                  />
+              {/* Customer and identification (Phone and CPF with masks) */}
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="pdv-cust-name" className="text-[11px] font-semibold text-slate-700">
+                      Nome do Cliente
+                    </Label>
+                    <Input
+                      id="pdv-cust-name"
+                      placeholder="Ex: Carlos"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      className="h-8 rounded-lg border-slate-200 text-xs"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="pdv-cust-phone" className="text-[11px] font-semibold text-slate-700">
+                      WhatsApp (Cashback)
+                    </Label>
+                    <Input
+                      id="pdv-cust-phone"
+                      placeholder="(11) 99999-9999"
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(formatPhoneInputMask(e.target.value))}
+                      className="h-8 rounded-lg border-slate-200 text-xs"
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-1">
-                  <Label htmlFor="pdv-cust-phone" className="text-[11px] font-semibold text-slate-700">
-                    WhatsApp (Cashback)
+                  <Label htmlFor="pdv-cust-cpf" className="text-[11px] font-semibold text-slate-700">
+                    CPF na Nota (Opcional)
                   </Label>
                   <Input
-                    id="pdv-cust-phone"
-                    placeholder="11999999999"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    id="pdv-cust-cpf"
+                    placeholder="000.000.000-00"
+                    value={customerCpf}
+                    onChange={(e) => setCustomerCpf(formatCpfInputMask(e.target.value))}
                     className="h-8 rounded-lg border-slate-200 text-xs"
                   />
                 </div>
@@ -1712,32 +1788,30 @@ const PdvFrenteCaixa = ({
                 <Label className="text-[11px] font-semibold text-slate-700">
                   Forma de Pagamento
                 </Label>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {(["DINHEIRO", "CARTAO_PRESENCIAL", "PIX", "VALE_REFEICAO", "VALE_ALIMENTACAO"] as PdvPaymentMethod[]).map(
-                    (method) => {
-                      const isSelected = paymentMethod === method;
-                      return (
-                        <button
-                          key={method}
-                          type="button"
-                          onClick={() => setPaymentMethod(method)}
-                          className={cn(
-                            "flex items-center justify-center gap-1 rounded-xl border p-2 text-xs font-semibold transition-all",
-                            isSelected
-                              ? "border-slate-900 bg-slate-900 text-white shadow-sm"
-                              : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
-                          )}
-                        >
-                          {method === "DINHEIRO" && <BanknoteIcon size={13} />}
-                          {method === "CARTAO_PRESENCIAL" && <CreditCardIcon size={13} />}
-                          {method === "PIX" && <QrCodeIcon size={13} />}
-                          {method === "VALE_REFEICAO" && <UtensilsCrossedIcon size={13} />}
-                          {method === "VALE_ALIMENTACAO" && <TagIcon size={13} />}
-                          <span>{PAYMENT_LABELS[method]}</span>
-                        </button>
-                      );
-                    },
-                  )}
+                <div className={cn("grid gap-1.5", availablePaymentMethods.length <= 3 ? "grid-cols-3" : "grid-cols-2 sm:grid-cols-3")}>
+                  {availablePaymentMethods.map((method) => {
+                    const isSelected = paymentMethod === method;
+                    return (
+                      <button
+                        key={method}
+                        type="button"
+                        onClick={() => setPaymentMethod(method)}
+                        className={cn(
+                          "flex items-center justify-center gap-1 rounded-xl border p-2 text-xs font-semibold transition-all",
+                          isSelected
+                            ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                        )}
+                      >
+                        {method === "DINHEIRO" && <BanknoteIcon size={13} />}
+                        {method === "CARTAO_PRESENCIAL" && <CreditCardIcon size={13} />}
+                        {method === "PIX" && <QrCodeIcon size={13} />}
+                        {method === "VALE_REFEICAO" && <UtensilsCrossedIcon size={13} />}
+                        {method === "VALE_ALIMENTACAO" && <TagIcon size={13} />}
+                        <span>{PAYMENT_LABELS[method]}</span>
+                      </button>
+                    );
+                  })}
                 </div>
 
                 {/* Cash change field */}
@@ -1749,10 +1823,10 @@ const PdvFrenteCaixa = ({
                       </Label>
                       <Input
                         id="pdv-cash-received"
-                        placeholder="Ex: 50,00"
+                        placeholder="0,00"
                         value={receivedAmount}
-                        onChange={(e) => setReceivedAmount(e.target.value)}
-                        className="h-8 rounded-lg border-slate-200 text-xs"
+                        onChange={(e) => setReceivedAmount(formatCurrencyInputMask(e.target.value))}
+                        className="h-8 rounded-lg border-slate-200 text-xs font-semibold"
                       />
                     </div>
                     {receivedAmountNum > 0 && (
@@ -2330,7 +2404,7 @@ const PdvFrenteCaixa = ({
 
             <div className="space-y-1.5">
               <Label htmlFor="shift-operator" className="text-xs font-semibold text-slate-700">
-                Nome do Operador *
+                Nome do Operador
               </Label>
               <Input
                 id="shift-operator"
@@ -2345,7 +2419,7 @@ const PdvFrenteCaixa = ({
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <Label htmlFor="shift-opening-amount" className="text-xs font-semibold text-slate-700">
-                  Fundo de Caixa Inicial (Troco) *
+                  Fundo de Caixa Inicial (Troco)
                 </Label>
                 <span className="text-[11px] text-slate-400">Moedas e cédulas na gaveta</span>
               </div>
@@ -2358,7 +2432,7 @@ const PdvFrenteCaixa = ({
                   required
                   placeholder="0,00"
                   value={shiftOpeningAmount}
-                  onChange={(e) => setShiftOpeningAmount(e.target.value)}
+                  onChange={(e) => setShiftOpeningAmount(formatCurrencyInputMask(e.target.value))}
                   className="h-10 pl-9 rounded-xl border-slate-200 bg-white text-sm font-semibold text-slate-900 focus:border-primary"
                 />
               </div>
@@ -2370,7 +2444,7 @@ const PdvFrenteCaixa = ({
                   <button
                     key={val}
                     type="button"
-                    onClick={() => setShiftOpeningAmount(val.toFixed(2).replace(".", ","))}
+                    onClick={() => setShiftOpeningAmount(formatCurrencyInputMask(val * 100))}
                     className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-600 hover:bg-primary/10 hover:border-primary/30 hover:text-primary transition-colors"
                   >
                     R$ {val}
@@ -2451,21 +2525,21 @@ const PdvFrenteCaixa = ({
 
             <div className="space-y-1.5">
               <Label htmlFor="mov-amount" className="text-xs font-semibold text-slate-700">
-                Valor da Movimentação (R$) *
+                Valor da Movimentação (R$)
               </Label>
               <Input
                 id="mov-amount"
                 required
                 placeholder="0,00"
                 value={movimentacaoAmount}
-                onChange={(e) => setMovimentacaoAmount(e.target.value)}
-                className="h-10 rounded-xl border-slate-200 text-sm"
+                onChange={(e) => setMovimentacaoAmount(formatCurrencyInputMask(e.target.value))}
+                className="h-10 rounded-xl border-slate-200 text-sm font-semibold"
               />
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="mov-reason" className="text-xs font-semibold text-slate-700">
-                Motivo / Justificativa *
+                Motivo / Justificativa
               </Label>
               <Input
                 id="mov-reason"
@@ -2560,13 +2634,13 @@ const PdvFrenteCaixa = ({
 
                 <div className="space-y-1.5">
                   <Label htmlFor="fech-actual" className="text-xs font-semibold text-slate-700">
-                    Valor Físico em Dinheiro Contado na Gaveta (R$) *
+                    Valor Físico em Dinheiro Contado na Gaveta (R$)
                   </Label>
                   <Input
                     id="fech-actual"
                     required
                     value={fechamentoActualAmount}
-                    onChange={(e) => setFechamentoActualAmount(e.target.value)}
+                    onChange={(e) => setFechamentoActualAmount(formatCurrencyInputMask(e.target.value))}
                     className="h-10 rounded-xl border-slate-200 text-sm font-semibold"
                   />
                 </div>

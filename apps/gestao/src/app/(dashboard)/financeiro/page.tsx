@@ -7,13 +7,17 @@ import {
   listarTransacoesFinanceirasPorSlug,
 } from "@/lib/admin-queries";
 import { listarGarconsComMetricasAction } from "@/app/(dashboard)/configuracoes/garcons-actions";
+import {
+  listarFuncionariosAction,
+  listarPagamentosFuncionariosAction,
+} from "@/app/(dashboard)/configuracoes/funcionarios-actions";
 
 import { FinanceiroClient } from "./_components/financeiro-client";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Gestão Financeira | Gestão",
+  title: "Gestão Financeira e Pagamentos | Gestão",
 };
 
 interface FinanceiroPageProps {
@@ -23,13 +27,28 @@ interface FinanceiroPageProps {
 const FinanceiroPage = async ({ params }: FinanceiroPageProps) => {
   const { slug } = await params;
   const restaurant = await buscarRestauranteParaGestao(slug);
-  const transacoes = await listarTransacoesFinanceirasPorSlug(slug);
-  const categorias = await listarCategoriasFinanceirasGestao(slug);
-  const garconsData = await listarGarconsComMetricasAction(slug);
 
   if (!restaurant) {
     return notFound();
   }
+
+  const [
+    transacoes,
+    categorias,
+    garconsData,
+    funcionariosRes,
+    pagamentosFuncionarios,
+  ] = await Promise.all([
+    listarTransacoesFinanceirasPorSlug(slug),
+    listarCategoriasFinanceirasGestao(slug),
+    listarGarconsComMetricasAction(slug).catch(() => ({ garcons: [] })),
+    listarFuncionariosAction(slug).catch(() => ({
+      funcionarios: [],
+      totalFolhaBase: 0,
+      totalAtivos: 0,
+    })),
+    listarPagamentosFuncionariosAction(slug).catch(() => []),
+  ]);
 
   const receitasPendentes = transacoes
     .filter(
@@ -51,6 +70,8 @@ const FinanceiroPage = async ({ params }: FinanceiroPageProps) => {
       transacoes={transacoes}
       categorias={categorias}
       garcons={garconsData.garcons}
+      funcionarios={funcionariosRes.funcionarios}
+      pagamentosFuncionarios={pagamentosFuncionarios}
       receitasPendentes={receitasPendentes}
       despesasPendentes={despesasPendentes}
     />

@@ -234,6 +234,8 @@ const ConfiguracoesPage = async ({
               acceptPix: restaurant.acceptPix ?? true,
               pixKey: restaurant.pixKey ?? "",
               pixMode: (restaurant.pixMode as "QRCODE" | "MANUAL") ?? "QRCODE",
+              acceptValeRefeicao: restaurant.acceptValeRefeicao ?? false,
+              acceptValeAlimentacao: restaurant.acceptValeAlimentacao ?? false,
               isCouponsEnabled: restaurant.isCouponsEnabled,
               isCashbackEnabled: restaurant.isCashbackEnabled,
               showOptionImages: restaurant.showOptionImages,

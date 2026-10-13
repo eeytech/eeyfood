@@ -154,6 +154,7 @@ const AdminSidebar = ({
           label: "Marketing e Clientes",
           items: [
             { href: "crm", label: "Clientes (CRM)", icon: HeartHandshakeIcon },
+            { href: "marketing/banners", label: "Gerador de Banners", icon: SparklesIcon },
             { href: "campanhas", label: "Campanhas", icon: MegaphoneIcon },
             { href: "cupons", label: "Cupons", icon: TagIcon },
             { href: "cashback", label: "Cashback", icon: CoinsIcon },

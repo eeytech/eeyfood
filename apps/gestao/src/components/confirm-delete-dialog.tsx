@@ -42,13 +42,13 @@ export function ConfirmDeleteDialog({
 }: ConfirmDeleteDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-md">
+      <DialogContent className="border-2 border-primary bg-white text-slate-900 shadow-2xl sm:max-w-md">
         <DialogHeader>
-          <div className="flex items-center gap-2 text-red-600">
-            <div className="rounded-xl bg-red-100 p-2 text-red-700">
+          <div className="flex items-center gap-2 text-primary">
+            <div className="rounded-xl bg-primary/10 p-2 text-primary">
               {icon || <Trash2Icon size={20} />}
             </div>
-            <DialogTitle className="font-display text-lg font-bold text-slate-900">
+            <DialogTitle className="font-display text-lg font-bold text-primary">
               {title}
             </DialogTitle>
           </div>

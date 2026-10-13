@@ -10,7 +10,9 @@ import {
   Loader2Icon,
   QrCodeIcon,
   SaveIcon,
+  ShoppingBagIcon,
   ToggleRightIcon,
+  UtensilsIcon,
   ZapIcon,
 } from "lucide-react";
 import { useState, useTransition } from "react";
@@ -39,6 +41,8 @@ interface RestaurantFeaturesFormProps {
     acceptPix?: boolean;
     pixKey?: string | null;
     pixMode?: "QRCODE" | "MANUAL";
+    acceptValeRefeicao?: boolean;
+    acceptValeAlimentacao?: boolean;
     isCouponsEnabled: boolean;
     isCashbackEnabled: boolean;
     showOptionImages: boolean;
@@ -72,6 +76,12 @@ export const RestaurantFeaturesForm = ({
   const [pixKey, setPixKey] = useState(initialValues.pixKey ?? "");
   const [pixMode, setPixMode] = useState<"QRCODE" | "MANUAL">(
     initialValues.pixMode ?? "QRCODE",
+  );
+  const [acceptValeRefeicao, setAcceptValeRefeicao] = useState(
+    initialValues.acceptValeRefeicao ?? false,
+  );
+  const [acceptValeAlimentacao, setAcceptValeAlimentacao] = useState(
+    initialValues.acceptValeAlimentacao ?? false,
   );
   const [showOptionImages, setShowOptionImages] = useState(
     initialValues.showOptionImages,
@@ -139,6 +149,8 @@ export const RestaurantFeaturesForm = ({
       formData.append("pixMode", pixMode);
     }
     if (pixKey.trim()) formData.append("pixKey", pixKey.trim());
+    if (acceptValeRefeicao) formData.append("acceptValeRefeicao", "on");
+    if (acceptValeAlimentacao) formData.append("acceptValeAlimentacao", "on");
     if (showOptionImages) formData.append("showOptionImages", "on");
     if (isDeliveryEnabled) formData.append("isDeliveryEnabled", "on");
     if (isTakeawayEnabled) formData.append("isTakeawayEnabled", "on");
@@ -708,6 +720,80 @@ export const RestaurantFeaturesForm = ({
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Vale Refeição (VR) */}
+              <div
+                className={`rounded-xl border transition-all p-3.5 shadow-2xs space-y-3 ${
+                  acceptValeRefeicao
+                    ? "border-primary/40 bg-primary/[0.03]"
+                    : "border-slate-200/80 bg-white hover:border-slate-300"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <Label
+                        htmlFor="acceptValeRefeicao"
+                        className="cursor-pointer font-semibold text-slate-950 text-sm flex items-center gap-1.5"
+                      >
+                        <UtensilsIcon size={16} className="text-amber-600" />
+                        Vale Refeição (VR)
+                      </Label>
+                      {acceptValeRefeicao && (
+                        <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                          Ativo
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      Permite pagamento com cartões de benefício refeição (VR, Sodexo, Alelo Refeição, Ticket Restaurante) no checkout do cardápio e no PDV.
+                    </p>
+                  </div>
+                  <Switch
+                    id="acceptValeRefeicao"
+                    checked={acceptValeRefeicao}
+                    onCheckedChange={setAcceptValeRefeicao}
+                    disabled={isPending}
+                  />
+                </div>
+              </div>
+
+              {/* Vale Alimentação (VA) */}
+              <div
+                className={`rounded-xl border transition-all p-3.5 shadow-2xs space-y-3 ${
+                  acceptValeAlimentacao
+                    ? "border-primary/40 bg-primary/[0.03]"
+                    : "border-slate-200/80 bg-white hover:border-slate-300"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <Label
+                        htmlFor="acceptValeAlimentacao"
+                        className="cursor-pointer font-semibold text-slate-950 text-sm flex items-center gap-1.5"
+                      >
+                        <ShoppingBagIcon size={16} className="text-emerald-600" />
+                        Vale Alimentação (VA)
+                      </Label>
+                      {acceptValeAlimentacao && (
+                        <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                          Ativo
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      Permite pagamento com cartões de alimentação (VA, Sodexo Alimentação, Alelo Alimentação, Ticket Alimentação) no checkout do cardápio e no PDV.
+                    </p>
+                  </div>
+                  <Switch
+                    id="acceptValeAlimentacao"
+                    checked={acceptValeAlimentacao}
+                    onCheckedChange={setAcceptValeAlimentacao}
+                    disabled={isPending}
+                  />
+                </div>
               </div>
 
               {/* Imagens nos adicionais */}

@@ -31,6 +31,8 @@ export const formSchema = z
       "DINHEIRO",
       "CARTAO_PRESENCIAL",
       "PIX",
+      "VALE_REFEICAO",
+      "VALE_ALIMENTACAO",
     ]),
     changeFor: z.string().trim().optional(),
     consumptionMethod: z.enum(["DINE_IN", "DELIVERY", "TAKEAWAY"]),

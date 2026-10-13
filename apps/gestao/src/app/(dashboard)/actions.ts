@@ -11,7 +11,7 @@ import {
   listarPerdasGestao,
 } from "@/lib/admin-queries";
 import type { InventoryItemType, UnitOfMeasure } from "@fsw/db";
-import { aiSettingsTable, and, db, eq, financialCategoriesTable, financialTransactionsTable, inventoryBatchesTable, inventoryItemsTable, inventoryLossesTable, menuCategoriesTable, operatingHoursTable, productOptionGroupsTable, productOptionsTable, productToOptionGroupsTable, productsTable, purchaseInvoicesTable, recipeItemsTable, restaurantsTable, stockMovementsTable, suppliersTable } from "@fsw/db";
+import { aiSettingsTable, and, db, eq, financialCategoriesTable, financialTransactionsTable, inventoryBatchesTable, inventoryItemsTable, inventoryLossesTable, menuCategoriesTable, operatingHoursTable, productOptionGroupsTable, productOptionsTable, productToOptionGroupsTable, productsTable, purchaseInvoicesTable, recipeItemsTable, restaurantsTable, stockMovementsTable, suppliersTable, sql } from "@fsw/db";
 import type { InventoryItem, InventoryLossReason, RecipeItem, RestaurantStatus } from "@fsw/db";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
@@ -956,6 +956,18 @@ export const updateRestaurantFeaturesAction = async (
     );
   }
 
+  const acceptValeRefeicao = getBooleanValue(formData.get("acceptValeRefeicao"));
+  const acceptValeAlimentacao = getBooleanValue(formData.get("acceptValeAlimentacao"));
+
+  try {
+    await db.execute(sql`
+      ALTER TABLE "Restaurant" ADD COLUMN IF NOT EXISTS "acceptValeRefeicao" boolean NOT NULL DEFAULT false;
+      ALTER TABLE "Restaurant" ADD COLUMN IF NOT EXISTS "acceptValeAlimentacao" boolean NOT NULL DEFAULT false;
+    `);
+  } catch {
+    // Columns already exist or database executed
+  }
+
   await db
     .update(restaurantsTable)
     .set({
@@ -970,6 +982,8 @@ export const updateRestaurantFeaturesAction = async (
       acceptPix,
       pixKey,
       pixMode,
+      acceptValeRefeicao,
+      acceptValeAlimentacao,
       isCouponsEnabled,
       isCashbackEnabled,
       showOptionImages: getBooleanValue(formData.get("showOptionImages")),

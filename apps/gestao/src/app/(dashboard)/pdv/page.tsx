@@ -13,14 +13,13 @@ interface PdvPageProps {
 const PdvPage = async ({ params }: PdvPageProps) => {
   const { slug } = await params;
 
-  const [cardapio, activeShift] = await Promise.all([
-    buscarCardapioGestao(slug),
-    buscarTurnoAtivoPdv(slug),
-  ]);
-
+  const cardapio = await buscarCardapioGestao(slug);
   if (!cardapio) {
     return notFound();
   }
+
+  const effectiveSlug = cardapio.restaurant.slug || slug || "";
+  const activeShift = await buscarTurnoAtivoPdv(effectiveSlug);
 
   const pizzaPricingRule =
     (cardapio.restaurant as unknown as { pizzaPricingRule?: "MAX" | "AVERAGE" })
@@ -28,9 +27,12 @@ const PdvPage = async ({ params }: PdvPageProps) => {
 
   return (
     <PdvFrenteCaixaClient
-      slug={slug}
+      slug={effectiveSlug}
       restaurantName={cardapio.restaurant.name}
       initialPixKey={cardapio.restaurant.pixKey ?? ""}
+      acceptPix={cardapio.restaurant.acceptPix ?? true}
+      acceptValeRefeicao={cardapio.restaurant.acceptValeRefeicao ?? false}
+      acceptValeAlimentacao={cardapio.restaurant.acceptValeAlimentacao ?? false}
       isCashbackEnabled={cardapio.restaurant.isCashbackEnabled}
       isCouponsEnabled={cardapio.restaurant.isCouponsEnabled}
       pizzaPricingRule={pizzaPricingRule}

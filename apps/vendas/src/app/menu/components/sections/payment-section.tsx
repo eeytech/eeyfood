@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckIcon, CopyIcon, CreditCardIcon, HandCoinsIcon, QrCodeIcon, ZapIcon } from "lucide-react";
+import { CheckIcon, CopyIcon, CreditCardIcon, HandCoinsIcon, QrCodeIcon, ShoppingBagIcon, UtensilsCrossedIcon, ZapIcon } from "lucide-react";
 import { useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { toast } from "sonner";
@@ -48,6 +48,18 @@ const paymentOptions: Array<{
     descricao: "Maquininha no balcão ou entrega.",
     icon: <CreditCardIcon size={20} className="text-slate-600" />,
   },
+  {
+    value: "VALE_REFEICAO",
+    titulo: "Vale Refeição (VR)",
+    descricao: "Sodexo, Alelo, VR ou Ticket na maquininha.",
+    icon: <UtensilsCrossedIcon size={20} className="text-amber-600" />,
+  },
+  {
+    value: "VALE_ALIMENTACAO",
+    titulo: "Vale Alimentação (VA)",
+    descricao: "Sodexo, Alelo, VR ou Ticket na maquininha.",
+    icon: <ShoppingBagIcon size={20} className="text-emerald-600" />,
+  },
 ];
 
 interface PaymentSectionProps {
@@ -59,6 +71,8 @@ interface PaymentSectionProps {
   acceptPix?: boolean;
   pixKey?: string | null;
   pixMode?: "QRCODE" | "MANUAL" | string;
+  acceptValeRefeicao?: boolean;
+  acceptValeAlimentacao?: boolean;
   isOrderFree?: boolean;
 }
 
@@ -71,6 +85,8 @@ export const PaymentSection = ({
   acceptPix = true,
   pixKey,
   pixMode = "QRCODE",
+  acceptValeRefeicao = false,
+  acceptValeAlimentacao = false,
   isOrderFree,
 }: PaymentSectionProps) => {
   const [copiedKey, setCopiedKey] = useState(false);
@@ -82,6 +98,8 @@ export const PaymentSection = ({
     .filter((option) => {
       if (option.value === "MERCADO_PAGO" && !isOnlinePaymentAllowed) return false;
       if (option.value === "PIX" && !acceptPix) return false;
+      if (option.value === "VALE_REFEICAO" && !acceptValeRefeicao) return false;
+      if (option.value === "VALE_ALIMENTACAO" && !acceptValeAlimentacao) return false;
       return true;
     })
     .map((option) => {
