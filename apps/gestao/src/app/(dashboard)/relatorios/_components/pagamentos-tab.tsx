@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useTheme } from "@/components/theme-provider";
 import type { DashboardData } from "@/lib/admin-queries";
 
 const fmt = (v: number) =>
@@ -38,6 +39,7 @@ interface PagamentosTabProps {
 
 const PagamentosTab = ({ data }: PagamentosTabProps) => {
   const { paymentMethods, financialBreakdown, summary } = data;
+  const { currentThemeConfig } = useTheme();
   const [transSearch, setTransSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<"ALL" | "EXPENSE" | "REVENUE">("ALL");
 
@@ -260,17 +262,21 @@ const PagamentosTab = ({ data }: PagamentosTabProps) => {
                           {f.categoryName ?? "Sem categoria"}
                         </TableCell>
                         <TableCell>
-                          {f.type === "EXPENSE" ? (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-rose-200/80 bg-rose-50 px-2.5 py-0.5 text-[11px] font-semibold text-rose-700">
+                          <span
+                            className="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold transition-colors"
+                            style={{
+                              color: currentThemeConfig.hex,
+                              borderColor: `${currentThemeConfig.hex}40`,
+                              backgroundColor: `${currentThemeConfig.hex}15`,
+                            }}
+                          >
+                            {f.type === "EXPENSE" ? (
                               <ArrowDownCircleIcon size={12} />
-                              Despesa
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
+                            ) : (
                               <ArrowUpCircleIcon size={12} />
-                              Receita
-                            </span>
-                          )}
+                            )}
+                            {f.type === "EXPENSE" ? "Despesa" : "Receita"}
+                          </span>
                         </TableCell>
                         <TableCell className="text-right font-medium text-slate-700">{f.count}</TableCell>
                         <TableCell

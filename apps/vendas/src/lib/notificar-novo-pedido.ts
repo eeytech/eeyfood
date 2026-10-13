@@ -7,11 +7,16 @@ export const notificarNovoPedido = async ({
   orderId,
   restaurantSlug,
 }: NotificarNovoPedidoInput) => {
-  const websocketServerUrl = process.env.WEBSOCKET_SERVER_URL;
+  const rawUrl =
+    process.env.WEBSOCKET_SERVER_URL ||
+    process.env.NEXT_PUBLIC_WEBSOCKET_URL ||
+    process.env.WEBSOCKET_URL ||
+    "http://localhost:4000";
 
-  if (!websocketServerUrl) {
-    return;
-  }
+  const websocketServerUrl = rawUrl
+    .trim()
+    .replace(/^ws:\/\//i, "http://")
+    .replace(/^wss:\/\//i, "https://");
 
   try {
     const controller = new AbortController();

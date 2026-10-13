@@ -31,7 +31,7 @@ import { dispatchOrderAction, getCouriersAction } from "@/app/(dashboard)/logist
 import { logoutAction } from "@/lib/auth/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -49,6 +49,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { soundNotifier } from "@/lib/sound-notifications";
 import { cn } from "@/lib/utils";
 
 interface EntregasPainelProps {
@@ -60,7 +61,7 @@ interface EntregasPainelProps {
   userName?: string;
 }
 
-type TabFiltro = "TODOS" | "PRONTOS" | "EM_ROTA" | "COZINHA" | "CONCLUIDOS";
+type TabFiltro = "PRONTOS" | "EM_ROTA" | "COZINHA" | "CONCLUIDOS" | "TODOS";
 
 export default function EntregasPainel({
   slug,
@@ -73,6 +74,7 @@ export default function EntregasPainel({
   const [orders, setOrders] = useState<PedidoRecebimento[]>(initialOrders);
   const [couriers, setCouriers] = useState<Courier[]>(initialCouriers);
   const [socketConnected, setSocketConnected] = useState(false);
+  const [lastSyncOk, setLastSyncOk] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [loadingOrderIds, setLoadingOrderIds] = useState<number[]>([]);
 
@@ -86,53 +88,28 @@ export default function EntregasPainel({
   const [dispatchCourierId, setDispatchCourierId] = useState("");
   const [isDispatching, setIsDispatching] = useState(false);
 
-  // Itens expandidos
+  // Itens expandidos da sacola
   const [expandedOrders, setExpandedOrders] = useState<Set<number>>(new Set());
 
-  const audioCtxRef = useRef<AudioContext | null>(null);
   const audioEnabledRef = useRef(audioEnabled);
   useEffect(() => {
     audioEnabledRef.current = audioEnabled;
   }, [audioEnabled]);
 
   const enableAudio = () => {
-    if (!audioCtxRef.current) {
-      const AudioCtx =
-        window.AudioContext ||
-        (window as unknown as { webkitAudioContext: typeof AudioContext })
-          .webkitAudioContext;
-      audioCtxRef.current = new AudioCtx();
-    }
-    if (audioCtxRef.current.state === "suspended") {
-      void audioCtxRef.current.resume();
-    }
+    soundNotifier.playNewOrder();
     setAudioEnabled(true);
     toast.success("Alertas sonoros ativados");
   };
 
-  const playBip = () => {
-    if (!audioEnabledRef.current || !audioCtxRef.current) return;
+  const playAlert = () => {
+    if (!audioEnabledRef.current) return;
     try {
-      const ctx = audioCtxRef.current;
-      if (ctx.state === "suspended") void ctx.resume();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(880, ctx.currentTime);
-      gain.gain.setValueAtTime(0, ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.3);
+      soundNotifier.playNewOrder();
     } catch {
       // ignore
     }
   };
-
-  const playBipRef = useRef(playBip);
-  playBipRef.current = playBip;
 
   // Somente pedidos de entrega (DELIVERY)
   const deliveryOrders = useMemo(() => {
@@ -207,7 +184,7 @@ export default function EntregasPainel({
     });
   }, [deliveryOrders, activeTab, selectedCourierFilter, searchQuery]);
 
-  // Sincronização via WebSocket
+  // Sincronização via WebSocket e API
   const syncOrderById = async (orderId: number) => {
     try {
       const response = await fetch(`/api/pedidos/${String(orderId)}`, {
@@ -220,6 +197,7 @@ export default function EntregasPainel({
           ? prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o))
           : [updatedOrder, ...prev],
       );
+      setLastSyncOk(true);
     } catch {
       // ignore
     }
@@ -230,55 +208,101 @@ export default function EntregasPainel({
       const response = await fetch(`/api/pedidos?slug=${encodeURIComponent(slug)}`, {
         cache: "no-store",
       });
-      if (!response.ok) return;
+      if (!response.ok) {
+        setLastSyncOk(false);
+        return;
+      }
       const data = (await response.json()) as PedidoRecebimento[];
-      setOrders(data);
+      if (Array.isArray(data)) {
+        setOrders(data);
+        setLastSyncOk(true);
+      }
     } catch {
-      // ignore
+      setLastSyncOk(false);
     }
   };
 
+  const websocketUrl = (() => {
+    const raw = process.env.NEXT_PUBLIC_WEBSOCKET_URL?.trim();
+    if (!raw) return "http://localhost:4000";
+    if (raw.includes("websocket.eeytech.com") && !raw.includes("fswdonalds")) {
+      return raw.replace("websocket.eeytech.com", "websocket.fswdonalds.eeytech.com");
+    }
+    return raw;
+  })();
+
   useEffect(() => {
-    const websocketUrl =
-      process.env.NEXT_PUBLIC_WEBSOCKET_URL || "http://localhost:3001";
     const socket = io(websocketUrl, {
       transports: ["websocket", "polling"],
-      reconnectionAttempts: 10,
+      reconnectionAttempts: 3,
+      reconnectionDelay: 5000,
+      timeout: 5000,
     });
 
-    socket.on("connect", () => {
+    const handleConnect = () => {
       setSocketConnected(true);
-      socket.emit("join-restaurant", slug);
-    });
+      setLastSyncOk(true);
+      socket.emit("JOIN_RESTAURANT_ROOM", slug);
+    };
 
-    socket.on("disconnect", () => setSocketConnected(false));
-    socket.on("connect_error", () => setSocketConnected(false));
+    const handleDisconnect = () => {
+      setSocketConnected(false);
+    };
 
-    socket.on("NEW_ORDER", (data: { orderId: number; restaurantSlug: string }) => {
+    const handleNewOrder = async (data: { orderId: number; restaurantSlug: string }) => {
       if (data.restaurantSlug === slug) {
-        void syncOrderById(data.orderId);
-        playBipRef.current();
+        await syncOrderById(data.orderId);
+        playAlert();
+        toast.info(`Novo pedido #${data.orderId} recebido para expedição!`);
       }
-    });
+    };
 
-    socket.on("ORDER_UPDATED", (data: { orderId: number; restaurantSlug: string; status?: OrderStatus }) => {
+    const handleOrderUpdated = async (data: {
+      orderId: number;
+      restaurantSlug: string;
+      status?: OrderStatus;
+    }) => {
       if (data.restaurantSlug === slug) {
-        void syncOrderById(data.orderId);
+        await syncOrderById(data.orderId);
         if (data.status === "READY_FOR_PICKUP") {
-          playBipRef.current();
+          playAlert();
           toast.info(`Pedido #${data.orderId} está pronto para coleta!`);
         }
       }
-    });
+    };
 
-    getCouriersAction(slug).then(setCouriers);
+    socket.on("connect", handleConnect);
+    socket.on("disconnect", handleDisconnect);
+    socket.on("connect_error", handleDisconnect);
+    socket.on("NEW_ORDER", handleNewOrder);
+    socket.on("ORDER_UPDATED", handleOrderUpdated);
+
+    void getCouriersAction(slug).then(setCouriers);
 
     return () => {
+      socket.off("connect", handleConnect);
+      socket.off("disconnect", handleDisconnect);
+      socket.off("connect_error", handleDisconnect);
+      socket.off("NEW_ORDER", handleNewOrder);
+      socket.off("ORDER_UPDATED", handleOrderUpdated);
       socket.disconnect();
     };
-  }, [slug]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, websocketUrl]);
 
-  // Atualizar pedido
+  // Polling automático de segurança para manter atualizado
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!socketConnected) {
+        void reloadAllOrders();
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [socketConnected, slug]);
+
+  // Atualizar status do pedido
   const handleOrderPatch = async (
     orderId: number,
     payload: { status?: OrderStatus; paymentStatus?: PedidoRecebimento["paymentStatus"] },
@@ -292,7 +316,7 @@ export default function EntregasPainel({
       });
 
       if (!res.ok) {
-        toast.error("Erro ao atualizar pedido");
+        toast.error("Erro ao atualizar status do pedido.");
         return;
       }
 
@@ -335,7 +359,7 @@ export default function EntregasPainel({
     });
   };
 
-  const formatCurrency = (val: number | null) => {
+  const formatCurrency = (val: number | null | undefined) => {
     if (val === null || val === undefined) return "R$ 0,00";
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -434,55 +458,58 @@ export default function EntregasPainel({
     }
   };
 
+  const isOnline = socketConnected || lastSyncOk;
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* ── Modal de Despacho ────────────────────────── */}
       <Dialog
         open={!!orderToDispatch}
         onOpenChange={(open) => !open && setOrderToDispatch(null)}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-md rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <BikeIcon className="text-cyan-600" size={20} />
-              Despachar Pedido #{orderToDispatch?.id}
+            <DialogTitle className="flex items-center gap-2 font-display text-lg font-bold text-slate-900">
+              <BikeIcon size={20} className="text-primary" />
+              <span>Despachar Pedido #{orderToDispatch?.id}</span>
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs text-slate-500">
               Selecione o entregador responsável para levar o pedido de{" "}
-              <strong>{orderToDispatch?.customerName}</strong>.
+              <strong className="text-slate-800">{orderToDispatch?.customerName}</strong>.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3 py-3">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
+          <div className="space-y-3 py-2">
+            <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 p-3 text-xs space-y-1">
               <p className="font-semibold text-slate-800">Destino:</p>
-              <p className="text-slate-600">{orderToDispatch?.deliveryAddress || "Endereço não informado"}</p>
-              <p className="mt-1 font-semibold text-slate-800">Total a receber:</p>
-              <p className="text-slate-900 font-bold">
-                {formatCurrency(orderToDispatch?.total ?? 0)}{" "}
-                <span className="font-normal text-slate-500">
-                  ({orderToDispatch?.paymentMethod} • {orderToDispatch?.paymentStatus === "PAID" ? "Já Pago" : "Pendente"})
-                </span>
+              <p className="text-slate-600 leading-relaxed">
+                {orderToDispatch?.deliveryAddress || "Endereço não informado"}
               </p>
+              <div className="pt-1.5 flex items-center justify-between border-t border-slate-200/60 mt-1.5">
+                <span className="font-medium text-slate-600">Total do pedido:</span>
+                <span className="font-bold text-slate-900 text-sm">
+                  {formatCurrency(orderToDispatch?.total ?? 0)}
+                </span>
+              </div>
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-slate-700">
+              <label className="text-xs font-semibold text-slate-700 block mb-1.5">
                 Entregador / Motoboy
               </label>
               <Select
                 value={dispatchCourierId}
                 onValueChange={setDispatchCourierId}
               >
-                <SelectTrigger className="mt-1 h-11 rounded-xl border-slate-200 bg-white text-sm">
+                <SelectTrigger className="h-11 rounded-xl border-slate-200 bg-white text-sm">
                   <SelectValue placeholder="Selecione um entregador..." />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl border-slate-200 bg-white">
+                <SelectContent className="rounded-xl border-slate-200 bg-white shadow-xl">
                   {couriers.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       <div className="flex items-center gap-2">
-                        <BikeIcon size={14} className="text-slate-500" />
-                        <span>{c.name}</span>
+                        <BikeIcon size={14} className="text-primary" />
+                        <span className="font-medium text-slate-900">{c.name}</span>
                         <span className="text-[11px] text-slate-400">
                           ({c.vehicleType ?? "MOTO"} • {c.phone})
                         </span>
@@ -494,18 +521,18 @@ export default function EntregasPainel({
             </div>
           </div>
 
-          <DialogFooter className="gap-2">
+          <DialogFooter className="gap-2 sm:gap-0 pt-2">
             <Button
               variant="outline"
               onClick={() => setOrderToDispatch(null)}
-              className="rounded-full"
+              className="rounded-full border-slate-200 text-slate-700"
             >
               Cancelar
             </Button>
             <Button
               disabled={!dispatchCourierId || isDispatching}
               onClick={handleConfirmDispatch}
-              className="rounded-full bg-cyan-600 hover:bg-cyan-700 text-white font-semibold"
+              className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm shadow-primary/25"
             >
               {isDispatching && (
                 <Loader2Icon className="mr-1.5 h-4 w-4 animate-spin" />
@@ -516,108 +543,112 @@ export default function EntregasPainel({
         </DialogContent>
       </Dialog>
 
-      {/* ── Top Header Card (estilo tela de Usuários) ── */}
-      <Card className="border-slate-200/80 bg-white shadow-sm">
-        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-4 sm:p-5">
+      {/* ── Page Header Padrão das Telas de Gestão ──── */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm shadow-primary/25">
+            <BikeIcon size={22} />
+          </div>
           <div>
-            <div className="flex items-center gap-2">
-              <div className="rounded-xl bg-cyan-100 p-2 text-cyan-700">
-                <BikeIcon size={20} />
-              </div>
-              <div>
-                <CardTitle className="font-display text-xl sm:text-2xl font-bold text-slate-900">
-                  Painel de Entregas e Expedição
-                </CardTitle>
-                <p className="text-xs sm:text-sm text-slate-500">
-                  Controle de expedição, rotas de motoboys e pedidos para entrega em tempo real.
-                </p>
-              </div>
-            </div>
+            <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
+              Painel de Entregas e Expedição
+            </h1>
+            <p className="text-sm text-slate-500">
+              Controle de expedição, rotas de motoboys e pedidos para entrega em tempo real.
+            </p>
           </div>
+        </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge
-              variant={socketConnected ? "success" : "danger"}
-              className="h-8 gap-1.5 px-3 rounded-full text-xs font-semibold"
-            >
-              <span
-                className={cn(
-                  "h-2 w-2 rounded-full",
-                  socketConnected ? "bg-emerald-500 animate-pulse" : "bg-rose-500",
-                )}
-              />
-              {socketConnected ? "Expedição sincronizada" : "Reconectando..."}
-            </Badge>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={enableAudio}
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge
+            variant={isOnline ? "success" : "danger"}
+            className="h-9 gap-1.5 px-3.5 rounded-full text-xs font-semibold shadow-xs"
+          >
+            <span
               className={cn(
-                "h-8 rounded-full border-slate-200 text-xs",
-                audioEnabled && "border-cyan-300 bg-cyan-50 text-cyan-800",
+                "h-2 w-2 rounded-full",
+                socketConnected
+                  ? "bg-emerald-500 animate-pulse"
+                  : lastSyncOk
+                    ? "bg-emerald-500"
+                    : "bg-rose-500 animate-ping",
               )}
-              title={audioEnabled ? "Alertas sonoros ativos" : "Ativar som de novo pedido"}
-            >
-              {audioEnabled ? (
-                <Volume2Icon size={14} className="mr-1 text-cyan-600" />
-              ) : (
-                <VolumeXIcon size={14} className="mr-1 text-slate-400" />
-              )}
-              {audioEnabled ? "Som Ativo" : "Ativar Som"}
-            </Button>
+            />
+            {socketConnected
+              ? "Expedição em tempo real"
+              : lastSyncOk
+                ? "Expedição sincronizada"
+                : "Reconectando..."}
+          </Badge>
 
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={enableAudio}
+            className={cn(
+              "h-9 gap-1.5 rounded-full border-slate-200 bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition-all",
+              audioEnabled && "border-primary/30 bg-primary/10 text-primary font-bold hover:bg-primary/15",
+            )}
+            title={audioEnabled ? "Alertas sonoros ativos" : "Ativar som de novos pedidos"}
+          >
+            {audioEnabled ? (
+              <Volume2Icon size={14} className="text-primary" />
+            ) : (
+              <VolumeXIcon size={14} className="text-slate-400" />
+            )}
+            <span>{audioEnabled ? "Som Ativo" : "Ativar Som"}</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={reloadAllOrders}
+            className="h-9 gap-1.5 rounded-full border-slate-200 bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 hover:text-slate-900 transition-all"
+            title="Atualizar lista de pedidos"
+          >
+            <RefreshCwIcon size={13} />
+            <span>Atualizar</span>
+          </Button>
+
+          {isDedicatedMode && userName && (
+            <div className="flex h-9 items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3.5 text-xs font-semibold text-primary">
+              <BikeIcon size={14} className="text-primary" />
+              <span>{userName}</span>
+            </div>
+          )}
+
+          {isDedicatedMode && (
             <Button
               variant="outline"
               size="sm"
-              onClick={reloadAllOrders}
-              className="h-8 rounded-full border-slate-200 text-xs"
-              title="Atualizar lista"
+              onClick={async () => {
+                if (window.confirm("Deseja desconectar e sair do painel de entregas?")) {
+                  await logoutAction();
+                }
+              }}
+              className="h-9 gap-1.5 rounded-full border-rose-200 bg-rose-50 px-3.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 hover:text-rose-800 cursor-pointer active:scale-95 transition-all"
+              title="Desconectar do painel de entregas"
             >
-              <RefreshCwIcon size={13} className="mr-1" />
-              Atualizar
+              <LogOutIcon size={13} />
+              <span>Sair</span>
             </Button>
+          )}
+        </div>
+      </div>
 
-            {isDedicatedMode && userName && (
-              <div className="flex h-8 items-center gap-1.5 rounded-full border border-cyan-200 bg-cyan-50 px-3 text-xs font-semibold text-cyan-800">
-                <BikeIcon size={13} className="text-cyan-600" />
-                <span>{userName}</span>
-              </div>
-            )}
-
-            {isDedicatedMode && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={async () => {
-                  if (window.confirm("Deseja desconectar e sair do painel de entregas?")) {
-                    await logoutAction();
-                  }
-                }}
-                className="h-8 gap-1.5 rounded-full border-rose-200 bg-rose-50 text-xs font-semibold text-rose-700 hover:bg-rose-100 hover:text-rose-800 cursor-pointer active:scale-95 transition-all"
-                title="Desconectar do painel de entregas"
-              >
-                <LogOutIcon size={13} />
-                <span>Sair</span>
-              </Button>
-            )}
-          </div>
-        </CardHeader>
-      </Card>
-
-      {/* ── KPI Metrics Grid (estilo tela de Usuários) ── */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Card className="border-slate-200/80 bg-white shadow-sm transition hover:border-amber-300">
+      {/* ── KPI Metrics Grid ────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+        <Card className="border-slate-200/80 bg-white shadow-xs transition-all hover:border-amber-300 hover:shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Aguardando Coleta
               </span>
-              <div className="rounded-lg bg-amber-100 p-1.5 text-amber-700">
+              <div className="rounded-xl bg-amber-100 p-2 text-amber-700">
                 <PackageCheckIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl sm:text-3xl font-bold text-amber-700">
+            <p className="mt-2.5 font-display text-2xl sm:text-3xl font-bold text-amber-700">
               {prontosParaColeta.length}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -626,17 +657,17 @@ export default function EntregasPainel({
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/80 bg-white shadow-sm transition hover:border-cyan-300">
+        <Card className="border-slate-200/80 bg-white shadow-xs transition-all hover:border-primary/40 hover:shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Em Rota na Rua
               </span>
-              <div className="rounded-lg bg-cyan-100 p-1.5 text-cyan-700">
+              <div className="rounded-xl bg-primary/10 p-2 text-primary">
                 <BikeIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl sm:text-3xl font-bold text-cyan-700">
+            <p className="mt-2.5 font-display text-2xl sm:text-3xl font-bold text-primary">
               {emRotaDeEntrega.length}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -645,17 +676,17 @@ export default function EntregasPainel({
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/80 bg-white shadow-sm transition hover:border-emerald-300">
+        <Card className="border-slate-200/80 bg-white shadow-xs transition-all hover:border-emerald-300 hover:shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Entregues Hoje
               </span>
-              <div className="rounded-lg bg-emerald-100 p-1.5 text-emerald-700">
+              <div className="rounded-xl bg-emerald-100 p-2 text-emerald-700">
                 <CheckCircle2Icon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl sm:text-3xl font-bold text-emerald-700">
+            <p className="mt-2.5 font-display text-2xl sm:text-3xl font-bold text-emerald-700">
               {entreguesHoje.length}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -664,17 +695,17 @@ export default function EntregasPainel({
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/80 bg-white shadow-sm transition hover:border-slate-300">
+        <Card className="border-slate-200/80 bg-white shadow-xs transition-all hover:border-primary/40 hover:shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Motoboys Cadastrados
+                Motoboys Ativos
               </span>
-              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
+              <div className="rounded-xl bg-primary/10 p-2 text-primary">
                 <UsersIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl sm:text-3xl font-bold text-primary">
+            <p className="mt-2.5 font-display text-2xl sm:text-3xl font-bold text-primary">
               {motoboysAtivos.length}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -685,7 +716,7 @@ export default function EntregasPainel({
       </div>
 
       {/* ── Barra de Abas e Filtros ─────────────────── */}
-      <Card className="border-slate-200/80 bg-white shadow-sm">
+      <Card className="border-slate-200/80 bg-white shadow-xs">
         <CardContent className="p-3.5 sm:p-4 space-y-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             {/* Abas */}
@@ -695,53 +726,53 @@ export default function EntregasPainel({
                 onValueChange={(v) => setActiveTab(v as TabFiltro)}
                 className="w-auto"
               >
-                <TabsList className="h-10 p-1 bg-slate-100 rounded-xl">
+                <TabsList className="h-10 p-1 bg-slate-100/90 rounded-xl">
                   <TabsTrigger
                     value="PRONTOS"
-                    className="text-xs sm:text-sm gap-1.5 rounded-lg px-3"
+                    className="group text-xs sm:text-sm gap-1.5 rounded-lg px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs transition-all font-medium"
                   >
                     <span>Prontos p/ Coleta</span>
-                    <span className="rounded-full bg-amber-200/90 px-1.5 py-0.5 text-[10px] font-bold text-amber-900">
+                    <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-700 group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground">
                       {prontosParaColeta.length}
                     </span>
                   </TabsTrigger>
 
                   <TabsTrigger
                     value="EM_ROTA"
-                    className="text-xs sm:text-sm gap-1.5 rounded-lg px-3"
+                    className="group text-xs sm:text-sm gap-1.5 rounded-lg px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs transition-all font-medium"
                   >
                     <span>Em Rota</span>
-                    <span className="rounded-full bg-cyan-200/90 px-1.5 py-0.5 text-[10px] font-bold text-cyan-900">
+                    <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-700 group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground">
                       {emRotaDeEntrega.length}
                     </span>
                   </TabsTrigger>
 
                   <TabsTrigger
                     value="COZINHA"
-                    className="text-xs sm:text-sm gap-1.5 rounded-lg px-3"
+                    className="group text-xs sm:text-sm gap-1.5 rounded-lg px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs transition-all font-medium"
                   >
                     <span>Na Cozinha</span>
-                    <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">
+                    <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-700 group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground">
                       {emPreparo.length}
                     </span>
                   </TabsTrigger>
 
                   <TabsTrigger
                     value="CONCLUIDOS"
-                    className="text-xs sm:text-sm gap-1.5 rounded-lg px-3"
+                    className="group text-xs sm:text-sm gap-1.5 rounded-lg px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs transition-all font-medium"
                   >
                     <span>Concluídos</span>
-                    <span className="rounded-full bg-emerald-200/90 px-1.5 py-0.5 text-[10px] font-bold text-emerald-900">
+                    <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-700 group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground">
                       {entreguesHoje.length}
                     </span>
                   </TabsTrigger>
 
                   <TabsTrigger
                     value="TODOS"
-                    className="text-xs sm:text-sm gap-1.5 rounded-lg px-3"
+                    className="group text-xs sm:text-sm gap-1.5 rounded-lg px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs transition-all font-medium"
                   >
                     <span>Todos</span>
-                    <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">
+                    <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-700 group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground">
                       {deliveryOrders.length}
                     </span>
                   </TabsTrigger>
@@ -760,7 +791,7 @@ export default function EntregasPainel({
                   placeholder="Buscar #id, cliente, endereço..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-10 rounded-xl border-slate-200 bg-slate-50/70 pl-9 pr-8 text-xs placeholder:text-slate-400 focus:bg-white"
+                  className="h-10 rounded-xl border-slate-200 bg-slate-50/70 pl-9 pr-8 text-xs placeholder:text-slate-400 focus:bg-white focus:border-primary/40 focus:ring-primary/20"
                 />
                 {searchQuery && (
                   <button
@@ -778,10 +809,10 @@ export default function EntregasPainel({
                   value={selectedCourierFilter}
                   onValueChange={setSelectedCourierFilter}
                 >
-                  <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs font-medium text-slate-700">
+                  <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs font-medium text-slate-700 focus:border-primary/40 focus:ring-primary/20">
                     <SelectValue placeholder="Entregador..." />
                   </SelectTrigger>
-                  <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+                  <SelectContent className="rounded-xl border-slate-200 bg-white shadow-xl">
                     <SelectItem value="ALL">Todos os entregadores</SelectItem>
                     <SelectItem value="UNASSIGNED">Sem entregador</SelectItem>
                     {couriers.map((c) => (
@@ -799,19 +830,19 @@ export default function EntregasPainel({
 
       {/* ── Grid de Pedidos de Entrega ──────────────── */}
       {filteredOrders.length === 0 ? (
-        <Card className="border-dashed border-slate-300 bg-white/70">
-          <CardContent className="flex min-h-[220px] flex-col items-center justify-center p-8 text-center">
-            <TruckIcon className="text-slate-300" size={36} />
-            <p className="mt-3 text-base font-semibold text-slate-800">
-              Nenhum pedido de entrega encontrado
-            </p>
-            <p className="mt-1 max-w-sm text-xs text-slate-500">
-              {searchQuery || selectedCourierFilter !== "ALL"
-                ? "Tente ajustar os filtros ou a busca para localizar o pedido."
-                : "Quando novos pedidos de delivery forem realizados, eles aparecerão aqui automaticamente."}
-            </p>
-          </CardContent>
-        </Card>
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white/70 p-12 text-center">
+          <div className="rounded-2xl bg-primary/10 p-3.5 text-primary">
+            <TruckIcon size={28} />
+          </div>
+          <h3 className="mt-3 font-display text-base font-semibold text-slate-900">
+            Nenhum pedido de entrega encontrado
+          </h3>
+          <p className="mt-1 max-w-sm text-xs text-slate-500">
+            {searchQuery || selectedCourierFilter !== "ALL"
+              ? "Tente ajustar os filtros ou o termo de busca para localizar o pedido."
+              : "Quando novos pedidos de delivery forem realizados, eles aparecerão aqui automaticamente."}
+          </p>
+        </div>
       ) : (
         <div className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
           {filteredOrders.map((order) => {
@@ -836,23 +867,23 @@ export default function EntregasPainel({
               <Card
                 key={order.id}
                 className={cn(
-                  "border bg-white shadow-sm transition-all hover:shadow-md",
-                  isReady && "border-amber-300/80 bg-amber-50/20",
-                  isOut && "border-cyan-300/80 bg-cyan-50/20",
-                  isDone && "border-emerald-200 bg-emerald-50/10",
+                  "border bg-white shadow-xs transition-all hover:shadow-sm rounded-2xl overflow-hidden",
+                  isReady && "border-amber-300/80 bg-amber-50/15",
+                  isOut && "border-primary/40 bg-primary/[0.02]",
+                  isDone && "border-emerald-200/80 bg-emerald-50/15",
                 )}
               >
                 <CardHeader className="space-y-2 p-3.5 pb-2.5">
                   {/* Linha 1: ID, status e impressão */}
                   <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
                     <div className="flex items-center gap-1.5">
-                      <span className="rounded-md bg-slate-900 px-2 py-0.5 font-mono text-xs font-bold text-white">
+                      <span className="rounded-lg bg-slate-900 px-2 py-0.5 font-mono text-xs font-bold text-white shadow-2xs">
                         #{order.id}
                       </span>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                        className="h-6 w-6 text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-md"
                         onClick={() => handlePrintDelivery(order)}
                         title="Imprimir Cupom de Entrega"
                       >
@@ -872,9 +903,9 @@ export default function EntregasPainel({
                                 : "secondary"
                         }
                         className={cn(
-                          "px-2.5 py-0.5 text-[10px] font-bold uppercase",
+                          "px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full",
                           isReady && "bg-amber-100 text-amber-900 border-amber-300",
-                          isOut && "bg-cyan-100 text-cyan-900 border-cyan-300",
+                          isOut && "bg-primary/10 text-primary border-primary/25",
                           isDone && "bg-emerald-100 text-emerald-900 border-emerald-300",
                         )}
                       >
@@ -909,7 +940,7 @@ export default function EntregasPainel({
                             href={waUrl ?? undefined}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex h-8 items-center gap-1 rounded-lg bg-emerald-600 px-2.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 transition"
+                            className="inline-flex h-8 items-center gap-1 rounded-lg bg-emerald-600 px-2.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 transition active:scale-95"
                             title="Conversar no WhatsApp"
                           >
                             <MessageCircleIcon size={13} />
@@ -918,7 +949,7 @@ export default function EntregasPainel({
 
                           <a
                             href={`tel:${cleanPhone}`}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 transition"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 transition active:scale-95"
                             title="Ligar para o cliente"
                           >
                             <PhoneIcon size={13} />
@@ -934,7 +965,7 @@ export default function EntregasPainel({
                       <div className="flex items-start gap-1.5 min-w-0 flex-1">
                         <MapPinIcon
                           size={14}
-                          className="mt-0.5 shrink-0 text-cyan-600"
+                          className="mt-0.5 shrink-0 text-primary"
                         />
                         <p className="font-medium text-slate-800 leading-snug break-words">
                           {order.deliveryAddress || "Endereço não informado"}
@@ -1062,7 +1093,7 @@ export default function EntregasPainel({
                   {/* Entregador atribuído */}
                   <div className="flex items-center justify-between gap-2 rounded-xl border border-slate-200/80 bg-slate-50 p-2 text-xs">
                     <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                      <BikeIcon size={14} className="text-cyan-700 shrink-0" />
+                      <BikeIcon size={14} className="text-primary shrink-0" />
                       <span className="text-slate-500">Entregador:</span>
                       <span className="font-bold text-slate-900 truncate">
                         {order.courier?.name ?? "Nenhum atribuído"}
@@ -1077,7 +1108,7 @@ export default function EntregasPainel({
                           setOrderToDispatch(order);
                           setDispatchCourierId(order.courierId ?? "");
                         }}
-                        className="h-7 text-xs font-semibold text-cyan-700 hover:text-cyan-800"
+                        className="h-7 text-xs font-semibold text-primary hover:text-primary/80"
                       >
                         Trocar
                       </Button>
@@ -1093,7 +1124,7 @@ export default function EntregasPainel({
                           setOrderToDispatch(order);
                           setDispatchCourierId(order.courierId ?? "");
                         }}
-                        className="h-10 flex-1 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold shadow-sm"
+                        className="h-10 flex-1 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold shadow-sm shadow-primary/25"
                       >
                         <BikeIcon size={14} className="mr-1.5" />
                         Sair para Entrega
@@ -1107,7 +1138,7 @@ export default function EntregasPainel({
                         onClick={() =>
                           handleOrderPatch(order.id, { status: "FINISHED" })
                         }
-                        className="h-10 flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm"
+                        className="h-10 flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm shadow-emerald-600/25"
                       >
                         {isLoading ? (
                           <Loader2Icon className="mr-1.5 h-4 w-4 animate-spin" />
@@ -1132,7 +1163,7 @@ export default function EntregasPainel({
                         onClick={() =>
                           handleOrderPatch(order.id, { status: "READY_FOR_PICKUP" })
                         }
-                        className="h-9 flex-1 rounded-xl border-amber-300 bg-amber-50 text-amber-900 text-xs font-semibold hover:bg-amber-100"
+                        className="h-10 flex-1 rounded-xl border-amber-300 bg-amber-50 text-amber-900 text-xs font-semibold hover:bg-amber-100"
                       >
                         Marcar como Pronto p/ Coleta
                       </Button>

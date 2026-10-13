@@ -7,6 +7,7 @@ import { useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
+import { useTheme } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
 
 interface DateRangeFilterProps {
@@ -24,6 +25,7 @@ const fmt = (iso: string) =>
 const DateRangeFilter = ({ from, to }: DateRangeFilterProps) => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { currentThemeConfig } = useTheme();
 
   const navigate = useCallback(
     (newFrom: string, newTo: string) => {
@@ -209,7 +211,14 @@ const DateRangeFilter = ({ from, to }: DateRangeFilterProps) => {
               </strong>
             </span>
           </div>
-          <span className="rounded-full border border-emerald-200/80 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-800">
+          <span
+            className="rounded-full border px-2.5 py-0.5 text-[11px] font-semibold transition-colors"
+            style={{
+              color: currentThemeConfig.hex,
+              borderColor: `${currentThemeConfig.hex}40`,
+              backgroundColor: `${currentThemeConfig.hex}15`,
+            }}
+          >
             Dados consolidados
           </span>
         </div>

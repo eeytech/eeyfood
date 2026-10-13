@@ -12,6 +12,7 @@ import { useState } from "react";
 import { gerarInsightsIA } from "../actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useTheme } from "@/components/theme-provider";
 
 interface AssistenteIaTabProps {
   slug: string;
@@ -72,6 +73,7 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
 };
 
 const AssistenteIaTab = ({ slug }: AssistenteIaTabProps) => {
+  const { currentThemeConfig } = useTheme();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ markdown: string; generatedAt: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -94,7 +96,7 @@ const AssistenteIaTab = ({ slug }: AssistenteIaTabProps) => {
       <Card className="border-slate-200/80 bg-white shadow-sm">
         <CardHeader className="border-b border-slate-100 pb-4">
           <CardTitle className="flex items-center gap-2 font-display text-xl font-bold text-slate-900">
-            <SparklesIcon className="text-amber-500" size={22} />
+            <SparklesIcon style={{ color: currentThemeConfig.hex }} size={22} />
             Assistente Analítico IA
           </CardTitle>
           <CardDescription className="text-sm text-slate-500">

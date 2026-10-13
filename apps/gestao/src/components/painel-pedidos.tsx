@@ -23,6 +23,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { io } from "socket.io-client";
 
+import { soundNotifier } from "@/lib/sound-notifications";
 import { dispatchOrderAction, getCouriersAction } from "@/app/(dashboard)/logistica-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -437,7 +438,7 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
       if (!currentOrders.some((currentOrder) => currentOrder.id === order.id)) {
         // Novo pedido detectado em tempo real
         try {
-          new Audio("/sounds/bell.mp3").play().catch(() => null);
+          soundNotifier.playNewOrder();
         } catch { /* ignore */ }
 
         if (autoPrintEnabled) {
@@ -487,21 +488,11 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
       await syncOrderById(payload.orderId);
     };
 
-    const handleCallWaiter = (payload: { restaurantSlug: string; tableId: string; tableName: string }) => {
-      if (payload.restaurantSlug !== slug) return;
-      try { new Audio("/sounds/bell.mp3").play().catch(() => null); } catch { /* ignore */ }
-      toast.warning(`Mesa ${payload.tableName} solicitando atendimento!`, {
-        duration: 10000,
-        icon: "🔔",
-      });
-    };
-
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
     socket.on("connect_error", handleDisconnect);
     socket.on("NEW_ORDER", handleNewOrder);
     socket.on("ORDER_UPDATED", handleOrderUpdated);
-    socket.on("CALL_WAITER", handleCallWaiter);
 
     getCouriersAction(slug).then(setCouriers);
 
@@ -511,7 +502,6 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
       socket.off("connect_error", handleDisconnect);
       socket.off("NEW_ORDER", handleNewOrder);
       socket.off("ORDER_UPDATED", handleOrderUpdated);
-      socket.off("CALL_WAITER", handleCallWaiter);
       socket.disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

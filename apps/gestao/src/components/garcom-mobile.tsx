@@ -94,6 +94,7 @@ export const GarcomMobile = ({
   const [openingName, setOpeningName] = useState("");
   const [isPending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [callingTableIds, setCallingTableIds] = useState<Set<string>>(new Set());
 
   // ── Voice recognition ─────────────────────────────────────────────────
   const [isListening, setIsListening] = useState(false);
@@ -140,13 +141,21 @@ export const GarcomMobile = ({
       if (payload.restaurantSlug !== slug) return;
       await syncTables();
     };
+    const onCallWaiter = (payload: { restaurantSlug: string; tableId: string; tableName: string }) => {
+      if (payload.restaurantSlug !== slug) return;
+      setCallingTableIds((prev) => new Set(prev).add(payload.tableId));
+      setFeedback(`🔔 Mesa ${payload.tableName} chamando atendimento!`);
+      setTimeout(() => setFeedback(null), 5000);
+    };
     socket.on("connect", onConnect);
     socket.on("NEW_ORDER", onEvent);
     socket.on("ORDER_UPDATED", onEvent);
+    socket.on("CALL_WAITER", onCallWaiter);
     return () => {
       socket.off("connect", onConnect);
       socket.off("NEW_ORDER", onEvent);
       socket.off("ORDER_UPDATED", onEvent);
+      socket.off("CALL_WAITER", onCallWaiter);
       socket.disconnect();
     };
   }, [slug, syncTables, websocketUrl]);
@@ -565,23 +574,35 @@ export const GarcomMobile = ({
       <div className="grid grid-cols-3 gap-3 p-4">
         {tables.map((mesa) => {
           const isOccupied = !!mesa.currentOrder;
+          const isCalling = callingTableIds.has(mesa.table.id);
           return (
             <button
               key={mesa.table.id}
               type="button"
               onClick={() => {
                 setSelectedTableId(mesa.table.id);
+                setCallingTableIds((prev) => {
+                  const next = new Set(prev);
+                  next.delete(mesa.table.id);
+                  return next;
+                });
                 setScreen("MESA_DETALHE");
                 setCart([]);
               }}
               className={`flex aspect-square flex-col items-center justify-center rounded-2xl border-2 p-2 transition active:scale-95 ${
-                isOccupied
+                isCalling
+                  ? "border-orange-500 bg-orange-950/60 text-orange-200 ring-2 ring-orange-500 animate-pulse"
+                  : isOccupied
                   ? "border-amber-400/50 bg-amber-950/40 text-amber-200"
                   : "border-white/10 bg-white/5 text-white hover:bg-white/10"
               }`}
             >
               <span className="text-sm font-bold leading-tight">{mesa.table.name}</span>
-              {isOccupied ? (
+              {isCalling ? (
+                <span className="mt-1 flex items-center gap-1 rounded-full bg-orange-500 px-1.5 py-0.5 text-[9px] font-extrabold text-white animate-bounce">
+                  🔔 CHAMANDO
+                </span>
+              ) : isOccupied ? (
                 <span className="mt-1 text-xs opacity-80">
                   {formatCurrency(mesa.currentOrder!.total)}
                 </span>

@@ -37,6 +37,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - NEXT_PUBLIC_APP_SLUG=gestao
       - NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL}
+      - WEBSOCKET_SERVER_URL=${WEBSOCKET_SERVER_URL:-http://websocket:4000}
     deploy:
       resources:
         limits:
@@ -75,6 +76,7 @@ services:
       - MERCADO_PAGO_WEBHOOK_URL=${MERCADO_PAGO_WEBHOOK_URL}
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
       - NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL}
+      - WEBSOCKET_SERVER_URL=${WEBSOCKET_SERVER_URL:-http://websocket:4000}
     deploy:
       resources:
         limits:

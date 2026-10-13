@@ -319,16 +319,6 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Link href="/mesas/qrcodes">
-            <Button
-              variant="outline"
-              className="h-10 gap-2 rounded-full border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-            >
-              <QrCodeIcon size={15} />
-              <span>Imprimir QR Codes</span>
-            </Button>
-          </Link>
-
           <Button
             onClick={handleOpenCreate}
             className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
@@ -978,9 +968,6 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
         <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-md">
           <DialogHeader>
             <div className="flex items-center gap-2">
-              <div className="rounded-xl border border-primary/20 bg-primary/10 p-2 text-primary">
-                <PlusIcon size={20} />
-              </div>
               <div>
                 <DialogTitle className="font-display text-lg font-bold text-slate-900">
                   Cadastrar Nova Mesa
@@ -1249,9 +1236,6 @@ export function MesasClient({ slug, tables }: MesasClientProps) {
         <DialogContent className="border-slate-200 bg-white sm:max-w-md shadow-2xl">
           <DialogHeader>
             <div className="flex items-center gap-2">
-              <div className="rounded-xl border border-primary/20 bg-primary/10 p-2 text-primary">
-                <QrCodeIcon size={20} />
-              </div>
               <div>
                 <DialogTitle className="font-display text-lg font-bold text-slate-900">
                   QR Code da {qrTable?.name}

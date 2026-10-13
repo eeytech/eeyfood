@@ -12,6 +12,7 @@ import type { Restaurant } from "@fsw/db";
 export const dynamic = "force-dynamic";
 
 import AdminSidebar from "@/components/admin-sidebar";
+import GlobalRealtimeListener from "@/components/global-realtime-listener";
 import { getSession } from "@/lib/auth/session";
 
 interface DashboardLayoutProps {
@@ -32,33 +33,6 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
     pathname.startsWith("/senha/") ||
     pathname === "/kds" ||
     pathname.startsWith("/kds/");
-
-  // Telas de TV / perfis dedicados ocupam 100% da tela sem sidebar nem bordas de backoffice
-  if (session.role === "KITCHEN" || session.role === "PANEL" || isTvRoute) {
-    return (
-      <div className="h-screen w-screen overflow-hidden bg-slate-950 text-white">
-        {children}
-      </div>
-    );
-  }
-
-  // Perfil de Comandas / Garçom opera em tela cheia como um aplicativo dedicado (mobile/tablet/terminal)
-  if (session.role === "WAITER") {
-    return (
-      <div className="min-h-screen w-screen overflow-x-hidden bg-slate-100 text-slate-900">
-        {children}
-      </div>
-    );
-  }
-
-  // Perfil de Entregador / Motoboy opera em tela dedicada sem sidebar (estilo kds, tv senha e garçom)
-  if (session.role === "COURIER") {
-    return (
-      <div className="min-h-screen w-screen overflow-x-hidden bg-slate-100 p-3 sm:p-6 text-slate-900">
-        <div className="mx-auto max-w-[1600px]">{children}</div>
-      </div>
-    );
-  }
 
   // 1. Identificar a unidade ativa baseada na sessão JWT
   const targetId = session.activeCompanyId || session.companyId;
@@ -84,6 +58,34 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
   const slug = restaurant?.slug ?? "";
   const restaurantName = restaurant?.name ?? "Meu Restaurante";
 
+  // Telas de TV / perfis dedicados ocupam 100% da tela sem sidebar nem bordas de backoffice
+  if (session.role === "KITCHEN" || session.role === "PANEL" || isTvRoute) {
+    return (
+      <div className="h-screen w-screen overflow-hidden bg-slate-950 text-white">
+        {children}
+      </div>
+    );
+  }
+
+  // Perfil de Comandas / Garçom opera em tela cheia como um aplicativo dedicado (mobile/tablet/terminal)
+  if (session.role === "WAITER") {
+    return (
+      <div className="min-h-screen w-screen overflow-x-hidden bg-slate-100 text-slate-900">
+        <GlobalRealtimeListener slug={slug} />
+        {children}
+      </div>
+    );
+  }
+
+  // Perfil de Entregador / Motoboy opera em tela dedicada sem sidebar (estilo kds, tv senha e garçom)
+  if (session.role === "COURIER") {
+    return (
+      <div className="min-h-screen w-screen overflow-x-hidden bg-slate-100 p-3 sm:p-6 text-slate-900">
+        <div className="mx-auto max-w-[1600px]">{children}</div>
+      </div>
+    );
+  }
+
   // 2. Buscar todas as filiais/unidades cadastradas da empresa
   const allRestaurants = await db
     .select({
@@ -105,6 +107,7 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
       userName={session.name}
       userEmail={session.email}
     >
+      <GlobalRealtimeListener slug={slug} />
       <div className="mx-auto max-w-[1600px]">{children}</div>
     </AdminSidebar>
   );

@@ -45,7 +45,7 @@ interface MesasQrCodesClientProps {
   tables: DiningTable[];
 }
 
-type CardTemplate = "TOTEM_ACRYLIC" | "STICKER_COMPACT" | "DARK_ELEGANT" | "TENT_FOLDABLE";
+type CardTemplate = "TOTEM_ACRYLIC" | "DARK_ELEGANT" | "TENT_FOLDABLE";
 type GridDistribution = "1_PER_PAGE" | "2_PER_PAGE" | "4_PER_PAGE" | "6_PER_PAGE";
 
 export function MesasQrCodesClient({
@@ -287,15 +287,16 @@ export function MesasQrCodesClient({
                 margin: 0 auto !important;
                 border: none !important;
                 width: 210mm !important;
+                height: 297mm !important;
+                max-height: 297mm !important;
                 min-height: 297mm !important;
-                height: auto !important;
                 page-break-after: always !important;
                 break-after: page !important;
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
                 box-sizing: border-box !important;
                 padding: 8mm !important;
-                overflow: visible !important;
+                overflow: hidden !important;
                 transform: none !important;
               }
               .printable-table-page:last-child {
@@ -350,14 +351,18 @@ export function MesasQrCodesClient({
 
     const zoomWrapper = document.getElementById("qrcodes-preview-zoom-wrapper");
     const prevTransform = zoomWrapper?.style.transform;
+    const prevTransition = zoomWrapper?.style.transition;
 
     try {
       setIsExportingPdf(true);
       toast.info(`Gerando PDF com ${pageElements.length} folha(s) em alta qualidade...`);
 
       if (zoomWrapper) {
+        zoomWrapper.style.transition = "none";
         zoomWrapper.style.transform = "none";
       }
+
+      await new Promise((resolve) => setTimeout(resolve, 80));
 
       const { jsPDF } = await import("jspdf");
       const html2canvas = await loadHtml2Canvas();
@@ -393,6 +398,11 @@ export function MesasQrCodesClient({
             clonedEl.style.transform = "none";
             clonedEl.style.boxShadow = "none";
             clonedEl.style.margin = "0";
+            clonedEl.style.width = "210mm";
+            clonedEl.style.height = "297mm";
+            clonedEl.style.maxHeight = "297mm";
+            clonedEl.style.boxSizing = "border-box";
+            clonedEl.style.overflow = "hidden";
             clonedEl.querySelectorAll<HTMLElement>(".no-print").forEach((el) => {
               el.style.display = "none";
             });
@@ -410,8 +420,9 @@ export function MesasQrCodesClient({
       console.error("Erro ao gerar PDF:", err);
       toast.error("Ocorreu um erro ao gerar o PDF das mesas.");
     } finally {
-      if (zoomWrapper && prevTransform !== undefined) {
-        zoomWrapper.style.transform = prevTransform;
+      if (zoomWrapper) {
+        if (prevTransform !== undefined) zoomWrapper.style.transform = prevTransform;
+        zoomWrapper.style.transition = prevTransition ?? "transform 0.15s ease";
       }
       setIsExportingPdf(false);
     }
@@ -473,22 +484,20 @@ export function MesasQrCodesClient({
         key={table.id}
         id={`table-card-${table.id}`}
         className={cn(
-          "table-card-print relative rounded-2xl border transition-all p-5 flex flex-col items-center justify-between text-center overflow-hidden",
+          "table-card-print relative rounded-2xl border transition-all p-5 flex flex-col items-center justify-between text-center overflow-hidden min-h-0",
           showCutLines && "border-dashed border-slate-300",
           !showCutLines && "border-slate-200/80 shadow-xs",
           // Theme variations
           template === "DARK_ELEGANT"
             ? "bg-slate-950 text-white border-slate-800"
-            : template === "STICKER_COMPACT"
-              ? "bg-white text-slate-900 aspect-square justify-center p-3"
-              : template === "TENT_FOLDABLE"
-                ? "bg-white text-slate-900 border-stone-300"
-                : "bg-white text-slate-900",
+            : template === "TENT_FOLDABLE"
+              ? "bg-white text-slate-900 border-stone-300"
+              : "bg-white text-slate-900",
           // Size variations
-          gridDistribution === "4_PER_PAGE" && "min-h-[132mm] h-full",
-          gridDistribution === "2_PER_PAGE" && "min-h-[132mm] h-full",
-          gridDistribution === "1_PER_PAGE" && "min-h-[270mm] p-10 justify-around h-full",
-          gridDistribution === "6_PER_PAGE" && "min-h-[88mm] p-3 h-full",
+          gridDistribution === "4_PER_PAGE" && "h-full",
+          gridDistribution === "2_PER_PAGE" && "h-full",
+          gridDistribution === "1_PER_PAGE" && "p-10 justify-around h-full",
+          gridDistribution === "6_PER_PAGE" && "p-3 h-full",
         )}
       >
         {/* Cut Guide Scissors Indicator */}
@@ -595,7 +604,7 @@ export function MesasQrCodesClient({
           </p>
 
           {/* 3 Step Instruction Icons */}
-          {showInstructions && template !== "STICKER_COMPACT" && (
+          {showInstructions && (
             <div
               className={cn(
                 "mt-1.5 flex items-center justify-center gap-2 opacity-75",
@@ -634,7 +643,7 @@ export function MesasQrCodesClient({
             </div>
           )}
 
-          {subtext && template !== "STICKER_COMPACT" && (
+          {subtext && (
             <span
               className={cn(
                 "opacity-60 font-medium",
@@ -719,15 +728,16 @@ export function MesasQrCodesClient({
             margin: 0 auto !important;
             border: none !important;
             width: 210mm !important;
+            height: 297mm !important;
+            max-height: 297mm !important;
             min-height: 297mm !important;
-            height: auto !important;
             page-break-after: always !important;
             break-after: page !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
             box-sizing: border-box !important;
             padding: 8mm !important;
-            overflow: visible !important;
+            overflow: hidden !important;
             transform: none !important;
           }
           .printable-table-page:last-child {
@@ -838,9 +848,6 @@ export function MesasQrCodesClient({
                         </SelectItem>
                         <SelectItem value="DARK_ELEGANT">
                           🌙 Dark Luxury (Preto com Dourado)
-                        </SelectItem>
-                        <SelectItem value="STICKER_COMPACT">
-                          🏷️ Adesivo Compacto (Para canto de mesa)
                         </SelectItem>
                         <SelectItem value="TENT_FOLDABLE">
                           🔺 Prisma Dobrável (Fica em pé sozinho)
@@ -1010,7 +1017,7 @@ export function MesasQrCodesClient({
                         variant="ghost"
                         size="sm"
                         onClick={() => toggleAll(true)}
-                        className="h-7 px-2 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        className="h-7 px-2 text-xs text-slate-500 hover:text-slate-700"
                       >
                         Selecionar Todas
                       </Button>
@@ -1205,16 +1212,34 @@ export function MesasQrCodesClient({
                     <div
                       id={`table-qr-page-${pageIdx + 1}`}
                       data-page-index={pageIdx}
-                      className="printable-table-page relative bg-white shadow-2xl transition-all mx-auto w-[210mm] min-h-[297mm] p-[8mm] flex flex-col justify-between"
+                      className="printable-table-page relative bg-white shadow-2xl transition-all mx-auto w-[210mm] h-[297mm] max-h-[297mm] p-[8mm] box-border overflow-hidden flex flex-col justify-start"
                     >
                       <div
                         className={cn(
                           "grid gap-4 w-full h-full flex-1",
-                          gridDistribution === "1_PER_PAGE" && "grid-cols-1",
-                          gridDistribution === "2_PER_PAGE" && "grid-cols-1 md:grid-cols-2",
-                          gridDistribution === "4_PER_PAGE" && "grid-cols-2",
-                          gridDistribution === "6_PER_PAGE" && "grid-cols-2 md:grid-cols-3",
+                          gridDistribution === "1_PER_PAGE" && "grid-cols-1 grid-rows-1",
+                          gridDistribution === "2_PER_PAGE" && "grid-cols-1 grid-rows-2",
+                          gridDistribution === "4_PER_PAGE" && "grid-cols-2 grid-rows-2",
+                          gridDistribution === "6_PER_PAGE" && "grid-cols-2 grid-rows-3",
                         )}
+                        style={{
+                          gridTemplateColumns:
+                            gridDistribution === "1_PER_PAGE"
+                              ? "repeat(1, minmax(0, 1fr))"
+                              : gridDistribution === "2_PER_PAGE"
+                                ? "repeat(1, minmax(0, 1fr))"
+                                : gridDistribution === "4_PER_PAGE"
+                                  ? "repeat(2, minmax(0, 1fr))"
+                                  : "repeat(2, minmax(0, 1fr))",
+                          gridTemplateRows:
+                            gridDistribution === "1_PER_PAGE"
+                              ? "repeat(1, minmax(0, 1fr))"
+                              : gridDistribution === "2_PER_PAGE"
+                                ? "repeat(2, minmax(0, 1fr))"
+                                : gridDistribution === "4_PER_PAGE"
+                                  ? "repeat(2, minmax(0, 1fr))"
+                                  : "repeat(3, minmax(0, 1fr))",
+                        }}
                       >
                         {pageTables.map((table) => renderTableCard(table))}
                       </div>

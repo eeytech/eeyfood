@@ -47,6 +47,7 @@ export function RelatoriosClient({
         <div className="flex items-center gap-2">
           <ExportPDFButton
             data={data}
+            kpis={kpis}
             activeTab={activeTab}
             from={from}
             to={to}

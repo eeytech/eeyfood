@@ -23,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useTheme } from "@/components/theme-provider";
 import type { DashboardData } from "@/lib/admin-queries";
 
 const fmt = (v: number) =>
@@ -44,6 +45,7 @@ interface ProdutosTabProps {
 
 const ProdutosTab = ({ data }: ProdutosTabProps) => {
   const { topProducts, bottomProducts, topModifiers } = data;
+  const { currentThemeConfig } = useTheme();
   const [search, setSearch] = useState("");
   const [metricSort, setMetricSort] = useState<"QTY" | "REVENUE">("QTY");
 
@@ -299,7 +301,14 @@ const ProdutosTab = ({ data }: ProdutosTabProps) => {
                         <TableCell className="font-medium text-slate-900">
                           {p.productName}
                           {p.totalQuantity === 0 && (
-                            <span className="ml-2 inline-flex items-center rounded-full border border-amber-200/80 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                            <span
+                              className="ml-2 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-colors"
+                              style={{
+                                color: currentThemeConfig.hex,
+                                borderColor: `${currentThemeConfig.hex}40`,
+                                backgroundColor: `${currentThemeConfig.hex}15`,
+                              }}
+                            >
                               Sem saída
                             </span>
                           )}

@@ -23,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useTheme } from "@/components/theme-provider";
 import type { AdvancedKPIs, DashboardData } from "@/lib/admin-queries";
 
 const fmt = (v: number) =>
@@ -46,6 +47,7 @@ interface MockCliente {
 
 const ClientesTab = ({ data, kpis }: ClientesTabProps) => {
   const { summary, cashbackMetrics } = data;
+  const { currentThemeConfig } = useTheme();
   const [search, setSearch] = useState("");
   const [segmentFilter, setSegmentFilter] = useState<string>("ALL");
   const [sortBy, setSortBy] = useState<"SPENT" | "ORDERS">("SPENT");
@@ -305,27 +307,20 @@ const ClientesTab = ({ data, kpis }: ClientesTabProps) => {
                     <TableCell className="text-right font-bold text-primary">{fmt(c.totalGasto)}</TableCell>
                     <TableCell className="text-right font-medium text-slate-700">{fmt(c.ticketMedio)}</TableCell>
                     <TableCell className="text-right">
-                      {c.segmento === "VIP" && (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[11px] font-bold text-primary">
-                          <CrownIcon size={12} />
-                          VIP
-                        </span>
-                      )}
-                      {c.segmento === "FREQUENTE" && (
-                        <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700">
-                          Recorrente
-                        </span>
-                      )}
-                      {c.segmento === "NOVO" && (
-                        <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
-                          Novo
-                        </span>
-                      )}
-                      {c.segmento === "EM_RISCO" && (
-                        <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-800">
-                          Em risco
-                        </span>
-                      )}
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold transition-colors"
+                        style={{
+                          color: currentThemeConfig.hex,
+                          borderColor: `${currentThemeConfig.hex}40`,
+                          backgroundColor: `${currentThemeConfig.hex}15`,
+                        }}
+                      >
+                        {c.segmento === "VIP" && <CrownIcon size={12} />}
+                        {c.segmento === "VIP" && "VIP"}
+                        {c.segmento === "FREQUENTE" && "Recorrente"}
+                        {c.segmento === "NOVO" && "Novo"}
+                        {c.segmento === "EM_RISCO" && "Em risco"}
+                      </span>
                     </TableCell>
                     <TableCell className="text-right text-xs text-slate-500">{c.ultimoPedido}</TableCell>
                   </TableRow>
