@@ -42,7 +42,7 @@ import { Button } from "@/components/ui/button";
 import { CompanySwitcher } from "@/components/auth/CompanySwitcher";
 import { ScreenHelpTrigger } from "@/components/docs/screen-help-trigger";
 import { logoutAction } from "@/lib/auth/actions";
-import { isModuleEnabled } from "@fsw/db";
+import { isModuleEnabled } from "@fsw/db/modules-constants";
 import { cn } from "@/lib/utils";
 import type { TokenCompany } from "@/lib/auth/types";
 

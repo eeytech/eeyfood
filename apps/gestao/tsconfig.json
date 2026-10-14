@@ -12,7 +12,8 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@fsw/db": ["../../packages/db/src/index.ts"]
+      "@fsw/db": ["../../packages/db/src/index.ts"],
+      "@fsw/db/*": ["../../packages/db/src/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

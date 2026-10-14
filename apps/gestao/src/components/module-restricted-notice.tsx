@@ -6,7 +6,7 @@ import {
   ShieldAlertIcon,
   SparklesIcon,
 } from "lucide-react";
-import { getModuleById } from "@fsw/db";
+import { getModuleById } from "@fsw/db/modules-constants";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 

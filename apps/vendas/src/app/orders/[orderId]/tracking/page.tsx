@@ -1,6 +1,6 @@
 "use client";
 
-import { Courier, Order, Restaurant } from "@fsw/db";
+import type { Courier, Order, Restaurant } from "@fsw/db";
 import { BikeIcon, ChevronLeftIcon, ClockIcon } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";

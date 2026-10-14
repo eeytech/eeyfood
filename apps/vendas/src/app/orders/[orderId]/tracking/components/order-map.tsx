@@ -2,7 +2,7 @@
 
 import "leaflet/dist/leaflet.css";
 
-import { Courier, Order, Restaurant } from "@fsw/db";
+import type { Courier, Order, Restaurant } from "@fsw/db";
 import L from "leaflet";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 

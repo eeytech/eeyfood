@@ -1,6 +1,6 @@
 "use client";
 
-import { PedidoRecebimento } from "@fsw/db";
+import type { PedidoRecebimento } from "@fsw/db";
 import { QRCodeSVG } from "qrcode.react";
 import * as React from "react";
 

@@ -8,7 +8,7 @@ import {
   PLAN_PRESETS,
   type PlanPresetId,
   type SystemModule,
-} from "@fsw/db";
+} from "@fsw/db/modules-constants";
 import {
   AlertCircleIcon,
   BarChart3Icon,
