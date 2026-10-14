@@ -1793,7 +1793,7 @@ Os valores nutricionais são estimativas por porção individual e devem ser nú
 
   // Fallback nativo REST do Google Gemini caso a camada OpenAI tenha falhado/404
   if (geminiKey) {
-    for (const m of ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash"]) {
+    for (const m of ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]) {
       try {
         const res = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${geminiKey}`,

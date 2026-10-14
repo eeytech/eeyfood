@@ -168,73 +168,174 @@ export const testAiProviderKeyAction = async (
         };
       }
 
-      let modelTested = "gemini-2.0-flash";
-      let connected = false;
+      // Passo 1: Consulta a lista de modelos disponíveis para esta chave via API REST oficial do Google.
+      // Isso valida a chave, as permissões do projeto e evita adivinhações cegas que geram 404 falso.
+      let modelsRes: Response;
+      let apiVersion = "v1beta";
 
-      // 1. Tenta via endpoint OpenAI-compatible
-      for (const m of ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash"]) {
-        try {
-          const client = new OpenAI({
-            apiKey: cleanedKey,
-            baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
-            timeout: 8000,
-          });
-          await client.chat.completions.create({
-            model: m,
-            messages: [{ role: "user", content: "Diga apenas: OK" }],
-            max_tokens: 5,
-            temperature: 0,
-          });
-          modelTested = m;
-          connected = true;
-          break;
-        } catch {
-          // tenta próximo
-        }
-      }
+      try {
+        modelsRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(cleanedKey)}`,
+          {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            signal: AbortSignal.timeout(10000),
+          }
+        );
 
-      // 2. Se OpenAI endpoint retornar 404, tenta endpoint REST nativo do Google
-      if (!connected) {
-        for (const m of ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash"]) {
-          try {
-            const res = await fetch(
-              `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${cleanedKey}`,
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  contents: [{ parts: [{ text: "Diga apenas: OK" }] }],
-                }),
-              }
-            );
-            if (res.ok) {
-              modelTested = m;
-              connected = true;
-              break;
-            } else if (res.status === 400) {
-              const data = await res.json().catch(() => null);
-              const errMsg = data?.error?.message || "Chave de API do Google Gemini inválida.";
-              return { success: false, provider: "GOOGLE_GEMINI", error: errMsg };
+        // Se o endpoint v1beta retornar 404, tenta v1 como fallback
+        if (modelsRes.status === 404) {
+          const v1Res = await fetch(
+            `https://generativelanguage.googleapis.com/v1/models?key=${encodeURIComponent(cleanedKey)}`,
+            {
+              method: "GET",
+              headers: { "Content-Type": "application/json" },
+              signal: AbortSignal.timeout(10000),
             }
-          } catch {
-            // tenta próximo
+          ).catch(() => null);
+
+          if (v1Res && v1Res.ok) {
+            modelsRes = v1Res;
+            apiVersion = "v1";
           }
         }
+      } catch (netErr: unknown) {
+        const netMsg = netErr instanceof Error ? netErr.message : String(netErr);
+        return {
+          success: false,
+          provider: "GOOGLE_GEMINI",
+          error: `Falha na conexão com os servidores do Google (${netMsg}). Verifique a sua conexão com a internet.`,
+        };
       }
 
-      if (!connected) {
-        throw new Error(
-          "Modelos do Gemini ainda não sincronizados (Erro 404). Se você acabou de criar esta chave no Google AI Studio, o Google leva cerca de 1 a 2 minutos para propagar a chave para os servidores de IA. Aguarde um instante e clique em Testar novamente."
+      // Trata erros de status HTTP retornados pelo Google
+      if (!modelsRes.ok) {
+        const errData = await modelsRes.json().catch(() => null);
+        const errMsg = errData?.error?.message || "";
+
+        if (modelsRes.status === 400) {
+          return {
+            success: false,
+            provider: "GOOGLE_GEMINI",
+            error:
+              "Chave do Google Gemini inválida (Erro 400). Obtenha uma chave gratuita em https://aistudio.google.com/app/apikey.",
+          };
+        }
+
+        if (modelsRes.status === 403) {
+          if (
+            errMsg.toLowerCase().includes("generative language api") ||
+            errMsg.toLowerCase().includes("disabled")
+          ) {
+            return {
+              success: false,
+              provider: "GOOGLE_GEMINI",
+              error:
+                "A 'Generative Language API' está desativada no seu projeto do Google Cloud. Acesse https://console.cloud.google.com/apis/library/generativelanguage.googleapis.com e clique em 'Ativar'.",
+            };
+          }
+          return {
+            success: false,
+            provider: "GOOGLE_GEMINI",
+            error: `Acesso negado à API do Gemini (Erro 403): ${errMsg || "Verifique se a chave possui restrições de IP, HTTP Referrer ou restrições de API no Google Cloud Console."}`,
+          };
+        }
+
+        if (modelsRes.status === 429) {
+          return {
+            success: false,
+            provider: "GOOGLE_GEMINI",
+            error:
+              "Limite de requisições ou cota do Google Gemini atingida (Erro 429). Aguarde alguns instantes e tente novamente.",
+          };
+        }
+
+        if (modelsRes.status === 404) {
+          return {
+            success: false,
+            provider: "GOOGLE_GEMINI",
+            error:
+              "Modelos do Gemini ainda não sincronizados (Erro 404). Se você acabou de criar a chave no Google AI Studio, o Google pode levar de 2 a 10 minutos para propagar as permissões pelos servidores mundiais. Aguarde alguns instantes e clique em Testar novamente.",
+          };
+        }
+
+        return {
+          success: false,
+          provider: "GOOGLE_GEMINI",
+          error: `Erro ${modelsRes.status} ao validar chave no Google: ${errMsg || modelsRes.statusText}`,
+        };
+      }
+
+      // Passo 2: Analisa modelos retornados que suportam generateContent
+      const data = await modelsRes.json().catch(() => null);
+      const rawModels: Array<{ name: string; supportedGenerationMethods?: string[] }> =
+        data?.models || [];
+
+      const availableModels = rawModels
+        .filter((m) => m.supportedGenerationMethods?.includes("generateContent"))
+        .map((m) => m.name.replace(/^models\//, ""));
+
+      // Escolhe o modelo mais moderno e rápido disponível
+      const preferredCandidates = [
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
+        "gemini-1.5-pro",
+        "gemini-1.0-pro",
+      ];
+      let modelToTest = preferredCandidates.find((c) => availableModels.includes(c));
+      if (!modelToTest) {
+        modelToTest = availableModels.find((m) => m.includes("gemini")) || availableModels[0] || "gemini-1.5-flash";
+      }
+
+      // Passo 3: Executa uma chamada real de geração de conteúdo de teste (generateContent)
+      let genRes: Response;
+      try {
+        genRes = await fetch(
+          `https://generativelanguage.googleapis.com/${apiVersion}/models/${modelToTest}:generateContent?key=${encodeURIComponent(cleanedKey)}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: "Diga apenas: OK" }] }],
+            }),
+            signal: AbortSignal.timeout(10000),
+          }
         );
+      } catch (genNetErr: unknown) {
+        const genNetMsg = genNetErr instanceof Error ? genNetErr.message : String(genNetErr);
+        return {
+          success: false,
+          provider: "GOOGLE_GEMINI",
+          error: `Falha na requisição de teste para ${modelToTest} (${genNetMsg}).`,
+        };
       }
 
-      const responseTimeMs = Date.now() - startTime;
+      if (genRes.ok) {
+        const responseTimeMs = Date.now() - startTime;
+        return {
+          success: true,
+          provider: "GOOGLE_GEMINI",
+          modelTested: modelToTest,
+          responseTimeMs,
+          message: `Chave do Gemini válida! Conexão estabelecida com sucesso com o modelo ${modelToTest} (${(responseTimeMs / 1000).toFixed(2)}s).`,
+        };
+      }
+
+      const genData = await genRes.json().catch(() => null);
+      const genErrMsg = genData?.error?.message || "";
+
+      if (genRes.status === 404) {
+        return {
+          success: false,
+          provider: "GOOGLE_GEMINI",
+          error: `A chave é válida, mas o modelo ${modelToTest} ainda está finalizando a propagação no Google (Erro 404). Aguarde 1 a 2 minutos e teste novamente.`,
+        };
+      }
+
       return {
-        success: true,
+        success: false,
         provider: "GOOGLE_GEMINI",
-        modelTested,
-        responseTimeMs,
-        message: `Chave do Gemini válida! Conexão estabelecida com sucesso com o modelo ${modelTested} (${(responseTimeMs / 1000).toFixed(2)}s).`,
+        error: `Falha ao testar inferência com ${modelToTest} (Erro ${genRes.status}): ${genErrMsg || "Resposta inesperada."}`,
       };
     }
 
