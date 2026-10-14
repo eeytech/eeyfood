@@ -88,7 +88,7 @@ export default async function WhatsAppPage({ params }: PageProps) {
                     <p className="text-xs font-bold text-slate-900">
                       Notificações Automáticas de Etapas do Pedido
                     </p>
-                    <Badge variant="outline" className="border-emerald-500/30 bg-emerald-50 text-[10px] font-semibold text-emerald-700">
+                    <Badge variant="outline" className="border-primary/20 bg-primary/10 text-[10px] font-semibold text-primary">
                       Tempo Real
                     </Badge>
                   </div>

@@ -256,7 +256,7 @@ export function WhatsAppConnectionCard({
               {isConnected === false && (
                 <Badge
                   variant="secondary"
-                  className="gap-1 px-2.5 py-0.5 text-xs text-muted-foreground"
+                  className="gap-1 px-2.5 py-0.5 text-xs bg-primary/10 text-primary border-primary/20 hover:bg-primary/15"
                 >
                   <WifiOffIcon className="h-3 w-3" /> Desconectado
                 </Badge>
