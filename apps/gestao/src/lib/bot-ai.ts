@@ -105,7 +105,7 @@ export const processarMensagemBot = async ({
         name: "GOOGLE_GEMINI",
         apiKey: key,
         baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
-        models: ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"],
+        models: ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash", "gemini-1.5-pro"],
       };
     }
     if (p === "OPENAI") {
@@ -258,6 +258,123 @@ export const processarMensagemBot = async ({
           }
         }
         if (response) break;
+      }
+    }
+
+    // 3. Fallback nativo REST oficial do Google Gemini (generateContent)
+    // Essencial caso o endpoint OpenAI-compatible da Generative Language retorne 404 para a chave
+    if (!response) {
+      const geminiKey =
+        aiSettings.geminiApiKey ||
+        process.env.GEMINI_API_KEY ||
+        process.env.GOOGLE_API_KEY;
+
+      if (geminiKey) {
+        console.log(`[Bot AI] Tentando fallback nativo REST do Google Gemini (generateContent)...`);
+
+        let menuContext = "";
+        try {
+          const cardapio = await buscarRestauranteComCardapioPorSlug(slug);
+          if (cardapio?.menuCategories?.length) {
+            menuContext =
+              "\n\n[CARDÁPIO DO RESTAURANTE]\n" +
+              cardapio.menuCategories
+                .map(
+                  (c) =>
+                    `*${c.name}*\n${c.products
+                      .map((p) => `- ${p.name} (R$ ${p.price}): ${p.description || ""}`)
+                      .join("\n")}`,
+                )
+                .join("\n\n");
+          }
+        } catch {
+          // ignore
+        }
+
+        const sysPrompt = (aiSettings.systemPrompt || DEFAULT_AI_SYSTEM_PROMPT) + menuContext;
+        const geminiModels = [
+          "gemini-2.0-flash",
+          "gemini-1.5-flash",
+          "gemini-2.5-flash",
+          "gemini-1.5-pro",
+        ];
+
+        const geminiContents = messages
+          .filter((m) => m.role === "user" || m.role === "assistant")
+          .map((m) => ({
+            role: m.role === "assistant" ? "model" : "user",
+            parts: [{ text: typeof m.content === "string" ? m.content : "" }],
+          }));
+
+        for (const m of geminiModels) {
+          try {
+            const res = await fetch(
+              `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(geminiKey)}`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  system_instruction: {
+                    parts: [{ text: sysPrompt }],
+                  },
+                  contents:
+                    geminiContents.length > 0
+                      ? geminiContents
+                      : [
+                          {
+                            role: "user",
+                            parts: [
+                              {
+                                text: `Cliente: ${customerName} (${customerPhone})\nMensagem: ${textToProcess}`,
+                              },
+                            ],
+                          },
+                        ],
+                  generationConfig: {
+                    temperature: 0.7,
+                  },
+                }),
+                signal: AbortSignal.timeout(12000),
+              },
+            );
+
+            if (res.ok) {
+              const data = await res.json();
+              const replyText =
+                data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+              if (replyText) {
+                console.log(
+                  `[Bot AI] Resposta obtida com sucesso via fallback REST do Gemini (${m})!`,
+                );
+                response = {
+                  id: `gemini-rest-${Date.now()}`,
+                  created: Date.now(),
+                  model: m,
+                  object: "chat.completion",
+                  choices: [
+                    {
+                      index: 0,
+                      finish_reason: "stop",
+                      message: {
+                        role: "assistant",
+                        content: replyText,
+                      },
+                    },
+                  ],
+                } as unknown as OpenAI.Chat.ChatCompletion;
+                break;
+              }
+            } else {
+              const errBody = await res.json().catch(() => null);
+              console.warn(
+                `[Bot AI] Fallback REST falhou (${m}): status ${res.status}`,
+                errBody?.error?.message || errBody,
+              );
+            }
+          } catch (restErr) {
+            console.warn(`[Bot AI] Erro no fallback REST com modelo ${m}:`, restErr);
+          }
+        }
       }
     }
 

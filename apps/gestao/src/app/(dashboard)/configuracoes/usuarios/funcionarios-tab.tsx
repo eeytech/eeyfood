@@ -249,17 +249,17 @@ export function FuncionariosTab({
     <div className="space-y-6">
       {/* ── Cards de Métricas ───────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-        <Card className="border-slate-200/80 bg-white shadow-xs transition-all hover:border-slate-300">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Total de Colaboradores
               </span>
-              <div className="rounded-xl bg-primary/10 p-2 text-primary">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <UsersIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-slate-900">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {totalCount}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -268,17 +268,17 @@ export function FuncionariosTab({
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/80 bg-white shadow-xs transition-all hover:border-slate-300">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Ativos na Equipe
               </span>
-              <div className="rounded-xl bg-emerald-100 p-2 text-emerald-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <UserCheckIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-emerald-700">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {activeCount}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -287,17 +287,17 @@ export function FuncionariosTab({
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/80 bg-white shadow-xs transition-all hover:border-slate-300">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Previsão Folha Base
               </span>
-              <div className="rounded-xl bg-purple-100 p-2 text-purple-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <BanknoteIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-purple-700">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {formatCurrency(totalFolhaBase)}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -306,17 +306,17 @@ export function FuncionariosTab({
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/80 bg-white shadow-xs transition-all hover:border-slate-300">
+        <Card className="border-slate-200/80 bg-white shadow-sm transition-all hover:border-slate-300">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Cargos e Funções
               </span>
-              <div className="rounded-xl bg-blue-100 p-2 text-blue-700">
+              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <BriefcaseIcon size={16} />
               </div>
             </div>
-            <p className="mt-2 font-display text-2xl font-bold text-blue-700">
+            <p className="mt-2 font-display text-2xl font-bold text-primary">
               {uniqueRoles.length}
             </p>
             <p className="mt-0.5 text-xs text-slate-500">

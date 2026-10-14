@@ -53,6 +53,9 @@ export async function POST(request: Request) {
 
     // Ignora mensagens enviadas pelo próprio robô / WhatsApp conectado
     if (messageData.key.fromMe) {
+      console.log(
+        `[Webhook Evolution] Mensagem ignorada pois foi enviada pelo próprio número conectado (fromMe: true). Envie a mensagem a partir de OUTRO número de WhatsApp para testar o bot.`,
+      );
       return NextResponse.json({ ok: true, reason: "from_me" });
     }
 
