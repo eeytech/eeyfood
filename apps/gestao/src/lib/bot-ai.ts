@@ -105,7 +105,7 @@ export const processarMensagemBot = async ({
         name: "GOOGLE_GEMINI",
         apiKey: key,
         baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
-        models: ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"],
+        models: ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"],
       };
     }
     if (p === "OPENAI") {

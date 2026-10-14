@@ -275,67 +275,101 @@ export const testAiProviderKeyAction = async (
         .filter((m) => m.supportedGenerationMethods?.includes("generateContent"))
         .map((m) => m.name.replace(/^models\//, ""));
 
-      // Escolhe o modelo mais moderno e rápido disponível
-      const preferredCandidates = [
-        "gemini-2.0-flash",
-        "gemini-1.5-flash",
-        "gemini-1.5-pro",
-        "gemini-1.0-pro",
+      // Prioriza modelos comprovadamente estáveis e com alta disponibilidade gratuita:
+      // 1. gemini-1.5-flash (alta compatibilidade e disponibilidade imediata)
+      // 2. gemini-2.0-flash (nova geração rápida)
+      // 3. gemini-1.5-pro
+      // 4. gemini-2.5-flash (se habilitado pelo Google para a conta)
+      const priorityPatterns = [
+        /^gemini-1\.5-flash/i,
+        /^gemini-2\.0-flash/i,
+        /^gemini-1\.5-pro/i,
+        /^gemini-2\.5-flash/i,
       ];
-      let modelToTest = preferredCandidates.find((c) => availableModels.includes(c));
-      if (!modelToTest) {
-        modelToTest = availableModels.find((m) => m.includes("gemini")) || availableModels[0] || "gemini-1.5-flash";
-      }
 
-      // Passo 3: Executa uma chamada real de geração de conteúdo de teste (generateContent)
-      let genRes: Response;
-      try {
-        genRes = await fetch(
-          `https://generativelanguage.googleapis.com/${apiVersion}/models/${modelToTest}:generateContent?key=${encodeURIComponent(cleanedKey)}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: "Diga apenas: OK" }] }],
-            }),
-            signal: AbortSignal.timeout(10000),
+      const candidatesToTry: string[] = [];
+
+      for (const pattern of priorityPatterns) {
+        for (const m of availableModels) {
+          if (pattern.test(m) && !candidatesToTry.includes(m)) {
+            candidatesToTry.push(m);
           }
-        );
-      } catch (genNetErr: unknown) {
-        const genNetMsg = genNetErr instanceof Error ? genNetErr.message : String(genNetErr);
-        return {
-          success: false,
-          provider: "GOOGLE_GEMINI",
-          error: `Falha na requisição de teste para ${modelToTest} (${genNetMsg}).`,
-        };
+        }
       }
 
-      if (genRes.ok) {
+      // Adiciona quaisquer outros modelos que não entraram nos padrões acima
+      for (const m of availableModels) {
+        if (!candidatesToTry.includes(m)) {
+          candidatesToTry.push(m);
+        }
+      }
+
+      // Se a lista de modelos veio vazia, tenta os nomes padrão
+      if (candidatesToTry.length === 0) {
+        candidatesToTry.push(
+          "gemini-1.5-flash",
+          "gemini-2.0-flash",
+          "gemini-1.5-pro",
+          "gemini-2.5-flash"
+        );
+      }
+
+      // Passo 3: Testa os modelos em ordem até o primeiro que responder com sucesso
+      let connectedModel: string | null = null;
+      let lastErrMsg = "";
+      let lastStatus = 0;
+
+      for (const modelToTest of candidatesToTry) {
+        try {
+          const genRes = await fetch(
+            `https://generativelanguage.googleapis.com/${apiVersion}/models/${modelToTest}:generateContent?key=${encodeURIComponent(cleanedKey)}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: "Diga apenas: OK" }] }],
+              }),
+              signal: AbortSignal.timeout(8000),
+            }
+          );
+
+          if (genRes.ok) {
+            connectedModel = modelToTest;
+            break;
+          }
+
+          lastStatus = genRes.status;
+          const genData = await genRes.json().catch(() => null);
+          lastErrMsg = genData?.error?.message || "";
+        } catch (genErr: unknown) {
+          lastErrMsg = genErr instanceof Error ? genErr.message : String(genErr);
+        }
+      }
+
+      if (connectedModel) {
         const responseTimeMs = Date.now() - startTime;
         return {
           success: true,
           provider: "GOOGLE_GEMINI",
-          modelTested: modelToTest,
+          modelTested: connectedModel,
           responseTimeMs,
-          message: `Chave do Gemini válida! Conexão estabelecida com sucesso com o modelo ${modelToTest} (${(responseTimeMs / 1000).toFixed(2)}s).`,
+          message: `Chave do Gemini válida! Conexão estabelecida com sucesso com o modelo ${connectedModel} (${(responseTimeMs / 1000).toFixed(2)}s).`,
         };
       }
 
-      const genData = await genRes.json().catch(() => null);
-      const genErrMsg = genData?.error?.message || "";
-
-      if (genRes.status === 404) {
+      if (lastStatus === 404) {
         return {
           success: false,
           provider: "GOOGLE_GEMINI",
-          error: `A chave é válida, mas o modelo ${modelToTest} ainda está finalizando a propagação no Google (Erro 404). Aguarde 1 a 2 minutos e teste novamente.`,
+          error:
+            "A chave é válida no Google, mas os modelos ainda estão finalizando a propagação nos servidores de inferência (Erro 404). Aguarde 1 a 2 minutos e teste novamente.",
         };
       }
 
       return {
         success: false,
         provider: "GOOGLE_GEMINI",
-        error: `Falha ao testar inferência com ${modelToTest} (Erro ${genRes.status}): ${genErrMsg || "Resposta inesperada."}`,
+        error: `Falha ao testar inferência com os modelos disponíveis (Erro ${lastStatus || "Desconhecido"}): ${lastErrMsg || "Nenhum modelo respondeu com sucesso."}`,
       };
     }
 
