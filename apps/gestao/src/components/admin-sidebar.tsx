@@ -40,7 +40,6 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { CompanySwitcher } from "@/components/auth/CompanySwitcher";
-import { ScreenHelpTrigger } from "@/components/docs/screen-help-trigger";
 import { logoutAction } from "@/lib/auth/actions";
 import { isModuleEnabled } from "@fsw/db/modules-constants";
 import { cn } from "@/lib/utils";
@@ -432,7 +431,6 @@ const AdminSidebar = ({
         {children && (
           <main className="flex-1 overflow-y-auto p-3 md:p-4 lg:p-5 relative">
             {children}
-            <ScreenHelpTrigger variant="floating" />
           </main>
         )}
       </div>

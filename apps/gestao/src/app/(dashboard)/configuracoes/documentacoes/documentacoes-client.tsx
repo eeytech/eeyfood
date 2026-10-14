@@ -113,14 +113,6 @@ export default function DocumentacoesClient() {
     });
   }, [selectedCategory, searchQuery]);
 
-  const totalFeatures = useMemo(() => {
-    return SCREEN_DOCUMENTATIONS.reduce((acc, d) => acc + d.features.length, 0);
-  }, []);
-
-  const totalSteps = useMemo(() => {
-    return SCREEN_DOCUMENTATIONS.reduce((acc, d) => acc + d.howToUse.length, 0);
-  }, []);
-
   const categories: Array<{ id: ScreenCategory | "all"; label: string; count: number }> = [
     { id: "all", label: "Todas as Telas", count: SCREEN_DOCUMENTATIONS.length },
     {
@@ -152,97 +144,59 @@ export default function DocumentacoesClient() {
 
   return (
     <div className="space-y-6 pb-16">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6 sm:p-8 text-white shadow-xl border border-white/10">
-        <div className="relative z-10 max-w-4xl space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/20 text-primary border border-primary/30">
-              <BookOpenIcon size={20} />
-            </span>
-            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-slate-300">
-              Central de Conhecimento Oficial • EeyFood
-            </span>
+      {/* ── Page Header ─────────────────────────────────── */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm shadow-primary/25">
+            <BookOpenIcon size={22} />
           </div>
-
-          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white leading-tight">
-            Documentações & Manuais de Uso do Sistema
-          </h1>
-
-          <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-3xl">
-            Aprenda em detalhes tudo o que existe em cada tela do EeyFood e como utilizá-la no dia a dia.
-            Aqui você tem total autonomia para operar, treinar novos colaboradores e extrair o máximo
-            potencial do seu restaurante.
-          </p>
-
-          {/* Cards de Métricas do Conhecimento */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-            <div className="rounded-2xl bg-white/5 border border-white/10 p-3.5 backdrop-blur-xs">
-              <span className="text-xl sm:text-2xl font-bold text-white block">
-                {SCREEN_DOCUMENTATIONS.length}
-              </span>
-              <span className="text-xs text-slate-400 font-medium">Telas Documentadas</span>
-            </div>
-            <div className="rounded-2xl bg-white/5 border border-white/10 p-3.5 backdrop-blur-xs">
-              <span className="text-xl sm:text-2xl font-bold text-primary block">
-                +{totalFeatures}
-              </span>
-              <span className="text-xs text-slate-400 font-medium">Recursos & Botões</span>
-            </div>
-            <div className="rounded-2xl bg-white/5 border border-white/10 p-3.5 backdrop-blur-xs">
-              <span className="text-xl sm:text-2xl font-bold text-emerald-400 block">
-                +{totalSteps}
-              </span>
-              <span className="text-xs text-slate-400 font-medium">Passos Práticos</span>
-            </div>
-            <div className="rounded-2xl bg-white/5 border border-white/10 p-3.5 backdrop-blur-xs">
-              <span className="text-xl sm:text-2xl font-bold text-amber-400 block">
-                100%
-              </span>
-              <span className="text-xs text-slate-400 font-medium">Autonomia de Uso</span>
-            </div>
+          <div>
+            <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
+              Documentações & Manuais
+            </h1>
+            <p className="text-sm text-slate-500">
+              Aprenda em detalhes tudo o que existe em cada tela do sistema e como utilizá-la no dia a dia.
+            </p>
           </div>
+        </div>
+
+        {/* Botões de Expandir / Recolher */}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={expandAll}
+            className="h-9 gap-1.5 rounded-lg border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs"
+          >
+            <ChevronDownIcon size={14} />
+            <span>Expandir Tudo</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={collapseAll}
+            className="h-9 gap-1.5 rounded-lg border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs"
+          >
+            <ChevronUpIcon size={14} />
+            <span>Recolher Tudo</span>
+          </Button>
         </div>
       </div>
 
-      {/* Barra de Pesquisa e Filtros */}
-      <div className="sticky top-0 z-20 space-y-3 bg-slate-50/95 py-2 backdrop-blur-md">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          {/* Campo de Busca Rápida */}
-          <div className="relative flex-1 max-w-xl">
-            <SearchIcon
-              size={18}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
-            />
-            <Input
-              type="text"
-              placeholder="Pesquisar por tela, botão, campo ou palavra-chave (ex: NFC-e, Balança, Sangria, Pizza, Motoboy)..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-11 text-sm bg-white border-slate-300 rounded-xl shadow-xs focus-visible:ring-primary"
-            />
-          </div>
-
-          {/* Botões de Expandir / Recolher Tudo */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={expandAll}
-              className="h-10 text-xs font-semibold rounded-xl bg-white border-slate-200 hover:bg-slate-50 shadow-xs"
-            >
-              <ChevronDownIcon size={14} className="mr-1" />
-              Expandir Tudo
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={collapseAll}
-              className="h-10 text-xs font-semibold rounded-xl bg-white border-slate-200 hover:bg-slate-50 shadow-xs"
-            >
-              <ChevronUpIcon size={14} className="mr-1" />
-              Recolher Tudo
-            </Button>
-          </div>
+      {/* ── Barra de Pesquisa e Filtros ─────────────────── */}
+      <div className="space-y-3">
+        <div className="relative max-w-xl">
+          <SearchIcon
+            size={18}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+          />
+          <Input
+            type="text"
+            placeholder="Pesquisar por tela, botão, campo ou palavra-chave..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 h-10 text-sm bg-white border-slate-200 rounded-xl shadow-xs focus-visible:ring-primary"
+          />
         </div>
 
         {/* Categorias em Pílulas */}
@@ -253,7 +207,7 @@ export default function DocumentacoesClient() {
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`flex shrink-0 items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-xs ${
+                className={`flex shrink-0 items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-xs ${
                   isSelected
                     ? "bg-slate-900 text-white shadow-sm"
                     : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 hover:text-slate-900"
@@ -276,7 +230,7 @@ export default function DocumentacoesClient() {
       {/* Conteúdo Principal: Índice + Artigos Completos */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Sumário Lateral Fixo (Desktop) */}
-        <aside className="hidden lg:block lg:col-span-3 sticky top-36 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs max-h-[calc(100vh-160px)] overflow-y-auto no-scrollbar">
+        <aside className="hidden lg:block lg:col-span-3 sticky top-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs max-h-[calc(100vh-40px)] overflow-y-auto no-scrollbar">
           <div className="flex items-center justify-between pb-3 mb-2 border-b border-slate-100">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
               Índice Rápido ({filteredDocs.length})
