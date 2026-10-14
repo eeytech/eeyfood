@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, gte, ilike, inArray, isNotNull, ne, sql } from "drizzle-orm";
 
-import { db, pool, AUTO_MIGRATIONS_SQL } from "../client";
+import { db, pool, AUTO_MIGRATIONS_SQL, ensureAutoMigrations } from "../client";
 import { isRestaurantOpen } from "../restaurant-utils";
 import {
   abandonedCartsTable,
@@ -399,6 +399,8 @@ const pedidoEstaAtivo = (status: OrderStatus) => {
 };
 
 export const buscarRestauranteUnico = async (): Promise<Restaurant | null> => {
+  await ensureAutoMigrations().catch(() => {});
+
   try {
     const [restaurant] = await db
       .select()
@@ -432,6 +434,8 @@ export const buscarRestaurantePorSlug = async (
   if (!slug || slug === "default") {
     return buscarRestauranteUnico();
   }
+
+  await ensureAutoMigrations().catch(() => {});
 
   const cleanSlug = slug;
 
@@ -2586,34 +2590,57 @@ export const atualizarStatusPagamentoPedido = async ({
 export const buscarPedidoRecebimentoPorId = async (
   orderId: number,
 ): Promise<PedidoRecebimento | null> => {
-  const [pedido] = await db
-    .select({
-      order: ordersTable,
-      restaurant: {
-        id: restaurantsTable.id,
-        name: restaurantsTable.name,
-        slug: restaurantsTable.slug,
-      },
-      diningTable: {
-        id: diningTablesTable.id,
-        name: diningTablesTable.name,
-        seats: diningTablesTable.seats,
-      },
-      courier: {
-        id: couriersTable.id,
-        name: couriersTable.name,
-        phone: couriersTable.phone,
-      },
-    })
-    .from(ordersTable)
-    .innerJoin(
-      restaurantsTable,
-      eq(restaurantsTable.id, ordersTable.restaurantId),
-    )
-    .leftJoin(diningTablesTable, eq(diningTablesTable.id, ordersTable.diningTableId))
-    .leftJoin(couriersTable, eq(couriersTable.id, ordersTable.courierId))
-    .where(eq(ordersTable.id, orderId))
-    .limit(1);
+  const runQuery = async () => {
+    const [res] = await db
+      .select({
+        order: ordersTable,
+        restaurant: {
+          id: restaurantsTable.id,
+          name: restaurantsTable.name,
+          slug: restaurantsTable.slug,
+        },
+        diningTable: {
+          id: diningTablesTable.id,
+          name: diningTablesTable.name,
+          seats: diningTablesTable.seats,
+        },
+        courier: {
+          id: couriersTable.id,
+          name: couriersTable.name,
+          phone: couriersTable.phone,
+        },
+      })
+      .from(ordersTable)
+      .innerJoin(
+        restaurantsTable,
+        eq(restaurantsTable.id, ordersTable.restaurantId),
+      )
+      .leftJoin(diningTablesTable, eq(diningTablesTable.id, ordersTable.diningTableId))
+      .leftJoin(couriersTable, eq(couriersTable.id, ordersTable.courierId))
+      .where(eq(ordersTable.id, orderId))
+      .limit(1);
+    return res;
+  };
+
+  let pedido: Awaited<ReturnType<typeof runQuery>>;
+
+  try {
+    pedido = await runQuery();
+  } catch (err: unknown) {
+    const errorObj = err as { code?: string; message?: string } | undefined;
+    if (errorObj?.code === "42703" || String(errorObj?.message || "").includes("does not exist")) {
+      console.warn("⚠️ Coluna ausente em Order detectada em buscarPedidoRecebimentoPorId. Executando auto-migração...");
+      try {
+        await pool.query(AUTO_MIGRATIONS_SQL);
+        pedido = await runQuery();
+      } catch (retryErr) {
+        console.error("❌ Erro em buscarPedidoRecebimentoPorId após auto-migração:", retryErr);
+        throw retryErr;
+      }
+    } else {
+      throw err;
+    }
+  }
 
   if (!pedido) {
     return null;
@@ -2679,11 +2706,32 @@ export const listarPedidosRecebimentoPorSlug = async (
     return [];
   }
 
-  const pedidos = await db
-    .select()
-    .from(ordersTable)
-    .where(eq(ordersTable.restaurantId, restaurant.id))
-    .orderBy(desc(ordersTable.createdAt));
+  let pedidos: Array<typeof ordersTable.$inferSelect> = [];
+  try {
+    pedidos = await db
+      .select()
+      .from(ordersTable)
+      .where(eq(ordersTable.restaurantId, restaurant.id))
+      .orderBy(desc(ordersTable.createdAt));
+  } catch (err: unknown) {
+    const errorObj = err as { code?: string; message?: string } | undefined;
+    if (errorObj?.code === "42703" || String(errorObj?.message || "").includes("does not exist")) {
+      console.warn("⚠️ Coluna ausente em Order detectada em listarPedidosRecebimentoPorSlug. Executando auto-migração...");
+      try {
+        await pool.query(AUTO_MIGRATIONS_SQL);
+        pedidos = await db
+          .select()
+          .from(ordersTable)
+          .where(eq(ordersTable.restaurantId, restaurant.id))
+          .orderBy(desc(ordersTable.createdAt));
+      } catch (retryErr) {
+        console.error("❌ Erro em listarPedidosRecebimentoPorSlug após auto-migração:", retryErr);
+        throw retryErr;
+      }
+    } else {
+      throw err;
+    }
+  }
 
   const pedidosDetalhados = await Promise.all(
     pedidos.map((pedido) => buscarPedidoRecebimentoPorId(pedido.id)),
