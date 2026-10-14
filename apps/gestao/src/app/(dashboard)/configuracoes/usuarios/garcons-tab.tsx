@@ -139,8 +139,11 @@ export function GarconsTab({
   // Dialog de Criar/Editar Garçom
   const [garcomDialogOpen, setGarcomDialogOpen] = useState(false);
   const [editingGarcom, setEditingGarcom] = useState<GarcomMetricas | null>(null);
+  const [garcomName, setGarcomName] = useState("");
   const [garcomPhone, setGarcomPhone] = useState("");
   const [garcomCpf, setGarcomCpf] = useState("");
+  const [garcomCommissionPercent, setGarcomCommissionPercent] = useState("0");
+  const [garcomStatus, setGarcomStatus] = useState<"ACTIVE" | "INACTIVE">("ACTIVE");
   const [garcomCep, setGarcomCep] = useState("");
   const [garcomLogradouro, setGarcomLogradouro] = useState("");
   const [garcomNumero, setGarcomNumero] = useState("");
@@ -149,10 +152,15 @@ export function GarconsTab({
   const [garcomCidade, setGarcomCidade] = useState("");
   const [garcomEstado, setGarcomEstado] = useState("");
   const [isSearchingCep, setIsSearchingCep] = useState(false);
+  const [garcomErrors, setGarcomErrors] = useState<Record<string, string>>({});
   const [deletingGarcom, setDeletingGarcom] = useState<{ id: string; name: string } | null>(null);
 
   // Dialog de Regra de Serviço
   const [ruleDialogOpen, setRuleDialogOpen] = useState(false);
+  const [ruleName, setRuleName] = useState(regraComissao?.name || "Taxa de Serviço do Salão (10%)");
+  const [serviceFeePercent, setServiceFeePercent] = useState(String(regraComissao?.serviceFeePercent ?? 10));
+  const [waiterSharePercent, setWaiterSharePercent] = useState(String(regraComissao?.waiterSharePercent ?? 100));
+  const [ruleErrors, setRuleErrors] = useState<Record<string, string>>({});
 
 
   // Filtros e busca da tabela de garçons
@@ -190,20 +198,28 @@ export function GarconsTab({
     }
   };
 
+  const handleOpenNewGarcom = () => {
+    setEditingGarcom(null);
+    setGarcomName("");
+    setGarcomPhone("");
+    setGarcomCpf("");
+    setGarcomCommissionPercent("0");
+    setGarcomStatus("ACTIVE");
+    setGarcomCep("");
+    setGarcomLogradouro("");
+    setGarcomNumero("");
+    setGarcomComplemento("");
+    setGarcomBairro("");
+    setGarcomCidade("");
+    setGarcomEstado("");
+    setGarcomErrors({});
+    setGarcomDialogOpen(true);
+  };
+
   // Sincronização com botão do cabeçalho da página
   useEffect(() => {
     if (isNewGarcomOpen) {
-      setEditingGarcom(null);
-      setGarcomPhone("");
-      setGarcomCpf("");
-      setGarcomCep("");
-      setGarcomLogradouro("");
-      setGarcomNumero("");
-      setGarcomComplemento("");
-      setGarcomBairro("");
-      setGarcomCidade("");
-      setGarcomEstado("");
-      setGarcomDialogOpen(true);
+      handleOpenNewGarcom();
       onNewGarcomOpenChange?.(false);
     }
   }, [isNewGarcomOpen, onNewGarcomOpenChange]);
@@ -293,26 +309,14 @@ export function GarconsTab({
     setFechamentosCurrentPage(1);
   };
 
-  // Abrir Modal para Novo Garçom
-  const handleOpenNewGarcom = () => {
-    setEditingGarcom(null);
-    setGarcomPhone("");
-    setGarcomCpf("");
-    setGarcomCep("");
-    setGarcomLogradouro("");
-    setGarcomNumero("");
-    setGarcomComplemento("");
-    setGarcomBairro("");
-    setGarcomCidade("");
-    setGarcomEstado("");
-    setGarcomDialogOpen(true);
-  };
-
   // Abrir Modal para Editar Garçom
   const handleOpenEditGarcom = (g: GarcomMetricas) => {
     setEditingGarcom(g);
+    setGarcomName(g.waiter.name || "");
     setGarcomPhone(formatPhone(g.waiter.phone || ""));
     setGarcomCpf(formatCpf(g.waiter.cpf || ""));
+    setGarcomCommissionPercent(String(g.waiter.commissionPercent ?? 0));
+    setGarcomStatus(g.waiter.status as "ACTIVE" | "INACTIVE");
     setGarcomCep(g.waiter.cep ? formatCep(g.waiter.cep) : "");
     setGarcomLogradouro(g.waiter.logradouro || "");
     setGarcomNumero(g.waiter.numero || "");
@@ -320,18 +324,70 @@ export function GarconsTab({
     setGarcomBairro(g.waiter.bairro || "");
     setGarcomCidade(g.waiter.cidade || "");
     setGarcomEstado(g.waiter.estado || "");
+    setGarcomErrors({});
     setGarcomDialogOpen(true);
   };
 
   // Submeter Garçom
   const handleGarcomSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
+
+    const newErrors: Record<string, string> = {};
+
+    const trimmedName = garcomName.trim();
+    if (!trimmedName) {
+      newErrors.name = "Informe o nome ou apelido do garçom no salão.";
+    } else if (trimmedName.length < 2) {
+      newErrors.name = "O nome deve ter no mínimo 2 caracteres.";
+    }
+
+    if (garcomPhone.trim()) {
+      const phoneDigits = garcomPhone.replace(/\D/g, "");
+      if (phoneDigits.length > 0 && phoneDigits.length < 10) {
+        newErrors.phone = "Telefone incompleto. Deve conter DDD e número válido.";
+      }
+    }
+
+    if (garcomCpf.trim()) {
+      const cpfDigits = garcomCpf.replace(/\D/g, "");
+      if (cpfDigits.length > 0 && cpfDigits.length !== 11) {
+        newErrors.cpf = "CPF incompleto. Deve conter 11 dígitos.";
+      }
+    }
+
+    const commVal = Number(garcomCommissionPercent);
+    if (
+      garcomCommissionPercent.trim() !== "" &&
+      (isNaN(commVal) || commVal < 0 || commVal > 100)
+    ) {
+      newErrors.commissionPercent = "A comissão deve ser um valor entre 0% e 100%.";
+    }
+
+    if (garcomCep.trim()) {
+      const cepDigits = garcomCep.replace(/\D/g, "");
+      if (cepDigits.length > 0 && cepDigits.length !== 8) {
+        newErrors.cep = "CEP incompleto. Deve conter 8 dígitos.";
+      }
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setGarcomErrors(newErrors);
+      const firstError = Object.values(newErrors)[0];
+      toast.error(firstError || "Por favor, preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    setGarcomErrors({});
+
+    const formData = new FormData();
     if (editingGarcom) {
       formData.set("id", editingGarcom.waiter.id);
     }
+    formData.set("name", trimmedName);
     formData.set("phone", garcomPhone);
     formData.set("cpf", garcomCpf);
+    formData.set("commissionPercent", String(isNaN(commVal) ? 0 : commVal));
+    formData.set("status", garcomStatus);
     formData.set("cep", garcomCep);
     formData.set("logradouro", garcomLogradouro);
     formData.set("numero", garcomNumero);
@@ -379,10 +435,49 @@ export function GarconsTab({
     });
   };
 
+  const handleOpenRuleDialog = () => {
+    setRuleName(regraComissao?.name || "Taxa de Serviço do Salão (10%)");
+    setServiceFeePercent(String(regraComissao?.serviceFeePercent ?? 10));
+    setWaiterSharePercent(String(regraComissao?.waiterSharePercent ?? 100));
+    setRuleErrors({});
+    setRuleDialogOpen(true);
+  };
+
   // Submeter Regra de Comissão
   const handleRuleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
+
+    const newErrors: Record<string, string> = {};
+
+    const trimmedName = ruleName.trim();
+    if (!trimmedName) {
+      newErrors.name = "Informe o nome da regra de comissão.";
+    }
+
+    const feeVal = Number(serviceFeePercent);
+    if (serviceFeePercent.trim() === "" || isNaN(feeVal) || feeVal < 0 || feeVal > 100) {
+      newErrors.serviceFeePercent = "A taxa de serviço sugerida deve estar entre 0% e 100%.";
+    }
+
+    const shareVal = Number(waiterSharePercent);
+    if (waiterSharePercent.trim() === "" || isNaN(shareVal) || shareVal < 0 || shareVal > 100) {
+      newErrors.waiterSharePercent = "O repasse para a equipe deve estar entre 0% e 100%.";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setRuleErrors(newErrors);
+      const firstError = Object.values(newErrors)[0];
+      toast.error(firstError || "Por favor, preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    setRuleErrors({});
+
+    const formData = new FormData();
+    formData.set("name", trimmedName);
+    formData.set("serviceFeePercent", String(feeVal));
+    formData.set("waiterSharePercent", String(shareVal));
+    formData.set("isActive", "true");
 
     startTransition(async () => {
       const res = await salvarRegraComissaoAction(slug, formData);
@@ -489,7 +584,7 @@ export function GarconsTab({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setRuleDialogOpen(true)}
+            onClick={handleOpenRuleDialog}
             className="h-8 gap-1.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
           >
             <Settings2Icon size={13} />
@@ -1185,9 +1280,17 @@ export function GarconsTab({
       </Card>
 
       {/* ── Dialog: Criar/Editar Garçom ─────────────────────────────────── */}
-      <Dialog open={garcomDialogOpen} onOpenChange={setGarcomDialogOpen}>
+      <Dialog
+        open={garcomDialogOpen}
+        onOpenChange={(open) => {
+          setGarcomDialogOpen(open);
+          if (!open) {
+            setGarcomErrors({});
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-[620px] max-h-[90vh] overflow-y-auto rounded-3xl border-slate-200 bg-white p-6 shadow-2xl">
-          <form onSubmit={handleGarcomSubmit}>
+          <form onSubmit={handleGarcomSubmit} noValidate>
             <DialogHeader>
               <DialogTitle className="text-lg font-bold text-slate-900">
                 {editingGarcom ? "Editar Garçom" : "Cadastrar Novo Garçom"}
@@ -1202,16 +1305,25 @@ export function GarconsTab({
               <div className="space-y-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="name" className="text-xs font-semibold text-slate-700">
-                    Nome Completo / Apelido no Salão
+                    Nome Completo / Apelido no Salão <span className="text-rose-500">*</span>
                   </Label>
                   <Input
                     id="name"
                     name="name"
-                    required
-                    defaultValue={editingGarcom?.waiter.name || ""}
+                    value={garcomName}
+                    onChange={(e) => {
+                      setGarcomName(e.target.value);
+                      if (garcomErrors.name) setGarcomErrors((prev) => ({ ...prev, name: "" }));
+                    }}
                     placeholder="Ex: Carlos Oliveira (Carlinhos)"
-                    className="h-10 rounded-xl border-slate-200 text-xs"
+                    className={cn(
+                      "h-10 rounded-xl border-slate-200 text-xs transition-colors",
+                      garcomErrors.name && "border-rose-500 focus-visible:ring-rose-400 bg-rose-50/20",
+                    )}
                   />
+                  {garcomErrors.name && (
+                    <p className="text-[11px] font-medium text-rose-500">{garcomErrors.name}</p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -1223,10 +1335,19 @@ export function GarconsTab({
                       id="phone"
                       name="phone"
                       value={garcomPhone}
-                      onChange={(e) => setGarcomPhone(formatPhone(e.target.value))}
+                      onChange={(e) => {
+                        setGarcomPhone(formatPhone(e.target.value));
+                        if (garcomErrors.phone) setGarcomErrors((prev) => ({ ...prev, phone: "" }));
+                      }}
                       placeholder="(11) 98765-4321"
-                      className="h-10 rounded-xl border-slate-200 text-xs"
+                      className={cn(
+                        "h-10 rounded-xl border-slate-200 text-xs transition-colors",
+                        garcomErrors.phone && "border-rose-500 focus-visible:ring-rose-400 bg-rose-50/20",
+                      )}
                     />
+                    {garcomErrors.phone && (
+                      <p className="text-[11px] font-medium text-rose-500">{garcomErrors.phone}</p>
+                    )}
                   </div>
 
                   <div className="space-y-1.5">
@@ -1237,10 +1358,19 @@ export function GarconsTab({
                       id="cpf"
                       name="cpf"
                       value={garcomCpf}
-                      onChange={(e) => setGarcomCpf(formatCpf(e.target.value))}
+                      onChange={(e) => {
+                        setGarcomCpf(formatCpf(e.target.value));
+                        if (garcomErrors.cpf) setGarcomErrors((prev) => ({ ...prev, cpf: "" }));
+                      }}
                       placeholder="000.000.000-00"
-                      className="h-10 rounded-xl border-slate-200 text-xs"
+                      className={cn(
+                        "h-10 rounded-xl border-slate-200 text-xs transition-colors",
+                        garcomErrors.cpf && "border-rose-500 focus-visible:ring-rose-400 bg-rose-50/20",
+                      )}
                     />
+                    {garcomErrors.cpf && (
+                      <p className="text-[11px] font-medium text-rose-500">{garcomErrors.cpf}</p>
+                    )}
                   </div>
                 </div>
 
@@ -1256,20 +1386,34 @@ export function GarconsTab({
                       step="0.5"
                       min="0"
                       max="100"
-                      defaultValue={editingGarcom?.waiter.commissionPercent ?? 0}
+                      value={garcomCommissionPercent}
+                      onChange={(e) => {
+                        setGarcomCommissionPercent(e.target.value);
+                        if (garcomErrors.commissionPercent) setGarcomErrors((prev) => ({ ...prev, commissionPercent: "" }));
+                      }}
                       placeholder="0 (deixe 0 para taxa padrão)"
-                      className="h-10 rounded-xl border-slate-200 text-xs"
+                      className={cn(
+                        "h-10 rounded-xl border-slate-200 text-xs transition-colors",
+                        garcomErrors.commissionPercent && "border-rose-500 focus-visible:ring-rose-400 bg-rose-50/20",
+                      )}
                     />
-                    <p className="text-[10px] text-slate-400">
-                      Deixe 0% para usar a taxa padrão da casa.
-                    </p>
+                    {garcomErrors.commissionPercent ? (
+                      <p className="text-[11px] font-medium text-rose-500">{garcomErrors.commissionPercent}</p>
+                    ) : (
+                      <p className="text-[10px] text-slate-400">
+                        Deixe 0% para usar a taxa padrão da casa.
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-1.5">
                     <Label htmlFor="status" className="text-xs font-semibold text-slate-700">
                       Status
                     </Label>
-                    <Select name="status" defaultValue={editingGarcom?.waiter.status || "ACTIVE"}>
+                    <Select
+                      value={garcomStatus}
+                      onValueChange={(val) => setGarcomStatus(val as "ACTIVE" | "INACTIVE")}
+                    >
                       <SelectTrigger className="h-10 rounded-xl border-slate-200 text-xs">
                         <SelectValue />
                       </SelectTrigger>
@@ -1311,13 +1455,17 @@ export function GarconsTab({
                         onChange={(e) => {
                           const formatted = formatCep(e.target.value);
                           setGarcomCep(formatted);
+                          if (garcomErrors.cep) setGarcomErrors((prev) => ({ ...prev, cep: "" }));
                           if (formatted.replace(/\D/g, "").length === 8) {
                             handleGarcomCepLookup(formatted);
                           }
                         }}
                         onBlur={() => handleGarcomCepLookup(garcomCep)}
                         maxLength={9}
-                        className="h-10 rounded-xl border-slate-200 bg-white pr-9 text-xs text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                        className={cn(
+                          "h-10 rounded-xl border-slate-200 bg-white pr-9 text-xs text-slate-900 placeholder:text-slate-400 focus:border-primary transition-colors",
+                          garcomErrors.cep && "border-rose-500 focus-visible:ring-rose-400 bg-rose-50/20",
+                        )}
                       />
                       <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
                         {isSearchingCep ? (
@@ -1327,6 +1475,9 @@ export function GarconsTab({
                         )}
                       </div>
                     </div>
+                    {garcomErrors.cep && (
+                      <p className="text-[11px] font-medium text-rose-500">{garcomErrors.cep}</p>
+                    )}
                   </div>
 
                   {/* Logradouro / Rua */}
@@ -1454,9 +1605,17 @@ export function GarconsTab({
       </Dialog>
 
       {/* ── Dialog: Regras de Taxa de Serviço ───────────────────────────── */}
-      <Dialog open={ruleDialogOpen} onOpenChange={setRuleDialogOpen}>
+      <Dialog
+        open={ruleDialogOpen}
+        onOpenChange={(open) => {
+          setRuleDialogOpen(open);
+          if (!open) {
+            setRuleErrors({});
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-[460px]">
-          <form onSubmit={handleRuleSubmit}>
+          <form onSubmit={handleRuleSubmit} noValidate>
             <DialogHeader>
               <DialogTitle className="text-lg font-bold text-slate-900">
                 Regra de Taxa de Serviço e Gorjetas
@@ -1469,20 +1628,30 @@ export function GarconsTab({
             <div className="space-y-4 py-4">
               <div className="space-y-1.5">
                 <Label htmlFor="ruleName" className="text-xs font-semibold text-slate-700">
-                  Nome da Regra
+                  Nome da Regra <span className="text-rose-500">*</span>
                 </Label>
                 <Input
                   id="ruleName"
                   name="name"
-                  defaultValue={regraComissao?.name || "Taxa de Serviço do Salão (10%)"}
-                  className="h-9 text-xs"
+                  value={ruleName}
+                  onChange={(e) => {
+                    setRuleName(e.target.value);
+                    if (ruleErrors.name) setRuleErrors((prev) => ({ ...prev, name: "" }));
+                  }}
+                  className={cn(
+                    "h-9 text-xs transition-colors",
+                    ruleErrors.name && "border-rose-500 focus-visible:ring-rose-400 bg-rose-50/20",
+                  )}
                 />
+                {ruleErrors.name && (
+                  <p className="text-[11px] font-medium text-rose-500">{ruleErrors.name}</p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="serviceFeePercent" className="text-xs font-semibold text-slate-700">
-                    Taxa Sugerida na Comanda (%)
+                    Taxa Sugerida na Comanda (%) <span className="text-rose-500">*</span>
                   </Label>
                   <Input
                     id="serviceFeePercent"
@@ -1490,16 +1659,27 @@ export function GarconsTab({
                     type="number"
                     step="1"
                     min="0"
-                    max="30"
-                    defaultValue={regraComissao?.serviceFeePercent ?? 10}
-                    className="h-9 text-xs"
+                    max="100"
+                    value={serviceFeePercent}
+                    onChange={(e) => {
+                      setServiceFeePercent(e.target.value);
+                      if (ruleErrors.serviceFeePercent) setRuleErrors((prev) => ({ ...prev, serviceFeePercent: "" }));
+                    }}
+                    className={cn(
+                      "h-9 text-xs transition-colors",
+                      ruleErrors.serviceFeePercent && "border-rose-500 focus-visible:ring-rose-400 bg-rose-50/20",
+                    )}
                   />
-                  <p className="text-[10px] text-slate-400">Geralmente 10%</p>
+                  {ruleErrors.serviceFeePercent ? (
+                    <p className="text-[11px] font-medium text-rose-500">{ruleErrors.serviceFeePercent}</p>
+                  ) : (
+                    <p className="text-[10px] text-slate-400">Geralmente 10%</p>
+                  )}
                 </div>
 
                 <div className="space-y-1.5">
                   <Label htmlFor="waiterSharePercent" className="text-xs font-semibold text-slate-700">
-                    Repasse para Equipe (%)
+                    Repasse para Equipe (%) <span className="text-rose-500">*</span>
                   </Label>
                   <Input
                     id="waiterSharePercent"
@@ -1508,10 +1688,21 @@ export function GarconsTab({
                     step="5"
                     min="0"
                     max="100"
-                    defaultValue={regraComissao?.waiterSharePercent ?? 100}
-                    className="h-9 text-xs"
+                    value={waiterSharePercent}
+                    onChange={(e) => {
+                      setWaiterSharePercent(e.target.value);
+                      if (ruleErrors.waiterSharePercent) setRuleErrors((prev) => ({ ...prev, waiterSharePercent: "" }));
+                    }}
+                    className={cn(
+                      "h-9 text-xs transition-colors",
+                      ruleErrors.waiterSharePercent && "border-rose-500 focus-visible:ring-rose-400 bg-rose-50/20",
+                    )}
                   />
-                  <p className="text-[10px] text-slate-400">100% = repasse integral</p>
+                  {ruleErrors.waiterSharePercent ? (
+                    <p className="text-[11px] font-medium text-rose-500">{ruleErrors.waiterSharePercent}</p>
+                  ) : (
+                    <p className="text-[10px] text-slate-400">100% = repasse integral</p>
+                  )}
                 </div>
               </div>
             </div>

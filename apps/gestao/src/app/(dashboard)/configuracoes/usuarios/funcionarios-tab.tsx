@@ -3,20 +3,19 @@
 import {
   BanknoteIcon,
   BriefcaseIcon,
-  CalendarIcon,
-  CheckCircle2Icon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ChevronsLeftIcon,
+  ChevronsRightIcon,
   CopyIcon,
-  EditIcon,
-  ExternalLinkIcon,
+  Edit2Icon,
   FilterXIcon,
   LoaderCircleIcon,
-  MailIcon,
-  PhoneIcon,
+  MoreHorizontalIcon,
   PlusIcon,
   SearchIcon,
   Trash2Icon,
   UserCheckIcon,
-  UserIcon,
   UsersIcon,
   UserXIcon,
   XIcon,
@@ -37,6 +36,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -74,22 +80,6 @@ interface FuncionariosTabProps {
   onNewFuncionarioOpenChange?: (open: boolean) => void;
 }
 
-const COMMON_ROLES = [
-  "Cozinheiro(a)",
-  "Auxiliar de Cozinha",
-  "Atendente / Balcão",
-  "Barman / Bartender",
-  "Operador(a) de Caixa",
-  "Gerente Operacional",
-  "Pizzaiolo(a)",
-  "Sushiman",
-  "Limpeza / Serviços Gerais",
-  "Copeiro(a)",
-  "Sommelier",
-  "Entregador Próprio",
-  "Outro",
-];
-
 const CONTRACT_TYPES: Record<string, string> = {
   CLT: "CLT (Efetivo)",
   PJ: "PJ (Prestador)",
@@ -108,8 +98,21 @@ export function FuncionariosTab({
   const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
   const [roleFilter, setRoleFilter] = useState("ALL");
 
+  // Paginação da tabela de funcionários
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   const [modalOpen, setModalOpen] = useState(false);
   const [editingFuncionario, setEditingFuncionario] = useState<Employee | null>(null);
+  const [formName, setFormName] = useState("");
+  const [formRoleTitle, setFormRoleTitle] = useState("");
+  const [formContractType, setFormContractType] = useState("CLT");
+  const [formBaseSalary, setFormBaseSalary] = useState("0");
+  const [formPaymentFrequency, setFormPaymentFrequency] = useState("MONTHLY");
+  const [formPixType, setFormPixType] = useState("CPF");
+  const [formPixKey, setFormPixKey] = useState("");
+  const [formHireDate, setFormHireDate] = useState("");
+  const [formNotes, setFormNotes] = useState("");
   const [formCpf, setFormCpf] = useState("");
   const [formPhone, setFormPhone] = useState("");
   const [formCep, setFormCep] = useState("");
@@ -120,6 +123,7 @@ export function FuncionariosTab({
   const [formCidade, setFormCidade] = useState("");
   const [formEstado, setFormEstado] = useState("");
   const [isSearchingCep, setIsSearchingCep] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [funcionarioToDelete, setFuncionarioToDelete] = useState<Employee | null>(null);
@@ -152,6 +156,15 @@ export function FuncionariosTab({
     onNewFuncionarioOpenChange?.(val);
     if (!val) {
       setEditingFuncionario(null);
+      setFormName("");
+      setFormRoleTitle("");
+      setFormContractType("CLT");
+      setFormBaseSalary("0");
+      setFormPaymentFrequency("MONTHLY");
+      setFormPixType("CPF");
+      setFormPixKey("");
+      setFormHireDate("");
+      setFormNotes("");
       setFormCpf("");
       setFormPhone("");
       setFormCep("");
@@ -161,6 +174,7 @@ export function FuncionariosTab({
       setFormBairro("");
       setFormCidade("");
       setFormEstado("");
+      setErrors({});
     }
   };
 
@@ -196,8 +210,34 @@ export function FuncionariosTab({
     });
   }, [funcionarios, searchQuery, statusFilter, roleFilter]);
 
+  // Paginação de funcionários
+  const totalPages = Math.max(1, Math.ceil(filteredFuncionarios.length / pageSize));
+  const validCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (validCurrentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedFuncionarios = filteredFuncionarios.slice(startIndex, endIndex);
+
+  const isFiltering =
+    searchQuery.trim() !== "" || statusFilter !== "ALL" || roleFilter !== "ALL";
+
+  const handleClearFilters = () => {
+    setSearchQuery("");
+    setStatusFilter("ALL");
+    setRoleFilter("ALL");
+    setCurrentPage(1);
+  };
+
   const handleEdit = (f: Employee) => {
     setEditingFuncionario(f);
+    setFormName(f.name || "");
+    setFormRoleTitle(f.roleTitle || "");
+    setFormContractType(f.contractType || "CLT");
+    setFormBaseSalary(String(f.baseSalary || 0));
+    setFormPaymentFrequency(f.paymentFrequency || "MONTHLY");
+    setFormPixType(f.pixType || "CPF");
+    setFormPixKey(f.pixKey || "");
+    setFormHireDate(f.hireDate ? String(f.hireDate).slice(0, 10) : "");
+    setFormNotes(f.notes || "");
     setFormCpf(formatCpf(f.cpf || ""));
     setFormPhone(formatPhone(f.phone || ""));
     setFormCep(f.cep ? formatCep(f.cep) : "");
@@ -207,6 +247,7 @@ export function FuncionariosTab({
     setFormBairro(f.bairro || "");
     setFormCidade(f.cidade || "");
     setFormEstado(f.estado || "");
+    setErrors({});
     setCreateOpen(true);
   };
 
@@ -219,7 +260,7 @@ export function FuncionariosTab({
             ? "Colaborador desativado com sucesso."
             : "Colaborador ativado com sucesso.",
         );
-      } catch (err) {
+      } catch {
         toast.error("Erro ao alterar status do colaborador.");
       }
     });
@@ -233,7 +274,7 @@ export function FuncionariosTab({
         toast.success("Colaborador excluído com sucesso.");
         setDeleteDialogOpen(false);
         setFuncionarioToDelete(null);
-      } catch (err) {
+      } catch {
         toast.error("Erro ao excluir colaborador.");
       }
     });
@@ -326,285 +367,525 @@ export function FuncionariosTab({
         </Card>
       </div>
 
-      {/* ── Filtros e Busca da Tabela ───────────────────────── */}
-      <Card className="border-slate-200/80 bg-white shadow-xs">
-        <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative flex-1 max-w-md">
-            <SearchIcon
-              size={15}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-            />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar por nome, cargo, CPF ou telefone..."
-              className="h-9 rounded-xl border-slate-200 bg-slate-50/70 pl-9 text-xs focus:bg-white"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-              >
-                <XIcon size={14} />
-              </button>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Select
-              value={statusFilter}
-              onValueChange={(val: "ALL" | "ACTIVE" | "INACTIVE") => setStatusFilter(val)}
-            >
-              <SelectTrigger className="h-9 w-36 rounded-xl border-slate-200 bg-slate-50/70 text-xs">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">Todos os Status</SelectItem>
-                <SelectItem value="ACTIVE">Apenas Ativos</SelectItem>
-                <SelectItem value="INACTIVE">Apenas Inativos</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {uniqueRoles.length > 0 && (
-              <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger className="h-9 w-44 rounded-xl border-slate-200 bg-slate-50/70 text-xs">
-                  <SelectValue placeholder="Cargo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">Todos os Cargos</SelectItem>
-                  {uniqueRoles.map((r) => (
-                    <SelectItem key={r} value={r}>
-                      {r}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
-            {(searchQuery || statusFilter !== "ALL" || roleFilter !== "ALL") && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setSearchQuery("");
-                  setStatusFilter("ALL");
-                  setRoleFilter("ALL");
+      {/* ── Table & List Container (Funcionários) ─────────────── */}
+      <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
+        {/* Filtros de Colaboradores */}
+        <div className="border-b border-slate-100 bg-slate-50/50 p-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            {/* Search Input */}
+            <div className="relative flex-1">
+              <SearchIcon
+                size={16}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+              <Input
+                placeholder="Buscar por nome, cargo, CPF ou telefone..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
                 }}
-                className="h-9 gap-1 rounded-xl text-xs text-slate-500 hover:text-slate-800"
+                className="h-10 rounded-xl border-slate-200 bg-white pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setCurrentPage(1);
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  <XIcon size={14} />
+                </button>
+              )}
+            </div>
+
+            {/* Selects: Status & Cargo */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="w-full sm:w-36">
+                <Select
+                  value={statusFilter}
+                  onValueChange={(val: "ALL" | "ACTIVE" | "INACTIVE") => {
+                    setStatusFilter(val);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs font-medium text-slate-700">
+                    <SelectValue placeholder="Status..." />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+                    <SelectItem value="ALL">Todos os status</SelectItem>
+                    <SelectItem value="ACTIVE">Ativos</SelectItem>
+                    <SelectItem value="INACTIVE">Inativos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {uniqueRoles.length > 0 && (
+                <div className="w-full sm:w-44">
+                  <Select
+                    value={roleFilter}
+                    onValueChange={(val) => {
+                      setRoleFilter(val);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs font-medium text-slate-700">
+                      <SelectValue placeholder="Cargo..." />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+                      <SelectItem value="ALL">Todos os cargos</SelectItem>
+                      {uniqueRoles.map((r) => (
+                        <SelectItem key={r} value={r}>
+                          {r}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {isFiltering && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearFilters}
+                  className="h-10 gap-1.5 rounded-xl px-3 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                >
+                  <FilterXIcon size={14} />
+                  Limpar
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {filteredFuncionarios.length === 0 ? (
+          <div className="flex min-h-[260px] flex-col items-center justify-center p-8 text-center">
+            <div className="rounded-full bg-slate-100 p-3.5 text-slate-400">
+              <UserXIcon size={32} />
+            </div>
+            <h3 className="mt-3 font-display text-base font-semibold text-slate-900">
+              Nenhum colaborador encontrado
+            </h3>
+            <p className="mt-1 max-w-sm text-xs text-slate-500">
+              {isFiltering
+                ? "Tente ajustar os termos da busca ou limpar os filtros para ver outros membros da equipe."
+                : "Nenhum colaborador cadastrado ainda. Comece adicionando um novo funcionário!"}
+            </p>
+            {isFiltering ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClearFilters}
+                className="mt-4 gap-1.5 rounded-full border-slate-200 text-xs"
               >
                 <FilterXIcon size={14} />
-                <span>Limpar</span>
+                Limpar filtros
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                onClick={() => setCreateOpen(true)}
+                className="mt-4 gap-1.5 rounded-full bg-slate-900 text-xs font-semibold text-white hover:bg-slate-800"
+              >
+                <PlusIcon size={14} />
+                Novo Funcionário
               </Button>
             )}
           </div>
-        </div>
+        ) : (
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden lg:block overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-slate-100 hover:bg-transparent">
+                    <TableHead className="w-[220px] text-xs font-semibold text-slate-600">Colaborador</TableHead>
+                    <TableHead className="text-xs font-semibold text-slate-600">Cargo / Contrato</TableHead>
+                    <TableHead className="text-xs font-semibold text-slate-600">Contato / CPF</TableHead>
+                    <TableHead className="text-xs font-semibold text-slate-600">Salário Base</TableHead>
+                    <TableHead className="text-xs font-semibold text-slate-600">Chave Pix</TableHead>
+                    <TableHead className="text-center text-xs font-semibold text-slate-600">Status</TableHead>
+                    <TableHead className="w-[80px] text-right text-xs font-semibold text-slate-600">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedFuncionarios.map(({ funcionario, totalPagoMesAtual }) => {
+                    const isAvailable = funcionario.status === "ACTIVE";
+                    return (
+                      <TableRow key={funcionario.id} className="border-slate-100 hover:bg-slate-50/50">
+                        {/* Colaborador */}
+                        <TableCell className="font-medium text-slate-900">
+                          <div className="flex items-center gap-2.5">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 font-bold text-xs text-slate-700">
+                              {funcionario.name.substring(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-slate-900">{funcionario.name}</p>
+                              <p className="text-[10px] text-slate-400">ID: {funcionario.id.slice(0, 8)}</p>
+                            </div>
+                          </div>
+                        </TableCell>
 
-        {/* ── Tabela de Colaboradores ─────────────────────────── */}
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-slate-100 hover:bg-transparent">
-                <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Colaborador
-                </TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Cargo / Contrato
-                </TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Salário Base
-                </TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Chave Pix
-                </TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Contato
-                </TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Status
-                </TableHead>
-                <TableHead className="text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Ações
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredFuncionarios.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="py-12 text-center text-slate-500">
-                    <UserXIcon size={32} className="mx-auto mb-2 text-slate-300" />
-                    <p className="text-sm font-semibold text-slate-700">
-                      Nenhum colaborador encontrado
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Cadastre novos funcionários ou ajuste seus filtros de busca.
-                    </p>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredFuncionarios.map(({ funcionario, totalPagoMesAtual }) => (
-                  <TableRow
-                    key={funcionario.id}
-                    className="border-slate-100 transition-colors hover:bg-slate-50/70"
-                  >
-                    {/* Nome + Avatar */}
-                    <TableCell>
+                        {/* Cargo / Contrato */}
+                        <TableCell className="text-xs text-slate-600">
+                          <div className="font-semibold text-slate-900">{funcionario.roleTitle}</div>
+                          <div className="text-[11px] text-slate-400">
+                            {CONTRACT_TYPES[funcionario.contractType] || funcionario.contractType}
+                          </div>
+                        </TableCell>
+
+                        {/* Contato / CPF */}
+                        <TableCell className="text-xs text-slate-600">
+                          <div>{funcionario.phone ? formatPhone(funcionario.phone) : "—"}</div>
+                          <div className="text-[10px] text-slate-400">{funcionario.cpf ? formatCpf(funcionario.cpf) : ""}</div>
+                        </TableCell>
+
+                        {/* Salário Base */}
+                        <TableCell className="text-xs font-semibold text-slate-900">
+                          <div>{formatCurrency(Number(funcionario.baseSalary || 0))}</div>
+                          {totalPagoMesAtual > 0 ? (
+                            <div className="text-[10px] text-emerald-600 font-medium">
+                              {formatCurrency(totalPagoMesAtual)} pago no mês
+                            </div>
+                          ) : (
+                            <div className="text-[10px] text-slate-400 font-normal">Aguardando liquidação</div>
+                          )}
+                        </TableCell>
+
+                        {/* Chave Pix */}
+                        <TableCell className="text-xs text-slate-600">
+                          {funcionario.pixKey ? (
+                            <button
+                              type="button"
+                              onClick={() => handleCopyPix(funcionario.pixKey)}
+                              title="Clique para copiar a chave Pix"
+                              className="group inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-700 hover:border-primary/40 hover:bg-primary/5 hover:text-primary transition-all"
+                            >
+                              <span className="max-w-[120px] truncate font-mono">
+                                {funcionario.pixKey}
+                              </span>
+                              <CopyIcon size={11} className="text-slate-400 group-hover:text-primary" />
+                            </button>
+                          ) : (
+                            <span className="text-[11px] text-slate-400 italic">Não informada</span>
+                          )}
+                        </TableCell>
+
+                        {/* Status */}
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <span
+                              className={cn(
+                                "text-xs font-medium",
+                                isAvailable ? "text-primary font-semibold" : "text-slate-400",
+                              )}
+                            >
+                              {isAvailable ? "Ativo" : "Inativo"}
+                            </span>
+                            <Switch
+                              checked={isAvailable}
+                              disabled={isPending}
+                              onCheckedChange={() =>
+                                handleToggleStatus(funcionario.id, funcionario.status)
+                              }
+                              className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
+                            />
+                          </div>
+                        </TableCell>
+
+                        {/* Ações */}
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-slate-500 hover:text-slate-900"
+                              >
+                                <MoreHorizontalIcon size={16} />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem
+                                onClick={() => handleEdit(funcionario)}
+                                className="gap-2 text-xs font-semibold cursor-pointer"
+                              >
+                                <Edit2Icon size={13} className="text-primary" />
+                                Editar dados
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleToggleStatus(funcionario.id, funcionario.status)
+                                }
+                                className="gap-2 text-xs font-semibold cursor-pointer"
+                              >
+                                {isAvailable ? (
+                                  <>
+                                    <UserXIcon size={13} className="text-primary" />
+                                    Desativar colaborador
+                                  </>
+                                ) : (
+                                  <>
+                                    <UserCheckIcon size={13} className="text-primary" />
+                                    Ativar colaborador
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild className="gap-2 text-xs font-semibold cursor-pointer">
+                                <Link href="/financeiro" className="flex items-center gap-2 w-full">
+                                  <BanknoteIcon size={13} className="text-primary" />
+                                  Ver no Financeiro
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setFuncionarioToDelete(funcionario);
+                                  setDeleteDialogOpen(true);
+                                }}
+                                className="gap-2 text-xs font-semibold text-red-600 focus:text-red-600 cursor-pointer"
+                              >
+                                <Trash2Icon size={13} />
+                                Excluir colaborador
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Mobile / Tablet Cards View */}
+            <div className="divide-y divide-slate-100 lg:hidden">
+              {paginatedFuncionarios.map(({ funcionario, totalPagoMesAtual }) => {
+                const isAvailable = funcionario.status === "ACTIVE";
+                return (
+                  <div key={funcionario.id} className="p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-                          {funcionario.name.slice(0, 2).toUpperCase()}
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 font-bold text-xs text-slate-700">
+                          {funcionario.name.substring(0, 2).toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-slate-900">
-                            {funcionario.name}
+                          <p className="font-semibold text-slate-900 text-sm">{funcionario.name}</p>
+                          <p className="text-xs text-slate-500">
+                            {funcionario.phone ? formatPhone(funcionario.phone) : "Sem telefone"}{" "}
+                            {funcionario.cpf ? `• ${formatCpf(funcionario.cpf)}` : ""}
                           </p>
-                          {funcionario.cpf && (
-                            <p className="text-[11px] text-slate-400">
-                              CPF: {funcionario.cpf}
-                            </p>
-                          )}
                         </div>
                       </div>
-                    </TableCell>
 
-                    {/* Cargo / Contrato */}
-                    <TableCell>
-                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
-                        <BriefcaseIcon size={11} />
-                        {funcionario.roleTitle}
-                      </span>
-                      <p className="mt-0.5 text-[11px] text-slate-500">
-                        {CONTRACT_TYPES[funcionario.contractType] || funcionario.contractType}
-                      </p>
-                    </TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400">
+                            <MoreHorizontalIcon size={16} />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem onClick={() => handleEdit(funcionario)} className="gap-2 text-xs font-semibold cursor-pointer">
+                            <Edit2Icon size={13} className="text-primary" />
+                            Editar dados
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handleToggleStatus(funcionario.id, funcionario.status)
+                            }
+                            className="gap-2 text-xs font-semibold cursor-pointer"
+                          >
+                            {isAvailable ? (
+                              <>
+                                <UserXIcon size={13} className="text-primary" />
+                                Desativar colaborador
+                              </>
+                            ) : (
+                              <>
+                                <UserCheckIcon size={13} className="text-primary" />
+                                Ativar colaborador
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild className="gap-2 text-xs font-semibold cursor-pointer">
+                            <Link href="/financeiro" className="flex items-center gap-2 w-full">
+                              <BanknoteIcon size={13} className="text-primary" />
+                              Ver no Financeiro
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setFuncionarioToDelete(funcionario);
+                              setDeleteDialogOpen(true);
+                            }}
+                            className="gap-2 text-xs font-semibold text-red-600 focus:text-red-600 cursor-pointer"
+                          >
+                            <Trash2Icon size={13} />
+                            Excluir colaborador
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
 
-                    {/* Salário Base */}
-                    <TableCell>
-                      <p className="text-xs font-bold text-slate-900">
-                        {formatCurrency(Number(funcionario.baseSalary || 0))}
-                      </p>
-                      {totalPagoMesAtual > 0 ? (
-                        <p className="text-[10px] text-emerald-600 font-medium">
-                          {formatCurrency(totalPagoMesAtual)} pago este mês
-                        </p>
-                      ) : (
-                        <p className="text-[10px] text-slate-400">
-                          Aguardando liquidação
-                        </p>
-                      )}
-                    </TableCell>
-
-                    {/* Chave Pix */}
-                    <TableCell>
-                      {funcionario.pixKey ? (
-                        <button
-                          onClick={() => handleCopyPix(funcionario.pixKey)}
-                          title="Clique para copiar a chave Pix"
-                          className="group inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] text-slate-700 hover:border-primary/40 hover:bg-primary/5 hover:text-primary transition-all"
-                        >
-                          <span className="max-w-[120px] truncate font-mono">
-                            {funcionario.pixKey}
+                    <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-50 p-2.5 text-xs">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block uppercase">Cargo / Contrato</span>
+                        <span className="font-semibold text-slate-800">{funcionario.roleTitle}</span>
+                        <span className="text-[10px] text-slate-500 block">
+                          {CONTRACT_TYPES[funcionario.contractType] || funcionario.contractType}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block uppercase">Salário Base</span>
+                        <span className="font-bold text-primary">{formatCurrency(Number(funcionario.baseSalary || 0))}</span>
+                        {totalPagoMesAtual > 0 && (
+                          <span className="text-[10px] text-emerald-600 block">
+                            {formatCurrency(totalPagoMesAtual)} pago no mês
                           </span>
-                          <CopyIcon size={11} className="text-slate-400 group-hover:text-primary" />
-                        </button>
-                      ) : (
-                        <span className="text-[11px] text-slate-400 italic">
-                          Não informada
-                        </span>
-                      )}
-                    </TableCell>
+                        )}
+                      </div>
+                    </div>
 
-                    {/* Contato */}
-                    <TableCell>
-                      {funcionario.phone ? (
-                        <a
-                          href={`https://wa.me/55${funcionario.phone.replace(/\D/g, "")}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex items-center gap-1 text-xs text-slate-700 hover:text-emerald-600 transition-colors"
+                    {funcionario.pixKey && (
+                      <div className="flex items-center justify-between text-xs rounded-lg border border-slate-100 bg-white px-2.5 py-1.5">
+                        <span className="text-slate-500 text-[11px]">Pix ({funcionario.pixType || "Chave"}):</span>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyPix(funcionario.pixKey)}
+                          className="flex items-center gap-1 font-mono text-[11px] font-semibold text-slate-700 hover:text-primary"
+                          title="Copiar Pix"
                         >
-                          <PhoneIcon size={12} className="text-emerald-600" />
-                          <span>{funcionario.phone}</span>
-                        </a>
-                      ) : funcionario.email ? (
-                        <span className="flex items-center gap-1 text-xs text-slate-500">
-                          <MailIcon size={12} />
-                          <span className="truncate max-w-[110px]">{funcionario.email}</span>
-                        </span>
-                      ) : (
-                        <span className="text-[11px] text-slate-400">—</span>
-                      )}
-                    </TableCell>
+                          <span>{funcionario.pixKey}</span>
+                          <CopyIcon size={12} className="text-slate-400" />
+                        </button>
+                      </div>
+                    )}
 
-                    {/* Status Switch */}
-                    <TableCell>
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-xs text-slate-500">
+                        ID: <span className="font-mono text-slate-600">{funcionario.id.slice(0, 8)}</span>
+                      </span>
                       <div className="flex items-center gap-2">
+                        <span className={cn("text-xs font-medium", isAvailable ? "text-primary font-semibold" : "text-slate-400")}>
+                          {isAvailable ? "Ativo" : "Inativo"}
+                        </span>
                         <Switch
-                          checked={funcionario.status === "ACTIVE"}
+                          checked={isAvailable}
+                          disabled={isPending}
                           onCheckedChange={() =>
                             handleToggleStatus(funcionario.id, funcionario.status)
                           }
-                          disabled={isPending}
+                          className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
                         />
-                        <span
-                          className={cn(
-                            "text-[11px] font-semibold",
-                            funcionario.status === "ACTIVE"
-                              ? "text-emerald-600"
-                              : "text-slate-400",
-                          )}
-                        >
-                          {funcionario.status === "ACTIVE" ? "Ativo" : "Inativo"}
-                        </span>
                       </div>
-                    </TableCell>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
 
-                    {/* Ações */}
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(funcionario)}
-                          className="h-8 w-8 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800"
-                          title="Editar dados do colaborador"
-                        >
-                          <EditIcon size={14} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          asChild
-                          className="h-8 w-8 rounded-lg text-purple-600 hover:bg-purple-50 hover:text-purple-700"
-                          title="Ver pagamentos no Financeiro"
-                        >
-                          <Link href="/financeiro">
-                            <BanknoteIcon size={14} />
-                          </Link>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setFuncionarioToDelete(funcionario);
-                            setDeleteDialogOpen(true);
-                          }}
-                          className="h-8 w-8 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600"
-                          title="Excluir colaborador"
-                        >
-                          <Trash2Icon size={14} />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+            {/* Pagination Controls */}
+            <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              {/* Items per page selector & Result counter */}
+              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                <span>
+                  Exibindo{" "}
+                  <strong className="font-semibold text-slate-900">
+                    {filteredFuncionarios.length}
+                  </strong>{" "}
+                  de {totalCount} colaborador{totalCount !== 1 ? "es" : ""}
+                </span>
+                {isFiltering && (
+                  <span className="text-[11px] font-medium text-primary">
+                    (Filtros aplicados)
+                  </span>
+                )}
+                <span className="hidden sm:inline text-slate-300">|</span>
+                <div className="flex items-center gap-1.5">
+                  <span>Exibir</span>
+                  <Select
+                    value={String(pageSize)}
+                    onValueChange={(val) => {
+                      setPageSize(Number(val));
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="h-8 w-16 rounded-lg border-slate-200 bg-white text-xs font-medium text-slate-700">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-lg border-slate-200 bg-white">
+                      <SelectItem value="5">5</SelectItem>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="20">20</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span>por página</span>
+                </div>
+              </div>
+
+              {/* Page numbers & navigations */}
+              <div className="flex items-center justify-between gap-2 sm:justify-end">
+                <span className="text-xs text-slate-500">
+                  Página <strong className="font-semibold text-slate-900">{validCurrentPage}</strong> de{" "}
+                  <strong className="font-semibold text-slate-900">{totalPages}</strong>
+                </span>
+
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    disabled={validCurrentPage <= 1}
+                    onClick={() => setCurrentPage(1)}
+                    className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                    title="Primeira página"
+                  >
+                    <ChevronsLeftIcon size={14} />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    disabled={validCurrentPage <= 1}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                    title="Página anterior"
+                  >
+                    <ChevronLeftIcon size={14} />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    disabled={validCurrentPage >= totalPages}
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                    title="Próxima página"
+                  >
+                    <ChevronRightIcon size={14} />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    disabled={validCurrentPage >= totalPages}
+                    onClick={() => setCurrentPage(totalPages)}
+                    className="h-8 w-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                    title="Última página"
+                  >
+                    <ChevronsRightIcon size={14} />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </Card>
 
       {/* ── Modal de Cadastro e Edição de Funcionário ────────── */}
       <Dialog open={isCreateOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border-2 border-primary bg-white p-6 shadow-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border-slate-200 bg-white p-6 shadow-2xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold font-display text-primary">
               {editingFuncionario ? "Editar Funcionário" : "Cadastrar Novo Funcionário"}
@@ -617,12 +898,83 @@ export function FuncionariosTab({
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              const formData = new FormData(e.currentTarget);
+
+              const newErrors: Record<string, string> = {};
+
+              const trimmedName = formName.trim();
+              if (!trimmedName) {
+                newErrors.name = "Informe o nome completo do colaborador.";
+              } else if (trimmedName.length < 2) {
+                newErrors.name = "O nome deve ter no mínimo 2 caracteres.";
+              }
+
+              const trimmedRole = formRoleTitle.trim();
+              if (!trimmedRole) {
+                newErrors.roleTitle = "Informe o cargo ou função do colaborador.";
+              } else if (trimmedRole.length < 2) {
+                newErrors.roleTitle = "O cargo deve ter no mínimo 2 caracteres.";
+              }
+
+              if (!formContractType) {
+                newErrors.contractType = "Selecione o tipo de contrato.";
+              }
+
+              if (!formPaymentFrequency) {
+                newErrors.paymentFrequency = "Selecione a frequência de pagamento.";
+              }
+
+              if (formBaseSalary.trim() !== "") {
+                const salary = Number(formBaseSalary);
+                if (isNaN(salary) || salary < 0) {
+                  newErrors.baseSalary =
+                    "O salário base deve ser um valor numérico válido (maior ou igual a 0).";
+                }
+              }
+
+              if (formCpf.trim()) {
+                const cpfDigits = formCpf.replace(/\D/g, "");
+                if (cpfDigits.length > 0 && cpfDigits.length !== 11) {
+                  newErrors.cpf = "CPF incompleto. Deve conter 11 dígitos.";
+                }
+              }
+
+              if (formPhone.trim()) {
+                const phoneDigits = formPhone.replace(/\D/g, "");
+                if (phoneDigits.length > 0 && phoneDigits.length < 10) {
+                  newErrors.phone = "Telefone incompleto. Deve conter DDD e número válido.";
+                }
+              }
+
+              if (formCep.trim()) {
+                const cepDigits = formCep.replace(/\D/g, "");
+                if (cepDigits.length > 0 && cepDigits.length !== 8) {
+                  newErrors.cep = "CEP incompleto. Deve conter 8 dígitos.";
+                }
+              }
+
+              if (Object.keys(newErrors).length > 0) {
+                setErrors(newErrors);
+                const firstError = Object.values(newErrors)[0];
+                toast.error(firstError || "Por favor, preencha todos os campos obrigatórios.");
+                return;
+              }
+
+              setErrors({});
+
+              const formData = new FormData();
               if (editingFuncionario) {
                 formData.set("id", editingFuncionario.id);
               }
+              formData.set("name", trimmedName);
+              formData.set("roleTitle", trimmedRole);
+              formData.set("contractType", formContractType);
+              formData.set("baseSalary", formBaseSalary || "0");
+              formData.set("paymentFrequency", formPaymentFrequency);
+              formData.set("pixType", formPixType);
+              formData.set("pixKey", formPixKey.trim());
               formData.set("cpf", formCpf);
               formData.set("phone", formPhone);
+              formData.set("hireDate", formHireDate);
               formData.set("cep", formCep);
               formData.set("logradouro", formLogradouro);
               formData.set("numero", formNumero);
@@ -630,6 +982,7 @@ export function FuncionariosTab({
               formData.set("bairro", formBairro);
               formData.set("cidade", formCidade);
               formData.set("estado", formEstado);
+              formData.set("notes", formNotes.trim());
 
               startTransition(async () => {
                 try {
@@ -647,47 +1000,75 @@ export function FuncionariosTab({
                 }
               });
             }}
+            noValidate
             className="space-y-4 pt-2"
           >
             {/* Bloco 1: Identificação */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5 sm:col-span-2">
                 <Label htmlFor="name" className="text-xs font-semibold text-slate-700">
-                  Nome Completo
+                  Nome Completo <span className="text-rose-500">*</span>
                 </Label>
                 <Input
                   id="name"
                   name="name"
-                  required
-                  defaultValue={editingFuncionario?.name || ""}
+                  value={formName}
+                  onChange={(e) => {
+                    setFormName(e.target.value);
+                    if (errors.name) setErrors((prev) => ({ ...prev, name: "" }));
+                  }}
                   placeholder="Ex: Carlos Eduardo de Oliveira"
-                  className="h-10 rounded-xl border-slate-200 text-xs focus:bg-white"
+                  className={cn(
+                    "h-10 rounded-xl border-slate-200 text-xs focus:bg-white transition-colors",
+                    errors.name && "border-rose-500 focus-visible:ring-rose-400 bg-rose-50/20",
+                  )}
                 />
+                {errors.name && (
+                  <p className="text-[11px] font-medium text-rose-500">{errors.name}</p>
+                )}
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="roleTitle" className="text-xs font-semibold text-slate-700">
-                  Cargo / Função
+                  Cargo / Função <span className="text-rose-500">*</span>
                 </Label>
                 <Input
                   id="roleTitle"
                   name="roleTitle"
-                  required
-                  defaultValue={editingFuncionario?.roleTitle || ""}
+                  value={formRoleTitle}
+                  onChange={(e) => {
+                    setFormRoleTitle(e.target.value);
+                    if (errors.roleTitle) setErrors((prev) => ({ ...prev, roleTitle: "" }));
+                  }}
                   placeholder="Ex: Cozinheiro(a), Atendente, Auxiliar..."
-                  className="h-10 rounded-xl border-slate-200 text-xs focus:bg-white"
+                  className={cn(
+                    "h-10 rounded-xl border-slate-200 text-xs focus:bg-white transition-colors",
+                    errors.roleTitle && "border-rose-500 focus-visible:ring-rose-400 bg-rose-50/20",
+                  )}
                 />
+                {errors.roleTitle && (
+                  <p className="text-[11px] font-medium text-rose-500">{errors.roleTitle}</p>
+                )}
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="contractType" className="text-xs font-semibold text-slate-700">
-                  Tipo de Contrato
+                  Tipo de Contrato <span className="text-rose-500">*</span>
                 </Label>
                 <Select
                   name="contractType"
-                  defaultValue={editingFuncionario?.contractType || "CLT"}
+                  value={formContractType}
+                  onValueChange={(val) => {
+                    setFormContractType(val);
+                    if (errors.contractType) setErrors((prev) => ({ ...prev, contractType: "" }));
+                  }}
                 >
-                  <SelectTrigger className="h-10 rounded-xl border-slate-200 text-xs">
+                  <SelectTrigger
+                    className={cn(
+                      "h-10 rounded-xl border-slate-200 text-xs transition-colors",
+                      errors.contractType && "border-rose-500 focus-visible:ring-rose-400 bg-rose-50/20",
+                    )}
+                  >
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
@@ -698,6 +1079,9 @@ export function FuncionariosTab({
                     <SelectItem value="ESTAGIO">Estagiário</SelectItem>
                   </SelectContent>
                 </Select>
+                {errors.contractType && (
+                  <p className="text-[11px] font-medium text-rose-500">{errors.contractType}</p>
+                )}
               </div>
             </div>
 
@@ -713,21 +1097,40 @@ export function FuncionariosTab({
                   type="number"
                   step="0.01"
                   min="0"
-                  defaultValue={Number(editingFuncionario?.baseSalary || 0)}
+                  value={formBaseSalary}
+                  onChange={(e) => {
+                    setFormBaseSalary(e.target.value);
+                    if (errors.baseSalary) setErrors((prev) => ({ ...prev, baseSalary: "" }));
+                  }}
                   placeholder="0,00"
-                  className="h-10 rounded-xl border-slate-200 bg-white text-xs font-semibold focus:bg-white"
+                  className={cn(
+                    "h-10 rounded-xl border-slate-200 bg-white text-xs font-semibold focus:bg-white transition-colors",
+                    errors.baseSalary && "border-rose-500 focus-visible:ring-rose-400 bg-rose-50/20",
+                  )}
                 />
+                {errors.baseSalary && (
+                  <p className="text-[11px] font-medium text-rose-500">{errors.baseSalary}</p>
+                )}
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="paymentFrequency" className="text-xs font-semibold text-slate-700">
-                  Frequência de Pagamento
+                  Frequência de Pagamento <span className="text-rose-500">*</span>
                 </Label>
                 <Select
                   name="paymentFrequency"
-                  defaultValue={editingFuncionario?.paymentFrequency || "MONTHLY"}
+                  value={formPaymentFrequency}
+                  onValueChange={(val) => {
+                    setFormPaymentFrequency(val);
+                    if (errors.paymentFrequency) setErrors((prev) => ({ ...prev, paymentFrequency: "" }));
+                  }}
                 >
-                  <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs">
+                  <SelectTrigger
+                    className={cn(
+                      "h-10 rounded-xl border-slate-200 bg-white text-xs transition-colors",
+                      errors.paymentFrequency && "border-rose-500 focus-visible:ring-rose-400 bg-rose-50/20",
+                    )}
+                  >
                     <SelectValue placeholder="Frequência" />
                   </SelectTrigger>
                   <SelectContent>
@@ -737,6 +1140,9 @@ export function FuncionariosTab({
                     <SelectItem value="DAILY">Diária / Por Turno</SelectItem>
                   </SelectContent>
                 </Select>
+                {errors.paymentFrequency && (
+                  <p className="text-[11px] font-medium text-rose-500">{errors.paymentFrequency}</p>
+                )}
               </div>
             </div>
 
@@ -748,7 +1154,8 @@ export function FuncionariosTab({
                 </Label>
                 <Select
                   name="pixType"
-                  defaultValue={editingFuncionario?.pixType || "CPF"}
+                  value={formPixType}
+                  onValueChange={(val) => setFormPixType(val)}
                 >
                   <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white text-xs">
                     <SelectValue placeholder="Tipo Pix" />
@@ -770,7 +1177,8 @@ export function FuncionariosTab({
                 <Input
                   id="pixKey"
                   name="pixKey"
-                  defaultValue={editingFuncionario?.pixKey || ""}
+                  value={formPixKey}
+                  onChange={(e) => setFormPixKey(e.target.value)}
                   placeholder="Insira a chave Pix do colaborador..."
                   className="h-10 rounded-xl border-slate-200 bg-white text-xs font-mono focus:bg-white"
                 />
@@ -787,10 +1195,19 @@ export function FuncionariosTab({
                   id="cpf"
                   name="cpf"
                   value={formCpf}
-                  onChange={(e) => setFormCpf(formatCpf(e.target.value))}
+                  onChange={(e) => {
+                    setFormCpf(formatCpf(e.target.value));
+                    if (errors.cpf) setErrors((prev) => ({ ...prev, cpf: "" }));
+                  }}
                   placeholder="000.000.000-00"
-                  className="h-10 rounded-xl border-slate-200 text-xs focus:bg-white"
+                  className={cn(
+                    "h-10 rounded-xl border-slate-200 text-xs focus:bg-white transition-colors",
+                    errors.cpf && "border-rose-500 focus-visible:ring-rose-400 bg-rose-50/20",
+                  )}
                 />
+                {errors.cpf && (
+                  <p className="text-[11px] font-medium text-rose-500">{errors.cpf}</p>
+                )}
               </div>
 
               <div className="space-y-1.5">
@@ -801,10 +1218,19 @@ export function FuncionariosTab({
                   id="phone"
                   name="phone"
                   value={formPhone}
-                  onChange={(e) => setFormPhone(formatPhone(e.target.value))}
+                  onChange={(e) => {
+                    setFormPhone(formatPhone(e.target.value));
+                    if (errors.phone) setErrors((prev) => ({ ...prev, phone: "" }));
+                  }}
                   placeholder="(00) 00000-0000"
-                  className="h-10 rounded-xl border-slate-200 text-xs focus:bg-white"
+                  className={cn(
+                    "h-10 rounded-xl border-slate-200 text-xs focus:bg-white transition-colors",
+                    errors.phone && "border-rose-500 focus-visible:ring-rose-400 bg-rose-50/20",
+                  )}
                 />
+                {errors.phone && (
+                  <p className="text-[11px] font-medium text-rose-500">{errors.phone}</p>
+                )}
               </div>
 
               <div className="space-y-1.5">
@@ -815,11 +1241,11 @@ export function FuncionariosTab({
                   id="hireDate"
                   name="hireDate"
                   key={editingFuncionario?.id ? `hireDate-${editingFuncionario.id}` : "hireDate-new"}
-                  defaultValue={
-                    editingFuncionario?.hireDate
-                      ? String(editingFuncionario.hireDate).slice(0, 10)
-                      : ""
-                  }
+                  value={formHireDate}
+                  onChange={(_, str) => {
+                    setFormHireDate(str);
+                    if (errors.hireDate) setErrors((prev) => ({ ...prev, hireDate: "" }));
+                  }}
                   placeholder="Data de admissão"
                 />
               </div>
@@ -854,13 +1280,17 @@ export function FuncionariosTab({
                       onChange={(e) => {
                         const formatted = formatCep(e.target.value);
                         setFormCep(formatted);
+                        if (errors.cep) setErrors((prev) => ({ ...prev, cep: "" }));
                         if (formatted.replace(/\D/g, "").length === 8) {
                           handleFuncionarioCepLookup(formatted);
                         }
                       }}
                       onBlur={() => handleFuncionarioCepLookup(formCep)}
                       maxLength={9}
-                      className="h-10 rounded-xl border-slate-200 bg-white pr-9 text-xs text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                      className={cn(
+                        "h-10 rounded-xl border-slate-200 bg-white pr-9 text-xs text-slate-900 placeholder:text-slate-400 focus:border-primary transition-colors",
+                        errors.cep && "border-rose-500 focus-visible:ring-rose-400 bg-rose-50/20",
+                      )}
                     />
                     <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
                       {isSearchingCep ? (
@@ -870,6 +1300,9 @@ export function FuncionariosTab({
                       )}
                     </div>
                   </div>
+                  {errors.cep && (
+                    <p className="text-[11px] font-medium text-rose-500">{errors.cep}</p>
+                  )}
                 </div>
 
                 {/* Logradouro / Rua */}
@@ -984,7 +1417,8 @@ export function FuncionariosTab({
               <Textarea
                 id="notes"
                 name="notes"
-                defaultValue={editingFuncionario?.notes || ""}
+                value={formNotes}
+                onChange={(e) => setFormNotes(e.target.value)}
                 placeholder="Ex: Escala 6x1, folgas às terças, experiência prévia em cozinha industrial..."
                 className="rounded-xl border-slate-200 text-xs"
                 rows={2}

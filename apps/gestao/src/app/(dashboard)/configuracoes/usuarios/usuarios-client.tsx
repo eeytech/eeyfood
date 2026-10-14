@@ -218,12 +218,17 @@ export function UsuariosClient({
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<UserRole>("KITCHEN");
+  const [createName, setCreateName] = useState("");
+  const [createEmail, setCreateEmail] = useState("");
+  const [createPassword, setCreatePassword] = useState("");
+  const [createErrors, setCreateErrors] = useState<Record<string, string>>({});
 
   const [editingUser, setEditingUser] = useState<UserItem | null>(null);
   const [editName, setEditName] = useState("");
   const [editRole, setEditRole] = useState<UserRole>("KITCHEN");
   const [editPassword, setEditPassword] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
 
   const [deletingUser, setDeletingUser] = useState<UserItem | null>(null);
   const [isNewGarcomOpen, setIsNewGarcomOpen] = useState(false);
@@ -287,30 +292,75 @@ export function UsuariosClient({
     setCurrentPage(1);
   };
 
+  const handleOpenCreate = () => {
+    setCreateName("");
+    setCreateEmail("");
+    setCreatePassword("");
+    setSelectedRole("KITCHEN");
+    setCreateErrors({});
+    setCreateError(null);
+    setIsCreateOpen(true);
+  };
+
   // Handlers
   const handleCreateSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setCreateError(null);
 
-    if (currentUserRole === "MANAGER" && (selectedRole === "ADMIN" || selectedRole === "SUPER_ADMIN")) {
-      setCreateError(
-        "Usuários com perfil de Gerente não têm permissão para cadastrar Administradores.",
-      );
-      toast.error("Usuários com perfil de Gerente não têm permissão para cadastrar Administradores.");
+    const newErrors: Record<string, string> = {};
+
+    const trimmedName = createName.trim();
+    if (!trimmedName) {
+      newErrors.name = "Informe o nome completo do usuário.";
+    } else if (trimmedName.length < 2) {
+      newErrors.name = "O nome deve ter no mínimo 2 caracteres.";
+    }
+
+    const trimmedEmail = createEmail.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!trimmedEmail) {
+      newErrors.email = "Informe o e-mail de login.";
+    } else if (!emailRegex.test(trimmedEmail)) {
+      newErrors.email = "Informe um e-mail válido (ex.: usuario@empresa.com).";
+    }
+
+    const trimmedPassword = createPassword.trim();
+    if (!trimmedPassword) {
+      newErrors.password = "Informe uma senha inicial para o usuário.";
+    } else if (
+      trimmedPassword.length < 8 ||
+      !/[a-zA-Z]/.test(trimmedPassword) ||
+      !/[0-9]/.test(trimmedPassword)
+    ) {
+      newErrors.password =
+        "A senha deve ter no mínimo 8 caracteres e conter pelo menos uma letra e um número.";
+    }
+
+    if (!selectedRole) {
+      newErrors.role = "Selecione o cargo / nível de permissão.";
+    } else if (
+      currentUserRole === "MANAGER" &&
+      (selectedRole === "ADMIN" || selectedRole === "SUPER_ADMIN")
+    ) {
+      newErrors.role =
+        "Usuários com perfil de Gerente não têm permissão para cadastrar Administradores.";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setCreateErrors(newErrors);
+      const firstError = Object.values(newErrors)[0];
+      toast.error(firstError || "Por favor, preencha todos os campos obrigatórios.");
       return;
     }
 
-    const formData = new FormData(e.currentTarget);
+    setCreateErrors({});
+
+    const formData = new FormData();
+    formData.set("name", trimmedName);
+    formData.set("email", trimmedEmail);
+    formData.set("password", trimmedPassword);
     formData.set("role", selectedRole);
     formData.append("restaurantSlug", slug);
-
-    const password = formData.get("password")?.toString() || "";
-    if (password.length < 8 || !/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
-      setCreateError(
-        "A senha deve ter no mínimo 8 caracteres e conter pelo menos uma letra e um número.",
-      );
-      return;
-    }
 
     startTransition(async () => {
       const result = await criarUsuarioAction(null, formData);
@@ -320,6 +370,9 @@ export function UsuariosClient({
       } else {
         toast.success("Novo usuário cadastrado com sucesso!");
         setIsCreateOpen(false);
+        setCreateName("");
+        setCreateEmail("");
+        setCreatePassword("");
         setSelectedRole("KITCHEN");
       }
     });
@@ -334,37 +387,61 @@ export function UsuariosClient({
     setEditName(user.name);
     setEditRole((user.role as UserRole) || "KITCHEN");
     setEditPassword("");
+    setEditErrors({});
     setEditError(null);
   };
 
-  const handleEditSubmit = async (e: React.FormEvent) => {
+  const handleEditSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!editingUser) return;
     setEditError(null);
 
-    if (currentUserRole === "MANAGER" && (editRole === "ADMIN" || editRole === "SUPER_ADMIN")) {
-      setEditError(
-        "Usuários com perfil de Gerente não têm permissão para atribuir o cargo de Administrador.",
-      );
+    const newErrors: Record<string, string> = {};
+
+    const trimmedName = editName.trim();
+    if (!trimmedName) {
+      newErrors.name = "Informe o nome completo do usuário.";
+    } else if (trimmedName.length < 2) {
+      newErrors.name = "O nome deve ter no mínimo 2 caracteres.";
+    }
+
+    if (!editRole) {
+      newErrors.role = "Selecione o cargo / nível de permissão.";
+    } else if (
+      currentUserRole === "MANAGER" &&
+      (editRole === "ADMIN" || editRole === "SUPER_ADMIN")
+    ) {
+      newErrors.role =
+        "Usuários com perfil de Gerente não têm permissão para atribuir o cargo de Administrador.";
+    }
+
+    const trimmedPassword = editPassword.trim();
+    if (trimmedPassword) {
+      if (
+        trimmedPassword.length < 8 ||
+        !/[a-zA-Z]/.test(trimmedPassword) ||
+        !/[0-9]/.test(trimmedPassword)
+      ) {
+        newErrors.password =
+          "A nova senha deve ter no mínimo 8 caracteres e conter pelo menos uma letra e um número.";
+      }
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setEditErrors(newErrors);
+      const firstError = Object.values(newErrors)[0];
+      toast.error(firstError || "Por favor, preencha todos os campos obrigatórios.");
       return;
     }
 
-    if (editPassword.trim()) {
-      const pwd = editPassword.trim();
-      if (pwd.length < 8 || !/[a-zA-Z]/.test(pwd) || !/[0-9]/.test(pwd)) {
-        setEditError(
-          "A nova senha deve ter no mínimo 8 caracteres e conter pelo menos uma letra e um número.",
-        );
-        return;
-      }
-    }
+    setEditErrors({});
 
     startTransition(async () => {
       const result = await atualizarUsuarioAction({
         userId: editingUser.id,
-        name: editName,
+        name: trimmedName,
         role: editRole,
-        password: editPassword.trim() ? editPassword.trim() : undefined,
+        password: trimmedPassword ? trimmedPassword : undefined,
         restaurantSlug: slug,
       });
 
@@ -441,11 +518,7 @@ export function UsuariosClient({
 
         {activeTab === "USUARIOS" ? (
           <Button
-            onClick={() => {
-              setCreateError(null);
-              setSelectedRole("KITCHEN");
-              setIsCreateOpen(true);
-            }}
+            onClick={handleOpenCreate}
             className="h-10 gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90 transition-all"
           >
             <UserPlusIcon size={16} />
@@ -1150,7 +1223,16 @@ export function UsuariosClient({
       </Card>
 
       {/* ── Dialog: Cadastrar Novo Usuário ─────────────── */}
-      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+      <Dialog
+        open={isCreateOpen}
+        onOpenChange={(open) => {
+          setIsCreateOpen(open);
+          if (!open) {
+            setCreateErrors({});
+            setCreateError(null);
+          }
+        }}
+      >
         <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-lg">
           <DialogHeader>
             <div className="flex items-center gap-2">
@@ -1165,7 +1247,7 @@ export function UsuariosClient({
             </div>
           </DialogHeader>
 
-          <form onSubmit={handleCreateSubmit} className="space-y-4 pt-2">
+          <form onSubmit={handleCreateSubmit} noValidate className="space-y-4 pt-2">
             {createError && (
               <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
                 <AlertCircleIcon size={16} className="mt-0.5 shrink-0" />
@@ -1175,61 +1257,97 @@ export function UsuariosClient({
 
             <div className="space-y-1.5">
               <Label htmlFor="create-name" className="text-xs font-semibold text-slate-700">
-                Nome Completo
+                Nome Completo <span className="text-rose-500">*</span>
               </Label>
               <Input
                 id="create-name"
                 name="name"
-                required
+                value={createName}
+                onChange={(e) => {
+                  setCreateName(e.target.value);
+                  if (createErrors.name) setCreateErrors((prev) => ({ ...prev, name: "" }));
+                }}
                 placeholder="Ex.: Carlos Cozinheiro"
-                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                className={cn(
+                  "h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary transition-colors",
+                  createErrors.name && "border-rose-500 focus-visible:ring-rose-400 bg-rose-50/20",
+                )}
               />
+              {createErrors.name && (
+                <p className="text-[11px] font-medium text-rose-500">{createErrors.name}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="create-email" className="text-xs font-semibold text-slate-700">
-                E-mail de Login
+                E-mail de Login <span className="text-rose-500">*</span>
               </Label>
               <Input
                 id="create-email"
                 name="email"
                 type="email"
-                required
+                value={createEmail}
+                onChange={(e) => {
+                  setCreateEmail(e.target.value);
+                  if (createErrors.email) setCreateErrors((prev) => ({ ...prev, email: "" }));
+                }}
                 placeholder="Ex.: cozinha@restaurante.com"
-                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                className={cn(
+                  "h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary transition-colors",
+                  createErrors.email && "border-rose-500 focus-visible:ring-rose-400 bg-rose-50/20",
+                )}
               />
+              {createErrors.email && (
+                <p className="text-[11px] font-medium text-rose-500">{createErrors.email}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="create-password" className="text-xs font-semibold text-slate-700">
-                Senha Inicial
+                Senha Inicial <span className="text-rose-500">*</span>
               </Label>
               <Input
                 id="create-password"
                 name="password"
                 type="password"
-                required
-                minLength={8}
+                value={createPassword}
+                onChange={(e) => {
+                  setCreatePassword(e.target.value);
+                  if (createErrors.password) setCreateErrors((prev) => ({ ...prev, password: "" }));
+                }}
                 placeholder="Mínimo de 8 caracteres (letras e números)"
-                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                className={cn(
+                  "h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary transition-colors",
+                  createErrors.password && "border-rose-500 focus-visible:ring-rose-400 bg-rose-50/20",
+                )}
               />
-              <p className="text-[11px] text-slate-500">
-                A senha deve ter no mínimo 8 caracteres e conter pelo menos uma letra e um número.
-              </p>
+              {createErrors.password ? (
+                <p className="text-[11px] font-medium text-rose-500">{createErrors.password}</p>
+              ) : (
+                <p className="text-[11px] text-slate-500">
+                  A senha deve ter no mínimo 8 caracteres e conter pelo menos uma letra e um número.
+                </p>
+              )}
             </div>
 
             {/* Shadcn UI Select for Role */}
             <div className="space-y-1.5">
               <Label htmlFor="create-role" className="text-xs font-semibold text-slate-700">
-                Cargo / Nível de Permissão
+                Cargo / Nível de Permissão <span className="text-rose-500">*</span>
               </Label>
               <Select
                 value={selectedRole}
-                onValueChange={(val) => setSelectedRole(val as UserRole)}
+                onValueChange={(val) => {
+                  setSelectedRole(val as UserRole);
+                  if (createErrors.role) setCreateErrors((prev) => ({ ...prev, role: "" }));
+                }}
               >
                 <SelectTrigger
                   id="create-role"
-                  className="h-11 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-primary"
+                  className={cn(
+                    "h-11 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-primary transition-colors",
+                    createErrors.role && "border-rose-500 focus-visible:ring-rose-400 bg-rose-50/20",
+                  )}
                 >
                   <SelectValue />
                 </SelectTrigger>
@@ -1264,6 +1382,9 @@ export function UsuariosClient({
                   })}
                 </SelectContent>
               </Select>
+              {createErrors.role && (
+                <p className="text-[11px] font-medium text-rose-500">{createErrors.role}</p>
+              )}
             </div>
 
             <DialogFooter className="gap-2 pt-2">
@@ -1294,7 +1415,11 @@ export function UsuariosClient({
       <Dialog
         open={Boolean(editingUser)}
         onOpenChange={(open) => {
-          if (!open) setEditingUser(null);
+          if (!open) {
+            setEditingUser(null);
+            setEditErrors({});
+            setEditError(null);
+          }
         }}
       >
         <DialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl sm:max-w-lg">
@@ -1311,7 +1436,7 @@ export function UsuariosClient({
             </div>
           </DialogHeader>
 
-          <form onSubmit={handleEditSubmit} className="space-y-4 pt-2">
+          <form onSubmit={handleEditSubmit} noValidate className="space-y-4 pt-2">
             {editError && (
               <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
                 <AlertCircleIcon size={16} className="mt-0.5 shrink-0" />
@@ -1333,29 +1458,43 @@ export function UsuariosClient({
 
             <div className="space-y-1.5">
               <Label htmlFor="edit-name" className="text-xs font-semibold text-slate-700">
-                Nome Completo
+                Nome Completo <span className="text-rose-500">*</span>
               </Label>
               <Input
                 id="edit-name"
-                required
                 value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-primary"
+                onChange={(e) => {
+                  setEditName(e.target.value);
+                  if (editErrors.name) setEditErrors((prev) => ({ ...prev, name: "" }));
+                }}
+                className={cn(
+                  "h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-primary transition-colors",
+                  editErrors.name && "border-rose-500 focus-visible:ring-rose-400 bg-rose-50/20",
+                )}
               />
+              {editErrors.name && (
+                <p className="text-[11px] font-medium text-rose-500">{editErrors.name}</p>
+              )}
             </div>
 
             {/* Shadcn UI Select for Role */}
             <div className="space-y-1.5">
               <Label htmlFor="edit-role" className="text-xs font-semibold text-slate-700">
-                Cargo / Nível de Permissão
+                Cargo / Nível de Permissão <span className="text-rose-500">*</span>
               </Label>
               <Select
                 value={editRole}
-                onValueChange={(val) => setEditRole(val as UserRole)}
+                onValueChange={(val) => {
+                  setEditRole(val as UserRole);
+                  if (editErrors.role) setEditErrors((prev) => ({ ...prev, role: "" }));
+                }}
               >
                 <SelectTrigger
                   id="edit-role"
-                  className="h-11 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-primary"
+                  className={cn(
+                    "h-11 rounded-xl border-slate-200 bg-white text-sm text-slate-900 focus:border-primary transition-colors",
+                    editErrors.role && "border-rose-500 focus-visible:ring-rose-400 bg-rose-50/20",
+                  )}
                 >
                   <SelectValue />
                 </SelectTrigger>
@@ -1390,6 +1529,9 @@ export function UsuariosClient({
                   })}
                 </SelectContent>
               </Select>
+              {editErrors.role && (
+                <p className="text-[11px] font-medium text-rose-500">{editErrors.role}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -1399,15 +1541,24 @@ export function UsuariosClient({
               <Input
                 id="edit-password"
                 type="password"
-                minLength={8}
                 value={editPassword}
-                onChange={(e) => setEditPassword(e.target.value)}
+                onChange={(e) => {
+                  setEditPassword(e.target.value);
+                  if (editErrors.password) setEditErrors((prev) => ({ ...prev, password: "" }));
+                }}
                 placeholder="Deixe em branco para manter a senha atual"
-                className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                className={cn(
+                  "h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary transition-colors",
+                  editErrors.password && "border-rose-500 focus-visible:ring-rose-400 bg-rose-50/20",
+                )}
               />
-              <p className="text-[11px] text-slate-500">
-                Se informada, a nova senha deve ter no mínimo 8 caracteres com letra e número.
-              </p>
+              {editErrors.password ? (
+                <p className="text-[11px] font-medium text-rose-500">{editErrors.password}</p>
+              ) : (
+                <p className="text-[11px] text-slate-500">
+                  Se informada, a nova senha deve ter no mínimo 8 caracteres com letra e número.
+                </p>
+              )}
             </div>
 
             <DialogFooter className="gap-2 pt-2">
