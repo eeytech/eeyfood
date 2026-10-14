@@ -3,12 +3,9 @@ import { jwtVerify, SignJWT } from "jose";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-const COOKIE_NAME = "eey_session";
+import { getJwtSecretKey } from "@/lib/auth/config";
 
-const getJwtSecret = () => {
-  const secret = process.env.JWT_SECRET ?? "eeyfood_default_jwt_secret_key_2026";
-  return new TextEncoder().encode(secret);
-};
+const COOKIE_NAME = "eey_session";
 
 export async function POST(request: Request) {
   try {
@@ -29,8 +26,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
     }
 
-    const secretKey = getJwtSecret();
+    const secretKey = getJwtSecretKey();
     const { payload } = await jwtVerify(token, secretKey);
+
+    const userRole = String(payload.role ?? "");
+    const userOriginalRestaurantId = String(payload.companyId ?? "");
+
+    // Controle de acesso estrito (IDOR / Multi-tenant):
+    // Apenas SUPER_ADMIN pode alternar para qualquer restaurante do sistema.
+    // Usuários vinculados a um restaurante específico só podem selecionar a sua própria unidade.
+    if (
+      userRole !== "SUPER_ADMIN" &&
+      userOriginalRestaurantId &&
+      userOriginalRestaurantId !== companyId
+    ) {
+      return NextResponse.json(
+        { error: "Acesso negado: Você não possui autorização para alternar para esta unidade." },
+        { status: 403 },
+      );
+    }
 
     // Buscar restaurante de destino no banco
     const [targetRestaurant] = await db
@@ -51,7 +65,7 @@ export async function POST(request: Request) {
     const newToken = await new SignJWT({
       ...payload,
       activeCompanyId: targetRestaurant.id,
-      companyId: targetRestaurant.id,
+      companyId: userRole === "SUPER_ADMIN" ? targetRestaurant.id : payload.companyId,
       companySlug: targetRestaurant.slug,
       application: appSlug,
     })

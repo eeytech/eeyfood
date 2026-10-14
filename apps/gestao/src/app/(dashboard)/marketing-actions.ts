@@ -18,16 +18,31 @@ import { z } from "zod";
 import {
   getBooleanValue,
   getNumberValue,
-  getOptionalStringValue,
   getStringValue,
 } from "@/lib/admin-form-utils";
 import { cleanKey, normalizeWhatsAppNumber } from "@/lib/whatsapp-utils";
+import { assertRestaurantAccess } from "@/lib/auth/session";
 
 const marketingSettingsSchema = z.object({
-  metaPixelId: z.string().nullable().optional(),
-  metaCapiToken: z.string().nullable().optional(),
-  ga4MeasurementId: z.string().nullable().optional(),
-  gtmContainerId: z.string().nullable().optional(),
+  metaPixelId: z
+    .string()
+    .trim()
+    .regex(/^\d{4,25}$/, "Meta Pixel ID deve conter apenas números.")
+    .nullable()
+    .optional(),
+  metaCapiToken: z.string().trim().nullable().optional(),
+  ga4MeasurementId: z
+    .string()
+    .trim()
+    .regex(/^(G|UA)-[A-Z0-9-]+$/i, "ID de métrica GA4 inválido (ex: G-XXXXXXXXXX).")
+    .nullable()
+    .optional(),
+  gtmContainerId: z
+    .string()
+    .trim()
+    .regex(/^GTM-[A-Z0-9]+$/i, "ID do contêiner GTM inválido (ex: GTM-XXXXXXX).")
+    .nullable()
+    .optional(),
   abandonedCartEnabled: z.boolean(),
   abandonedCartDelayMinutes: z.number().int().min(30).max(1440),
   abandonedCartCouponPercent: z.number().min(0).max(50),
@@ -40,6 +55,7 @@ const getNullableStringValue = (value: FormDataEntryValue | null) => {
 };
 
 export async function salvarMarketingSettingsAction(slug: string, formData: FormData) {
+  await assertRestaurantAccess(slug);
   const restaurant = await buscarRestaurantePorSlug(slug);
   if (!restaurant) throw new Error("Restaurante não encontrado.");
 
@@ -106,6 +122,7 @@ export async function dispararCampanhaAction(
   slug: string,
   formData: FormData,
 ) {
+  await assertRestaurantAccess(slug);
   const restaurant = await buscarRestaurantePorSlug(slug);
   if (!restaurant) throw new Error("Restaurante não encontrado.");
 
@@ -325,6 +342,7 @@ export async function dispararCampanhaAction(
 }
 
 export async function buscarMarketingSettingsAction(slug: string) {
+  await assertRestaurantAccess(slug);
   const restaurant = await buscarRestaurantePorSlug(slug);
   if (!restaurant) return null;
 

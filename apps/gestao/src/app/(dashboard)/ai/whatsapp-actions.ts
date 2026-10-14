@@ -10,6 +10,8 @@ import {
 import axios from "axios";
 import { revalidatePath } from "next/cache";
 
+import { assertRestaurantAccess } from "@/lib/auth/session";
+
 export interface WhatsAppStatusResult {
   isConnected: boolean;
   state: "open" | "close" | "connecting" | "unknown";
@@ -161,6 +163,7 @@ export async function configurarWebhookEvolution(
 export async function buscarStatusWhatsAppAction(
   slug: string,
 ): Promise<WhatsAppStatusResult> {
+  await assertRestaurantAccess(slug);
   try {
     const restaurant = await buscarRestaurantePorSlug(slug);
     if (!restaurant) {
@@ -335,6 +338,7 @@ export async function buscarStatusWhatsAppAction(
 export async function gerarQrCodeWhatsAppAction(
   slug: string,
 ): Promise<QrCodeResult> {
+  await assertRestaurantAccess(slug);
   try {
     const restaurant = await buscarRestaurantePorSlug(slug);
     if (!restaurant) return { ok: false, error: "Restaurante não encontrado." };
@@ -509,6 +513,7 @@ export async function gerarQrCodeWhatsAppAction(
 export async function desconectarWhatsAppAction(
   slug: string,
 ): Promise<{ ok: boolean; error?: string }> {
+  await assertRestaurantAccess(slug);
   try {
     const restaurant = await buscarRestaurantePorSlug(slug);
     if (!restaurant) return { ok: false, error: "Restaurante não encontrado." };
@@ -556,6 +561,7 @@ export async function desconectarWhatsAppAction(
 export async function sincronizarWebhookAction(
   slug: string,
 ): Promise<{ ok: boolean; webhookUrl?: string; error?: string }> {
+  await assertRestaurantAccess(slug);
   try {
     const restaurant = await buscarRestaurantePorSlug(slug);
     if (!restaurant) return { ok: false, error: "Restaurante não encontrado." };
@@ -615,6 +621,7 @@ export async function alternarStatusBotAction(
   slug: string,
   ativar: boolean,
 ): Promise<{ ok: boolean; isBotActive: boolean; error?: string }> {
+  await assertRestaurantAccess(slug);
   try {
     const restaurant = await buscarRestaurantePorSlug(slug);
     if (!restaurant) throw new Error("Restaurante não encontrado.");

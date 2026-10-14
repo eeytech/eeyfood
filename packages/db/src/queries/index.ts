@@ -1314,6 +1314,7 @@ export const buscarRestauranteComCardapioPorSlug = async (
 
     return {
       ...restaurant,
+      mercadoPagoAccessToken: null, // Segredo sensível ocultado da API pública do cardápio
       menuCategories: Array.from(categoriesMap.values()),
       operatingHours,
       deliveryFeeRules,
@@ -2724,8 +2725,27 @@ export const buscarPedidoParaRastreamento = async (orderId: number) => {
   const pedido = await db.query.ordersTable.findFirst({
     where: eq(ordersTable.id, orderId),
     with: {
-      restaurant: true,
-      courier: true,
+      restaurant: {
+        columns: {
+          id: true,
+          name: true,
+          slug: true,
+          avatarImageUrl: true,
+          address: true,
+          phone: true,
+        },
+      },
+      courier: {
+        columns: {
+          id: true,
+          name: true,
+          phone: true,
+          vehicleType: true,
+          latitude: true,
+          longitude: true,
+          isAvailable: true,
+        },
+      },
     },
   });
 

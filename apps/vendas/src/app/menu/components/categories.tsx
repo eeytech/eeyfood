@@ -7,7 +7,7 @@ import type {
   ProductOptionGroup,
   RestaurantComCategoriasEProdutos,
 } from "@fsw/db";
-import { ClockIcon, SearchIcon, StarIcon } from "lucide-react";
+import { ClockIcon, SearchIcon, StarIcon, UtensilsCrossed } from "lucide-react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { useContext, useEffect, useMemo, useState } from "react";
@@ -30,6 +30,7 @@ import PizzaBuilderSheet from "./pizza-builder-sheet";
 import ProductSearch from "./product-search";
 import ProductSheet from "./product-sheet";
 import Products from "./products";
+import PromotionalCarousel from "./promotional-carousel";
 
 interface RestaurantCategoriesProps {
   restaurant: RestaurantComCategoriasEProdutos & {
@@ -108,13 +109,19 @@ function SearchProductCard({
       aria-label={`Ver detalhes de ${product.name}`}
       role="listitem"
     >
-      <div className="relative aspect-[16/10] w-full overflow-hidden rounded-t-[30px] bg-slate-100">
-        <Image
-          src={product.imageUrl}
-          alt=""
-          fill
-          className="object-contain p-4 transition duration-300 group-hover:scale-[1.03]"
-        />
+      <div className="relative aspect-[16/10] w-full overflow-hidden rounded-t-[30px] bg-slate-100 flex items-center justify-center">
+        {product.imageUrl ? (
+          <Image
+            src={product.imageUrl}
+            alt=""
+            fill
+            className="object-contain p-4 transition duration-300 group-hover:scale-[1.03]"
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center text-slate-300">
+            <UtensilsCrossed size={36} strokeWidth={1.5} />
+          </div>
+        )}
       </div>
       <div className="flex flex-1 flex-col gap-4 p-5">
         <div className="space-y-1">
@@ -314,13 +321,19 @@ const RestaurantCategories = ({
         {/* Restaurant info card */}
         <div className="flex flex-col gap-4 rounded-[32px] bg-slate-50 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-4">
-            <Image
-              src={restaurant.avatarImageUrl}
-              alt={restaurant.name}
-              height={48}
-              width={48}
-              className="rounded-xl"
-            />
+            {restaurant.avatarImageUrl ? (
+              <Image
+                src={restaurant.avatarImageUrl}
+                alt={restaurant.name}
+                height={48}
+                width={48}
+                className="rounded-xl object-cover"
+              />
+            ) : (
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-200 text-slate-500 font-bold">
+                {restaurant.name?.charAt(0) || "R"}
+              </div>
+            )}
             <div className="space-y-1.5">
               <div>
                 <div className="flex items-center gap-3">
@@ -399,8 +412,18 @@ const RestaurantCategories = ({
           </div>
         </div>
 
+        {/* Destaques Promocionais / Carrossel de Benefícios */}
+        {!isSearchActive && (
+          <div className="mt-5">
+            <PromotionalCarousel
+              restaurant={restaurant}
+              consumptionMethod={consumptionMethod}
+            />
+          </div>
+        )}
+
         {/* Search bar */}
-        <div className="mt-5">
+        <div className="mt-5" id="menu-categories-anchor">
           <ProductSearch onSearchQueryChange={setSearchQuery} />
         </div>
 

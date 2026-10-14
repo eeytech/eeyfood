@@ -37,6 +37,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -717,17 +718,15 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
               {/* Selecionar todos */}
               {filteredOrders.length > 0 && (
                 <div className="flex items-center justify-between border-t border-slate-200/60 pt-2 text-xs">
-                  <label className="flex cursor-pointer items-center gap-2 text-slate-600">
-                    <input
-                      type="checkbox"
+                  <div className="flex cursor-pointer items-center gap-2 text-slate-600">
+                    <Checkbox
                       checked={
                         selectedIds.size === filteredOrders.length && filteredOrders.length > 0
                       }
-                      onChange={toggleAll}
-                      className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-primary"
+                      onCheckedChange={toggleAll}
                     />
                     <span>Selecionar todos</span>
-                  </label>
+                  </div>
                   {selectedIds.size > 0 && (
                     <Badge className="bg-primary text-primary-foreground text-[10px]">
                       {selectedIds.size} selecionado(s)
@@ -782,12 +781,11 @@ export function MapaRoteirizador({ slug, restaurant }: MapaRoteirizadorProps) {
                           : "hover:bg-slate-50 border-l-4 border-l-transparent"
                       }`}
                     >
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         checked={isSelected}
-                        onChange={() => toggleOrder(order.id)}
+                        onCheckedChange={() => toggleOrder(order.id)}
                         onClick={(e) => e.stopPropagation()}
-                        className="mt-1 h-4 w-4 cursor-pointer rounded border-slate-300 accent-primary"
+                        className="mt-1"
                       />
 
                       <div className="min-w-0 flex-1 space-y-1">

@@ -15,17 +15,7 @@ const ITEM_STATUS_VALUES: OrderProductItemStatus[] = ["PENDING", "READY"];
 const isItemStatus = (value: unknown): value is OrderProductItemStatus =>
   typeof value === "string" && ITEM_STATUS_VALUES.includes(value as OrderProductItemStatus);
 
-// Extrai o slug do restaurante autenticado injetado pelo middleware JWT
-const getCompanySlug = (request: Request): string | null => {
-  const raw = request.headers.get("x-user-data");
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as { companySlug?: unknown };
-    return typeof parsed.companySlug === "string" ? parsed.companySlug : null;
-  } catch {
-    return null;
-  }
-};
+import { validateRouteRestaurantAccess } from "@/lib/auth/session";
 
 export async function PATCH(request: Request, context: RouteContext) {
   const { orderId: orderIdStr, itemId } = await context.params;
@@ -49,8 +39,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ message: "Pedido não encontrado." }, { status: 404 });
   }
 
-  const companySlug = getCompanySlug(request);
-  if (companySlug && order.restaurant.slug !== companySlug) {
+  if (!validateRouteRestaurantAccess(request, order.restaurant.slug)) {
     return NextResponse.json({ message: "Acesso negado." }, { status: 403 });
   }
 

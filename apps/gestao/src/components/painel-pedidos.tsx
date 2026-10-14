@@ -2,6 +2,7 @@
 
 import type { Courier, OrderStatus, PedidoRecebimento } from "@fsw/db";
 import {
+  AlertTriangleIcon,
   ArrowLeftIcon,
   ArrowRightIcon,
   BadgeDollarSignIcon,
@@ -14,6 +15,8 @@ import {
   ChevronRightIcon,
   ClockIcon,
   CreditCardIcon,
+  FileCheckIcon,
+  FileTextIcon,
   InboxIcon,
   Loader2Icon,
   MapPinIcon,
@@ -30,6 +33,11 @@ import { io } from "socket.io-client";
 import { useTheme } from "@/components/theme-provider";
 import { soundNotifier } from "@/lib/sound-notifications";
 import { dispatchOrderAction, getCouriersAction } from "@/app/(dashboard)/logistica-actions";
+import { emitirDocumentoFiscalPedidoAction } from "@/app/(dashboard)/financeiro/configuracoes-fiscais/actions";
+import { prepararImpressaoPedidoAction } from "@/app/(dashboard)/configuracoes/impressoras-actions";
+import { dispatchPrintJobs } from "@/lib/printer/client-print-dispatcher";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -422,6 +430,48 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
   // Refs para evitar problemas de stale closure em callbacks assíncronos e WebSocket
   const autoPrintEnabledRef = useRef(autoPrintEnabled);
   const autoPrintModeRef = useRef(autoPrintMode);
+
+  // Emissão de Nota Fiscal (ACBr API)
+  const [fiscalModalOrder, setFiscalModalOrder] = useState<PedidoRecebimento | null>(null);
+  const [fiscalCpf, setFiscalCpf] = useState("");
+  const [isEmittingFiscal, setIsEmittingFiscal] = useState(false);
+
+  const handleEmitirFiscal = async () => {
+    if (!fiscalModalOrder) return;
+    setIsEmittingFiscal(true);
+    try {
+      const res = await emitirDocumentoFiscalPedidoAction(
+        slug,
+        fiscalModalOrder.id,
+        fiscalCpf || undefined,
+      );
+      if (res.success) {
+        toast.success(res.message);
+        setOrders((prev) =>
+          prev.map((o) =>
+            o.id === fiscalModalOrder.id
+              ? {
+                  ...o,
+                  nfeStatus: "ISSUED",
+                  nfeDanfeUrl: res.danfeUrl ?? o.nfeDanfeUrl,
+                  nfeAccessKey: res.accessKey ?? o.nfeAccessKey,
+                }
+              : o,
+          ),
+        );
+        if (res.danfeUrl) {
+          window.open(res.danfeUrl, "_blank");
+        }
+        setFiscalModalOrder(null);
+      } else {
+        toast.error(res.message);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao emitir nota fiscal.");
+    } finally {
+      setIsEmittingFiscal(false);
+    }
+  };
   const knownOrderIdsRef = useRef<Set<number>>(
     new Set(initialOrders.map((o) => o.id))
   );
@@ -839,10 +889,35 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
     `;
   };
 
-  const handlePrint = (
+  const handlePrint = async (
     order: PedidoRecebimento,
     type: "PRODUCTION" | "DELIVERY" | "BOTH",
+    forceBrowser = false,
   ) => {
+    // 1. Tentar impressão direcionada por hardware (Cozinha via Rede TCP / Caixa via USB Spooler)
+    if (!forceBrowser) {
+      try {
+        const targetRole =
+          type === "PRODUCTION" ? "KITCHEN" : type === "DELIVERY" ? "CASHIER" : "ALL";
+        const res = await prepararImpressaoPedidoAction(slug, order.id, targetRole);
+
+        if (res.success && res.jobs && res.jobs.length > 0) {
+          const results = await dispatchPrintJobs(res.jobs);
+          if (results.length > 0) {
+            const successCount = results.filter((r) => r.success).length;
+            if (successCount > 0) {
+              const details = results.map((r) => `${r.printerName}: ${r.message}`).join(" | ");
+              toast.success(`Impressão enviada com sucesso! (${details})`);
+              return;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("[Auto-Print] Falha no envio por hardware, acionando fallback no navegador:", err);
+      }
+    }
+
+    // 2. Fallback visual no navegador (iframe com layout térmico)
     try {
       const iframe = document.createElement("iframe");
       iframe.style.position = "fixed";
@@ -1116,6 +1191,89 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                 <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
               )}
               Confirmar Despacho
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Emissão Fiscal ACBr API */}
+      <Dialog
+        open={!!fiscalModalOrder}
+        onOpenChange={(open) => !open && setFiscalModalOrder(null)}
+      >
+        <DialogContent className="sm:max-w-[440px] rounded-2xl">
+          <DialogHeader>
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800">
+                <FileTextIcon size={20} />
+              </div>
+              <div>
+                <DialogTitle className="text-base font-bold text-slate-900">
+                  Emitir Nota Fiscal (ACBr API)
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500">
+                  Pedido #{fiscalModalOrder?.id} • Total: {formatCurrency(fiscalModalOrder?.total ?? 0)}
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-3.5 py-2 text-xs">
+            <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 p-3 space-y-1">
+              <p className="font-semibold text-slate-800">Cliente: {fiscalModalOrder?.customerName}</p>
+              <p className="text-slate-600">Forma de pagamento: {fiscalModalOrder ? getPaymentLabel(fiscalModalOrder.paymentMethod) : "-"}</p>
+              <p className="text-slate-600">Total de itens: {fiscalModalOrder?.orderProducts?.length ?? 0} produto(s)</p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="fiscal-cpf" className="text-xs font-semibold text-slate-700">
+                CPF do Cliente na Nota (Opcional)
+              </Label>
+              <Input
+                id="fiscal-cpf"
+                placeholder="000.000.000-00 (deixe em branco se não informado)"
+                value={fiscalCpf}
+                onChange={(e) => setFiscalCpf(e.target.value)}
+                className="h-10 rounded-xl border-slate-200 bg-white font-mono text-sm"
+              />
+              <p className="text-[11px] text-slate-500">
+                A nota será emitida e assinada via ACBr API oficial diretamente com a SEFAZ.
+              </p>
+            </div>
+
+            {fiscalModalOrder?.nfeRejectionReason && (
+              <Alert className="border-rose-200 bg-rose-50/80 text-rose-950 py-2.5">
+                <AlertTriangleIcon className="h-4 w-4 text-rose-600 shrink-0" />
+                <AlertTitle className="text-xs font-semibold">Motivo da Rejeição Anterior</AlertTitle>
+                <AlertDescription className="text-[11px] mt-0.5">
+                  {fiscalModalOrder.nfeRejectionReason}
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setFiscalModalOrder(null)}
+              disabled={isEmittingFiscal}
+              className="rounded-xl"
+            >
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleEmitirFiscal}
+              disabled={isEmittingFiscal}
+              className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+            >
+              {isEmittingFiscal ? (
+                <Loader2Icon size={14} className="animate-spin" />
+              ) : (
+                <CheckCircle2Icon size={14} />
+              )}
+              <span>{isEmittingFiscal ? "Transmitindo SEFAZ..." : "Emitir via ACBr API"}</span>
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1677,6 +1835,38 @@ const PainelPedidos = ({ slug, initialOrders }: PainelPedidosProps) => {
                                     <ReceiptTextIcon size={11} />
                                   </button>
                                 </div>
+
+                                {/* Ação Fiscal ACBr API */}
+                                {order.nfeStatus === "ISSUED" ? (
+                                  <a
+                                    href={order.nfeDanfeUrl || "#"}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="h-5 px-1.5 rounded flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100/90 hover:bg-emerald-200 transition-colors shrink-0"
+                                    title="NFC-e Autorizada pela SEFAZ via ACBr API (Clique para abrir DANFE em PDF)"
+                                  >
+                                    <FileCheckIcon size={10} className="text-emerald-700" />
+                                    <span>NFC-e</span>
+                                  </a>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setFiscalModalOrder(order);
+                                      setFiscalCpf(order.customerCpf || "");
+                                    }}
+                                    className={cn(
+                                      "h-5 px-1.5 rounded flex items-center gap-1 text-[10px] font-medium transition-colors shrink-0 border",
+                                      order.nfeStatus === "REJECTED"
+                                        ? "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                                        : "border-slate-200/80 bg-slate-50/80 text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 hover:border-emerald-200",
+                                    )}
+                                    title={order.nfeStatus === "REJECTED" ? "Nota Rejeitada. Clique para ver detalhes e reemitir via ACBr API" : "Emitir Nota Fiscal (NFC-e) via ACBr API"}
+                                  >
+                                    <FileTextIcon size={10} />
+                                    <span>{order.nfeStatus === "REJECTED" ? "Reemitir NF" : "NF"}</span>
+                                  </button>
+                                )}
                               </div>
 
                               {/* Horário de criação */}

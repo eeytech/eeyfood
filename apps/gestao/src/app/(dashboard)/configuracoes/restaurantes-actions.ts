@@ -11,18 +11,23 @@ import { jwtVerify, SignJWT } from "jose";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
-const COOKIE_NAME = "eey_session";
+import { getJwtSecretKey } from "@/lib/auth/config";
+import { getSession } from "@/lib/auth/session";
 
-const getJwtSecret = () => {
-  const secret = process.env.JWT_SECRET ?? "eeyfood_default_jwt_secret_key_2026";
-  return new TextEncoder().encode(secret);
-};
+const COOKIE_NAME = "eey_session";
 
 export async function criarNovaUnidadeAction(
   _prevState: { error?: string; success?: boolean; newSlug?: string } | null,
   formData: FormData,
 ): Promise<{ error?: string; success?: boolean; newSlug?: string }> {
   try {
+    const session = await getSession();
+    if (!session || (session.role !== "SUPER_ADMIN" && session.role !== "ADMIN")) {
+      return {
+        error: "Acesso negado: Somente administradores têm permissão para criar novas unidades.",
+      };
+    }
+
     const name = formData.get("name")?.toString()?.trim();
     let slug = formData.get("slug")?.toString()?.trim()?.toLowerCase();
     const description =
@@ -118,14 +123,14 @@ export async function criarNovaUnidadeAction(
 
     if (token) {
       try {
-        const secretKey = getJwtSecret();
+        const secretKey = getJwtSecretKey();
         const { payload } = await jwtVerify(token, secretKey);
         const appSlug = process.env.NEXT_PUBLIC_APP_SLUG ?? "gestao";
 
         const newToken = await new SignJWT({
           ...payload,
           activeCompanyId: newRestaurant.id,
-          companyId: newRestaurant.id,
+          companyId: session.role === "SUPER_ADMIN" ? newRestaurant.id : payload.companyId,
           companySlug: newRestaurant.slug,
           application: appSlug,
         })

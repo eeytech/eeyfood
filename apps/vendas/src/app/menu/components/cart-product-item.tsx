@@ -1,4 +1,4 @@
-import { MinusIcon, PlusIcon, TrashIcon } from "lucide-react";
+import { MinusIcon, PlusIcon, TrashIcon, UtensilsCrossed } from "lucide-react";
 import Image from "next/image";
 import { useContext } from "react";
 
@@ -35,13 +35,17 @@ const CartProductItem = ({ product, variant = "sheet" }: CartItemProps) => {
     >
       {/* Esquerda: Imagem e Informações */}
       <div className="flex min-w-0 flex-1 items-start gap-2.5 sm:gap-3">
-        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-slate-50 border border-slate-100 sm:h-14 sm:w-14">
-          <Image
-            src={product.imageUrl}
-            alt={product.name}
-            fill
-            className="object-contain p-1"
-          />
+        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-slate-50 border border-slate-100 sm:h-14 sm:w-14 flex items-center justify-center">
+          {product.imageUrl ? (
+            <Image
+              src={product.imageUrl}
+              alt={product.name}
+              fill
+              className="object-contain p-1"
+            />
+          ) : (
+            <UtensilsCrossed size={20} strokeWidth={1.5} className="text-slate-300" />
+          )}
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">

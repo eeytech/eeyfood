@@ -411,7 +411,7 @@ export const FulfillmentSection = ({
                       render={({ field }) => (
                         <FormItem className="col-span-8 space-y-1">
                           <FormLabel className="text-xs font-medium text-slate-700">
-                            Rua / Avenida *
+                            Rua / Avenida
                           </FormLabel>
                           <FormControl>
                             <Input
@@ -431,7 +431,7 @@ export const FulfillmentSection = ({
                       render={({ field }) => (
                         <FormItem className="col-span-4 space-y-1">
                           <FormLabel className="text-xs font-medium text-slate-700">
-                            Número *
+                            Número
                           </FormLabel>
                           <FormControl>
                             <Input
@@ -453,7 +453,7 @@ export const FulfillmentSection = ({
                       render={({ field }) => (
                         <FormItem className="col-span-6 space-y-1">
                           <FormLabel className="text-xs font-medium text-slate-700">
-                            Bairro *
+                            Bairro
                           </FormLabel>
                           <FormControl>
                             <Input

@@ -28,6 +28,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import type { BankAccount } from "@fsw/db";
 
@@ -56,6 +63,8 @@ function ContaForm({
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   isPending: boolean;
 }) {
+  const [type, setType] = useState<string>(defaultValues?.type ?? "CHECKING");
+
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="space-y-1.5">
@@ -77,18 +86,17 @@ function ContaForm({
           <Label htmlFor="conta-type" className="text-xs font-semibold text-slate-700">
             Tipo da Conta
           </Label>
-          <select
-            id="conta-type"
-            name="type"
-            defaultValue={defaultValues?.type ?? "CHECKING"}
-            className="flex h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-sm text-slate-900 focus:bg-white"
-            required
-          >
-            <option value="INTERNAL">Caixa Interno (Gaveta)</option>
-            <option value="CHECKING">Conta Corrente</option>
-            <option value="SAVINGS">Poupança</option>
-            <option value="DIGITAL">Conta Digital</option>
-          </select>
+          <Select name="type" value={type} onValueChange={setType}>
+            <SelectTrigger id="conta-type" className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 text-sm text-slate-900 focus:bg-white">
+              <SelectValue placeholder="Selecione o tipo" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+              <SelectItem value="INTERNAL">Caixa Interno (Gaveta)</SelectItem>
+              <SelectItem value="CHECKING">Conta Corrente</SelectItem>
+              <SelectItem value="SAVINGS">Poupança</SelectItem>
+              <SelectItem value="DIGITAL">Conta Digital</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="conta-balance" className="text-xs font-semibold text-slate-700">

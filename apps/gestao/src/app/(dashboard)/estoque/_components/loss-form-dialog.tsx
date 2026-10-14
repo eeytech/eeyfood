@@ -21,6 +21,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -76,6 +83,7 @@ function LossForm({
   const [costDisplay, setCostDisplay] = useState<string>(() =>
     formatCurrency(loss?.financialLoss)
   );
+  const [reason, setReason] = useState<string>(loss?.reason ?? "VENCIDO");
 
   const selectedItem = useMemo(
     () => inventoryItems.find((i) => i.id === selectedItemId),
@@ -275,18 +283,21 @@ function LossForm({
           <Label htmlFor="loss-reason" className="text-xs font-semibold text-slate-700">
             Motivo
           </Label>
-          <select
-            id="loss-reason"
+          <Select
             name="reason"
-            defaultValue={loss?.reason ?? "VENCIDO"}
-            required
-            className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs sm:text-sm text-slate-900 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
+            value={reason}
+            onValueChange={setReason}
           >
-            <option value="VENCIDO">Vencido</option>
-            <option value="DANIFICADO">Danificado</option>
-            <option value="ESTRAGADO">Estragado</option>
-            <option value="OUTROS">Outros</option>
-          </select>
+            <SelectTrigger id="loss-reason" className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs sm:text-sm text-slate-900 focus:border-primary/50 focus:ring-2 focus:ring-primary/20">
+              <SelectValue placeholder="Selecione o motivo" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+              <SelectItem value="VENCIDO">Vencido</SelectItem>
+              <SelectItem value="DANIFICADO">Danificado</SelectItem>
+              <SelectItem value="ESTRAGADO">Estragado</SelectItem>
+              <SelectItem value="OUTROS">Outros</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-1.5">

@@ -84,6 +84,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { DatePicker } from "@/components/ui/date-picker";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -1683,11 +1684,9 @@ const ComandaDigital = ({
                                       : "border-slate-100 bg-slate-50/50 hover:bg-slate-50",
                                   )}
                                 >
-                                  <input
-                                    type="checkbox"
+                                  <Checkbox
                                     checked={isChecked}
-                                    onChange={() => toggleSelectedItem(item.id)}
-                                    className="h-4 w-4 rounded accent-primary cursor-pointer shrink-0"
+                                    onCheckedChange={() => toggleSelectedItem(item.id)}
                                     onClick={(e) => e.stopPropagation()}
                                   />
                                   <div className="min-w-0 flex-1">
@@ -1882,7 +1881,7 @@ const ComandaDigital = ({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
                 <div className="md:col-span-2 space-y-1">
                   <Label htmlFor="fila-nome" className="text-xs font-semibold text-slate-700">
-                    Nome do Cliente *
+                    Nome do Cliente
                   </Label>
                   <Input
                     id="fila-nome"
@@ -1901,7 +1900,7 @@ const ComandaDigital = ({
 
                 <div className="space-y-1">
                   <Label htmlFor="fila-pessoas" className="text-xs font-semibold text-slate-700">
-                    Pessoas *
+                    Pessoas
                   </Label>
                   <Input
                     id="fila-pessoas"
@@ -2034,7 +2033,7 @@ const ComandaDigital = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                 <div className="space-y-1">
                   <Label htmlFor="reserva-name" className="text-xs font-semibold text-slate-700">
-                    Nome do Cliente *
+                    Nome do Cliente
                   </Label>
                   <Input
                     id="reserva-name"
@@ -2063,7 +2062,7 @@ const ComandaDigital = ({
 
                 <div className="space-y-1">
                   <Label htmlFor="reserva-party-size" className="text-xs font-semibold text-slate-700">
-                    Pessoas *
+                    Pessoas
                   </Label>
                   <Input
                     id="reserva-party-size"
@@ -2082,7 +2081,7 @@ const ComandaDigital = ({
 
                 <div className="space-y-1">
                   <Label htmlFor="reserva-datetime" className="text-xs font-semibold text-slate-700">
-                    Data e Horário *
+                    Data e Horário
                   </Label>
                   <DatePicker
                     value={reservaForm.scheduledFor}
@@ -2328,11 +2327,9 @@ const ComandaDigital = ({
                       : "border-slate-100 bg-slate-50/50 hover:bg-slate-50",
                   )}
                 >
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={itemTransferSelectedIds.has(item.id)}
-                    onChange={() => toggleItemTransferSelection(item.id)}
-                    className="h-4 w-4 rounded accent-primary cursor-pointer shrink-0"
+                    onCheckedChange={() => toggleItemTransferSelection(item.id)}
                     onClick={(e) => e.stopPropagation()}
                   />
                   <div className="min-w-0 flex-1">

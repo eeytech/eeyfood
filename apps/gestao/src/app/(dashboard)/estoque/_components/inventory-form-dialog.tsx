@@ -19,6 +19,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { InventoryItem } from "@fsw/db";
 
 const TYPES = [
@@ -58,6 +65,8 @@ export function InventoryFormDialog({
   const [isPending, startTransition] = useTransition();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const isEditing = !!item;
+  const [type, setType] = useState<string>(item?.type ?? "INSUMO");
+  const [unitOfMeasure, setUnitOfMeasure] = useState<string>(item?.unitOfMeasure ?? "UN");
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -157,19 +166,22 @@ export function InventoryFormDialog({
               <Label htmlFor="inv-type" className="text-xs font-semibold text-slate-700">
                 Tipo
               </Label>
-              <select
-                id="inv-type"
+              <Select
                 name="type"
-                defaultValue={item?.type ?? "INSUMO"}
-                className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs sm:text-sm text-slate-900 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
-                required
+                value={type}
+                onValueChange={setType}
               >
-                {TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="inv-type" className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs sm:text-sm text-slate-900 focus:border-primary/50 focus:ring-2 focus:ring-primary/20">
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+                  {TYPES.map((t) => (
+                    <SelectItem key={t.value} value={t.value} className="text-xs sm:text-sm">
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Unidade de medida */}
@@ -177,19 +189,22 @@ export function InventoryFormDialog({
               <Label htmlFor="inv-unit" className="text-xs font-semibold text-slate-700">
                 Unidade de Medida
               </Label>
-              <select
-                id="inv-unit"
+              <Select
                 name="unitOfMeasure"
-                defaultValue={item?.unitOfMeasure ?? "UN"}
-                className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs sm:text-sm text-slate-900 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
-                required
+                value={unitOfMeasure}
+                onValueChange={setUnitOfMeasure}
               >
-                {UNITS.map((u) => (
-                  <option key={u.value} value={u.value}>
-                    {u.label}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="inv-unit" className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs sm:text-sm text-slate-900 focus:border-primary/50 focus:ring-2 focus:ring-primary/20">
+                  <SelectValue placeholder="Selecione a unidade" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+                  {UNITS.map((u) => (
+                    <SelectItem key={u.value} value={u.value} className="text-xs sm:text-sm">
+                      {u.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

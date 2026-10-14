@@ -52,6 +52,8 @@ import type { FinalizarVendaPdvInput } from "@/app/(dashboard)/pdv/actions";
 import { useCashDrawer } from "@/hooks/use-cash-drawer";
 import { useWebSerial } from "@/hooks/use-web-serial";
 import type { ScaleProtocol } from "@/hooks/use-web-serial";
+import { prepararImpressaoPedidoAction } from "@/app/(dashboard)/configuracoes/impressoras-actions";
+import { dispatchPrintJobs } from "@/lib/printer/client-print-dispatcher";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -1013,6 +1015,22 @@ const PdvFrenteCaixa = ({
   const handlePrintReceipt = useCallback(async () => {
     if (!completedOrderId) return;
     setIsPrintLoading(true);
+
+    // 1. Tentar envio automatizado por hardware (Cozinha via Rede + Caixa via USB Spooler)
+    try {
+      const printRes = await prepararImpressaoPedidoAction(slug, completedOrderId, "ALL");
+      if (printRes.success && printRes.jobs && printRes.jobs.length > 0) {
+        const results = await dispatchPrintJobs(printRes.jobs);
+        if (results.length > 0 && results.some((r) => r.success)) {
+          setIsPrintLoading(false);
+          const details = results.map((r) => `${r.printerName}: ${r.message}`).join(" | ");
+          toast.success(`Cupom impresso com sucesso! (${details})`);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn("[PDV] Hardware print falhou ou sem agente, acionando fallback no navegador:", err);
+    }
 
     const order = await buscarPedidoPdvParaImpressao(completedOrderId);
     setIsPrintLoading(false);
@@ -2028,7 +2046,7 @@ const PdvFrenteCaixa = ({
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label className="text-xs font-semibold text-slate-700">
-                      Escolha o 2º Sabor (1/2) *
+                      Escolha o 2º Sabor (1/2)
                     </Label>
                     <span className="text-[11px] text-amber-700 font-medium">
                       {pizzaPricingRule === "MAX"

@@ -566,15 +566,15 @@ export function FinanceiroClient({
               <Label htmlFor="cat-type" className="text-xs font-semibold text-slate-700">
                 Natureza
               </Label>
-              <select
-                id="cat-type"
-                name="type"
-                className="flex h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-sm text-slate-900 focus:bg-white"
-                required
-              >
-                <option value="EXPENSE">Despesa (Contas a Pagar)</option>
-                <option value="REVENUE">Receita (Contas a Receber)</option>
-              </select>
+              <Select name="type" defaultValue="EXPENSE">
+                <SelectTrigger id="cat-type" className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 text-sm text-slate-900 focus:bg-white">
+                  <SelectValue placeholder="Selecione a natureza" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+                  <SelectItem value="EXPENSE">Despesa (Contas a Pagar)</SelectItem>
+                  <SelectItem value="REVENUE">Receita (Contas a Receber)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <Button
               type="submit"
@@ -1812,7 +1812,7 @@ export function FinanceiroClient({
             {/* Seletor de Colaborador */}
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-slate-700">
-                Selecione o Colaborador *
+                Selecione o Colaborador
               </Label>
               <Select
                 value={selectedEmployeeForPayment?.funcionario.id}
@@ -1870,7 +1870,7 @@ export function FinanceiroClient({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-slate-700">
-                  Tipo de Provento *
+                  Tipo de Provento
                 </Label>
                 <Select value={paymentType} onValueChange={setPaymentType}>
                   <SelectTrigger className="h-10 rounded-xl border-slate-200 text-xs">
@@ -1890,7 +1890,7 @@ export function FinanceiroClient({
 
               <div className="space-y-1.5">
                 <Label htmlFor="paymentRefMonth" className="text-xs font-semibold text-slate-700">
-                  Mês de Referência *
+                  Mês de Referência
                 </Label>
                 <Input
                   id="paymentRefMonth"
@@ -1907,7 +1907,7 @@ export function FinanceiroClient({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="paymentAmount" className="text-xs font-semibold text-slate-700">
-                  Valor a Pagar (R$) *
+                  Valor a Pagar (R$)
                 </Label>
                 <Input
                   id="paymentAmount"
@@ -2055,6 +2055,10 @@ function TransactionForm({
     ? new Date(defaultValues.dueDate).toISOString().split("T")[0]
     : "";
 
+  const [type, setType] = useState<string>(defaultValues?.type ?? "EXPENSE");
+  const [status, setStatus] = useState<string>(defaultValues?.status ?? "PENDING");
+  const [categoryId, setCategoryId] = useState<string>(defaultValues?.categoryId || "none");
+
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="space-y-1.5">
@@ -2106,32 +2110,30 @@ function TransactionForm({
           <Label htmlFor="tx-type" className="text-xs font-semibold text-slate-700">
             Natureza da Operação
           </Label>
-          <select
-            id="tx-type"
-            name="type"
-            defaultValue={defaultValues?.type ?? "EXPENSE"}
-            className="flex h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-sm text-slate-900 focus:bg-white"
-            required
-          >
-            <option value="EXPENSE">Despesa (Contas a Pagar)</option>
-            <option value="REVENUE">Receita (Contas a Receber)</option>
-          </select>
+          <Select name="type" value={type} onValueChange={setType}>
+            <SelectTrigger id="tx-type" className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 text-sm text-slate-900 focus:bg-white">
+              <SelectValue placeholder="Selecione a natureza" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+              <SelectItem value="EXPENSE">Despesa (Contas a Pagar)</SelectItem>
+              <SelectItem value="REVENUE">Receita (Contas a Receber)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="tx-status" className="text-xs font-semibold text-slate-700">
             Status
           </Label>
-          <select
-            id="tx-status"
-            name="status"
-            defaultValue={defaultValues?.status ?? "PENDING"}
-            className="flex h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-sm text-slate-900 focus:bg-white"
-            required
-          >
-            <option value="PENDING">Pendente</option>
-            <option value="PAID">Pago / Recebido</option>
-            <option value="CANCELLED">Cancelado</option>
-          </select>
+          <Select name="status" value={status} onValueChange={setStatus}>
+            <SelectTrigger id="tx-status" className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 text-sm text-slate-900 focus:bg-white">
+              <SelectValue placeholder="Selecione o status" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+              <SelectItem value="PENDING">Pendente</SelectItem>
+              <SelectItem value="PAID">Pago / Recebido</SelectItem>
+              <SelectItem value="CANCELLED">Cancelado</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -2139,19 +2141,24 @@ function TransactionForm({
         <Label htmlFor="tx-category" className="text-xs font-semibold text-slate-700">
           Categoria
         </Label>
-        <select
-          id="tx-category"
+        <Select
           name="categoryId"
-          defaultValue={defaultValues?.categoryId ?? ""}
-          className="flex h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-sm text-slate-900 focus:bg-white"
+          value={categoryId}
+          onValueChange={setCategoryId}
         >
-          <option value="">Sem categoria (Geral)</option>
-          {categorias.map((cat) => (
-            <option key={cat.id} value={cat.id}>
-              {cat.name} ({cat.type === "REVENUE" ? "Receita" : "Despesa"})
-            </option>
-          ))}
-        </select>
+          <SelectTrigger id="tx-category" className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 text-sm text-slate-900 focus:bg-white">
+            <SelectValue placeholder="Selecione a categoria" />
+          </SelectTrigger>
+          <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+            <SelectItem value="none">Sem categoria (Geral)</SelectItem>
+            {categorias.map((cat) => (
+              <SelectItem key={cat.id} value={cat.id}>
+                {cat.name} ({cat.type === "REVENUE" ? "Receita" : "Despesa"})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <input type="hidden" name="categoryId" value={categoryId === "none" ? "" : categoryId} />
       </div>
 
       <Button

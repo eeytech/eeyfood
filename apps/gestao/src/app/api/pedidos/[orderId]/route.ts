@@ -78,17 +78,7 @@ const parsePayload = async (request: Request): Promise<PedidoPatchPayload> => {
   return payload;
 };
 
-// Extrai o slug do restaurante autenticado injetado pelo middleware JWT
-const getCompanySlug = (request: Request): string | null => {
-  const raw = request.headers.get("x-user-data");
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as { companySlug?: unknown };
-    return typeof parsed.companySlug === "string" ? parsed.companySlug : null;
-  } catch {
-    return null;
-  }
-};
+import { validateRouteRestaurantAccess } from "@/lib/auth/session";
 
 export async function GET(request: Request, context: RouteContext) {
   const orderId = await getOrderId(context);
@@ -109,9 +99,8 @@ export async function GET(request: Request, context: RouteContext) {
     );
   }
 
-  // IDOR: garante que o pedido pertence ao restaurante autenticado
-  const companySlug = getCompanySlug(request);
-  if (companySlug && order.restaurant.slug !== companySlug) {
+  // IDOR: garante que o pedido pertence ao restaurante autenticado (ou SUPER_ADMIN)
+  if (!validateRouteRestaurantAccess(request, order.restaurant.slug)) {
     return NextResponse.json({ message: "Acesso negado." }, { status: 403 });
   }
 
@@ -138,18 +127,16 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   // IDOR: valida pertença ao restaurante antes de qualquer mutação
-  const companySlug = getCompanySlug(request);
-  if (companySlug) {
-    const existingOrder = await buscarPedidoRecebimentoPorId(orderId);
-    if (!existingOrder) {
-      return NextResponse.json(
-        { message: "Pedido não encontrado." },
-        { status: 404 },
-      );
-    }
-    if (existingOrder.restaurant.slug !== companySlug) {
-      return NextResponse.json({ message: "Acesso negado." }, { status: 403 });
-    }
+  const existingOrder = await buscarPedidoRecebimentoPorId(orderId);
+  if (!existingOrder) {
+    return NextResponse.json(
+      { message: "Pedido não encontrado." },
+      { status: 404 },
+    );
+  }
+
+  if (!validateRouteRestaurantAccess(request, existingOrder.restaurant.slug)) {
+    return NextResponse.json({ message: "Acesso negado." }, { status: 403 });
   }
 
   let updatedStatus: OrderStatus | undefined;

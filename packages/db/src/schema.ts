@@ -252,6 +252,20 @@ export const ticketCategoryEnum = pgEnum("TicketCategory", [
 
 export const ticketSenderEnum = pgEnum("TicketSender", ["USER", "SUPPORT"]);
 
+export const printerRoleEnum = pgEnum("PrinterRole", [
+  "KITCHEN",
+  "CASHIER",
+  "BAR",
+  "BOTH",
+]);
+
+export const printerConnectionTypeEnum = pgEnum("PrinterConnectionType", [
+  "NETWORK_TCP",
+  "WINDOWS_SPOOLER",
+  "BROWSER",
+  "LOCAL_AGENT",
+]);
+
 export const usersTable = pgTable("User", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
@@ -271,8 +285,8 @@ export const restaurantsTable = pgTable("Restaurant", {
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   description: text("description").notNull(),
-  avatarImageUrl: text("avatarImageUrl").notNull(),
-  coverImageUrl: text("coverImageUrl").notNull(),
+  avatarImageUrl: text("avatarImageUrl"),
+  coverImageUrl: text("coverImageUrl"),
   status: restaurantStatusEnum("status").default("AUTO").notNull(),
   cashbackPercent: doublePrecision("cashbackPercent").default(0).notNull(),
   acceptMercadoPago: boolean("acceptMercadoPago").default(true).notNull(),
@@ -287,6 +301,20 @@ export const restaurantsTable = pgTable("Restaurant", {
   isCouponsEnabled: boolean("isCouponsEnabled").default(true).notNull(),
   isCashbackEnabled: boolean("isCashbackEnabled").default(true).notNull(),
   showOptionImages: boolean("showOptionImages").default(true).notNull(),
+  showPromotionalBanners: boolean("showPromotionalBanners").default(true).notNull(),
+  promotionalBanners: jsonb("promotionalBanners").$type<
+    Array<{
+      id: string;
+      title: string;
+      subtitle?: string;
+      tag?: string;
+      imageUrl?: string;
+      gradient?: string;
+      linkUrl?: string;
+      buttonText?: string;
+      isActive: boolean;
+    }>
+  >(),
   isDeliveryEnabled: boolean("isDeliveryEnabled").default(true).notNull(),
   isTakeawayEnabled: boolean("isTakeawayEnabled").default(true).notNull(),
   isDineInEnabled: boolean("isDineInEnabled").default(true).notNull(),
@@ -312,6 +340,9 @@ export const restaurantsTable = pgTable("Restaurant", {
   schedulingHoursMode: text("schedulingHoursMode").default("OPERATING_HOURS").notNull(), // "OPERATING_HOURS" | "CUSTOM"
   schedulingCustomStartTime: text("schedulingCustomStartTime").default("11:00"),
   schedulingCustomEndTime: text("schedulingCustomEndTime").default("23:00"),
+  // Plan and enabled modules configuration (managed exclusively by SUPER_ADMIN)
+  planName: text("planName").default("COMPLETO").notNull(),
+  enabledModules: jsonb("enabledModules").$type<string[]>(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
@@ -381,7 +412,7 @@ export const productsTable = pgTable("Product", {
   description: text("description").notNull(),
   price: money("price").notNull(),
   costPrice: money("costPrice").default(0).notNull(),
-  imageUrl: text("imageUrl").notNull(),
+  imageUrl: text("imageUrl"),
   ingredients: text("ingredients").array().notNull(),
   sku: text("sku"),
   // Campos Fiscais
@@ -879,6 +910,7 @@ export const ordersTable = pgTable("Order", {
   nfeAccessKey: text("nfeAccessKey"),
   nfeDanfeUrl: text("nfeDanfeUrl"),
   nfeRejectionReason: text("nfeRejectionReason"),
+  nfeDocumentoId: text("nfeDocumentoId"),
   customerLedgerId: uuid("customerLedgerId").references(
     () => customerLedgersTable.id,
     { onDelete: "set null" },
@@ -1338,6 +1370,18 @@ export const fiscalSettingsTable = pgTable("FiscalSettings", {
   proximoNumeroNfce: integer("proximoNumeroNfce").default(1).notNull(),
   focusNfeToken: text("focusNfeToken"),
   webhookUrl: text("webhookUrl"),
+  // ACBr API - Autenticação OAuth 2.0 (client_credentials)
+  acbrClientId: text("acbrClientId"),
+  acbrClientSecret: text("acbrClientSecret"),
+  acbrToken: text("acbrToken"),
+  acbrTokenExpiresAt: timestamp("acbrTokenExpiresAt"),
+  tipoDocumentoPadrao: text("tipoDocumentoPadrao").default("NFCE").notNull(),
+  inscricaoMunicipal: text("inscricaoMunicipal"),
+  codigoMunicipio: text("codigoMunicipio"),
+  cscId: text("cscId"),
+  cscCodigo: text("cscCodigo"),
+  regimeTributario: text("regimeTributario").default("SIMPLES_NACIONAL"),
+  provedorNfse: text("provedorNfse").default("padrao"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
@@ -1475,6 +1519,7 @@ export const restaurantsRelations = relations(
   marketingSpends: many(marketingSpendTable),
   freeDeliveryRules: many(freeDeliveryRulesTable),
   supportTickets: many(supportTicketsTable),
+  printers: many(restaurantPrintersTable),
 }));
 
 export const orderRatingsRelations = relations(
@@ -2284,4 +2329,43 @@ export const supportTicketMessagesRelations = relations(
     }),
   }),
 );
+
+// ─── Restaurant Printers & Hardware Routing ──────────────────────────────────
+
+export const restaurantPrintersTable = pgTable("RestaurantPrinter", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  restaurantId: uuid("restaurantId")
+    .notNull()
+    .references(() => restaurantsTable.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  role: printerRoleEnum("role").default("KITCHEN").notNull(),
+  connectionType: printerConnectionTypeEnum("connectionType")
+    .default("NETWORK_TCP")
+    .notNull(),
+  ipAddress: text("ipAddress"),
+  port: integer("port").default(9100).notNull(),
+  spoolerName: text("spoolerName"),
+  paperWidth: integer("paperWidth").default(80).notNull(),
+  cutPaper: boolean("cutPaper").default(true).notNull(),
+  openDrawer: boolean("openDrawer").default(false).notNull(),
+  copies: integer("copies").default(1).notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  autoPrintOnNewOrder: boolean("autoPrintOnNewOrder").default(true).notNull(),
+  printPrices: boolean("printPrices").default(false).notNull(),
+  printCustomerDetails: boolean("printCustomerDetails").default(true).notNull(),
+  printObservations: boolean("printObservations").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export const restaurantPrintersRelations = relations(
+  restaurantPrintersTable,
+  ({ one }) => ({
+    restaurant: one(restaurantsTable, {
+      fields: [restaurantPrintersTable.restaurantId],
+      references: [restaurantsTable.id],
+    }),
+  }),
+);
+
 

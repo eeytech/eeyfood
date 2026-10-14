@@ -63,13 +63,19 @@ const RestaurantPage = async ({ searchParams }: RestaurantPageProps) => {
                 className="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-primary/50 hover:shadow-md"
               >
                 <div className="flex items-center gap-3">
-                  <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-slate-100 bg-slate-50">
-                    <Image
-                      src={branch.avatarImageUrl}
-                      alt={branch.name}
-                      fill
-                      className="object-cover"
-                    />
+                  <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-center">
+                    {branch.avatarImageUrl ? (
+                      <Image
+                        src={branch.avatarImageUrl}
+                        alt={branch.name}
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <span className="text-base font-bold text-slate-400">
+                        {branch.name.charAt(0)}
+                      </span>
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate text-base font-bold text-slate-900 group-hover:text-primary transition-colors">
@@ -166,13 +172,19 @@ const RestaurantPage = async ({ searchParams }: RestaurantPageProps) => {
   return (
     <div className="mx-auto flex min-h-screen max-w-[1200px] flex-col items-center justify-center px-3 py-8 sm:px-4 sm:py-16">
       <div className="flex flex-col items-center gap-2">
-        <Image
-          src={restaurant.avatarImageUrl}
-          alt={restaurant.name}
-          width={72}
-          height={72}
-          className="rounded-2xl"
-        />
+        {restaurant.avatarImageUrl ? (
+          <Image
+            src={restaurant.avatarImageUrl}
+            alt={restaurant.name}
+            width={72}
+            height={72}
+            className="rounded-2xl object-cover"
+          />
+        ) : (
+          <div className="flex h-[72px] w-[72px] items-center justify-center rounded-2xl bg-slate-200 text-2xl font-bold text-slate-500">
+            {restaurant.name.charAt(0)}
+          </div>
+        )}
         <h2 className="text-lg font-bold tracking-tight">{restaurant.name}</h2>
       </div>
 

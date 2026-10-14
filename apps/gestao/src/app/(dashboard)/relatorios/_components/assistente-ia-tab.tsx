@@ -18,6 +18,20 @@ interface AssistenteIaTabProps {
   slug: string;
 }
 
+const renderFormattedText = (text: string): React.ReactNode => {
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return (
+        <strong key={index} className="font-semibold text-slate-800">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    return part;
+  });
+};
+
 const MarkdownRenderer = ({ content }: { content: string }) => {
   const lines = content.split("\n");
   const elements: React.ReactNode[] = [];
@@ -45,26 +59,26 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
       );
     } else if (line.startsWith("- ")) {
       const text = line.replace(/^- /, "");
-      const formatted = text.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
       elements.push(
         <li
           key={i}
-          className="ml-4 list-disc text-sm text-slate-600 [&>strong]:font-semibold [&>strong]:text-slate-800"
-          dangerouslySetInnerHTML={{ __html: formatted }}
-        />,
+          className="ml-4 list-disc text-sm text-slate-600"
+        >
+          {renderFormattedText(text)}
+        </li>,
       );
     } else if (line.startsWith("---")) {
       elements.push(<hr key={i} className="my-4 border-slate-200" />);
     } else if (line.trim() === "") {
       elements.push(<div key={i} className="h-1" />);
     } else {
-      const formatted = line.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
       elements.push(
         <p
           key={i}
-          className="text-sm text-slate-600 [&>strong]:font-semibold [&>strong]:text-slate-800"
-          dangerouslySetInnerHTML={{ __html: formatted }}
-        />,
+          className="text-sm text-slate-600"
+        >
+          {renderFormattedText(line)}
+        </p>,
       );
     }
   }

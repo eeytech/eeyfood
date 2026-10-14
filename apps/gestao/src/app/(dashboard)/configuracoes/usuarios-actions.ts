@@ -12,9 +12,22 @@ import {
   usersTable,
 } from "@fsw/db";
 import type { UserRole } from "@fsw/db";
-import { getSession } from "@/lib/auth/session";
+import { assertRestaurantAccess } from "@/lib/auth/session";
+
+const VALID_USER_ROLES: readonly UserRole[] = [
+  "SUPER_ADMIN",
+  "ADMIN",
+  "MANAGER",
+  "WAITER",
+  "KITCHEN",
+  "PANEL",
+  "COURIER",
+  "ATTENDANT",
+] as const;
 
 export async function listarUsuariosAction(restaurantSlug?: string) {
+  await assertRestaurantAccess(restaurantSlug);
+
   const restaurant = await buscarRestaurantePorSlug(restaurantSlug);
 
   if (!restaurant) {
@@ -46,15 +59,29 @@ export async function criarUsuarioAction(
   _prevState: { error?: string; success?: boolean } | null,
   formData: FormData,
 ): Promise<{ error?: string; success?: boolean }> {
+  const restaurantSlug = formData.get("restaurantSlug")?.toString();
+
+  const session = await assertRestaurantAccess(restaurantSlug);
+  if (!session.role || !["SUPER_ADMIN", "ADMIN", "MANAGER"].includes(session.role)) {
+    return {
+      error: "Acesso negado: Você não possui permissão para cadastrar usuários.",
+    };
+  }
+
   const name = formData.get("name")?.toString().trim();
   const email = formData.get("email")?.toString().trim().toLowerCase();
   const password = formData.get("password")?.toString();
-  const role = (formData.get("role")?.toString() ?? "ADMIN") as UserRole;
-  const restaurantSlug = formData.get("restaurantSlug")?.toString();
+  const rawRole = (formData.get("role")?.toString() ?? "ADMIN") as UserRole;
 
   if (!name || !email || !password) {
     return { error: "Todos os campos obrigatórios devem ser preenchidos." };
   }
+
+  if (!VALID_USER_ROLES.includes(rawRole)) {
+    return { error: "Perfil de usuário inválido." };
+  }
+
+  const role = rawRole;
 
   if (password.length < 8 || !/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
     return {
@@ -70,8 +97,7 @@ export async function criarUsuarioAction(
     };
   }
 
-  const session = await getSession();
-  if (session?.role === "MANAGER" && role === "ADMIN") {
+  if (session.role === "MANAGER" && role === "ADMIN") {
     return {
       error:
         "Usuários com perfil de Gerente não têm permissão para cadastrar Administradores, pois este cargo está acima na hierarquia.",
@@ -97,12 +123,19 @@ export async function criarUsuarioAction(
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    if (role === "PANEL" || role === "COURIER" || role === "ATTENDANT") {
+    // Garante enum sem injeção de SQL dinâmico
+    if (role === "PANEL") {
       try {
-        await db.execute(sql`ALTER TYPE "public"."UserRole" ADD VALUE IF NOT EXISTS ${sql.raw(`'${role}'`)}`);
-      } catch {
-        // ignore if already present or permission
-      }
+        await db.execute(sql`ALTER TYPE "public"."UserRole" ADD VALUE IF NOT EXISTS 'PANEL'`);
+      } catch {}
+    } else if (role === "COURIER") {
+      try {
+        await db.execute(sql`ALTER TYPE "public"."UserRole" ADD VALUE IF NOT EXISTS 'COURIER'`);
+      } catch {}
+    } else if (role === "ATTENDANT") {
+      try {
+        await db.execute(sql`ALTER TYPE "public"."UserRole" ADD VALUE IF NOT EXISTS 'ATTENDANT'`);
+      } catch {}
     }
 
     await db.insert(usersTable).values({
@@ -131,18 +164,38 @@ export async function alternarStatusUsuarioAction(
   isActive: boolean,
   restaurantSlug?: string,
 ) {
-  const session = await getSession();
-  if (session?.role === "MANAGER") {
-    const [existing] = await db
-      .select({ id: usersTable.id, role: usersTable.role })
-      .from(usersTable)
-      .where(eq(usersTable.id, userId))
-      .limit(1);
+  const session = await assertRestaurantAccess(restaurantSlug);
+  if (!session.role || !["SUPER_ADMIN", "ADMIN", "MANAGER"].includes(session.role)) {
+    throw new Error("Acesso negado: Você não possui permissão para alterar o status de usuários.");
+  }
 
-    if (existing?.role === "ADMIN" || existing?.role === "SUPER_ADMIN") {
+  const [existing] = await db
+    .select({
+      id: usersTable.id,
+      role: usersTable.role,
+      restaurantId: usersTable.restaurantId,
+    })
+    .from(usersTable)
+    .where(eq(usersTable.id, userId))
+    .limit(1);
+
+  if (!existing) {
+    throw new Error("Usuário não encontrado.");
+  }
+
+  if (session.role === "MANAGER") {
+    if (existing.role === "ADMIN" || existing.role === "SUPER_ADMIN") {
       throw new Error(
         "Usuários com perfil de Gerente não têm permissão para alterar o status de Administradores.",
       );
+    }
+  }
+
+  // Se não for SUPER_ADMIN, não pode alterar usuários de outro restaurante
+  if (session.role !== "SUPER_ADMIN" && existing.restaurantId) {
+    const userCompanyId = session.activeCompanyId || session.companyId;
+    if (userCompanyId && existing.restaurantId !== userCompanyId) {
+      throw new Error("Acesso negado: Este usuário pertence a outra unidade.");
     }
   }
 
@@ -166,8 +219,17 @@ export async function atualizarUsuarioAction(params: {
 }): Promise<{ error?: string; success?: boolean }> {
   const { userId, name, role, password, restaurantSlug } = params;
 
+  const session = await assertRestaurantAccess(restaurantSlug);
+  if (!session.role || !["SUPER_ADMIN", "ADMIN", "MANAGER"].includes(session.role)) {
+    return { error: "Acesso negado: Você não possui permissão para editar usuários." };
+  }
+
   if (!name.trim()) {
     return { error: "O nome do usuário não pode ficar vazio." };
+  }
+
+  if (!VALID_USER_ROLES.includes(role)) {
+    return { error: "Perfil de usuário selecionado é inválido." };
   }
 
   if (password && password.trim()) {
@@ -182,24 +244,38 @@ export async function atualizarUsuarioAction(params: {
 
   try {
     const [existing] = await db
-      .select({ id: usersTable.id, role: usersTable.role })
+      .select({
+        id: usersTable.id,
+        role: usersTable.role,
+        restaurantId: usersTable.restaurantId,
+      })
       .from(usersTable)
       .where(eq(usersTable.id, userId))
       .limit(1);
 
-    if (existing?.role === "SUPER_ADMIN" && role !== "SUPER_ADMIN") {
+    if (!existing) {
+      return { error: "Usuário não encontrado." };
+    }
+
+    if (existing.role === "SUPER_ADMIN" && role !== "SUPER_ADMIN") {
       return { error: "O cargo do Super Administrador não pode ser alterado." };
     }
 
-    if (existing?.role !== "SUPER_ADMIN" && role === "SUPER_ADMIN") {
+    if (existing.role !== "SUPER_ADMIN" && role === "SUPER_ADMIN") {
       return {
-        error:
-          "Não é permitido promover usuários para Super Administrador.",
+        error: "Não é permitido promover usuários para Super Administrador.",
       };
     }
 
-    const session = await getSession();
-    if (session?.role === "MANAGER") {
+    // Se não for SUPER_ADMIN, não pode alterar usuários de outra unidade
+    if (session.role !== "SUPER_ADMIN" && existing.restaurantId) {
+      const userCompanyId = session.activeCompanyId || session.companyId;
+      if (userCompanyId && existing.restaurantId !== userCompanyId) {
+        return { error: "Acesso negado: Este usuário pertence a outra unidade." };
+      }
+    }
+
+    if (session.role === "MANAGER") {
       if (role === "ADMIN" || role === "SUPER_ADMIN") {
         return {
           error:
@@ -207,7 +283,7 @@ export async function atualizarUsuarioAction(params: {
         };
       }
 
-      if (existing?.role === "ADMIN" || existing?.role === "SUPER_ADMIN") {
+      if (existing.role === "ADMIN" || existing.role === "SUPER_ADMIN") {
         return {
           error:
             "Usuários com perfil de Gerente não têm permissão para alterar dados de Administradores.",
@@ -226,16 +302,22 @@ export async function atualizarUsuarioAction(params: {
       updatedAt: new Date(),
     };
 
-    if (password && password.trim().length >= 6) {
+    if (password && password.trim().length >= 8) {
       updateData.passwordHash = await bcrypt.hash(password.trim(), 10);
     }
 
-    if (role === "PANEL" || role === "COURIER" || role === "ATTENDANT") {
+    if (role === "PANEL") {
       try {
-        await db.execute(sql`ALTER TYPE "public"."UserRole" ADD VALUE IF NOT EXISTS ${sql.raw(`'${role}'`)}`);
-      } catch {
-        // ignore if already present or permission
-      }
+        await db.execute(sql`ALTER TYPE "public"."UserRole" ADD VALUE IF NOT EXISTS 'PANEL'`);
+      } catch {}
+    } else if (role === "COURIER") {
+      try {
+        await db.execute(sql`ALTER TYPE "public"."UserRole" ADD VALUE IF NOT EXISTS 'COURIER'`);
+      } catch {}
+    } else if (role === "ATTENDANT") {
+      try {
+        await db.execute(sql`ALTER TYPE "public"."UserRole" ADD VALUE IF NOT EXISTS 'ATTENDANT'`);
+      } catch {}
     }
 
     await db
@@ -261,18 +343,38 @@ export async function excluirUsuarioAction(
   restaurantSlug?: string,
 ): Promise<{ error?: string; success?: boolean }> {
   try {
+    const session = await assertRestaurantAccess(restaurantSlug);
+    if (!session.role || !["SUPER_ADMIN", "ADMIN", "MANAGER"].includes(session.role)) {
+      return { error: "Acesso negado: Você não possui permissão para excluir usuários." };
+    }
+
     const [existing] = await db
-      .select({ id: usersTable.id, role: usersTable.role })
+      .select({
+        id: usersTable.id,
+        role: usersTable.role,
+        restaurantId: usersTable.restaurantId,
+      })
       .from(usersTable)
       .where(eq(usersTable.id, userId))
       .limit(1);
 
-    if (existing?.role === "SUPER_ADMIN") {
+    if (!existing) {
+      return { error: "Usuário não encontrado." };
+    }
+
+    if (existing.role === "SUPER_ADMIN") {
       return { error: "O Super Administrador não pode ser excluído." };
     }
 
-    const session = await getSession();
-    if (session?.role === "MANAGER" && existing?.role === "ADMIN") {
+    // Se não for SUPER_ADMIN, não pode excluir usuários de outra unidade
+    if (session.role !== "SUPER_ADMIN" && existing.restaurantId) {
+      const userCompanyId = session.activeCompanyId || session.companyId;
+      if (userCompanyId && existing.restaurantId !== userCompanyId) {
+        return { error: "Acesso negado: Este usuário pertence a outra unidade." };
+      }
+    }
+
+    if (session.role === "MANAGER" && existing.role === "ADMIN") {
       return {
         error:
           "Usuários com perfil de Gerente não têm permissão para excluir Administradores.",

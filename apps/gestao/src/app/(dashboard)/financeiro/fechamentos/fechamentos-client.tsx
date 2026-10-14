@@ -21,6 +21,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -234,37 +241,43 @@ export function FechamentosClient({
             </div>
 
             <div className="flex items-center gap-2">
-              <select
-                aria-label="Mês de competência"
-                value={selectedMes}
-                onChange={(e) => {
-                  setSelectedMes(Number(e.target.value));
+              <Select
+                value={String(selectedMes)}
+                onValueChange={(val) => {
+                  setSelectedMes(Number(val));
                   setPrevia(null);
                 }}
-                className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-2xs focus:outline-hidden"
               >
-                {MESES.map((m) => (
-                  <option key={m.value} value={m.value}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger aria-label="Mês de competência" className="h-9 w-36 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-2xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+                  {MESES.map((m) => (
+                    <SelectItem key={m.value} value={String(m.value)} className="text-xs">
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-              <select
-                aria-label="Ano de competência"
-                value={selectedAno}
-                onChange={(e) => {
-                  setSelectedAno(Number(e.target.value));
+              <Select
+                value={String(selectedAno)}
+                onValueChange={(val) => {
+                  setSelectedAno(Number(val));
                   setPrevia(null);
                 }}
-                className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-2xs focus:outline-hidden"
               >
-                {ANOS.map((a) => (
-                  <option key={a} value={a}>
-                    {a}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger aria-label="Ano de competência" className="h-9 w-24 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-2xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+                  {ANOS.map((a) => (
+                    <SelectItem key={a} value={String(a)} className="text-xs">
+                      {a}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
               <Button
                 type="button"

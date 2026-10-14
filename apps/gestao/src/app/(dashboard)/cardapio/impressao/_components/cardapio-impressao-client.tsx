@@ -33,6 +33,7 @@ import { useTheme } from "@/components/theme-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -1419,15 +1420,13 @@ export function CardapioImpressaoClient({
                               <span className="text-[10px] font-mono text-slate-500 bg-white border border-slate-200 px-1.5 py-0.5 rounded shrink-0">
                                 #{idx + 1}
                               </span>
-                              <label className="flex items-center gap-2 text-xs font-semibold text-slate-800 cursor-pointer truncate">
-                                <input
-                                  type="checkbox"
+                              <div className="flex items-center gap-2 text-xs font-semibold text-slate-800 cursor-pointer truncate">
+                                <Checkbox
                                   checked={isCatChecked}
-                                  onChange={() => toggleCategory(cat.id)}
-                                  className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900 shrink-0"
+                                  onCheckedChange={() => toggleCategory(cat.id)}
                                 />
                                 <span className="truncate">{cat.name}</span>
-                              </label>
+                              </div>
                             </div>
 
                             <div className="flex items-center gap-1 shrink-0">
@@ -1478,11 +1477,9 @@ export function CardapioImpressaoClient({
                                     className="flex items-center justify-between text-[11px] text-slate-600 hover:text-slate-900 cursor-pointer py-0.5"
                                   >
                                     <div className="flex items-center gap-2 truncate">
-                                      <input
-                                        type="checkbox"
+                                      <Checkbox
                                         checked={isProdChecked}
-                                        onChange={() => toggleProduct(prod.id)}
-                                        className="h-3 w-3 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
+                                        onCheckedChange={() => toggleProduct(prod.id)}
                                       />
                                       <span className={cn(!isProdChecked && "line-through text-slate-400")}>
                                         {prod.name}

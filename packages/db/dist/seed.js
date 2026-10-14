@@ -99,6 +99,11 @@ const main = async () => {
             serieNfce: "001",
             proximoNumeroNfce: 1,
             focusNfeToken: "homologacao_token_ficticio_1234567890",
+            acbrClientId: "acbr_client_id_homologacao",
+            acbrClientSecret: "acbr_client_secret_homologacao",
+            tipoDocumentoPadrao: "NFCE",
+            cscId: "000001",
+            cscCodigo: "123456789ABCDEF",
         });
         await tx.insert(aiSettingsTable).values({
             restaurantId: restaurant.id,

@@ -64,13 +64,17 @@ const RestaurantHeader = ({
   return (
     <div className={`relative w-full overflow-hidden ${isKioskMode ? "h-[200px]" : "h-[280px] sm:h-[320px] lg:h-[380px]"}`}>
       <div className="absolute inset-0 bg-slate-950/20" />
-      <Image
-        src={restaurant.coverImageUrl}
-        alt={restaurant.name}
-        fill
-        priority
-        className="object-cover"
-      />
+      {restaurant.coverImageUrl ? (
+        <Image
+          src={restaurant.coverImageUrl}
+          alt={restaurant.name}
+          fill
+          priority
+          className="object-cover"
+        />
+      ) : (
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-950" />
+      )}
 
       {!isKioskMode && (
         <div className="absolute inset-x-0 top-0 z-20 mx-auto flex w-full max-w-[1600px] items-start justify-between px-4 pt-4 sm:px-6 lg:px-8 lg:pt-6">

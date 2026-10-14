@@ -3,6 +3,7 @@
 import {
   BarChart3Icon,
   BikeIcon,
+  BookOpenIcon,
   BoxesIcon,
   CircleDollarSignIcon,
   ClipboardListIcon,
@@ -39,9 +40,41 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { CompanySwitcher } from "@/components/auth/CompanySwitcher";
+import { ScreenHelpTrigger } from "@/components/docs/screen-help-trigger";
 import { logoutAction } from "@/lib/auth/actions";
+import { isModuleEnabled } from "@fsw/db";
 import { cn } from "@/lib/utils";
 import type { TokenCompany } from "@/lib/auth/types";
+
+const HREF_TO_MODULE: Record<string, string> = {
+  pedidos: "pedidos",
+  pdv: "pdv",
+  comandas: "comandas",
+  mesas: "mesas",
+  "mesas/qrcodes": "mesas",
+  kds: "kds",
+  entregas: "entregas",
+  cardapio: "cardapio",
+  "cardapio/impressao": "cardapio",
+  estoque: "estoque",
+  "estoque/compras": "estoque",
+  financeiro: "financeiro",
+  relatorios: "relatorios",
+  crm: "crm",
+  "marketing/banners": "marketing_banners",
+  campanhas: "campanhas",
+  cupons: "cupons",
+  cashback: "cashback",
+  frete: "frete",
+  configuracoes: "configuracoes",
+  "configuracoes/documentacoes": "documentacoes",
+  logistica: "entregas",
+  "configuracoes/usuarios": "usuarios",
+  marketplaces: "marketplaces",
+  whatsapp: "whatsapp",
+  ai: "ai",
+  marketing: "marketing",
+};
 
 interface AdminSidebarProps {
   slug?: string;
@@ -52,6 +85,7 @@ interface AdminSidebarProps {
   userRole?: string;
   userName?: string;
   userEmail?: string;
+  enabledModules?: string[] | null;
   children?: React.ReactNode;
 }
 
@@ -61,6 +95,7 @@ const AdminSidebar = ({
   restaurantName,
   companies,
   currentCompanyId,
+  enabledModules,
   children,
 }: AdminSidebarProps) => {
   const pathname = usePathname();
@@ -96,6 +131,7 @@ const AdminSidebar = ({
 
   const activeGroups = useMemo(() => {
     const role = userRole || "ADMIN";
+    const isSuperAdmin = role === "SUPER_ADMIN";
     const isManagement = ["SUPER_ADMIN", "ADMIN", "MANAGER"].includes(role);
     const isAttendant = role === "ATTENDANT";
     const isWaiter = role === "WAITER";
@@ -165,6 +201,7 @@ const AdminSidebar = ({
           label: "Configurações",
           items: [
             { href: "configuracoes", label: "Geral", icon: StoreIcon },
+            { href: "configuracoes/documentacoes", label: "Documentações", icon: BookOpenIcon },
             { href: "logistica", label: "Logística e Motoboys", icon: TruckIcon },
             { href: "configuracoes/usuarios", label: "Acessos", icon: Users2Icon },
             { href: "marketplaces", label: "Marketplaces", icon: ShoppingBagIcon },
@@ -176,8 +213,22 @@ const AdminSidebar = ({
       );
     }
 
+    // Se não for SUPER_ADMIN, filtra os módulos baseado na licença/plano do restaurante
+    if (!isSuperAdmin && enabledModules && Array.isArray(enabledModules)) {
+      return groups
+        .map((group) => ({
+          ...group,
+          items: group.items.filter((item) => {
+            const moduleId = HREF_TO_MODULE[item.href];
+            if (!moduleId || moduleId === "configuracoes") return true;
+            return isModuleEnabled(moduleId, enabledModules);
+          }),
+        }))
+        .filter((group) => group.items.length > 0);
+    }
+
     return groups;
-  }, [userRole]);
+  }, [userRole, enabledModules]);
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-slate-50/70">
@@ -365,10 +416,10 @@ const AdminSidebar = ({
 
       {/* Área Direita: Linha Fixa Superior + Conteúdo da Tela */}
       <div className="flex flex-1 flex-col h-screen min-w-0 overflow-hidden">
-        {/* Linha fixa no topo para o botão quando a sidebar estiver recolhida */}
-        {isCollapsed && (
-          <header className="flex h-12 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-3 sm:px-4 shadow-xs z-20">
-            <div className="flex items-center gap-3">
+        {/* Linha fixa no topo para navegação e ajuda contextual */}
+        <header className="flex h-12 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-3 sm:px-4 shadow-xs z-20">
+          <div className="flex items-center gap-3 min-w-0">
+            {isCollapsed ? (
               <Button
                 variant="outline"
                 size="sm"
@@ -379,27 +430,44 @@ const AdminSidebar = ({
                 <MenuIcon size={15} className="text-slate-700" />
                 <span>Abrir Menu</span>
               </Button>
-
-              <div className="h-4 w-px bg-slate-200" />
-
+            ) : (
               <div className="flex items-center gap-2 min-w-0">
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/15 border border-primary/25 p-0.5">
-                  <Image
-                    src="/logo-icon.png"
-                    alt="Logo"
-                    width={18}
-                    height={18}
-                    className="h-full w-full object-contain"
-                  />
-                </div>
                 <span className="truncate text-xs font-semibold text-slate-800">
                   {restaurantName || "Gestão"}
                 </span>
+                <span className="hidden sm:inline-block text-[11px] text-slate-400 font-medium">
+                  • Painel de Gestão
+                </span>
               </div>
-            </div>
+            )}
+
+            {isCollapsed && (
+              <>
+                <div className="h-4 w-px bg-slate-200" />
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/15 border border-primary/25 p-0.5">
+                    <Image
+                      src="/logo-icon.png"
+                      alt="Logo"
+                      width={18}
+                      height={18}
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
+                  <span className="truncate text-xs font-semibold text-slate-800">
+                    {restaurantName || "Gestão"}
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Botão Contextual de Como Usar Esta Tela */}
+            <ScreenHelpTrigger variant="header" />
 
             {userName && (
-              <div className="flex items-center gap-2 text-xs text-slate-500">
+              <div className="flex items-center gap-2 text-xs text-slate-500 pl-2 sm:border-l sm:border-slate-200">
                 <span className="hidden sm:inline-block font-medium text-slate-700 truncate max-w-[150px]">
                   {userName}
                 </span>
@@ -414,13 +482,14 @@ const AdminSidebar = ({
                 </span>
               </div>
             )}
-          </header>
-        )}
+          </div>
+        </header>
 
         {/* Conteúdo Principal logo abaixo da linha */}
         {children && (
-          <main className="flex-1 overflow-y-auto p-3 md:p-4 lg:p-5">
+          <main className="flex-1 overflow-y-auto p-3 md:p-4 lg:p-5 relative">
             {children}
+            <ScreenHelpTrigger variant="floating" />
           </main>
         )}
       </div>

@@ -167,12 +167,36 @@ export const atualizarStatusFiscalPedido = async (
     nfeAccessKey?: string | null;
     nfeDanfeUrl?: string | null;
     nfeRejectionReason?: string | null;
+    nfeDocumentoId?: string | null;
   },
 ) => {
   await db
     .update(ordersTable)
     .set({ ...data, updatedAt: new Date() })
     .where(eq(ordersTable.id, orderId));
+};
+
+export const incrementarNumeroFiscal = async (
+  restaurantId: string,
+  tipo: "NFCE" | "NFE" = "NFCE",
+) => {
+  if (tipo === "NFCE") {
+    await db
+      .update(fiscalSettingsTable)
+      .set({
+        proximoNumeroNfce: sql`${fiscalSettingsTable.proximoNumeroNfce} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(fiscalSettingsTable.restaurantId, restaurantId));
+  } else {
+    await db
+      .update(fiscalSettingsTable)
+      .set({
+        proximoNumeroNfe: sql`${fiscalSettingsTable.proximoNumeroNfe} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(fiscalSettingsTable.restaurantId, restaurantId));
+  }
 };
 
 // ─── Livro de Fiados ─────────────────────────────────────────────────────────

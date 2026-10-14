@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import type { DiningTable } from "@fsw/db";
 
@@ -22,6 +23,7 @@ interface MesaFormProps {
 export function MesaForm({ slug, defaultValues, onSuccess }: MesaFormProps) {
   const [isPending, startTransition] = useTransition();
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isActive, setIsActive] = useState<boolean>(defaultValues?.isActive ?? true);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -108,15 +110,22 @@ export function MesaForm({ slug, defaultValues, onSuccess }: MesaFormProps) {
         </div>
       </div>
 
-      <label className="flex cursor-pointer items-center gap-2.5 rounded-md border bg-slate-50 px-3 py-2.5 text-sm font-medium">
-        <input
-          type="checkbox"
-          name="isActive"
-          defaultChecked={defaultValues?.isActive ?? true}
-          className="h-4 w-4 rounded"
+      <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/50 p-3">
+        <div className="space-y-0.5">
+          <Label htmlFor="mesa-active" className="text-xs font-semibold text-slate-800 cursor-pointer">
+            Mesa ativa
+          </Label>
+          <p className="text-[11px] text-slate-500">
+            Disponível para abertura e lançamento de comandas no salão
+          </p>
+        </div>
+        <Switch
+          id="mesa-active"
+          checked={isActive}
+          onCheckedChange={setIsActive}
         />
-        Mesa ativa
-      </label>
+        <input type="hidden" name="isActive" value={isActive ? "on" : "off"} />
+      </div>
 
       <Button type="submit" className="w-full" disabled={isPending}>
         {isPending

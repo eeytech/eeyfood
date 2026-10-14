@@ -17,9 +17,10 @@ import {
 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-
+import type { PromotionalBannerItem } from "@fsw/db";
 import { updateRestaurantFeaturesAction } from "@/app/(dashboard)/actions";
 import { Button } from "@/components/ui/button";
+import { PromotionalBannersManager } from "./promotional-banners-manager";
 import {
   Card,
   CardContent,
@@ -29,6 +30,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 
 interface RestaurantFeaturesFormProps {
@@ -46,6 +48,8 @@ interface RestaurantFeaturesFormProps {
     isCouponsEnabled: boolean;
     isCashbackEnabled: boolean;
     showOptionImages: boolean;
+    showPromotionalBanners?: boolean;
+    promotionalBanners?: PromotionalBannerItem[];
     isDeliveryEnabled: boolean;
     isTakeawayEnabled: boolean;
     isDineInEnabled: boolean;
@@ -85,6 +89,12 @@ export const RestaurantFeaturesForm = ({
   );
   const [showOptionImages, setShowOptionImages] = useState(
     initialValues.showOptionImages,
+  );
+  const [showPromotionalBanners, setShowPromotionalBanners] = useState(
+    initialValues.showPromotionalBanners ?? true,
+  );
+  const [banners, setBanners] = useState<PromotionalBannerItem[]>(
+    initialValues.promotionalBanners ?? [],
   );
   const [isDeliveryEnabled, setIsDeliveryEnabled] = useState(
     initialValues.isDeliveryEnabled,
@@ -152,6 +162,8 @@ export const RestaurantFeaturesForm = ({
     if (acceptValeRefeicao) formData.append("acceptValeRefeicao", "on");
     if (acceptValeAlimentacao) formData.append("acceptValeAlimentacao", "on");
     if (showOptionImages) formData.append("showOptionImages", "on");
+    if (showPromotionalBanners) formData.append("showPromotionalBanners", "on");
+    formData.append("promotionalBanners", JSON.stringify(banners));
     if (isDeliveryEnabled) formData.append("isDeliveryEnabled", "on");
     if (isTakeawayEnabled) formData.append("isTakeawayEnabled", "on");
     if (isDineInEnabled) formData.append("isDineInEnabled", "on");
@@ -262,7 +274,11 @@ export const RestaurantFeaturesForm = ({
               Define a fórmula aplicada quando o cliente seleciona dois sabores no App de Vendas ou no PDV Frente de Caixa.
             </p>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <RadioGroup
+              value={pizzaPricingRule}
+              onValueChange={(val) => setPizzaPricingRule(val as "MAX" | "AVERAGE")}
+              className="grid gap-3 sm:grid-cols-2"
+            >
               {/* Opção Maior Valor */}
               <label
                 className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-all ${
@@ -271,13 +287,9 @@ export const RestaurantFeaturesForm = ({
                     : "border-slate-200/80 bg-white hover:border-slate-300"
                 }`}
               >
-                <input
-                  type="radio"
-                  name="pizzaPricingRuleRadio"
+                <RadioGroupItem
                   value="MAX"
-                  checked={pizzaPricingRule === "MAX"}
-                  onChange={() => setPizzaPricingRule("MAX")}
-                  className="mt-1 h-4 w-4 accent-primary"
+                  className="mt-1"
                 />
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
@@ -305,13 +317,9 @@ export const RestaurantFeaturesForm = ({
                     : "border-slate-200/80 bg-white hover:border-slate-300"
                 }`}
               >
-                <input
-                  type="radio"
-                  name="pizzaPricingRuleRadio"
+                <RadioGroupItem
                   value="AVERAGE"
-                  checked={pizzaPricingRule === "AVERAGE"}
-                  onChange={() => setPizzaPricingRule("AVERAGE")}
-                  className="mt-1 h-4 w-4 accent-primary"
+                  className="mt-1"
                 />
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
@@ -330,7 +338,7 @@ export const RestaurantFeaturesForm = ({
                   </p>
                 </div>
               </label>
-            </div>
+            </RadioGroup>
           </div>
 
           {/* Funcionalidades Gerais */}
@@ -829,6 +837,18 @@ export const RestaurantFeaturesForm = ({
                   disabled={isPending}
                 />
               </div>
+
+              {/* Carrossel de Destaques e Promoções no Topo do Cardápio */}
+              <PromotionalBannersManager
+                showPromotionalBanners={showPromotionalBanners}
+                onToggleShow={setShowPromotionalBanners}
+                banners={banners}
+                onBannersChange={setBanners}
+                isCashbackEnabled={initialValues.isCashbackEnabled}
+                isCouponsEnabled={initialValues.isCouponsEnabled}
+                isDeliveryEnabled={isDeliveryEnabled}
+                disabled={isPending}
+              />
             </div>
           </div>
 

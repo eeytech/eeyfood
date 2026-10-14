@@ -43,6 +43,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { formatCpf, formatPhone } from "@/lib/masks";
+import {
   Table,
   TableBody,
   TableCell,
@@ -81,6 +89,9 @@ function FiadoForm({
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   isPending: boolean;
 }) {
+  const [cpf, setCpf] = useState(formatCpf(defaultValues?.customerCpf ?? ""));
+  const [phone, setPhone] = useState(formatPhone(defaultValues?.customerPhone ?? ""));
+
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="space-y-1.5">
@@ -106,7 +117,8 @@ function FiadoForm({
             id="fiado-cpf"
             name="customerCpf"
             placeholder="000.000.000-00"
-            defaultValue={defaultValues?.customerCpf ?? ""}
+            value={cpf}
+            onChange={(e) => setCpf(formatCpf(e.target.value))}
             className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm text-slate-900 focus:bg-white"
           />
         </div>
@@ -118,7 +130,8 @@ function FiadoForm({
             id="fiado-phone"
             name="customerPhone"
             placeholder="(00) 00000-0000"
-            defaultValue={defaultValues?.customerPhone ?? ""}
+            value={phone}
+            onChange={(e) => setPhone(formatPhone(e.target.value))}
             className="h-10 rounded-xl border-slate-200 bg-slate-50/70 text-sm text-slate-900 focus:bg-white"
           />
         </div>
@@ -175,6 +188,8 @@ function PagamentoForm({
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   isPending: boolean;
 }) {
+  const [bankAccountId, setBankAccountId] = useState<string>("none");
+
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3 text-xs">
@@ -207,18 +222,28 @@ function PagamentoForm({
           <Label htmlFor="pag-conta" className="text-xs font-semibold text-slate-700">
             Conta de Destino (Opcional)
           </Label>
-          <select
-            id="pag-conta"
+          <Select
             name="bankAccountId"
-            className="flex h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-sm text-slate-900 focus:bg-white"
+            value={bankAccountId}
+            onValueChange={setBankAccountId}
           >
-            <option value="">Nenhuma (lançamento avulso)</option>
-            {contas.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id="pag-conta" className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 text-sm text-slate-900 focus:bg-white">
+              <SelectValue placeholder="Nenhuma (lançamento avulso)" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+              <SelectItem value="none">Nenhuma (lançamento avulso)</SelectItem>
+              {contas.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <input
+            type="hidden"
+            name="bankAccountId"
+            value={bankAccountId === "none" ? "" : bankAccountId}
+          />
         </div>
       )}
 

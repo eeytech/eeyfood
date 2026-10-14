@@ -55,6 +55,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { formatCpf, formatPhone } from "@/lib/masks";
 import { cn } from "@/lib/utils";
 import {
   alternarStatusFuncionarioAction,
@@ -107,6 +108,8 @@ export function FuncionariosTab({
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingFuncionario, setEditingFuncionario] = useState<Employee | null>(null);
+  const [formCpf, setFormCpf] = useState("");
+  const [formPhone, setFormPhone] = useState("");
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [funcionarioToDelete, setFuncionarioToDelete] = useState<Employee | null>(null);
@@ -118,7 +121,11 @@ export function FuncionariosTab({
   const setCreateOpen = (val: boolean) => {
     setModalOpen(val);
     onNewFuncionarioOpenChange?.(val);
-    if (!val) setEditingFuncionario(null);
+    if (!val) {
+      setEditingFuncionario(null);
+      setFormCpf("");
+      setFormPhone("");
+    }
   };
 
   const formatCurrency = (val: number) => {
@@ -155,6 +162,8 @@ export function FuncionariosTab({
 
   const handleEdit = (f: Employee) => {
     setEditingFuncionario(f);
+    setFormCpf(formatCpf(f.cpf || ""));
+    setFormPhone(formatPhone(f.phone || ""));
     setCreateOpen(true);
   };
 
@@ -630,7 +639,7 @@ export function FuncionariosTab({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5 sm:col-span-2">
                 <Label htmlFor="name" className="text-xs font-semibold text-slate-700">
-                  Nome Completo *
+                  Nome Completo
                 </Label>
                 <Input
                   id="name"
@@ -644,7 +653,7 @@ export function FuncionariosTab({
 
               <div className="space-y-1.5">
                 <Label htmlFor="roleTitle" className="text-xs font-semibold text-slate-700">
-                  Cargo / Função *
+                  Cargo / Função
                 </Label>
                 <Input
                   id="roleTitle"
@@ -769,7 +778,8 @@ export function FuncionariosTab({
                 <Input
                   id="cpf"
                   name="cpf"
-                  defaultValue={editingFuncionario?.cpf || ""}
+                  value={formCpf}
+                  onChange={(e) => setFormCpf(formatCpf(e.target.value))}
                   placeholder="000.000.000-00"
                   className="h-10 rounded-xl border-slate-200 text-xs focus:bg-white"
                 />
@@ -782,7 +792,8 @@ export function FuncionariosTab({
                 <Input
                   id="phone"
                   name="phone"
-                  defaultValue={editingFuncionario?.phone || ""}
+                  value={formPhone}
+                  onChange={(e) => setFormPhone(formatPhone(e.target.value))}
                   placeholder="(00) 00000-0000"
                   className="h-10 rounded-xl border-slate-200 text-xs focus:bg-white"
                 />

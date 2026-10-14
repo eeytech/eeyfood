@@ -3,12 +3,15 @@ import {
   ClockIcon,
   PaletteIcon,
   PizzaIcon,
+  PrinterIcon,
   Settings2Icon,
+  ShieldCheckIcon,
   ShoppingBagIcon,
   StoreIcon,
   ToggleRightIcon,
 } from "lucide-react";
 import { notFound } from "next/navigation";
+import { buscarImpressorasPorSlug } from "@fsw/db";
 
 import {
   Card,
@@ -18,10 +21,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   buscarConfiguracoesRestaurante,
 } from "@/lib/admin-queries";
+import { getSession } from "@/lib/auth/session";
 
 import { RestaurantDetailsForm } from "./restaurant-details-form";
 import { RestaurantFeaturesForm } from "./restaurant-features-form";
 import { RestaurantHoursSchedulingForm } from "./restaurant-hours-scheduling-form";
+import { RestaurantPlanForm } from "./restaurant-plan-form";
+import { RestaurantPrintersManager } from "./restaurant-printers-manager";
 import { ThemeSettings } from "./theme-settings";
 
 interface ConfiguracoesPageProps {
@@ -34,12 +40,20 @@ const ConfiguracoesPage = async ({
   searchParams,
 }: ConfiguracoesPageProps) => {
   const { slug } = await params;
+  const session = await getSession();
+  const isSuperAdmin = session?.role === "SUPER_ADMIN";
+
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const allowedTabs = [
+    "estabelecimento",
+    "modulos",
+    "funcionamento",
+    "impressoras",
+    "tema",
+    ...(isSuperAdmin ? ["plano"] : []),
+  ];
   const defaultTab =
-    resolvedSearchParams?.tab &&
-    ["estabelecimento", "modulos", "funcionamento", "tema"].includes(
-      resolvedSearchParams.tab,
-    )
+    resolvedSearchParams?.tab && allowedTabs.includes(resolvedSearchParams.tab)
       ? resolvedSearchParams.tab
       : "estabelecimento";
 
@@ -50,6 +64,7 @@ const ConfiguracoesPage = async ({
   }
 
   const { restaurant, operatingHours } = config;
+  const printers = await buscarImpressorasPorSlug(slug);
 
   const activeDaysCount = operatingHours.length;
   const activeChannels = [
@@ -200,12 +215,31 @@ const ConfiguracoesPage = async ({
             Horários e Agendamento
           </TabsTrigger>
           <TabsTrigger
+            value="impressoras"
+            className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 transition data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs"
+          >
+            <PrinterIcon size={15} className="mr-1.5" />
+            Impressoras & Vias
+          </TabsTrigger>
+          <TabsTrigger
             value="tema"
             className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 transition data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs"
           >
             <PaletteIcon size={15} className="mr-1.5" />
             Aparência e Tema
           </TabsTrigger>
+          {isSuperAdmin && (
+            <TabsTrigger
+              value="plano"
+              className="rounded-xl px-4 py-2 text-xs font-semibold text-amber-700 transition data-[state=active]:bg-amber-600 data-[state=active]:text-white data-[state=active]:shadow-xs"
+            >
+              <ShieldCheckIcon size={15} className="mr-1.5 text-amber-600 data-[state=active]:text-white" />
+              Plano & Módulos
+              <span className="ml-1.5 rounded-full bg-amber-500/15 px-1.5 py-0.2 text-[9px] font-bold uppercase tracking-wider text-amber-800 border border-amber-300">
+                Super Admin
+              </span>
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="estabelecimento" className="mt-5">
@@ -239,6 +273,8 @@ const ConfiguracoesPage = async ({
               isCouponsEnabled: restaurant.isCouponsEnabled,
               isCashbackEnabled: restaurant.isCashbackEnabled,
               showOptionImages: restaurant.showOptionImages,
+              showPromotionalBanners: restaurant.showPromotionalBanners ?? true,
+              promotionalBanners: (restaurant.promotionalBanners as any) ?? [],
               isDeliveryEnabled: restaurant.isDeliveryEnabled,
               isTakeawayEnabled: restaurant.isTakeawayEnabled,
               isDineInEnabled: restaurant.isDineInEnabled,
@@ -266,9 +302,27 @@ const ConfiguracoesPage = async ({
           />
         </TabsContent>
 
+        <TabsContent value="impressoras" className="mt-5">
+          <RestaurantPrintersManager
+            slug={slug}
+            initialPrinters={printers}
+          />
+        </TabsContent>
+
         <TabsContent value="tema" className="mt-5">
           <ThemeSettings />
         </TabsContent>
+
+        {isSuperAdmin && (
+          <TabsContent value="plano" className="mt-5">
+            <RestaurantPlanForm
+              slug={slug}
+              restaurantName={restaurant.name}
+              initialPlanName={restaurant.planName ?? "COMPLETO"}
+              initialEnabledModules={restaurant.enabledModules ?? null}
+            />
+          </TabsContent>
+        )}
       </Tabs>
     </main>
   );

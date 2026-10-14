@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -198,7 +199,11 @@ export const RestaurantHoursSchedulingForm = ({
               Abra ou feche a loja imediatamente, ou deixe no modo automático seguindo os horários cadastrados.
             </p>
 
-            <div className="grid gap-3 sm:grid-cols-3">
+            <RadioGroup
+              value={status}
+              onValueChange={(val) => setStatus(val as RestaurantStatus)}
+              className="grid gap-3 sm:grid-cols-3"
+            >
               {[
                 {
                   value: "AUTO",
@@ -233,13 +238,9 @@ export const RestaurantHoursSchedulingForm = ({
                       : "border-slate-200/80 bg-white hover:border-slate-300"
                   }`}
                 >
-                  <input
-                    type="radio"
-                    name="statusOption"
+                  <RadioGroupItem
                     value={item.value}
-                    checked={status === item.value}
-                    onChange={() => setStatus(item.value as RestaurantStatus)}
-                    className="mt-1 h-4 w-4 accent-primary cursor-pointer"
+                    className="mt-1"
                   />
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
@@ -258,7 +259,7 @@ export const RestaurantHoursSchedulingForm = ({
                   </div>
                 </label>
               ))}
-            </div>
+            </RadioGroup>
           </div>
 
           {/* ── 2. Horário de Atendimento Semanal ─────────────────────── */}
@@ -475,7 +476,11 @@ export const RestaurantHoursSchedulingForm = ({
                     Escolha se os horários permitidos devem seguir os horários de funcionamento semanais ou uma faixa personalizada.
                   </p>
 
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <RadioGroup
+                    value={hoursMode}
+                    onValueChange={(val) => setHoursMode(val as "OPERATING_HOURS" | "CUSTOM")}
+                    className="grid gap-3 sm:grid-cols-2"
+                  >
                     <label
                       className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-all ${
                         hoursMode === "OPERATING_HOURS"
@@ -483,13 +488,9 @@ export const RestaurantHoursSchedulingForm = ({
                           : "border-slate-200/80 bg-white hover:border-slate-300"
                       }`}
                     >
-                      <input
-                        type="radio"
-                        name="hoursModeRadio"
+                      <RadioGroupItem
                         value="OPERATING_HOURS"
-                        checked={hoursMode === "OPERATING_HOURS"}
-                        onChange={() => setHoursMode("OPERATING_HOURS")}
-                        className="mt-1 h-4 w-4 accent-primary cursor-pointer"
+                        className="mt-1"
                       />
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
@@ -513,13 +514,9 @@ export const RestaurantHoursSchedulingForm = ({
                           : "border-slate-200/80 bg-white hover:border-slate-300"
                       }`}
                     >
-                      <input
-                        type="radio"
-                        name="hoursModeRadio"
+                      <RadioGroupItem
                         value="CUSTOM"
-                        checked={hoursMode === "CUSTOM"}
-                        onChange={() => setHoursMode("CUSTOM")}
-                        className="mt-1 h-4 w-4 accent-primary cursor-pointer"
+                        className="mt-1"
                       />
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
@@ -535,7 +532,7 @@ export const RestaurantHoursSchedulingForm = ({
                         </p>
                       </div>
                     </label>
-                  </div>
+                  </RadioGroup>
 
                   {hoursMode === "CUSTOM" && (
                     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200/80 bg-white p-3.5 shadow-2xs animate-in fade-in slide-in-from-top-1 duration-150">

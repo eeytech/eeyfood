@@ -218,7 +218,7 @@ function ProductFields({
       try {
         if (defaultValues) {
           formData.set("productId", defaultValues.id);
-          formData.set("currentImageUrl", defaultValues.imageUrl);
+          formData.set("currentImageUrl", defaultValues.imageUrl || "");
           await updateProductAction(slug, formData);
           toast.success("Produto atualizado com sucesso!");
         } else {

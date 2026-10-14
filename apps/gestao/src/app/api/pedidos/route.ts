@@ -1,24 +1,20 @@
 import { buscarRestaurantePorSlug, listarPedidosRecebimentoPorSlug } from "@fsw/db";
 import { NextResponse } from "next/server";
 
-export const dynamic = "force-dynamic";
+import { getRouteAuthUser, validateRouteRestaurantAccess } from "@/lib/auth/session";
 
-const getCompanySlug = (request: Request): string | null => {
-  const raw = request.headers.get("x-user-data");
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as { companySlug?: unknown };
-    return typeof parsed.companySlug === "string" ? parsed.companySlug : null;
-  } catch {
-    return null;
-  }
-};
+export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const paramSlug = searchParams.get("slug");
-  const authSlug = getCompanySlug(request);
-  const targetSlug = authSlug || paramSlug;
+  const authUser = getRouteAuthUser(request);
+
+  if (!authUser) {
+    return NextResponse.json({ message: "Não autenticado." }, { status: 401 });
+  }
+
+  const targetSlug = paramSlug || authUser.companySlug;
 
   if (!targetSlug) {
     return NextResponse.json(
@@ -27,8 +23,8 @@ export async function GET(request: Request) {
     );
   }
 
-  // IDOR: se o usuário estiver autenticado em um restaurante, restringir a ele
-  if (authSlug && paramSlug && authSlug !== paramSlug) {
+  // IDOR: valida que o usuário autenticado pertence ao restaurante solicitado ou é SUPER_ADMIN
+  if (!validateRouteRestaurantAccess(request, targetSlug)) {
     return NextResponse.json({ message: "Acesso negado." }, { status: 403 });
   }
 

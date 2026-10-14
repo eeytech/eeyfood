@@ -84,13 +84,19 @@ const OrderCard = ({ order, isRated, onRatingSuccess }: OrderCardProps) => (
     <CardContent className="space-y-3.5 p-4">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-2.5">
-          <div className="relative h-9 w-9 overflow-hidden rounded-xl border">
-            <Image
-              src={order.restaurant.avatarImageUrl}
-              alt={order.restaurant.name}
-              className="object-cover"
-              fill
-            />
+          <div className="relative h-9 w-9 overflow-hidden rounded-xl border flex items-center justify-center bg-slate-50">
+            {order.restaurant.avatarImageUrl ? (
+              <Image
+                src={order.restaurant.avatarImageUrl}
+                alt={order.restaurant.name}
+                className="object-cover"
+                fill
+              />
+            ) : (
+              <span className="text-xs font-bold text-slate-400">
+                {order.restaurant.name.charAt(0)}
+              </span>
+            )}
           </div>
           <div>
             <p className="text-base font-bold text-slate-900">

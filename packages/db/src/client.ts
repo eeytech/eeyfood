@@ -17,8 +17,46 @@ export const AUTO_MIGRATIONS_SQL = `
   ALTER TABLE "Restaurant" ADD COLUMN IF NOT EXISTS "mercadoPagoAccessToken" text;
   ALTER TABLE "Restaurant" ADD COLUMN IF NOT EXISTS "acceptValeRefeicao" boolean DEFAULT false NOT NULL;
   ALTER TABLE "Restaurant" ADD COLUMN IF NOT EXISTS "acceptValeAlimentacao" boolean DEFAULT false NOT NULL;
+  ALTER TABLE "Restaurant" ADD COLUMN IF NOT EXISTS "showPromotionalBanners" boolean DEFAULT true NOT NULL;
+  ALTER TABLE "Restaurant" ADD COLUMN IF NOT EXISTS "promotionalBanners" jsonb;
+  ALTER TABLE "Restaurant" ADD COLUMN IF NOT EXISTS "planName" text DEFAULT 'COMPLETO' NOT NULL;
+  ALTER TABLE "Restaurant" ADD COLUMN IF NOT EXISTS "enabledModules" jsonb;
   ALTER TYPE "PaymentMethod" ADD VALUE IF NOT EXISTS 'INFINITEPAY';
   ALTER TYPE "MarketplaceType" ADD VALUE IF NOT EXISTS 'KEETA';
+
+  DO $$ BEGIN
+    CREATE TYPE "PrinterRole" AS ENUM ('KITCHEN', 'CASHIER', 'BAR', 'BOTH');
+  EXCEPTION
+    WHEN duplicate_object THEN null;
+  END $$;
+
+  DO $$ BEGIN
+    CREATE TYPE "PrinterConnectionType" AS ENUM ('NETWORK_TCP', 'WINDOWS_SPOOLER', 'BROWSER', 'LOCAL_AGENT');
+  EXCEPTION
+    WHEN duplicate_object THEN null;
+  END $$;
+
+  CREATE TABLE IF NOT EXISTS "RestaurantPrinter" (
+    "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    "restaurantId" uuid NOT NULL REFERENCES "Restaurant"("id") ON DELETE CASCADE,
+    "name" text NOT NULL,
+    "role" "PrinterRole" DEFAULT 'KITCHEN' NOT NULL,
+    "connectionType" "PrinterConnectionType" DEFAULT 'NETWORK_TCP' NOT NULL,
+    "ipAddress" text,
+    "port" integer DEFAULT 9100 NOT NULL,
+    "spoolerName" text,
+    "paperWidth" integer DEFAULT 80 NOT NULL,
+    "cutPaper" boolean DEFAULT true NOT NULL,
+    "openDrawer" boolean DEFAULT false NOT NULL,
+    "copies" integer DEFAULT 1 NOT NULL,
+    "isActive" boolean DEFAULT true NOT NULL,
+    "autoPrintOnNewOrder" boolean DEFAULT true NOT NULL,
+    "printPrices" boolean DEFAULT false NOT NULL,
+    "printCustomerDetails" boolean DEFAULT true NOT NULL,
+    "printObservations" boolean DEFAULT true NOT NULL,
+    "createdAt" timestamp DEFAULT now() NOT NULL,
+    "updatedAt" timestamp DEFAULT now() NOT NULL
+  );
 `;
 
 const globalForDb = globalThis as typeof globalThis & {

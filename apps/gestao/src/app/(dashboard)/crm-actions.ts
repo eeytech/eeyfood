@@ -249,8 +249,8 @@ export async function buscarClienteDetalheAction(slug: string, customerId: strin
 }
 
 const updateCustomerSchema = z.object({
-  name: z.string().trim().min(1),
-  email: z.string().email().optional().or(z.literal("")),
+  name: z.string().trim().min(1, "Nome do cliente é obrigatório."),
+  email: z.string().email("E-mail inválido.").optional().or(z.literal("")),
   cpf: z.string().optional(),
   birthDate: z.string().optional(),
 });

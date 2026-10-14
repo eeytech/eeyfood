@@ -99,9 +99,9 @@ export const criarPreferenciaMercadoPago = async ({
     );
   }
 
-  let restaurantToken = explicitAccessToken;
+  let restaurantToken: string | null = null;
 
-  if (!restaurantToken && slug) {
+  if (slug) {
     try {
       const [rest] = await db
         .select({
@@ -124,6 +124,7 @@ export const criarPreferenciaMercadoPago = async ({
 
   const accessToken =
     restaurantToken ||
+    explicitAccessToken ||
     process.env.MERCADO_PAGO_ACCESS_TOKEN ||
     process.env.MERCADOPAGO_ACCESS_TOKEN;
 

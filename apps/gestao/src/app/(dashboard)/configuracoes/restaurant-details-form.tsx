@@ -28,8 +28,8 @@ interface RestaurantDetailsFormProps {
     cnpj: string | null;
     phone: string | null;
     address: string | null;
-    avatarImageUrl: string;
-    coverImageUrl: string;
+    avatarImageUrl: string | null;
+    coverImageUrl: string | null;
   };
 }
 
@@ -55,8 +55,8 @@ export const RestaurantDetailsForm = ({
   initialValues,
 }: RestaurantDetailsFormProps) => {
   const [isPending, startTransition] = useTransition();
-  const [avatarPreview, setAvatarPreview] = useState<string>(initialValues.avatarImageUrl);
-  const [coverPreview, setCoverPreview] = useState<string>(initialValues.coverImageUrl);
+  const [avatarPreview, setAvatarPreview] = useState<string>(initialValues.avatarImageUrl || "");
+  const [coverPreview, setCoverPreview] = useState<string>(initialValues.coverImageUrl || "");
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
@@ -95,11 +95,11 @@ export const RestaurantDetailsForm = ({
   }, [initialValues.cnpj]);
 
   useEffect(() => {
-    setAvatarPreview(initialValues.avatarImageUrl);
+    setAvatarPreview(initialValues.avatarImageUrl || "");
   }, [initialValues.avatarImageUrl]);
 
   useEffect(() => {
-    setCoverPreview(initialValues.coverImageUrl);
+    setCoverPreview(initialValues.coverImageUrl || "");
   }, [initialValues.coverImageUrl]);
 
   const fetchViaCep = async (cepValue: string) => {

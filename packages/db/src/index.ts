@@ -66,6 +66,7 @@ export {
   buscarConfiguracoesFiscaisPorSlug,
   salvarConfiguracoesFiscais,
   atualizarStatusFiscalPedido,
+  incrementarNumeroFiscal,
   listarFiadosPorSlug,
   criarFiado,
   atualizarFiado,
@@ -109,6 +110,15 @@ export {
   excluirGastoMarketing,
 } from "./queries/integration";
 export type { ClientePausadoInfo, CriarGastoMarketingInput } from "./queries/integration";
+export {
+  buscarImpressorasPorSlug,
+  buscarImpressorasAtivasPorSlug,
+  buscarImpressoraPorId,
+  criarImpressora,
+  atualizarImpressora,
+  alternarStatusImpressora,
+  excluirImpressora,
+} from "./queries/printers";
 export { isRestaurantOpen, getNextOpeningTime, getBrazilTime } from "./restaurant-utils";
 export type { RestaurantOpenStatus } from "./restaurant-utils";
 export {
@@ -272,6 +282,10 @@ export {
   ticketPriorityEnum,
   ticketCategoryEnum,
   ticketSenderEnum,
+  restaurantPrintersTable,
+  restaurantPrintersRelations,
+  printerRoleEnum,
+  printerConnectionTypeEnum,
 } from "./schema";
 export type {
   AbandonedCart,
@@ -433,6 +447,11 @@ export type {
   TicketCategory,
   TicketSender,
   SupportTicketComMensagens,
+  PromotionalBannerItem,
+  RestaurantPrinter,
+  NewRestaurantPrinter,
+  PrinterRole,
+  PrinterConnectionType,
 } from "./types";
 export { geocodeAddress, cleanAddressForGeocoding } from "./geocoding";
 export type { GeocodedCoordinates } from "./geocoding";
@@ -441,3 +460,16 @@ export {
   normalizeWhatsAppNumber,
 } from "./whatsapp-notifications";
 export type { NotificarWhatsAppStatusInput } from "./whatsapp-notifications";
+export {
+  AVAILABLE_MODULES,
+  ALL_MODULE_IDS,
+  PLAN_PRESETS,
+  isModuleEnabled,
+  getModuleForRoute,
+  getModuleById,
+} from "./modules-constants";
+export type {
+  SystemModule,
+  PlanPresetId,
+  PlanPreset,
+} from "./modules-constants";

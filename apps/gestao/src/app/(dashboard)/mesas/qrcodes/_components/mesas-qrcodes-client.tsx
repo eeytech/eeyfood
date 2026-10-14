@@ -26,6 +26,7 @@ import { useTheme } from "@/components/theme-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -1099,15 +1100,13 @@ export function MesasQrCodesClient({
                           )}
                           onClick={() => toggleTable(table.id)}
                         >
-                          <label className="flex items-center gap-2.5 text-xs font-semibold text-slate-800 cursor-pointer">
-                            <input
-                              type="checkbox"
+                          <div className="flex items-center gap-2.5 text-xs font-semibold text-slate-800">
+                            <Checkbox
                               checked={isChecked}
-                              onChange={() => toggleTable(table.id)}
-                              className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
+                              onCheckedChange={() => toggleTable(table.id)}
                             />
                             <span>{table.name}</span>
-                          </label>
+                          </div>
 
                           <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                             <span className="text-[11px] text-slate-400">

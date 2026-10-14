@@ -5,7 +5,7 @@ import Image from "next/image";
 
 interface KioskIdleOverlayProps {
   restaurantName: string;
-  coverImageUrl: string;
+  coverImageUrl?: string | null;
   onTouch: () => void;
 }
 
@@ -21,13 +21,17 @@ const KioskIdleOverlay = ({
       onTouchStart={onTouch}
     >
       <div className="absolute inset-0">
-        <Image
-          src={coverImageUrl}
-          alt={restaurantName}
-          fill
-          className="object-cover"
-          priority
-        />
+        {coverImageUrl ? (
+          <Image
+            src={coverImageUrl}
+            alt={restaurantName}
+            fill
+            className="object-cover"
+            priority
+          />
+        ) : (
+          <div className="absolute inset-0 bg-slate-900" />
+        )}
         <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
       </div>
 

@@ -356,11 +356,6 @@ export const createProductAction = async (slug: string, formData: FormData) => {
     throw new Error(errorMsg);
   }
 
-  if (!parsedData.data.imageUrl) {
-    console.error("Falha ao validar produto.", "Imagem obrigatória.");
-    throw new Error("A imagem do produto é obrigatória (informe uma URL ou faça upload de um arquivo).");
-  }
-
   const nutritionInfo = buildNutritionInfo(parsedData.data);
 
   await db.insert(productsTable).values({
@@ -370,7 +365,7 @@ export const createProductAction = async (slug: string, formData: FormData) => {
     costPrice: parsedData.data.costPrice,
     menuCategoryId: parsedData.data.menuCategoryId,
     sku: parsedData.data.sku,
-    imageUrl: parsedData.data.imageUrl,
+    imageUrl: parsedData.data.imageUrl || null,
     trackInventory: parsedData.data.trackInventory,
     stockQuantity: parsedData.data.stockQuantity,
     lowStockThreshold: parsedData.data.lowStockThreshold,
@@ -445,11 +440,6 @@ export const updateProductAction = async (slug: string, formData: FormData) => {
     throw new Error(errorMsg);
   }
 
-  if (!parsedData.data.imageUrl) {
-    console.error("Falha ao validar atualização de produto.", "Imagem obrigatória.");
-    throw new Error("A imagem do produto é obrigatória.");
-  }
-
   const nutritionInfo = buildNutritionInfo(parsedData.data);
 
   await db
@@ -461,7 +451,7 @@ export const updateProductAction = async (slug: string, formData: FormData) => {
       costPrice: parsedData.data.costPrice,
       menuCategoryId: parsedData.data.menuCategoryId,
       sku: parsedData.data.sku,
-      imageUrl: parsedData.data.imageUrl,
+      imageUrl: parsedData.data.imageUrl || null,
       trackInventory: parsedData.data.trackInventory,
       stockQuantity: parsedData.data.stockQuantity,
       lowStockThreshold: parsedData.data.lowStockThreshold,
@@ -958,11 +948,28 @@ export const updateRestaurantFeaturesAction = async (
 
   const acceptValeRefeicao = getBooleanValue(formData.get("acceptValeRefeicao"));
   const acceptValeAlimentacao = getBooleanValue(formData.get("acceptValeAlimentacao"));
+  const showPromotionalBanners = formData.has("showPromotionalBanners")
+    ? getBooleanValue(formData.get("showPromotionalBanners"))
+    : false;
+
+  let promotionalBanners = restaurant.promotionalBanners;
+  if (formData.has("promotionalBanners")) {
+    try {
+      const raw = formData.get("promotionalBanners");
+      if (typeof raw === "string") {
+        promotionalBanners = JSON.parse(raw);
+      }
+    } catch (e) {
+      console.warn("⚠️ [updateRestaurantFeaturesAction] Erro no parse de promotionalBanners:", e);
+    }
+  }
 
   try {
     await db.execute(sql`
       ALTER TABLE "Restaurant" ADD COLUMN IF NOT EXISTS "acceptValeRefeicao" boolean NOT NULL DEFAULT false;
       ALTER TABLE "Restaurant" ADD COLUMN IF NOT EXISTS "acceptValeAlimentacao" boolean NOT NULL DEFAULT false;
+      ALTER TABLE "Restaurant" ADD COLUMN IF NOT EXISTS "showPromotionalBanners" boolean NOT NULL DEFAULT true;
+      ALTER TABLE "Restaurant" ADD COLUMN IF NOT EXISTS "promotionalBanners" jsonb;
     `);
   } catch {
     // Columns already exist or database executed
@@ -987,6 +994,8 @@ export const updateRestaurantFeaturesAction = async (
       isCouponsEnabled,
       isCashbackEnabled,
       showOptionImages: getBooleanValue(formData.get("showOptionImages")),
+      showPromotionalBanners,
+      promotionalBanners,
       isDeliveryEnabled,
       isTakeawayEnabled,
       isDineInEnabled,
@@ -996,6 +1005,56 @@ export const updateRestaurantFeaturesAction = async (
     .where(eq(restaurantsTable.id, restaurant.id));
 
   revalidateRestaurantPaths(slug);
+};
+
+export const togglePromotionalBannersAction = async (
+  slug: string,
+  enabled: boolean,
+) => {
+  const restaurant = await getRestaurantOrThrow(slug);
+
+  try {
+    await db.execute(sql`
+      ALTER TABLE "Restaurant" ADD COLUMN IF NOT EXISTS "showPromotionalBanners" boolean NOT NULL DEFAULT true;
+      ALTER TABLE "Restaurant" ADD COLUMN IF NOT EXISTS "promotionalBanners" jsonb;
+    `);
+  } catch {}
+
+  await db
+    .update(restaurantsTable)
+    .set({
+      showPromotionalBanners: enabled,
+      updatedAt: new Date(),
+    })
+    .where(eq(restaurantsTable.id, restaurant.id));
+
+  revalidateRestaurantPaths(slug);
+  return { success: true };
+};
+
+export const savePromotionalBannersListAction = async (
+  slug: string,
+  banners: any[],
+) => {
+  const restaurant = await getRestaurantOrThrow(slug);
+
+  try {
+    await db.execute(sql`
+      ALTER TABLE "Restaurant" ADD COLUMN IF NOT EXISTS "showPromotionalBanners" boolean NOT NULL DEFAULT true;
+      ALTER TABLE "Restaurant" ADD COLUMN IF NOT EXISTS "promotionalBanners" jsonb;
+    `);
+  } catch {}
+
+  await db
+    .update(restaurantsTable)
+    .set({
+      promotionalBanners: banners,
+      updatedAt: new Date(),
+    })
+    .where(eq(restaurantsTable.id, restaurant.id));
+
+  revalidateRestaurantPaths(slug);
+  return { success: true };
 };
 
 export const toggleCouponsEnabledAction = async (

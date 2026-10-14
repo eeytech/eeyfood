@@ -21,12 +21,18 @@ const VENDAS_URL = process.env.VENDAS_URL || "http://localhost:3001";
 const EVOLUTION_URL = (process.env.EVOLUTION_API_URL || process.env.EVOLUTION_URL || "http://localhost:8080").replace(/\/+$/, "");
 
 export async function GET(request: Request) {
+  const cronSecret = process.env.CRON_SECRET;
   const authHeader = request.headers.get("authorization");
-  if (
-    process.env.CRON_SECRET &&
-    authHeader !== `Bearer ${process.env.CRON_SECRET}`
-  ) {
-    return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
+
+  if (cronSecret) {
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
+    }
+  } else if (process.env.NODE_ENV === "production") {
+    return NextResponse.json(
+      { error: "Endpoint de cron desabilitado: CRON_SECRET não configurado no servidor." },
+      { status: 403 },
+    );
   }
 
   try {

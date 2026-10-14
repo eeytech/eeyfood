@@ -17,7 +17,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/ui/submit-button";
 import {
   buscarAiSettingsPorSlug,
@@ -141,15 +143,16 @@ export default async function AiSettingsPage({ params }: AiSettingsPageProps) {
               defaultPrompt={DEFAULT_AI_SYSTEM_PROMPT}
             />
 
-            <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-xs font-medium text-slate-800 hover:bg-slate-100/70 transition-colors">
-              <input
-                type="checkbox"
+            <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-xs font-medium text-slate-800 transition-colors">
+              <Checkbox
+                id="isBotActive"
                 name="isBotActive"
                 defaultChecked={aiSettings?.isBotActive ?? false}
-                className="h-4 w-4 rounded accent-primary"
               />
-              Ativar atendimento automático com IA no WhatsApp
-            </label>
+              <Label htmlFor="isBotActive" className="cursor-pointer text-xs font-medium text-slate-800">
+                Ativar atendimento automático com IA no WhatsApp
+              </Label>
+            </div>
           </CardContent>
         </Card>
 

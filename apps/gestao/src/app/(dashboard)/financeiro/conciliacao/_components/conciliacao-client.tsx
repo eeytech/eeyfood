@@ -34,6 +34,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -255,18 +262,21 @@ export function ConciliacaoClient({ slug, contas }: ConciliacaoClientProps) {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold text-slate-700">Conta Bancária de Destino</Label>
-                    <select
+                    <Select
                       value={selectedContaId}
-                      onChange={(e) => setSelectedContaId(e.target.value)}
-                      className="flex h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-sm text-slate-900 focus:bg-white"
-                      required
+                      onValueChange={setSelectedContaId}
                     >
-                      {contas.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 text-sm text-slate-900 focus:bg-white">
+                        <SelectValue placeholder="Selecione a conta" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+                        {contas.map((c) => (
+                          <SelectItem key={c.id} value={c.id} className="text-sm">
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="ofxFile" className="text-xs font-semibold text-slate-700">

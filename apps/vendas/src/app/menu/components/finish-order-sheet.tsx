@@ -12,6 +12,7 @@ import { gerarPayloadPix } from "@/lib/pix";
 
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Sheet,
@@ -704,7 +705,6 @@ export const FinishOrderSheet = ({
           consumptionMethod,
           phone: data.phone,
           infinitePayHandle: restaurant.infinitePayHandle,
-          mercadoPagoAccessToken: restaurant.mercadoPagoAccessToken,
         });
 
         if (result.isFree || !result.initPoint) {
@@ -1041,10 +1041,10 @@ const OrderSuccessView = ({
                             Ou use o Pix Copia e Cola:
                           </span>
                           <div className="flex items-center gap-1.5">
-                            <input
+                            <Input
                               readOnly
                               value={pixPayload}
-                              className="flex-1 h-9 px-2.5 text-[11px] font-mono bg-white border border-teal-200 rounded-xl text-slate-700 truncate select-all focus:outline-hidden"
+                              className="flex-1 h-9 px-2.5 text-[11px] font-mono bg-white border border-teal-200 rounded-xl text-slate-700 truncate select-all"
                             />
                             <Button
                               type="button"

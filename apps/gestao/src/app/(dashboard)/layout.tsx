@@ -5,6 +5,8 @@ import {
   buscarRestauranteUnico,
   db,
   eq,
+  getModuleForRoute,
+  isModuleEnabled,
   restaurantsTable,
 } from "@fsw/db";
 import type { Restaurant } from "@fsw/db";
@@ -13,6 +15,7 @@ export const dynamic = "force-dynamic";
 
 import AdminSidebar from "@/components/admin-sidebar";
 import GlobalRealtimeListener from "@/components/global-realtime-listener";
+import { ModuleRestrictedNotice } from "@/components/module-restricted-notice";
 import { getSession } from "@/lib/auth/session";
 
 interface DashboardLayoutProps {
@@ -100,6 +103,16 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
     .from(restaurantsTable)
     .orderBy(restaurantsTable.name);
 
+  // 3. Verificar se a rota atual pertence a um módulo bloqueado no plano deste cliente
+  const isSuperAdmin = session.role === "SUPER_ADMIN";
+  const targetModule = getModuleForRoute(pathname);
+  const isBlocked =
+    !isSuperAdmin &&
+    targetModule &&
+    restaurant?.enabledModules &&
+    Array.isArray(restaurant.enabledModules) &&
+    !isModuleEnabled(targetModule, restaurant.enabledModules);
+
   return (
     <AdminSidebar
       slug={slug}
@@ -110,9 +123,20 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
       userRole={session.role}
       userName={session.name}
       userEmail={session.email}
+      enabledModules={restaurant?.enabledModules ?? null}
     >
       <GlobalRealtimeListener slug={slug} />
-      <div className="mx-auto max-w-[1600px]">{children}</div>
+      <div className="mx-auto max-w-[1600px]">
+        {isBlocked ? (
+          <ModuleRestrictedNotice
+            moduleId={targetModule}
+            restaurantName={restaurantName}
+            userRole={session.role}
+          />
+        ) : (
+          children
+        )}
+      </div>
     </AdminSidebar>
   );
 }

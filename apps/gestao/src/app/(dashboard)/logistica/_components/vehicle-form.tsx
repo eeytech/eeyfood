@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { formatPlate } from "@/lib/masks";
 import type { CompanyVehicle } from "@fsw/db";
 
 interface VehicleFormProps {
@@ -37,6 +38,9 @@ export function VehicleForm({
 }: VehicleFormProps) {
   const [isPending, startTransition] = useTransition();
   const [status, setStatus] = useState<string>(defaultValues?.status ?? "ACTIVE");
+  const [licensePlate, setLicensePlate] = useState<string>(
+    defaultValues?.licensePlate ? formatPlate(defaultValues.licensePlate) : ""
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -192,8 +196,12 @@ export function VehicleForm({
                 id="vehicle-plate"
                 name="licensePlate"
                 placeholder="ABC-1234"
-                defaultValue={defaultValues?.licensePlate}
-                onChange={() => setErrors((prev) => ({ ...prev, licensePlate: "" }))}
+                value={licensePlate}
+                onChange={(e) => {
+                  setLicensePlate(formatPlate(e.target.value));
+                  setErrors((prev) => ({ ...prev, licensePlate: "" }));
+                }}
+                maxLength={8}
                 className={cn(
                   "h-10 rounded-xl border-slate-200 bg-white uppercase text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary transition-colors",
                   errors.licensePlate && "border-rose-500 bg-rose-50/20 focus-visible:ring-rose-500"

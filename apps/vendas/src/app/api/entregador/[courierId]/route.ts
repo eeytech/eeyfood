@@ -1,4 +1,5 @@
 import {
+  and,
   atualizarLocalizacaoEntregador,
   buscarPedidosParaEntregador,
   couriersTable,
@@ -106,7 +107,7 @@ export async function PATCH(
   }
 
   if (body.action === "claim_order" && body.orderId !== undefined) {
-    await db
+    const [claimed] = await db
       .update(ordersTable)
       .set({
         courierId,
@@ -114,11 +115,42 @@ export async function PATCH(
         dispatchedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(ordersTable.id, body.orderId));
+      .where(
+        and(
+          eq(ordersTable.id, body.orderId),
+          eq(ordersTable.restaurantId, courier.restaurantId),
+        ),
+      )
+      .returning({ id: ordersTable.id });
+
+    if (!claimed) {
+      return NextResponse.json(
+        { error: "Pedido não encontrado nesta unidade ou indisponível." },
+        { status: 404 },
+      );
+    }
     return NextResponse.json({ ok: true });
   }
 
   if (body.action === "deliver_order" && body.orderId !== undefined && body.proofUrl) {
+    const [targetOrder] = await db
+      .select({ id: ordersTable.id })
+      .from(ordersTable)
+      .where(
+        and(
+          eq(ordersTable.id, body.orderId),
+          eq(ordersTable.restaurantId, courier.restaurantId),
+        ),
+      )
+      .limit(1);
+
+    if (!targetOrder) {
+      return NextResponse.json(
+        { error: "Pedido não encontrado nesta unidade." },
+        { status: 404 },
+      );
+    }
+
     await registrarComprovanteEntrega(
       body.orderId,
       body.proofUrl,

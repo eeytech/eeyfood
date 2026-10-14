@@ -2,6 +2,8 @@ import { jwtVerify } from "jose";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import { getJwtSecretKey } from "@/lib/auth/config";
+
 const COOKIE_NAME = "eey_session";
 
 const PUBLIC_PATHS = [
@@ -10,16 +12,20 @@ const PUBLIC_PATHS = [
   "/api/webhooks/",
 ];
 
-const getJwtSecret = () => {
-  const secret = process.env.JWT_SECRET ?? "eeyfood_default_jwt_secret_key_2026";
-  return new TextEncoder().encode(secret);
-};
-
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
+  }
+
+  // Permite jobs automatizados autenticados via CRON_SECRET
+  if (pathname.startsWith("/api/jobs/")) {
+    const cronSecret = process.env.CRON_SECRET;
+    const authHeader = request.headers.get("authorization");
+    if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
+      return NextResponse.next();
+    }
   }
 
   const token = request.cookies.get(COOKIE_NAME)?.value;
@@ -28,7 +34,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  const jwtSecret = getJwtSecret();
+  const jwtSecret = getJwtSecretKey();
 
   try {
     const { payload } = await jwtVerify(token, jwtSecret);

@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeftIcon, ScrollTextIcon } from "lucide-react";
+import { ChevronLeftIcon, ScrollTextIcon, UtensilsCrossed } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
@@ -15,7 +15,7 @@ interface ProductHeaderProps {
 
 const ProductHeader = ({ product }: ProductHeaderProps) => {
   const router = useRouter();
-  const [isImageLoading, setIsImageLoading] = useState(true);
+  const [isImageLoading, setIsImageLoading] = useState(Boolean(product.imageUrl));
 
   const handleBackClick = () => router.back();
   const handleOrdersClick = () => router.push("/orders");
@@ -35,17 +35,23 @@ const ProductHeader = ({ product }: ProductHeaderProps) => {
         <ChevronLeftIcon />
       </Button>
 
-      <div className="relative h-full w-full p-8 lg:p-16">
-        <Image
-          src={product.imageUrl}
-          alt={product.name}
-          fill
-          className={`object-contain p-8 transition-opacity duration-500 lg:p-16 ${
-            isImageLoading ? "opacity-0" : "opacity-100"
-          }`}
-          priority
-          onLoad={() => setIsImageLoading(false)}
-        />
+      <div className="relative h-full w-full p-8 lg:p-16 flex items-center justify-center">
+        {product.imageUrl ? (
+          <Image
+            src={product.imageUrl}
+            alt={product.name}
+            fill
+            className={`object-contain p-8 transition-opacity duration-500 lg:p-16 ${
+              isImageLoading ? "opacity-0" : "opacity-100"
+            }`}
+            priority
+            onLoad={() => setIsImageLoading(false)}
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center text-slate-300">
+            <UtensilsCrossed size={64} strokeWidth={1.5} />
+          </div>
+        )}
       </div>
 
       <Button

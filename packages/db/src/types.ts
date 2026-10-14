@@ -100,6 +100,9 @@ import {
   ticketPriorityEnum,
   ticketCategoryEnum,
   ticketSenderEnum,
+  restaurantPrintersTable,
+  printerRoleEnum,
+  printerConnectionTypeEnum,
 } from "./schema";
 
   // ...
@@ -421,4 +424,22 @@ export type TicketSender = (typeof ticketSenderEnum.enumValues)[number];
 export interface SupportTicketComMensagens extends SupportTicket {
   messages: SupportTicketMessage[];
 }
+
+export interface PromotionalBannerItem {
+  id: string;
+  title: string;
+  subtitle?: string;
+  tag?: string;
+  imageUrl?: string;
+  gradient?: "primary" | "amber" | "emerald" | "violet" | "rose" | "blue" | "dark" | string;
+  linkUrl?: string;
+  buttonText?: string;
+  isActive: boolean;
+}
+
+export type RestaurantPrinter = InferSelectModel<typeof restaurantPrintersTable>;
+export type NewRestaurantPrinter = InferInsertModel<typeof restaurantPrintersTable>;
+export type PrinterRole = (typeof printerRoleEnum.enumValues)[number];
+export type PrinterConnectionType = (typeof printerConnectionTypeEnum.enumValues)[number];
+
 

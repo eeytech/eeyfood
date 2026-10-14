@@ -172,13 +172,17 @@ const CartRecommendations = ({ restaurantSlug, variant = "sidebar" }: CartRecomm
               key={product.id}
               className="flex shrink-0 items-center gap-2 rounded-xl border border-slate-200/80 bg-white p-1.5 shadow-sm transition hover:border-slate-300 min-w-[155px] max-w-[170px]"
             >
-              <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-slate-50">
-                <Image
-                  src={product.imageUrl}
-                  alt={product.name}
-                  fill
-                  className="object-contain p-0.5 pointer-events-none"
-                />
+              <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-slate-50 flex items-center justify-center">
+                {product.imageUrl ? (
+                  <Image
+                    src={product.imageUrl}
+                    alt={product.name}
+                    fill
+                    className="object-contain p-0.5 pointer-events-none"
+                  />
+                ) : (
+                  <SparklesIcon size={16} className="text-slate-300 pointer-events-none" />
+                )}
               </div>
               <div className="flex flex-1 min-w-0 flex-col">
                 <p className="truncate text-[11px] font-semibold text-slate-800 leading-tight">

@@ -8,6 +8,7 @@ import { updateOrderSchedulingAction } from "@/app/(dashboard)/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -210,7 +211,11 @@ export const OrderSchedulingForm = ({
               </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <RadioGroup
+              value={hoursMode}
+              onValueChange={setHoursMode}
+              className="grid gap-3 sm:grid-cols-2"
+            >
               {/* Opção 1: Horário de Funcionamento */}
               <label
                 className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition ${
@@ -219,13 +224,9 @@ export const OrderSchedulingForm = ({
                     : "border-slate-200 bg-white/70 hover:bg-white"
                 }`}
               >
-                <input
-                  type="radio"
-                  name="hoursModeRadio"
+                <RadioGroupItem
                   value="OPERATING_HOURS"
-                  checked={hoursMode === "OPERATING_HOURS"}
-                  onChange={() => setHoursMode("OPERATING_HOURS")}
-                  className="mt-0.5 h-4 w-4 accent-primary"
+                  className="mt-0.5"
                 />
                 <div>
                   <p className="text-sm font-semibold text-slate-900">
@@ -245,13 +246,9 @@ export const OrderSchedulingForm = ({
                     : "border-slate-200 bg-white/70 hover:bg-white"
                 }`}
               >
-                <input
-                  type="radio"
-                  name="hoursModeRadio"
+                <RadioGroupItem
                   value="CUSTOM"
-                  checked={hoursMode === "CUSTOM"}
-                  onChange={() => setHoursMode("CUSTOM")}
-                  className="mt-0.5 h-4 w-4 accent-primary"
+                  className="mt-0.5"
                 />
                 <div>
                   <p className="text-sm font-semibold text-slate-900">
@@ -262,7 +259,7 @@ export const OrderSchedulingForm = ({
                   </p>
                 </div>
               </label>
-            </div>
+            </RadioGroup>
 
             {/* Seletor de Horário Customizado se CUSTOM estiver selecionado */}
             {hoursMode === "CUSTOM" && (

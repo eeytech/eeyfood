@@ -4,6 +4,7 @@ import type { ConsumptionMethod } from "@fsw/db";
 import { headers } from "next/headers";
 
 import { db, eq, ordersTable, restaurantsTable } from "@/lib/db";
+import { generateOrderWebhookToken } from "@/lib/webhook-signature";
 import { normalizePhoneNumber } from "../helpers/phone";
 
 interface CriarCheckoutInfinitePayInput {
@@ -135,7 +136,7 @@ export const criarCheckoutInfinitePay = async ({
   searchParams.set("phone", normalizePhoneNumber(phone));
 
   const redirectUrl = `${origin}/orders?${searchParams.toString()}`;
-  const webhookUrl =
+  const baseWebhookUrl =
     process.env.INFINITEPAY_WEBHOOK_URL ??
     (origin.startsWith("https://")
       ? `${origin}/api/webhooks/infinitepay`
@@ -159,8 +160,10 @@ export const criarCheckoutInfinitePay = async ({
     redirect_url: redirectUrl,
   };
 
-  if (webhookUrl) {
-    payload.webhook_url = webhookUrl;
+  if (baseWebhookUrl) {
+    const signatureToken = generateOrderWebhookToken(orderId);
+    const separator = baseWebhookUrl.includes("?") ? "&" : "?";
+    payload.webhook_url = `${baseWebhookUrl}${separator}orderId=${orderId}&token=${signatureToken}`;
   }
 
   const response = await fetch("https://api.checkout.infinitepay.io/links", {

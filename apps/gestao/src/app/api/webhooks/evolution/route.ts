@@ -417,6 +417,7 @@ export async function POST(request: Request) {
       } catch (err: unknown) {
         console.warn(
           `[Webhook Evolution] Tentativa de envio para ${targetPhone} falhou. Tentando com remoteJid (${remoteJid})...`,
+          err,
         );
         try {
           await axios.post(

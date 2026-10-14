@@ -10,12 +10,14 @@ import {
   MinusIcon,
   PlusIcon,
   SearchIcon,
+  UtensilsCrossed,
 } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useContext, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
@@ -373,20 +375,28 @@ const ProductDetailsContent = ({
       {/* LEFT COLUMN — product image (desktop only: sticky) */}
       {showImage && (
         <div className="relative shrink-0 bg-slate-100">
-          <div className="relative h-[160px] w-full sm:h-[200px]">
-            {isImageLoading && (
-              <div className="absolute inset-0 z-10 animate-pulse bg-slate-200" />
+          <div className="relative h-[160px] w-full sm:h-[200px] flex items-center justify-center">
+            {product.imageUrl ? (
+              <>
+                {isImageLoading && (
+                  <div className="absolute inset-0 z-10 animate-pulse bg-slate-200" />
+                )}
+                <Image
+                  src={product.imageUrl}
+                  alt={product.name}
+                  fill
+                  className={`object-contain transition-all duration-500 hover:scale-105 ${
+                    isImageLoading ? "opacity-0" : "opacity-100"
+                  }`}
+                  priority
+                  onLoad={() => setIsImageLoading(false)}
+                />
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center text-slate-300">
+                <UtensilsCrossed size={48} strokeWidth={1.5} />
+              </div>
             )}
-            <Image
-              src={product.imageUrl}
-              alt={product.name}
-              fill
-              className={`object-contain transition-all duration-500 hover:scale-105 ${
-                isImageLoading ? "opacity-0" : "opacity-100"
-              }`}
-              priority
-              onLoad={() => setIsImageLoading(false)}
-            />
           </div>
         </div>
       )}
@@ -397,13 +407,15 @@ const ProductDetailsContent = ({
           {/* Header */}
           <div className="shrink-0">
             <div className="flex items-center gap-1.5">
-              <Image
-                src={product.restaurant.avatarImageUrl}
-                alt={product.restaurant.name}
-                width={18}
-                height={18}
-                className="rounded-full ring-2 ring-white"
-              />
+              {product.restaurant.avatarImageUrl && (
+                <Image
+                  src={product.restaurant.avatarImageUrl}
+                  alt={product.restaurant.name}
+                  width={18}
+                  height={18}
+                  className="rounded-full ring-2 ring-white"
+                />
+              )}
               <p className="text-sm font-medium text-muted-foreground">
                 {product.restaurant.name}
               </p>
@@ -473,12 +485,12 @@ const ProductDetailsContent = ({
                   size={14}
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
                 />
-                <input
+                <Input
                   type="search"
                   placeholder="Buscar adicional..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50 pl-8 pr-3 text-sm outline-none focus:border-slate-400 focus:ring-0"
+                  className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50 pl-8 pr-3 text-sm"
                 />
               </div>
             )}

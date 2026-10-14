@@ -23,6 +23,7 @@ export type TestAiKeyResult = {
 };
 
 import { getBooleanValue, getStringValue } from "@/lib/admin-form-utils";
+import { assertAuthenticated, assertRestaurantAccess } from "@/lib/auth/session";
 import { sincronizarWebhookAction } from "./ai/whatsapp-actions";
 
 const aiSettingsSchema = z.object({
@@ -44,6 +45,7 @@ export const updateAiSettingsAction = async (
   slug: string,
   formData: FormData,
 ) => {
+  await assertRestaurantAccess(slug);
   const restaurant = await buscarRestaurantePorSlug(slug);
   if (!restaurant) throw new Error("Restaurante não encontrado.");
 
@@ -113,6 +115,7 @@ export const updateAiSettingsAction = async (
 };
 
 export const reativarBotAction = async (slug: string, customerPhone?: string) => {
+  await assertRestaurantAccess(slug);
   const restaurant = await buscarRestaurantePorSlug(slug);
   if (!restaurant) throw new Error("Restaurante não encontrado.");
 
@@ -127,6 +130,7 @@ export const reativarBotAction = async (slug: string, customerPhone?: string) =>
 };
 
 export const reativarTodosClientesAction = async (slug: string) => {
+  await assertRestaurantAccess(slug);
   const restaurant = await buscarRestaurantePorSlug(slug);
   if (!restaurant) throw new Error("Restaurante não encontrado.");
 
@@ -139,6 +143,7 @@ export const testAiProviderKeyAction = async (
   provider: "GOOGLE_GEMINI" | "OPENAI",
   apiKey: string,
 ): Promise<TestAiKeyResult> => {
+  await assertAuthenticated();
   const cleanedKey = (apiKey || "").trim().replace(/^["']|["']$/g, "");
   if (!cleanedKey) {
     return {

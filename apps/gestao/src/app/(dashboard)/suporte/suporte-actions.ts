@@ -12,7 +12,7 @@ import {
 } from "@fsw/db";
 import { revalidatePath } from "next/cache";
 
-import { getSession } from "@/lib/auth/session";
+import { assertAuthenticated, assertRestaurantAccess } from "@/lib/auth/session";
 import type {
   SupportTicket,
   TicketCategory,
@@ -105,10 +105,13 @@ let inMemoryFallbackTickets: SupportTicket[] = [...initialFallbackTickets];
 export async function listarChamadosAction(
   restaurantSlug?: string,
 ): Promise<SupportTicket[]> {
-  const session = await getSession();
+  const session = await assertAuthenticated();
   const slug = restaurantSlug || "";
-  const userRole = session?.role || "";
-  const userEmail = (session?.email || "").trim().toLowerCase();
+  if (slug) {
+    await assertRestaurantAccess(slug);
+  }
+  const userRole = session.role || "";
+  const userEmail = (session.email || "").trim().toLowerCase();
 
   // Somente Super Administrador, Administrador de Restaurante e Gerente Operacional veem todos os chamados.
   // Todos os demais perfis veem apenas os chamados que eles mesmos abriram.
@@ -190,8 +193,8 @@ export async function listarChamadosAction(
   return fallbackList.map((t) => ({
     ...t,
     restaurantSlug: t.restaurantSlug || slug,
-    userName: t.userName || session?.name || "Administrador",
-    userEmail: t.userEmail || session?.email || "contato@restaurante.com",
+    userName: t.userName || session.name || "Administrador",
+    userEmail: t.userEmail || session.email || "contato@restaurante.com",
   }));
 }
 
@@ -199,7 +202,7 @@ export async function criarChamadoAction(
   _prevState: { error?: string; success?: boolean; ticketId?: string } | null,
   formData: FormData,
 ): Promise<{ error?: string; success?: boolean; ticketId?: string }> {
-  const session = await getSession();
+  const session = await assertAuthenticated();
 
   const title = formData.get("title")?.toString().trim();
   const description = formData.get("description")?.toString().trim();
@@ -207,6 +210,10 @@ export async function criarChamadoAction(
   const priority = (formData.get("priority")?.toString() || "NORMAL") as TicketPriority;
   const userPhone = formData.get("userPhone")?.toString().trim() || undefined;
   const restaurantSlug = formData.get("restaurantSlug")?.toString().trim() || "";
+
+  if (restaurantSlug) {
+    await assertRestaurantAccess(restaurantSlug);
+  }
 
   if (!title || !description) {
     return { error: "Título e descrição do chamado são obrigatórios." };
@@ -298,10 +305,10 @@ export async function atualizarStatusChamadoAction(
   ticketId: string,
   newStatus: TicketStatus,
 ): Promise<{ success: boolean; error?: string }> {
-  const session = await getSession();
+  const session = await assertAuthenticated();
 
   // Somente o usuário Super Administrador (Equipe de Suporte Técnico) pode alterar o status ou marcar como resolvido
-  if (session?.role !== "SUPER_ADMIN") {
+  if (session.role !== "SUPER_ADMIN") {
     return {
       success: false,
       error:
@@ -336,7 +343,7 @@ export async function adicionarMensagemChamadoAction(
   ticketId: string,
   content: string,
 ): Promise<{ success: boolean; error?: string }> {
-  const session = await getSession();
+  const session = await assertAuthenticated();
   const trimmed = content.trim();
 
   if (!trimmed) {
@@ -344,13 +351,34 @@ export async function adicionarMensagemChamadoAction(
   }
 
   const now = new Date();
-  const isSuperAdmin = session?.role === "SUPER_ADMIN";
+  const isSuperAdmin = session.role === "SUPER_ADMIN";
+
+  // Se não for super admin, garante que o chamado pertence ao usuário ou ao restaurante do usuário
+  if (!isSuperAdmin) {
+    try {
+      const ticket = await db.query.supportTicketsTable.findFirst({
+        where: eq(supportTicketsTable.id, ticketId),
+      });
+
+      if (ticket) {
+        const isOwner = ticket.userEmail?.toLowerCase() === session.email?.toLowerCase();
+        const userCompanyId = session.activeCompanyId || session.companyId;
+        const isSameRestaurant = ticket.restaurantId && ticket.restaurantId === userCompanyId;
+
+        if (!isOwner && !isSameRestaurant) {
+          return { success: false, error: "Acesso negado ao chamado informado." };
+        }
+      }
+    } catch {
+      // Caso ocorra falha ao consultar banco, segue fluxo com verificação em fallback
+    }
+  }
 
   // Respostas a nível da empresa que disponibiliza o sistema pertencem exclusivamente ao Super Administrador (Equipe de Suporte Técnico)
   const sender: TicketSender = isSuperAdmin ? "SUPPORT" : "USER";
   const senderName = isSuperAdmin
     ? "Equipe de Suporte Técnico"
-    : session?.name || "Restaurante";
+    : session.name || "Restaurante";
 
   try {
     await db.insert(supportTicketMessagesTable).values({
@@ -397,17 +425,40 @@ export async function excluirChamadoAction(
   ticketId: string,
   restaurantSlug?: string,
 ): Promise<{ success: boolean; error?: string }> {
-  const session = await getSession();
+  const session = await assertAuthenticated();
+  if (restaurantSlug) {
+    await assertRestaurantAccess(restaurantSlug);
+  }
+
   const canDelete =
-    session?.role === "SUPER_ADMIN" ||
-    session?.role === "ADMIN" ||
-    session?.role === "MANAGER";
+    session.role === "SUPER_ADMIN" ||
+    session.role === "ADMIN" ||
+    session.role === "MANAGER";
 
   if (!canDelete) {
     return {
       success: false,
       error: "Você não tem permissão para excluir chamados de suporte.",
     };
+  }
+
+  if (session.role !== "SUPER_ADMIN") {
+    try {
+      const ticket = await db.query.supportTicketsTable.findFirst({
+        where: eq(supportTicketsTable.id, ticketId),
+      });
+      if (ticket?.restaurantId) {
+        const userCompanyId = session.activeCompanyId || session.companyId;
+        if (ticket.restaurantId !== userCompanyId) {
+          return {
+            success: false,
+            error: "Acesso negado: você não pode excluir chamados de outra unidade.",
+          };
+        }
+      }
+    } catch {
+      // Ignora erro de query caso tabela não exista
+    }
   }
 
   try {

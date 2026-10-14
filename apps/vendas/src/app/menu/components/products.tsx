@@ -82,13 +82,19 @@ const Products = ({ products, restaurant }: ProductsProps) => {
             aria-label={`Ver detalhes de ${product.name}`}
             role="listitem"
           >
-            <div className="relative aspect-[16/10] w-full overflow-hidden rounded-t-[24px] bg-slate-100">
-              <Image
-                src={product.imageUrl}
-                alt=""
-                fill
-                className="object-contain p-4 transition duration-300 group-hover:scale-[1.03]"
-              />
+            <div className="relative aspect-[16/10] w-full overflow-hidden rounded-t-[24px] bg-slate-100 flex items-center justify-center">
+              {product.imageUrl ? (
+                <Image
+                  src={product.imageUrl}
+                  alt=""
+                  fill
+                  className="object-contain p-4 transition duration-300 group-hover:scale-[1.03]"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center text-slate-300">
+                  <FlameIcon size={36} strokeWidth={1.5} className="text-slate-300" />
+                </div>
+              )}
               {product.isBestseller && (
                 <div
                   className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-xs font-extrabold uppercase tracking-widest text-white shadow-xl shadow-secondary/30"

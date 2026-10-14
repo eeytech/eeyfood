@@ -6,12 +6,14 @@ import {
   ChevronRightIcon,
   CircleCheckIcon,
   SearchIcon,
+  UtensilsCrossed,
 } from "lucide-react";
 import Image from "next/image";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -256,20 +258,28 @@ const PizzaBuilderSheet = ({
           <div className="flex h-full flex-col overflow-hidden bg-white">
             {/* Top Product Image */}
             <div className="relative shrink-0 bg-slate-100">
-              <div className="relative h-[160px] w-full sm:h-[200px]">
-                {isImageLoading && (
-                  <div className="absolute inset-0 z-10 animate-pulse bg-slate-200" />
+              <div className="relative h-[160px] w-full sm:h-[200px] flex items-center justify-center">
+                {product.imageUrl ? (
+                  <>
+                    {isImageLoading && (
+                      <div className="absolute inset-0 z-10 animate-pulse bg-slate-200" />
+                    )}
+                    <Image
+                      src={product.imageUrl}
+                      alt={product.name}
+                      fill
+                      className={`object-contain transition-all duration-500 hover:scale-105 ${
+                        isImageLoading ? "opacity-0" : "opacity-100"
+                      }`}
+                      priority
+                      onLoad={() => setIsImageLoading(false)}
+                    />
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-slate-300">
+                    <UtensilsCrossed size={48} strokeWidth={1.5} />
+                  </div>
                 )}
-                <Image
-                  src={product.imageUrl}
-                  alt={product.name}
-                  fill
-                  className={`object-contain transition-all duration-500 hover:scale-105 ${
-                    isImageLoading ? "opacity-0" : "opacity-100"
-                  }`}
-                  priority
-                  onLoad={() => setIsImageLoading(false)}
-                />
               </div>
             </div>
 
@@ -280,13 +290,15 @@ const PizzaBuilderSheet = ({
                 <div className="shrink-0">
                   {restaurantInfo && (
                     <div className="flex items-center gap-1.5">
-                      <Image
-                        src={restaurantInfo.avatarImageUrl}
-                        alt={restaurantInfo.name}
-                        width={18}
-                        height={18}
-                        className="rounded-full ring-2 ring-white"
-                      />
+                      {restaurantInfo.avatarImageUrl && (
+                        <Image
+                          src={restaurantInfo.avatarImageUrl}
+                          alt={restaurantInfo.name}
+                          width={18}
+                          height={18}
+                          className="rounded-full ring-2 ring-white"
+                        />
+                      )}
                       <p className="text-sm font-medium text-muted-foreground">
                         {restaurantInfo.name}
                       </p>
@@ -487,13 +499,17 @@ const PizzaBuilderSheet = ({
 
                       <div className="mt-1 divide-y divide-slate-100 rounded-xl border border-slate-100">
                         <div className="flex items-center gap-3 bg-destructive/5 px-3 py-3">
-                          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-slate-100">
-                            <Image
-                              src={product.imageUrl}
-                              alt={product.name}
-                              fill
-                              className="object-cover"
-                            />
+                          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-slate-100 flex items-center justify-center bg-slate-50">
+                            {product.imageUrl ? (
+                              <Image
+                                src={product.imageUrl}
+                                alt={product.name}
+                                fill
+                                className="object-cover"
+                              />
+                            ) : (
+                              <UtensilsCrossed size={20} className="text-slate-300" />
+                            )}
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-semibold text-destructive">
@@ -545,12 +561,12 @@ const PizzaBuilderSheet = ({
                             size={14}
                             className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
                           />
-                          <input
+                          <Input
                             type="search"
                             placeholder="Buscar 2º sabor..."
                             value={flavorSearch}
                             onChange={(e) => setFlavorSearch(e.target.value)}
-                            className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50 pl-8 pr-3 text-sm outline-none focus:border-slate-400 focus:ring-0"
+                            className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50 pl-8 pr-3 text-sm"
                           />
                         </div>
                       )}
@@ -585,13 +601,17 @@ const PizzaBuilderSheet = ({
                                     : "bg-white hover:bg-slate-50"
                                 }`}
                               >
-                                <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-slate-100">
-                                  <Image
-                                    src={p.imageUrl}
-                                    alt={p.name}
-                                    fill
-                                    className="object-cover"
-                                  />
+                                <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-slate-100 flex items-center justify-center bg-slate-50">
+                                  {p.imageUrl ? (
+                                    <Image
+                                      src={p.imageUrl}
+                                      alt={p.name}
+                                      fill
+                                      className="object-cover"
+                                    />
+                                  ) : (
+                                    <UtensilsCrossed size={20} className="text-slate-300" />
+                                  )}
                                 </div>
                                 <div className="min-w-0 flex-1">
                                   <p

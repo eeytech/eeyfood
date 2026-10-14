@@ -51,6 +51,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 export interface CustomerOrderProduct {
@@ -618,94 +619,43 @@ export function CustomerDetailClient({
         </Link>
       </div>
 
-      {/* ── Sub-Tabs Navigation (Padrão Acessos) ──────────────────── */}
-      <div className="flex border-b border-slate-200 overflow-x-auto gap-1 sm:gap-2">
-        <button
-          type="button"
-          onClick={() => setActiveTab("overview")}
-          className={cn(
-            "flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-semibold transition-all whitespace-nowrap",
-            activeTab === "overview"
-              ? "border-primary text-primary"
-              : "border-transparent text-slate-500 hover:text-slate-800",
-          )}
-        >
-          <UserIcon size={16} />
-          <span>Visão Geral</span>
-        </button>
+      {/* ── Sub-Tabs Navigation (Padrão Shadcn Tabs) ──────────────────── */}
+      <Tabs
+        value={activeTab}
+        onValueChange={(val) => setActiveTab(val as "overview" | "orders" | "addresses" | "messages")}
+        className="w-full"
+      >
+        <TabsList className="h-11 w-full justify-start rounded-xl bg-slate-100 p-1 border border-slate-200/80 overflow-x-auto">
+          <TabsTrigger value="overview" className="gap-2 rounded-lg text-xs font-semibold">
+            <UserIcon size={14} />
+            <span>Visão Geral</span>
+          </TabsTrigger>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab("orders")}
-          className={cn(
-            "flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-semibold transition-all whitespace-nowrap",
-            activeTab === "orders"
-              ? "border-primary text-primary"
-              : "border-transparent text-slate-500 hover:text-slate-800",
-          )}
-        >
-          <PackageIcon size={16} />
-          <span>Histórico de Pedidos</span>
-          <span
-            className={cn(
-              "rounded-full px-2 py-0.5 text-xs font-semibold",
-              activeTab === "orders"
-                ? "bg-primary/10 text-primary"
-                : "bg-slate-100 text-slate-600",
-            )}
-          >
-            {orders.length}
-          </span>
-        </button>
+          <TabsTrigger value="orders" className="gap-2 rounded-lg text-xs font-semibold">
+            <PackageIcon size={14} />
+            <span>Histórico de Pedidos</span>
+            <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-bold">
+              {orders.length}
+            </Badge>
+          </TabsTrigger>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab("addresses")}
-          className={cn(
-            "flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-semibold transition-all whitespace-nowrap",
-            activeTab === "addresses"
-              ? "border-primary text-primary"
-              : "border-transparent text-slate-500 hover:text-slate-800",
-          )}
-        >
-          <MapPinIcon size={16} />
-          <span>Endereços de Entrega</span>
-          <span
-            className={cn(
-              "rounded-full px-2 py-0.5 text-xs font-semibold",
-              activeTab === "addresses"
-                ? "bg-primary/10 text-primary"
-                : "bg-slate-100 text-slate-600",
-            )}
-          >
-            {parsedAddresses.length}
-          </span>
-        </button>
+          <TabsTrigger value="addresses" className="gap-2 rounded-lg text-xs font-semibold">
+            <MapPinIcon size={14} />
+            <span>Endereços de Entrega</span>
+            <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-bold">
+              {parsedAddresses.length}
+            </Badge>
+          </TabsTrigger>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab("messages")}
-          className={cn(
-            "flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-semibold transition-all whitespace-nowrap",
-            activeTab === "messages"
-              ? "border-primary text-primary"
-              : "border-transparent text-slate-500 hover:text-slate-800",
-          )}
-        >
-          <MessageSquareIcon size={16} />
-          <span>Histórico de Mensagens</span>
-          <span
-            className={cn(
-              "rounded-full px-2 py-0.5 text-xs font-semibold",
-              activeTab === "messages"
-                ? "bg-primary/10 text-primary"
-                : "bg-slate-100 text-slate-600",
-            )}
-          >
-            {interactions.length}
-          </span>
-        </button>
-      </div>
+          <TabsTrigger value="messages" className="gap-2 rounded-lg text-xs font-semibold">
+            <MessageSquareIcon size={14} />
+            <span>Histórico de Mensagens</span>
+            <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-bold">
+              {interactions.length}
+            </Badge>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {/* ── ABA 1: Visão Geral ─────────────────────────────────── */}
       {activeTab === "overview" && (

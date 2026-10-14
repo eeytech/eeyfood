@@ -17,7 +17,6 @@ export interface CriarCheckoutOnlineInput {
   consumptionMethod: ConsumptionMethod;
   phone: string;
   infinitePayHandle?: string | null;
-  mercadoPagoAccessToken?: string | null;
 }
 
 export const criarCheckoutOnline = async (input: CriarCheckoutOnlineInput) => {
@@ -34,7 +33,7 @@ export const criarCheckoutOnline = async (input: CriarCheckoutOnlineInput) => {
       });
     }
 
-    // Padrão: Mercado Pago
+    // Padrão: Mercado Pago (carrega o token seguro diretamente no servidor)
     return await criarPreferenciaMercadoPago({
       orderId: input.orderId,
       orderTotal: input.orderTotal,
@@ -42,7 +41,6 @@ export const criarCheckoutOnline = async (input: CriarCheckoutOnlineInput) => {
       slug: input.slug,
       consumptionMethod: input.consumptionMethod,
       phone: input.phone,
-      accessToken: input.mercadoPagoAccessToken,
     });
   } catch (error) {
     const numericOrderId = Number(input.orderId);

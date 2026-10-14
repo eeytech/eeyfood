@@ -1469,16 +1469,20 @@ export default function EntregasPainel({
               {/* Itens por página */}
               <div className="flex items-center gap-1.5 text-xs text-slate-500">
                 <span className="hidden sm:inline">Exibir:</span>
-                <select
-                  value={pageSize}
-                  onChange={(e) => setPageSize(Number(e.target.value))}
-                  className="h-8 rounded-lg border border-slate-200 bg-slate-50/80 px-2 text-xs font-semibold text-slate-700 outline-none focus:border-primary/40 focus:bg-white"
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(val) => setPageSize(Number(val))}
                 >
-                  <option value={6}>6 por pág.</option>
-                  <option value={12}>12 por pág.</option>
-                  <option value={18}>18 por pág.</option>
-                  <option value={24}>24 por pág.</option>
-                </select>
+                  <SelectTrigger className="h-8 w-28 rounded-lg border border-slate-200 bg-slate-50/80 px-2 text-xs font-semibold text-slate-700">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-slate-200 bg-white shadow-lg">
+                    <SelectItem value="6" className="text-xs">6 por pág.</SelectItem>
+                    <SelectItem value="12" className="text-xs">12 por pág.</SelectItem>
+                    <SelectItem value="18" className="text-xs">18 por pág.</SelectItem>
+                    <SelectItem value="24" className="text-xs">24 por pág.</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Controles de página */}

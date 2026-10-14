@@ -165,7 +165,7 @@ export function CompanySwitcher({
             <div className="space-y-4 py-4">
               <div className="space-y-1.5">
                 <Label htmlFor="unitName" className="text-xs font-semibold text-slate-700">
-                  Nome do Restaurante / Unidade *
+                  Nome do Restaurante / Unidade
                 </Label>
                 <Input
                   id="unitName"
