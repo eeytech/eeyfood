@@ -239,6 +239,34 @@
       "when": 1790950000000,
       "tag": "0033_add_keeta_marketplace",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1791000000000,
+      "tag": "0034_add_pix_mode",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1791100000000,
+      "tag": "0035_add_infinitepay_gateway",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1791200000000,
+      "tag": "0036_add_mercadopago_token",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1791930000000,
+      "tag": "0037_add_vale_refeicao_alimentacao",
+      "breakpoints": true
     }
   ]
 }

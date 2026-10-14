@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, gte, ilike, inArray, isNotNull, ne, sql } from "drizzle-orm";
 
-import { db } from "../client";
+import { db, pool, AUTO_MIGRATIONS_SQL } from "../client";
 import { isRestaurantOpen } from "../restaurant-utils";
 import {
   abandonedCartsTable,
@@ -406,7 +406,21 @@ export const buscarRestauranteUnico = async (): Promise<Restaurant | null> => {
       .limit(1);
 
     return restaurant ?? null;
-  } catch (err) {
+  } catch (err: unknown) {
+    const errorObj = err as { code?: string; message?: string } | undefined;
+    if (errorObj?.code === "42703" || String(errorObj?.message || "").includes("does not exist")) {
+      console.warn("⚠️ Coluna ausente em Restaurant detectada em buscarRestauranteUnico. Executando auto-migração...");
+      try {
+        await pool.query(AUTO_MIGRATIONS_SQL);
+        const [restaurant] = await db
+          .select()
+          .from(restaurantsTable)
+          .limit(1);
+        return restaurant ?? null;
+      } catch (retryErr) {
+        console.error("❌ Erro em buscarRestauranteUnico após tentativa de auto-migração:", retryErr);
+      }
+    }
     console.error("❌ Erro em buscarRestauranteUnico:", err);
     return null;
   }
@@ -415,19 +429,36 @@ export const buscarRestauranteUnico = async (): Promise<Restaurant | null> => {
 export const buscarRestaurantePorSlug = async (
   slug?: string,
 ): Promise<Restaurant | null> => {
-  try {
-    if (!slug || slug === "default") {
-      return buscarRestauranteUnico();
-    }
+  if (!slug || slug === "default") {
+    return buscarRestauranteUnico();
+  }
 
+  const cleanSlug = slug;
+
+  try {
     const [restaurant] = await db
       .select()
       .from(restaurantsTable)
-      .where(eq(restaurantsTable.slug, slug))
+      .where(eq(restaurantsTable.slug, cleanSlug))
       .limit(1);
 
     return restaurant ?? (await buscarRestauranteUnico());
-  } catch (err) {
+  } catch (err: unknown) {
+    const errorObj = err as { code?: string; message?: string } | undefined;
+    if (errorObj?.code === "42703" || String(errorObj?.message || "").includes("does not exist")) {
+      console.warn("⚠️ Coluna ausente em Restaurant detectada em buscarRestaurantePorSlug. Executando auto-migração...");
+      try {
+        await pool.query(AUTO_MIGRATIONS_SQL);
+        const [restaurant] = await db
+          .select()
+          .from(restaurantsTable)
+          .where(eq(restaurantsTable.slug, cleanSlug))
+          .limit(1);
+        return restaurant ?? (await buscarRestauranteUnico());
+      } catch (retryErr) {
+        console.error("❌ Erro em buscarRestaurantePorSlug após tentativa de auto-migração:", retryErr);
+      }
+    }
     console.error("❌ Erro em buscarRestaurantePorSlug:", err);
     return null;
   }

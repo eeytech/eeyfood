@@ -39,12 +39,16 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
   let restaurant: Restaurant | null = null;
 
   if (targetId) {
-    const [found] = await db
-      .select()
-      .from(restaurantsTable)
-      .where(eq(restaurantsTable.id, targetId))
-      .limit(1);
-    restaurant = found ?? null;
+    try {
+      const [found] = await db
+        .select()
+        .from(restaurantsTable)
+        .where(eq(restaurantsTable.id, targetId))
+        .limit(1);
+      restaurant = found ?? null;
+    } catch {
+      // Fallback seguro em caso de coluna pendente de migração
+    }
   }
 
   if (!restaurant && session.companySlug) {

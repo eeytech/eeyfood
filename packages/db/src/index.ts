@@ -1,6 +1,6 @@
 export { and, asc, desc, eq, gte, ilike, inArray, isNotNull, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 
-export { db, pool } from "./client";
+export { db, pool, AUTO_MIGRATIONS_SQL, ensureAutoMigrations } from "./client";
 export {
   adicionarItensComanda,
   atualizarStatusPagamentoPedido,
