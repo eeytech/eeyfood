@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Dialog,
   DialogContent,
@@ -55,7 +56,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { formatCpf, formatPhone } from "@/lib/masks";
+import { BRAZIL_UFS } from "@/lib/address-utils";
+import { formatCep, formatCpf, formatPhone } from "@/lib/masks";
 import { cn } from "@/lib/utils";
 import {
   alternarStatusFuncionarioAction,
@@ -110,11 +112,38 @@ export function FuncionariosTab({
   const [editingFuncionario, setEditingFuncionario] = useState<Employee | null>(null);
   const [formCpf, setFormCpf] = useState("");
   const [formPhone, setFormPhone] = useState("");
+  const [formCep, setFormCep] = useState("");
+  const [formLogradouro, setFormLogradouro] = useState("");
+  const [formNumero, setFormNumero] = useState("");
+  const [formComplemento, setFormComplemento] = useState("");
+  const [formBairro, setFormBairro] = useState("");
+  const [formCidade, setFormCidade] = useState("");
+  const [formEstado, setFormEstado] = useState("");
+  const [isSearchingCep, setIsSearchingCep] = useState(false);
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [funcionarioToDelete, setFuncionarioToDelete] = useState<Employee | null>(null);
 
   const [isPending, startTransition] = useTransition();
+
+  const handleFuncionarioCepLookup = async (cepVal: string) => {
+    const digits = cepVal.replace(/\D/g, "");
+    if (digits.length !== 8) return;
+    setIsSearchingCep(true);
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+      const data = await res.json();
+      if (data.erro) return;
+      setFormLogradouro(data.logradouro ?? "");
+      setFormBairro(data.bairro ?? "");
+      setFormCidade(data.localidade ?? "");
+      setFormEstado(data.uf ?? "");
+    } catch {
+      // busca de CEP silenciosa
+    } finally {
+      setIsSearchingCep(false);
+    }
+  };
 
   // Controle de abertura externa vindo do botão do topo
   const isCreateOpen = isNewFuncionarioOpen || modalOpen;
@@ -125,6 +154,13 @@ export function FuncionariosTab({
       setEditingFuncionario(null);
       setFormCpf("");
       setFormPhone("");
+      setFormCep("");
+      setFormLogradouro("");
+      setFormNumero("");
+      setFormComplemento("");
+      setFormBairro("");
+      setFormCidade("");
+      setFormEstado("");
     }
   };
 
@@ -164,6 +200,13 @@ export function FuncionariosTab({
     setEditingFuncionario(f);
     setFormCpf(formatCpf(f.cpf || ""));
     setFormPhone(formatPhone(f.phone || ""));
+    setFormCep(f.cep ? formatCep(f.cep) : "");
+    setFormLogradouro(f.logradouro || "");
+    setFormNumero(f.numero || "");
+    setFormComplemento(f.complemento || "");
+    setFormBairro(f.bairro || "");
+    setFormCidade(f.cidade || "");
+    setFormEstado(f.estado || "");
     setCreateOpen(true);
   };
 
@@ -281,45 +324,6 @@ export function FuncionariosTab({
             </p>
           </CardContent>
         </Card>
-      </div>
-
-      {/* ── Barra de Ações e Atalho para Financeiro ─────────── */}
-      <div className="flex flex-col gap-3 rounded-2xl border-2 border-primary/20 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-xs">
-            <BanknoteIcon size={20} />
-          </div>
-          <div>
-            <h4 className="text-sm font-bold text-slate-900">
-              Pagamento e Folha Integrados ao Financeiro
-            </h4>
-            <p className="text-xs text-slate-600">
-              Os lançamentos de salários, adiantamentos e vales são geridos e conciliados diretamente no módulo financeiro.
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            asChild
-            variant="outline"
-            className="h-9 gap-1.5 rounded-full border-primary bg-white text-xs font-semibold text-primary hover:bg-primary/10"
-          >
-            <Link href="/financeiro">
-              <span>Acessar Folha no Financeiro</span>
-              <ExternalLinkIcon size={13} />
-            </Link>
-          </Button>
-          <Button
-            onClick={() => {
-              setEditingFuncionario(null);
-              setCreateOpen(true);
-            }}
-            className="h-9 gap-1.5 rounded-full bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-xs hover:bg-primary/90"
-          >
-            <PlusIcon size={14} />
-            <span>Novo Colaborador</span>
-          </Button>
-        </div>
       </div>
 
       {/* ── Filtros e Busca da Tabela ───────────────────────── */}
@@ -603,7 +607,7 @@ export function FuncionariosTab({
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border-2 border-primary bg-white p-6 shadow-2xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold font-display text-primary">
-              {editingFuncionario ? "Editar Colaborador" : "Novo Colaborador"}
+              {editingFuncionario ? "Editar Funcionário" : "Cadastrar Novo Funcionário"}
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
               Cadastre as informações cadastrais e dados para liquidação de proventos.
@@ -617,18 +621,28 @@ export function FuncionariosTab({
               if (editingFuncionario) {
                 formData.set("id", editingFuncionario.id);
               }
+              formData.set("cpf", formCpf);
+              formData.set("phone", formPhone);
+              formData.set("cep", formCep);
+              formData.set("logradouro", formLogradouro);
+              formData.set("numero", formNumero);
+              formData.set("complemento", formComplemento);
+              formData.set("bairro", formBairro);
+              formData.set("cidade", formCidade);
+              formData.set("estado", formEstado);
+
               startTransition(async () => {
                 try {
                   await criarOuEditarFuncionarioAction(slug, formData);
                   toast.success(
                     editingFuncionario
-                      ? "Colaborador atualizado com sucesso!"
-                      : "Colaborador cadastrado com sucesso!",
+                      ? "Funcionário atualizado com sucesso!"
+                      : "Funcionário cadastrado com sucesso!",
                   );
                   setCreateOpen(false);
                 } catch (err: unknown) {
                   toast.error(
-                    err instanceof Error ? err.message : "Erro ao salvar colaborador.",
+                    err instanceof Error ? err.message : "Erro ao salvar funcionário.",
                   );
                 }
               });
@@ -659,16 +673,10 @@ export function FuncionariosTab({
                   id="roleTitle"
                   name="roleTitle"
                   required
-                  list="roles-datalist"
                   defaultValue={editingFuncionario?.roleTitle || ""}
-                  placeholder="Ex: Cozinheiro(a) ou selecione..."
+                  placeholder="Ex: Cozinheiro(a), Atendente, Auxiliar..."
                   className="h-10 rounded-xl border-slate-200 text-xs focus:bg-white"
                 />
-                <datalist id="roles-datalist">
-                  {COMMON_ROLES.map((r) => (
-                    <option key={r} value={r} />
-                  ))}
-                </datalist>
               </div>
 
               <div className="space-y-1.5">
@@ -803,21 +811,172 @@ export function FuncionariosTab({
                 <Label htmlFor="hireDate" className="text-xs font-semibold text-slate-700">
                   Data de Admissão
                 </Label>
-                <Input
+                <DatePicker
                   id="hireDate"
                   name="hireDate"
-                  type="date"
+                  key={editingFuncionario?.id ? `hireDate-${editingFuncionario.id}` : "hireDate-new"}
                   defaultValue={
                     editingFuncionario?.hireDate
                       ? String(editingFuncionario.hireDate).slice(0, 10)
                       : ""
                   }
-                  className="h-10 rounded-xl border-slate-200 text-xs focus:bg-white"
+                  placeholder="Data de admissão"
                 />
               </div>
             </div>
 
-            {/* Bloco 5: Observações */}
+            {/* Bloco 5: Endereço */}
+            <div className="pt-1">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                    Endereço
+                  </span>
+                  <div className="h-px w-12 bg-slate-100" />
+                </div>
+                <span className="text-[11px] text-slate-500">
+                  Digite o CEP para buscar o endereço automaticamente
+                </span>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-12">
+                {/* CEP */}
+                <div className="space-y-1.5 sm:col-span-4">
+                  <Label htmlFor="func-cep" className="text-xs font-semibold text-slate-700">
+                    CEP
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="func-cep"
+                      name="cep"
+                      placeholder="00000-000"
+                      value={formCep}
+                      onChange={(e) => {
+                        const formatted = formatCep(e.target.value);
+                        setFormCep(formatted);
+                        if (formatted.replace(/\D/g, "").length === 8) {
+                          handleFuncionarioCepLookup(formatted);
+                        }
+                      }}
+                      onBlur={() => handleFuncionarioCepLookup(formCep)}
+                      maxLength={9}
+                      className="h-10 rounded-xl border-slate-200 bg-white pr-9 text-xs text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                    />
+                    <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                      {isSearchingCep ? (
+                        <LoaderCircleIcon size={14} className="animate-spin text-primary" />
+                      ) : (
+                        <SearchIcon size={14} />
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Logradouro / Rua */}
+                <div className="space-y-1.5 sm:col-span-8">
+                  <Label htmlFor="func-logradouro" className="text-xs font-semibold text-slate-700">
+                    Logradouro / Rua
+                  </Label>
+                  <Input
+                    id="func-logradouro"
+                    name="logradouro"
+                    placeholder="Ex: Av. Paulista, Rua das Flores"
+                    value={formLogradouro}
+                    onChange={(e) => setFormLogradouro(e.target.value)}
+                    className="h-10 rounded-xl border-slate-200 bg-white text-xs text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                  />
+                </div>
+
+                {/* Número */}
+                <div className="space-y-1.5 sm:col-span-3">
+                  <Label htmlFor="func-numero" className="text-xs font-semibold text-slate-700">
+                    Número
+                  </Label>
+                  <Input
+                    id="func-numero"
+                    name="numero"
+                    placeholder="Ex: 123"
+                    value={formNumero}
+                    onChange={(e) => setFormNumero(e.target.value)}
+                    className="h-10 rounded-xl border-slate-200 bg-white text-xs text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                  />
+                </div>
+
+                {/* UF */}
+                <div className="space-y-1.5 sm:col-span-3">
+                  <Label htmlFor="func-estado" className="text-xs font-semibold text-slate-700">
+                    UF
+                  </Label>
+                  <Select
+                    value={formEstado || undefined}
+                    onValueChange={(val) => setFormEstado(val)}
+                  >
+                    <SelectTrigger
+                      id="func-estado"
+                      className="h-10 rounded-xl border-slate-200 bg-white px-3 font-semibold text-xs uppercase text-slate-900 focus:border-primary"
+                    >
+                      <SelectValue placeholder="UF" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60 rounded-xl border-slate-200 bg-white shadow-xl">
+                      {BRAZIL_UFS.map((uf) => (
+                        <SelectItem key={uf.value} value={uf.value} className="text-xs font-medium">
+                          <span className="font-semibold text-slate-900">{uf.value}</span>
+                          <span className="ml-1.5 text-slate-500">- {uf.name}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <input type="hidden" name="estado" value={formEstado} />
+                </div>
+
+                {/* Complemento */}
+                <div className="space-y-1.5 sm:col-span-6">
+                  <Label htmlFor="func-complemento" className="text-xs font-semibold text-slate-700">
+                    Complemento
+                  </Label>
+                  <Input
+                    id="func-complemento"
+                    name="complemento"
+                    placeholder="Ex: Apto, Bloco..."
+                    value={formComplemento}
+                    onChange={(e) => setFormComplemento(e.target.value)}
+                    className="h-10 rounded-xl border-slate-200 bg-white text-xs text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                  />
+                </div>
+
+                {/* Bairro */}
+                <div className="space-y-1.5 sm:col-span-6">
+                  <Label htmlFor="func-bairro" className="text-xs font-semibold text-slate-700">
+                    Bairro
+                  </Label>
+                  <Input
+                    id="func-bairro"
+                    name="bairro"
+                    placeholder="Ex: Centro"
+                    value={formBairro}
+                    onChange={(e) => setFormBairro(e.target.value)}
+                    className="h-10 rounded-xl border-slate-200 bg-white text-xs text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                  />
+                </div>
+
+                {/* Cidade */}
+                <div className="space-y-1.5 sm:col-span-6">
+                  <Label htmlFor="func-cidade" className="text-xs font-semibold text-slate-700">
+                    Cidade
+                  </Label>
+                  <Input
+                    id="func-cidade"
+                    name="cidade"
+                    placeholder="Ex: São Paulo"
+                    value={formCidade}
+                    onChange={(e) => setFormCidade(e.target.value)}
+                    className="h-10 rounded-xl border-slate-200 bg-white text-xs text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Bloco 6: Observações */}
             <div className="space-y-1.5">
               <Label htmlFor="notes" className="text-xs font-semibold text-slate-700">
                 Observações Adicionais
@@ -848,7 +1007,7 @@ export function FuncionariosTab({
                 className="h-10 gap-1.5 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-xs hover:bg-primary/90"
               >
                 {isPending && <LoaderCircleIcon size={14} className="animate-spin" />}
-                <span>{editingFuncionario ? "Salvar Alterações" : "Cadastrar Colaborador"}</span>
+                <span>{editingFuncionario ? "Salvar Alterações" : "Cadastrar Funcionário"}</span>
               </Button>
             </DialogFooter>
           </form>
@@ -859,7 +1018,7 @@ export function FuncionariosTab({
       <ConfirmDeleteDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        title="Excluir Colaborador"
+        title="Excluir Funcionário"
         description={
           funcionarioToDelete ? (
             <>

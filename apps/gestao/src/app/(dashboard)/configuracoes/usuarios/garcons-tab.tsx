@@ -63,6 +63,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { BRAZIL_UFS } from "@/lib/address-utils";
 import { cn } from "@/lib/utils";
 import {
   alternarStatusGarcomAction,
@@ -120,6 +121,11 @@ const formatCpf = (v: string) => {
     .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
 };
 
+const formatCep = (v: string) => {
+  const d = v.replace(/\D/g, "").slice(0, 8);
+  return d.replace(/(\d{5})(\d{1,3})$/, "$1-$2");
+};
+
 export function GarconsTab({
   slug,
   garcons,
@@ -135,6 +141,14 @@ export function GarconsTab({
   const [editingGarcom, setEditingGarcom] = useState<GarcomMetricas | null>(null);
   const [garcomPhone, setGarcomPhone] = useState("");
   const [garcomCpf, setGarcomCpf] = useState("");
+  const [garcomCep, setGarcomCep] = useState("");
+  const [garcomLogradouro, setGarcomLogradouro] = useState("");
+  const [garcomNumero, setGarcomNumero] = useState("");
+  const [garcomComplemento, setGarcomComplemento] = useState("");
+  const [garcomBairro, setGarcomBairro] = useState("");
+  const [garcomCidade, setGarcomCidade] = useState("");
+  const [garcomEstado, setGarcomEstado] = useState("");
+  const [isSearchingCep, setIsSearchingCep] = useState(false);
   const [deletingGarcom, setDeletingGarcom] = useState<{ id: string; name: string } | null>(null);
 
   // Dialog de Regra de Serviço
@@ -157,12 +171,38 @@ export function GarconsTab({
   const [fechamentosCurrentPage, setFechamentosCurrentPage] = useState(1);
   const [fechamentosPageSize, setFechamentosPageSize] = useState(10);
 
+  const handleGarcomCepLookup = async (cepVal: string) => {
+    const digits = cepVal.replace(/\D/g, "");
+    if (digits.length !== 8) return;
+    setIsSearchingCep(true);
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+      const data = await res.json();
+      if (data.erro) return;
+      setGarcomLogradouro(data.logradouro ?? "");
+      setGarcomBairro(data.bairro ?? "");
+      setGarcomCidade(data.localidade ?? "");
+      setGarcomEstado(data.uf ?? "");
+    } catch {
+      // busca de CEP silenciosa
+    } finally {
+      setIsSearchingCep(false);
+    }
+  };
+
   // Sincronização com botão do cabeçalho da página
   useEffect(() => {
     if (isNewGarcomOpen) {
       setEditingGarcom(null);
       setGarcomPhone("");
       setGarcomCpf("");
+      setGarcomCep("");
+      setGarcomLogradouro("");
+      setGarcomNumero("");
+      setGarcomComplemento("");
+      setGarcomBairro("");
+      setGarcomCidade("");
+      setGarcomEstado("");
       setGarcomDialogOpen(true);
       onNewGarcomOpenChange?.(false);
     }
@@ -258,6 +298,13 @@ export function GarconsTab({
     setEditingGarcom(null);
     setGarcomPhone("");
     setGarcomCpf("");
+    setGarcomCep("");
+    setGarcomLogradouro("");
+    setGarcomNumero("");
+    setGarcomComplemento("");
+    setGarcomBairro("");
+    setGarcomCidade("");
+    setGarcomEstado("");
     setGarcomDialogOpen(true);
   };
 
@@ -266,6 +313,13 @@ export function GarconsTab({
     setEditingGarcom(g);
     setGarcomPhone(formatPhone(g.waiter.phone || ""));
     setGarcomCpf(formatCpf(g.waiter.cpf || ""));
+    setGarcomCep(g.waiter.cep ? formatCep(g.waiter.cep) : "");
+    setGarcomLogradouro(g.waiter.logradouro || "");
+    setGarcomNumero(g.waiter.numero || "");
+    setGarcomComplemento(g.waiter.complemento || "");
+    setGarcomBairro(g.waiter.bairro || "");
+    setGarcomCidade(g.waiter.cidade || "");
+    setGarcomEstado(g.waiter.estado || "");
     setGarcomDialogOpen(true);
   };
 
@@ -278,6 +332,13 @@ export function GarconsTab({
     }
     formData.set("phone", garcomPhone);
     formData.set("cpf", garcomCpf);
+    formData.set("cep", garcomCep);
+    formData.set("logradouro", garcomLogradouro);
+    formData.set("numero", garcomNumero);
+    formData.set("complemento", garcomComplemento);
+    formData.set("bairro", garcomBairro);
+    formData.set("cidade", garcomCidade);
+    formData.set("estado", garcomEstado);
 
     startTransition(async () => {
       const res = await criarOuEditarGarcomAction(slug, formData);
@@ -1125,7 +1186,7 @@ export function GarconsTab({
 
       {/* ── Dialog: Criar/Editar Garçom ─────────────────────────────────── */}
       <Dialog open={garcomDialogOpen} onOpenChange={setGarcomDialogOpen}>
-        <DialogContent className="sm:max-w-[480px]">
+        <DialogContent className="sm:max-w-[620px] max-h-[90vh] overflow-y-auto rounded-3xl border-slate-200 bg-white p-6 shadow-2xl">
           <form onSubmit={handleGarcomSubmit}>
             <DialogHeader>
               <DialogTitle className="text-lg font-bold text-slate-900">
@@ -1137,97 +1198,253 @@ export function GarconsTab({
             </DialogHeader>
 
             <div className="space-y-4 py-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="name" className="text-xs font-semibold text-slate-700">
-                  Nome Completo / Apelido no Salão
-                </Label>
-                <Input
-                  id="name"
-                  name="name"
-                  required
-                  defaultValue={editingGarcom?.waiter.name || ""}
-                  placeholder="Ex: Carlos Oliveira (Carlinhos)"
-                  className="h-9 text-xs"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
+              {/* ── Dados Pessoais ── */}
+              <div className="space-y-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="phone" className="text-xs font-semibold text-slate-700">
-                    Telefone / WhatsApp
+                  <Label htmlFor="name" className="text-xs font-semibold text-slate-700">
+                    Nome Completo / Apelido no Salão
                   </Label>
                   <Input
-                    id="phone"
-                    name="phone"
-                    value={garcomPhone}
-                    onChange={(e) => setGarcomPhone(formatPhone(e.target.value))}
-                    placeholder="(11) 98765-4321"
-                    className="h-9 text-xs"
+                    id="name"
+                    name="name"
+                    required
+                    defaultValue={editingGarcom?.waiter.name || ""}
+                    placeholder="Ex: Carlos Oliveira (Carlinhos)"
+                    className="h-10 rounded-xl border-slate-200 text-xs"
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="cpf" className="text-xs font-semibold text-slate-700">
-                    CPF
-                  </Label>
-                  <Input
-                    id="cpf"
-                    name="cpf"
-                    value={garcomCpf}
-                    onChange={(e) => setGarcomCpf(formatCpf(e.target.value))}
-                    placeholder="000.000.000-00"
-                    className="h-9 text-xs"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="phone" className="text-xs font-semibold text-slate-700">
+                      Telefone / WhatsApp
+                    </Label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      value={garcomPhone}
+                      onChange={(e) => setGarcomPhone(formatPhone(e.target.value))}
+                      placeholder="(11) 98765-4321"
+                      className="h-10 rounded-xl border-slate-200 text-xs"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="cpf" className="text-xs font-semibold text-slate-700">
+                      CPF
+                    </Label>
+                    <Input
+                      id="cpf"
+                      name="cpf"
+                      value={garcomCpf}
+                      onChange={(e) => setGarcomCpf(formatCpf(e.target.value))}
+                      placeholder="000.000.000-00"
+                      className="h-10 rounded-xl border-slate-200 text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="commissionPercent" className="text-xs font-semibold text-slate-700">
+                      Percentual de Comissão Individual (%)
+                    </Label>
+                    <Input
+                      id="commissionPercent"
+                      name="commissionPercent"
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      max="100"
+                      defaultValue={editingGarcom?.waiter.commissionPercent ?? 0}
+                      placeholder="0 (deixe 0 para taxa padrão)"
+                      className="h-10 rounded-xl border-slate-200 text-xs"
+                    />
+                    <p className="text-[10px] text-slate-400">
+                      Deixe 0% para usar a taxa padrão da casa.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="status" className="text-xs font-semibold text-slate-700">
+                      Status
+                    </Label>
+                    <Select name="status" defaultValue={editingGarcom?.waiter.status || "ACTIVE"}>
+                      <SelectTrigger className="h-10 rounded-xl border-slate-200 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ACTIVE">Ativo (visível no app garçom)</SelectItem>
+                        <SelectItem value="INACTIVE">Inativo (bloqueado)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="commissionPercent" className="text-xs font-semibold text-slate-700">
-                  Percentual de Comissão Individual (%)
-                </Label>
-                <Input
-                  id="commissionPercent"
-                  name="commissionPercent"
-                  type="number"
-                  step="0.5"
-                  min="0"
-                  max="100"
-                  defaultValue={editingGarcom?.waiter.commissionPercent ?? 0}
-                  placeholder="0 (deixe 0 para usar taxa de 10% padrão)"
-                  className="h-9 text-xs"
-                />
-                <p className="text-[10px] text-slate-400">
-                  Deixe em 0% se o garçom recebe a taxa de serviço rateada padrão da casa.
-                </p>
-              </div>
+              {/* ── Endereço ── */}
+              <div className="pt-2">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                      Endereço
+                    </span>
+                    <div className="h-px w-12 bg-slate-100" />
+                  </div>
+                  <span className="text-[11px] text-slate-500">
+                    Digite o CEP para buscar o endereço automaticamente
+                  </span>
+                </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="status" className="text-xs font-semibold text-slate-700">
-                  Status
-                </Label>
-                <Select name="status" defaultValue={editingGarcom?.waiter.status || "ACTIVE"}>
-                  <SelectTrigger className="h-9 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ACTIVE">Ativo (visível no app garçom)</SelectItem>
-                    <SelectItem value="INACTIVE">Inativo (bloqueado)</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="grid gap-3 sm:grid-cols-12">
+                  {/* CEP */}
+                  <div className="space-y-1.5 sm:col-span-4">
+                    <Label htmlFor="garcom-cep" className="text-xs font-semibold text-slate-700">
+                      CEP
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="garcom-cep"
+                        name="cep"
+                        placeholder="00000-000"
+                        value={garcomCep}
+                        onChange={(e) => {
+                          const formatted = formatCep(e.target.value);
+                          setGarcomCep(formatted);
+                          if (formatted.replace(/\D/g, "").length === 8) {
+                            handleGarcomCepLookup(formatted);
+                          }
+                        }}
+                        onBlur={() => handleGarcomCepLookup(garcomCep)}
+                        maxLength={9}
+                        className="h-10 rounded-xl border-slate-200 bg-white pr-9 text-xs text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                      />
+                      <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                        {isSearchingCep ? (
+                          <Loader2Icon size={14} className="animate-spin text-primary" />
+                        ) : (
+                          <SearchIcon size={14} />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Logradouro / Rua */}
+                  <div className="space-y-1.5 sm:col-span-8">
+                    <Label htmlFor="garcom-logradouro" className="text-xs font-semibold text-slate-700">
+                      Logradouro / Rua
+                    </Label>
+                    <Input
+                      id="garcom-logradouro"
+                      name="logradouro"
+                      placeholder="Ex: Av. Paulista, Rua das Flores"
+                      value={garcomLogradouro}
+                      onChange={(e) => setGarcomLogradouro(e.target.value)}
+                      className="h-10 rounded-xl border-slate-200 bg-white text-xs text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                    />
+                  </div>
+
+                  {/* Número */}
+                  <div className="space-y-1.5 sm:col-span-3">
+                    <Label htmlFor="garcom-numero" className="text-xs font-semibold text-slate-700">
+                      Número
+                    </Label>
+                    <Input
+                      id="garcom-numero"
+                      name="numero"
+                      placeholder="Ex: 123"
+                      value={garcomNumero}
+                      onChange={(e) => setGarcomNumero(e.target.value)}
+                      className="h-10 rounded-xl border-slate-200 bg-white text-xs text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                    />
+                  </div>
+
+                  {/* UF */}
+                  <div className="space-y-1.5 sm:col-span-3">
+                    <Label htmlFor="garcom-estado" className="text-xs font-semibold text-slate-700">
+                      UF
+                    </Label>
+                    <Select
+                      value={garcomEstado || undefined}
+                      onValueChange={(val) => setGarcomEstado(val)}
+                    >
+                      <SelectTrigger
+                        id="garcom-estado"
+                        className="h-10 rounded-xl border-slate-200 bg-white px-3 font-semibold text-xs uppercase text-slate-900 focus:border-primary"
+                      >
+                        <SelectValue placeholder="UF" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-60 rounded-xl border-slate-200 bg-white shadow-xl">
+                        {BRAZIL_UFS.map((uf) => (
+                          <SelectItem key={uf.value} value={uf.value} className="text-xs font-medium">
+                            <span className="font-semibold text-slate-900">{uf.value}</span>
+                            <span className="ml-1.5 text-slate-500">- {uf.name}</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <input type="hidden" name="estado" value={garcomEstado} />
+                  </div>
+
+                  {/* Complemento */}
+                  <div className="space-y-1.5 sm:col-span-6">
+                    <Label htmlFor="garcom-complemento" className="text-xs font-semibold text-slate-700">
+                      Complemento
+                    </Label>
+                    <Input
+                      id="garcom-complemento"
+                      name="complemento"
+                      placeholder="Ex: Apto, Bloco..."
+                      value={garcomComplemento}
+                      onChange={(e) => setGarcomComplemento(e.target.value)}
+                      className="h-10 rounded-xl border-slate-200 bg-white text-xs text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                    />
+                  </div>
+
+                  {/* Bairro */}
+                  <div className="space-y-1.5 sm:col-span-6">
+                    <Label htmlFor="garcom-bairro" className="text-xs font-semibold text-slate-700">
+                      Bairro
+                    </Label>
+                    <Input
+                      id="garcom-bairro"
+                      name="bairro"
+                      placeholder="Ex: Centro"
+                      value={garcomBairro}
+                      onChange={(e) => setGarcomBairro(e.target.value)}
+                      className="h-10 rounded-xl border-slate-200 bg-white text-xs text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                    />
+                  </div>
+
+                  {/* Cidade */}
+                  <div className="space-y-1.5 sm:col-span-6">
+                    <Label htmlFor="garcom-cidade" className="text-xs font-semibold text-slate-700">
+                      Cidade
+                    </Label>
+                    <Input
+                      id="garcom-cidade"
+                      name="cidade"
+                      placeholder="Ex: São Paulo"
+                      value={garcomCidade}
+                      onChange={(e) => setGarcomCidade(e.target.value)}
+                      className="h-10 rounded-xl border-slate-200 bg-white text-xs text-slate-900 placeholder:text-slate-400 focus:border-primary"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
-            <DialogFooter className="gap-2 sm:gap-0">
+            <DialogFooter className="gap-2 sm:gap-0 pt-2">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setGarcomDialogOpen(false)}
                 disabled={isPending}
-                className="h-9 text-xs"
+                className="h-10 rounded-full text-xs font-semibold"
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isPending} className="h-9 gap-1.5 bg-primary text-xs font-semibold text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/25">
+              <Button type="submit" disabled={isPending} className="h-10 gap-1.5 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-md shadow-primary/25 hover:bg-primary/90">
                 {isPending && <Loader2Icon size={14} className="animate-spin" />}
                 {editingGarcom ? "Salvar Alterações" : "Cadastrar Garçom"}
               </Button>

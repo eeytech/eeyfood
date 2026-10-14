@@ -1196,6 +1196,13 @@ export const waitersTable = pgTable("Waiter", {
   restaurantId: uuid("restaurantId")
     .notNull()
     .references(() => restaurantsTable.id, { onDelete: "cascade" }),
+  cep: text("cep"),
+  logradouro: text("logradouro"),
+  numero: text("numero"),
+  complemento: text("complemento"),
+  bairro: text("bairro"),
+  cidade: text("cidade"),
+  estado: text("estado"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
@@ -1250,6 +1257,13 @@ export const employeesTable = pgTable("Employee", {
   hireDate: date("hireDate"),
   status: employeeStatusEnum("status").default("ACTIVE").notNull(),
   notes: text("notes"),
+  cep: text("cep"),
+  logradouro: text("logradouro"),
+  numero: text("numero"),
+  complemento: text("complemento"),
+  bairro: text("bairro"),
+  cidade: text("cidade"),
+  estado: text("estado"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });

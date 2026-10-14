@@ -75,9 +75,24 @@ async function ensureEmployeesTablesExist() {
         "hireDate" date,
         "status" "EmployeeStatus" NOT NULL DEFAULT 'ACTIVE',
         "notes" text,
+        "cep" text,
+        "logradouro" text,
+        "numero" text,
+        "complemento" text,
+        "bairro" text,
+        "cidade" text,
+        "estado" text,
         "createdAt" timestamp DEFAULT now() NOT NULL,
         "updatedAt" timestamp DEFAULT now() NOT NULL
       );
+
+      ALTER TABLE "Employee" ADD COLUMN IF NOT EXISTS "cep" text;
+      ALTER TABLE "Employee" ADD COLUMN IF NOT EXISTS "logradouro" text;
+      ALTER TABLE "Employee" ADD COLUMN IF NOT EXISTS "numero" text;
+      ALTER TABLE "Employee" ADD COLUMN IF NOT EXISTS "complemento" text;
+      ALTER TABLE "Employee" ADD COLUMN IF NOT EXISTS "bairro" text;
+      ALTER TABLE "Employee" ADD COLUMN IF NOT EXISTS "cidade" text;
+      ALTER TABLE "Employee" ADD COLUMN IF NOT EXISTS "estado" text;
 
       CREATE TABLE IF NOT EXISTS "EmployeePayment" (
         "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -204,6 +219,13 @@ export async function criarOuEditarFuncionarioAction(
   const bankAccount = formData.get("bankAccount")?.toString().trim() || null;
   const hireDate = formData.get("hireDate")?.toString() || null;
   const notes = formData.get("notes")?.toString().trim() || null;
+  const cep = formData.get("cep")?.toString().trim() || null;
+  const logradouro = formData.get("logradouro")?.toString().trim() || null;
+  const numero = formData.get("numero")?.toString().trim() || null;
+  const complemento = formData.get("complemento")?.toString().trim() || null;
+  const bairro = formData.get("bairro")?.toString().trim() || null;
+  const cidade = formData.get("cidade")?.toString().trim() || null;
+  const estado = formData.get("estado")?.toString().trim() || null;
   const status = (formData.get("status")?.toString() === "INACTIVE" ? "INACTIVE" : "ACTIVE") as "ACTIVE" | "INACTIVE";
 
   if (!name) throw new Error("O nome do colaborador é obrigatório.");
@@ -229,6 +251,13 @@ export async function criarOuEditarFuncionarioAction(
         hireDate,
         status,
         notes,
+        cep,
+        logradouro,
+        numero,
+        complemento,
+        bairro,
+        cidade,
+        estado,
         updatedAt: new Date(),
       })
       .where(and(eq(employeesTable.id, id), eq(employeesTable.restaurantId, restaurant.id)));
@@ -251,6 +280,13 @@ export async function criarOuEditarFuncionarioAction(
       hireDate,
       status,
       notes,
+      cep,
+      logradouro,
+      numero,
+      complemento,
+      bairro,
+      cidade,
+      estado,
     });
   }
 

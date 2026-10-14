@@ -53,6 +53,22 @@ const getRestaurantOrThrow = async (slug: string) => {
   return restaurant;
 };
 
+async function ensureWaitersColumnsExist() {
+  try {
+    await db.execute(sql`
+      ALTER TABLE "Waiter" ADD COLUMN IF NOT EXISTS "cep" text;
+      ALTER TABLE "Waiter" ADD COLUMN IF NOT EXISTS "logradouro" text;
+      ALTER TABLE "Waiter" ADD COLUMN IF NOT EXISTS "numero" text;
+      ALTER TABLE "Waiter" ADD COLUMN IF NOT EXISTS "complemento" text;
+      ALTER TABLE "Waiter" ADD COLUMN IF NOT EXISTS "bairro" text;
+      ALTER TABLE "Waiter" ADD COLUMN IF NOT EXISTS "cidade" text;
+      ALTER TABLE "Waiter" ADD COLUMN IF NOT EXISTS "estado" text;
+    `);
+  } catch (err) {
+    console.error("[ensureWaitersColumnsExist] Erro:", err);
+  }
+}
+
 export async function listarGarconsComMetricasAction(
   slug: string,
 ): Promise<{
@@ -60,6 +76,7 @@ export async function listarGarconsComMetricasAction(
   regraComissao: CommissionRuleData | null;
   fechamentos: TipClosingItem[];
 }> {
+  await ensureWaitersColumnsExist();
   const restaurant = await getRestaurantOrThrow(slug);
 
   // 1. Buscar todos os garçons
@@ -199,6 +216,7 @@ export async function criarOuEditarGarcomAction(
   formData: FormData,
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    await ensureWaitersColumnsExist();
     const restaurant = await getRestaurantOrThrow(slug);
 
     const id = formData.get("id")?.toString()?.trim();
@@ -211,6 +229,13 @@ export async function criarOuEditarGarcomAction(
     const status = (formData.get("status")?.toString() || "ACTIVE") as
       | "ACTIVE"
       | "INACTIVE";
+    const cep = formData.get("cep")?.toString()?.trim() || null;
+    const logradouro = formData.get("logradouro")?.toString()?.trim() || null;
+    const numero = formData.get("numero")?.toString()?.trim() || null;
+    const complemento = formData.get("complemento")?.toString()?.trim() || null;
+    const bairro = formData.get("bairro")?.toString()?.trim() || null;
+    const cidade = formData.get("cidade")?.toString()?.trim() || null;
+    const estado = formData.get("estado")?.toString()?.trim() || null;
 
     if (!name) {
       return { success: false, error: "Nome do garçom é obrigatório." };
@@ -226,6 +251,13 @@ export async function criarOuEditarGarcomAction(
           cpf,
           commissionPercent: isNaN(commissionPercent) ? 0 : commissionPercent,
           status,
+          cep,
+          logradouro,
+          numero,
+          complemento,
+          bairro,
+          cidade,
+          estado,
           updatedAt: new Date(),
         })
         .where(
@@ -243,6 +275,13 @@ export async function criarOuEditarGarcomAction(
         cpf,
         commissionPercent: isNaN(commissionPercent) ? 0 : commissionPercent,
         status,
+        cep,
+        logradouro,
+        numero,
+        complemento,
+        bairro,
+        cidade,
+        estado,
       });
     }
 
