@@ -92,7 +92,6 @@ interface AdminSidebarProps {
 const AdminSidebar = ({
   userRole,
   userName,
-  restaurantName,
   companies,
   currentCompanyId,
   enabledModules,
@@ -414,78 +413,22 @@ const AdminSidebar = ({
         </div>
       </aside>
 
-      {/* Área Direita: Linha Fixa Superior + Conteúdo da Tela */}
-      <div className="flex flex-1 flex-col h-screen min-w-0 overflow-hidden">
-        {/* Linha fixa no topo para navegação e ajuda contextual */}
-        <header className="flex h-12 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-3 sm:px-4 shadow-xs z-20">
-          <div className="flex items-center gap-3 min-w-0">
-            {isCollapsed ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCollapsed(false)}
-                className="flex h-8 items-center gap-2 rounded-lg border-slate-200 bg-slate-50 px-2.5 text-xs font-semibold text-slate-800 shadow-xs hover:border-primary/40 hover:text-primary active:scale-95 transition-all"
-                title="Abrir menu lateral"
-              >
-                <MenuIcon size={15} className="text-slate-700" />
-                <span>Abrir Menu</span>
-              </Button>
-            ) : (
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="truncate text-xs font-semibold text-slate-800">
-                  {restaurantName || "Gestão"}
-                </span>
-                <span className="hidden sm:inline-block text-[11px] text-slate-400 font-medium">
-                  • Painel de Gestão
-                </span>
-              </div>
-            )}
+      {/* Área Direita: Conteúdo da Tela */}
+      <div className="flex flex-1 flex-col h-screen min-w-0 overflow-hidden relative">
+        {/* Botão flutuante para reabrir o menu quando recolhido ou no celular */}
+        {isCollapsed && (
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setCollapsed(false)}
+            className="fixed top-3 left-3 z-40 h-9 w-9 rounded-lg border-slate-200 bg-white/95 shadow-md hover:bg-slate-50 active:scale-95 transition-all md:top-4 md:left-4"
+            title="Abrir menu lateral"
+          >
+            <MenuIcon size={18} className="text-slate-700" />
+          </Button>
+        )}
 
-            {isCollapsed && (
-              <>
-                <div className="h-4 w-px bg-slate-200" />
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/15 border border-primary/25 p-0.5">
-                    <Image
-                      src="/logo-icon.png"
-                      alt="Logo"
-                      width={18}
-                      height={18}
-                      className="h-full w-full object-contain"
-                    />
-                  </div>
-                  <span className="truncate text-xs font-semibold text-slate-800">
-                    {restaurantName || "Gestão"}
-                  </span>
-                </div>
-              </>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Botão Contextual de Como Usar Esta Tela */}
-            <ScreenHelpTrigger variant="header" />
-
-            {userName && (
-              <div className="flex items-center gap-2 text-xs text-slate-500 pl-2 sm:border-l sm:border-slate-200">
-                <span className="hidden sm:inline-block font-medium text-slate-700 truncate max-w-[150px]">
-                  {userName}
-                </span>
-                <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary border border-primary/20">
-                  {userRole === "KITCHEN"
-                    ? "Cozinha"
-                    : userRole === "WAITER"
-                      ? "Garçom"
-                      : userRole === "COURIER"
-                        ? "Entregador"
-                        : "Admin"}
-                </span>
-              </div>
-            )}
-          </div>
-        </header>
-
-        {/* Conteúdo Principal logo abaixo da linha */}
+        {/* Conteúdo Principal */}
         {children && (
           <main className="flex-1 overflow-y-auto p-3 md:p-4 lg:p-5 relative">
             {children}
