@@ -170,7 +170,7 @@ export function LoginForm() {
             <p className="mt-2 text-[10px] text-slate-500">
               © {new Date().getFullYear()} eeyTech Soluções de Tecnologia • Todos os direitos reservados.
               <br />
-              Acesso estritamente restrito a colaboradores autorizados.
+              Acesso estritamente restrito a funcionários autorizados.
             </p>
           </div>
         </div>

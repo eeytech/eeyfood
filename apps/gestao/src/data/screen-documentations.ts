@@ -1774,7 +1774,7 @@ export const SCREEN_DOCUMENTATIONS: ScreenDocumentation[] = [
         name: "Perfis Granulares de Acesso",
         badge: "Papéis",
         description:
-          "Cada colaborador visualiza estritamente o que precisa para trabalhar, impedindo que garçons ou cozinheiros acessem o financeiro ou configurações fiscais.",
+          "Cada funcionário visualiza estritamente o que precisa para trabalhar, impedindo que garçons ou cozinheiros acessem o financeiro ou configurações fiscais.",
         action: "Selecione o papel no cadastro do usuário.",
       },
       {
@@ -1788,7 +1788,7 @@ export const SCREEN_DOCUMENTATIONS: ScreenDocumentation[] = [
         name: "Redefinição de Senhas e Bloqueio Imediato",
         badge: "Auditoria",
         description:
-          "Altere senhas ou inative colaboradores desligados instantaneamente para proteger os dados do restaurante.",
+          "Altere senhas ou inative funcionários desligados instantaneamente para proteger os dados do restaurante.",
         action: "Clique em 'Editar' ou 'Inativar Usuário'.",
       },
     ],
@@ -1802,7 +1802,7 @@ export const SCREEN_DOCUMENTATIONS: ScreenDocumentation[] = [
       {
         title: "2. Configurar o Papel Adequado",
         description:
-          "Se o colaborador trabalha na montagem de hambúrgueres, defina o papel como 'KITCHEN'; ao logar, ele entrará direto no KDS.",
+          "Se o funcionário trabalha na montagem de hambúrgueres, defina o papel como 'KITCHEN'; ao logar, ele entrará direto no KDS.",
         expectedResult: "Ambiente limpo e sem distrações ou riscos operacionais.",
       },
     ],

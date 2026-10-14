@@ -353,13 +353,19 @@ export function WhatsAppConnectionCard({
               {/* Status da IA & Webhook */}
               <div className="grid gap-3 sm:grid-cols-2">
                 {/* Indicador do Robô de IA */}
-                <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3 shadow-xs">
+                <div
+                  className={`flex items-center justify-between rounded-xl border p-3 shadow-xs transition-colors ${
+                    isBotActive
+                      ? "border-primary/25 bg-primary/[0.03]"
+                      : "border-slate-200 bg-white"
+                  }`}
+                >
                   <div className="flex items-center gap-2.5">
                     <div
-                      className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+                      className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
                         isBotActive
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-amber-100 text-amber-700"
+                          ? "bg-primary/10 text-primary border border-primary/20"
+                          : "bg-slate-100 text-slate-400"
                       }`}
                     >
                       <BotIcon className="h-4 w-4" />
@@ -373,17 +379,22 @@ export function WhatsAppConnectionCard({
                           variant="outline"
                           className={
                             isBotActive
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]"
-                              : "bg-amber-50 text-amber-700 border-amber-200 text-[10px]"
+                              ? "bg-primary/10 text-primary border-primary/30 font-semibold text-[10px]"
+                              : "bg-slate-100 text-slate-600 border-slate-200 text-[10px]"
                           }
                         >
                           {isBotActive ? "Ligado" : "Desligado"}
                         </Badge>
                       </div>
                       <p className="text-[11px] text-slate-500">
-                        {isBotActive
-                          ? `Respondendo via ${aiProvider}`
-                          : "Clientes não recebem resposta automática"}
+                        {isBotActive ? (
+                          <>
+                            Respondendo via{" "}
+                            <span className="font-semibold text-primary">{aiProvider}</span>
+                          </>
+                        ) : (
+                          "Clientes não recebem resposta automática"
+                        )}
                       </p>
                     </div>
                   </div>
@@ -395,8 +406,8 @@ export function WhatsAppConnectionCard({
                     disabled={isTogglingBot}
                     className={`h-8 text-xs font-semibold px-3 ${
                       !isBotActive
-                        ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                        : "border-slate-300 text-slate-700"
+                        ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs"
+                        : "border-primary/30 text-primary hover:bg-primary/10"
                     }`}
                   >
                     {isTogglingBot ? (
@@ -410,13 +421,19 @@ export function WhatsAppConnectionCard({
                 </div>
 
                 {/* Indicador do Webhook */}
-                <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3 shadow-xs">
+                <div
+                  className={`flex items-center justify-between rounded-xl border p-3 shadow-xs transition-colors ${
+                    webhookEnabled
+                      ? "border-primary/25 bg-primary/[0.03]"
+                      : "border-slate-200 bg-white"
+                  }`}
+                >
                   <div className="flex items-center gap-2.5">
                     <div
-                      className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+                      className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
                         webhookEnabled
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-blue-100 text-blue-700"
+                          ? "bg-primary/10 text-primary border border-primary/20"
+                          : "bg-slate-100 text-slate-400"
                       }`}
                     >
                       <GlobeIcon className="h-4 w-4" />
@@ -430,15 +447,17 @@ export function WhatsAppConnectionCard({
                           variant="outline"
                           className={
                             webhookEnabled
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]"
-                              : "bg-blue-50 text-blue-700 border-blue-200 text-[10px]"
+                              ? "bg-primary/10 text-primary border-primary/30 font-semibold text-[10px]"
+                              : "bg-slate-100 text-slate-600 border-slate-200 text-[10px]"
                           }
                         >
                           {webhookEnabled ? "Ativo" : "Pronto"}
                         </Badge>
                       </div>
                       <p className="text-[11px] text-slate-500 truncate max-w-[200px]" title={webhookUrl || ""}>
-                        {webhookUrl ? "/api/webhooks/evolution" : "Sincronizado"}
+                        <code className="rounded bg-primary/10 px-1 py-0.5 font-mono text-[10px] text-primary">
+                          {webhookUrl ? "/api/webhooks/evolution" : "Sincronizado"}
+                        </code>
                       </p>
                     </div>
                   </div>
@@ -448,7 +467,7 @@ export function WhatsAppConnectionCard({
                     size="sm"
                     onClick={handleSincronizarWebhook}
                     disabled={isSyncingWebhook}
-                    className="h-8 text-xs px-2.5 text-slate-600 hover:text-slate-900"
+                    className="h-8 text-xs px-2.5 text-primary hover:text-primary hover:bg-primary/10 transition-colors"
                     title="Reenviar configuração de webhook para Evolution API"
                   >
                     {isSyncingWebhook ? (

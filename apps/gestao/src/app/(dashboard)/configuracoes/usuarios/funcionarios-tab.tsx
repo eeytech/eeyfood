@@ -257,11 +257,11 @@ export function FuncionariosTab({
         await alternarStatusFuncionarioAction(slug, id);
         toast.success(
           currentStatus === "ACTIVE"
-            ? "Colaborador desativado com sucesso."
-            : "Colaborador ativado com sucesso.",
+            ? "Funcionário desativado com sucesso."
+            : "Funcionário ativado com sucesso.",
         );
       } catch {
-        toast.error("Erro ao alterar status do colaborador.");
+        toast.error("Erro ao alterar status do funcionário.");
       }
     });
   };
@@ -271,11 +271,11 @@ export function FuncionariosTab({
     startTransition(async () => {
       try {
         await excluirFuncionarioAction(slug, funcionarioToDelete.id);
-        toast.success("Colaborador excluído com sucesso.");
+        toast.success("Funcionário excluído com sucesso.");
         setDeleteDialogOpen(false);
         setFuncionarioToDelete(null);
       } catch {
-        toast.error("Erro ao excluir colaborador.");
+        toast.error("Erro ao excluir funcionário.");
       }
     });
   };
@@ -294,7 +294,7 @@ export function FuncionariosTab({
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                Total de Colaboradores
+                Total de Funcionários
               </span>
               <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
                 <UsersIcon size={16} />
@@ -369,7 +369,7 @@ export function FuncionariosTab({
 
       {/* ── Table & List Container (Funcionários) ─────────────── */}
       <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm">
-        {/* Filtros de Colaboradores */}
+        {/* Filtros de Funcionários */}
         <div className="border-b border-slate-100 bg-slate-50/50 p-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             {/* Search Input */}
@@ -467,12 +467,12 @@ export function FuncionariosTab({
               <UserXIcon size={32} />
             </div>
             <h3 className="mt-3 font-display text-base font-semibold text-slate-900">
-              Nenhum colaborador encontrado
+              Nenhum funcionário encontrado
             </h3>
             <p className="mt-1 max-w-sm text-xs text-slate-500">
               {isFiltering
                 ? "Tente ajustar os termos da busca ou limpar os filtros para ver outros membros da equipe."
-                : "Nenhum colaborador cadastrado ainda. Comece adicionando um novo funcionário!"}
+                : "Nenhum funcionário cadastrado ainda. Comece adicionando um novo funcionário!"}
             </p>
             {isFiltering ? (
               <Button
@@ -502,7 +502,7 @@ export function FuncionariosTab({
               <Table>
                 <TableHeader>
                   <TableRow className="border-slate-100 hover:bg-transparent">
-                    <TableHead className="w-[220px] text-xs font-semibold text-slate-600">Colaborador</TableHead>
+                    <TableHead className="w-[220px] text-xs font-semibold text-slate-600">Funcionário</TableHead>
                     <TableHead className="text-xs font-semibold text-slate-600">Cargo / Contrato</TableHead>
                     <TableHead className="text-xs font-semibold text-slate-600">Contato / CPF</TableHead>
                     <TableHead className="text-xs font-semibold text-slate-600">Salário Base</TableHead>
@@ -516,7 +516,7 @@ export function FuncionariosTab({
                     const isAvailable = funcionario.status === "ACTIVE";
                     return (
                       <TableRow key={funcionario.id} className="border-slate-100 hover:bg-slate-50/50">
-                        {/* Colaborador */}
+                        {/* Funcionário */}
                         <TableCell className="font-medium text-slate-900">
                           <div className="flex items-center gap-2.5">
                             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 font-bold text-xs text-slate-700">
@@ -625,12 +625,12 @@ export function FuncionariosTab({
                                 {isAvailable ? (
                                   <>
                                     <UserXIcon size={13} className="text-primary" />
-                                    Desativar colaborador
+                                    Desativar funcionário
                                   </>
                                 ) : (
                                   <>
                                     <UserCheckIcon size={13} className="text-primary" />
-                                    Ativar colaborador
+                                    Ativar funcionário
                                   </>
                                 )}
                               </DropdownMenuItem>
@@ -649,7 +649,7 @@ export function FuncionariosTab({
                                 className="gap-2 text-xs font-semibold text-red-600 focus:text-red-600 cursor-pointer"
                               >
                                 <Trash2Icon size={13} />
-                                Excluir colaborador
+                                Excluir funcionário
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -701,12 +701,12 @@ export function FuncionariosTab({
                             {isAvailable ? (
                               <>
                                 <UserXIcon size={13} className="text-primary" />
-                                Desativar colaborador
+                                Desativar funcionário
                               </>
                             ) : (
                               <>
                                 <UserCheckIcon size={13} className="text-primary" />
-                                Ativar colaborador
+                                Ativar funcionário
                               </>
                             )}
                           </DropdownMenuItem>
@@ -725,7 +725,7 @@ export function FuncionariosTab({
                             className="gap-2 text-xs font-semibold text-red-600 focus:text-red-600 cursor-pointer"
                           >
                             <Trash2Icon size={13} />
-                            Excluir colaborador
+                            Excluir funcionário
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -797,7 +797,7 @@ export function FuncionariosTab({
                   <strong className="font-semibold text-slate-900">
                     {filteredFuncionarios.length}
                   </strong>{" "}
-                  de {totalCount} colaborador{totalCount !== 1 ? "es" : ""}
+                  de {totalCount} funcionário{totalCount !== 1 ? "s" : ""}
                 </span>
                 {isFiltering && (
                   <span className="text-[11px] font-medium text-primary">
@@ -903,14 +903,14 @@ export function FuncionariosTab({
 
               const trimmedName = formName.trim();
               if (!trimmedName) {
-                newErrors.name = "Informe o nome completo do colaborador.";
+                newErrors.name = "Informe o nome completo do funcionário.";
               } else if (trimmedName.length < 2) {
                 newErrors.name = "O nome deve ter no mínimo 2 caracteres.";
               }
 
               const trimmedRole = formRoleTitle.trim();
               if (!trimmedRole) {
-                newErrors.roleTitle = "Informe o cargo ou função do colaborador.";
+                newErrors.roleTitle = "Informe o cargo ou função do funcionário.";
               } else if (trimmedRole.length < 2) {
                 newErrors.roleTitle = "O cargo deve ter no mínimo 2 caracteres.";
               }
@@ -1179,7 +1179,7 @@ export function FuncionariosTab({
                   name="pixKey"
                   value={formPixKey}
                   onChange={(e) => setFormPixKey(e.target.value)}
-                  placeholder="Insira a chave Pix do colaborador..."
+                  placeholder="Insira a chave Pix do funcionário..."
                   className="h-10 rounded-xl border-slate-200 bg-white text-xs font-mono focus:bg-white"
                 />
               </div>

@@ -794,7 +794,7 @@ export function UsuariosClient({
             </h3>
             <p className="mt-1 max-w-sm text-xs text-slate-500">
               {isFiltering
-                ? "Tente ajustar os termos da busca ou limpar os filtros selecionados para ver outros colaboradores."
+                ? "Tente ajustar os termos da busca ou limpar os filtros selecionados para ver outros funcionários."
                 : "Nenhum usuário cadastrado neste restaurante ainda. Comece adicionando um novo usuário!"}
             </p>
             {isFiltering ? (
@@ -826,7 +826,7 @@ export function UsuariosClient({
                 <TableHeader className="bg-slate-50/80">
                   <TableRow className="border-b border-slate-200">
                     <TableHead className="w-[300px] text-xs font-semibold text-slate-700">
-                      Colaborador
+                      Funcionário
                     </TableHead>
                     <TableHead className="text-xs font-semibold text-slate-700">
                       Cargo / Função
@@ -858,7 +858,7 @@ export function UsuariosClient({
                         key={u.id}
                         className="transition-colors hover:bg-slate-50/70"
                       >
-                        {/* Colaborador */}
+                        {/* Funcionário */}
                         <TableCell className="py-3.5">
                           <div className="flex items-center gap-3">
                             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10 font-display text-xs font-bold text-primary">

@@ -228,7 +228,7 @@ export async function criarOuEditarFuncionarioAction(
   const estado = formData.get("estado")?.toString().trim() || null;
   const status = (formData.get("status")?.toString() === "INACTIVE" ? "INACTIVE" : "ACTIVE") as "ACTIVE" | "INACTIVE";
 
-  if (!name) throw new Error("O nome do colaborador é obrigatório.");
+  if (!name) throw new Error("O nome do funcionário é obrigatório.");
   if (!roleTitle) throw new Error("O cargo / função é obrigatório.");
 
   if (id) {
@@ -454,10 +454,10 @@ export async function registrarPagamentoFuncionarioAction(
       DAILY: "Diária / Avulso",
       VACATION: "Férias",
       THIRTEENTH: "13º Salário",
-      OTHER: "Pagamento Colaborador",
+      OTHER: "Pagamento Funcionário",
     };
 
-    const description = `Pagamento ${typeLabels[type] || "Colaborador"} - ${employee.name} (${employee.roleTitle}) [Ref: ${referenceMonth}]`;
+    const description = `Pagamento ${typeLabels[type] || "Funcionário"} - ${employee.name} (${employee.roleTitle}) [Ref: ${referenceMonth}]`;
 
     const [tx] = await db
       .insert(financialTransactionsTable)

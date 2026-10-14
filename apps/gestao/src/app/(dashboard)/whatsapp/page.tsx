@@ -20,9 +20,11 @@ import {
 } from "@/components/ui/card";
 import {
   buscarAiSettingsPorSlug,
+  buscarClientesPausadosPorSlug,
   buscarRestauranteParaGestao,
 } from "@/lib/admin-queries";
 import { WhatsAppConnectionCard } from "../ai/whatsapp-connection-card";
+import { AiHandoffCard } from "../ai/ai-handoff-card";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +41,10 @@ export default async function WhatsAppPage({ params }: PageProps) {
   }
 
   const slug = restaurant.slug;
-  const aiSettings = await buscarAiSettingsPorSlug(slug);
+  const [aiSettings, clientesPausados] = await Promise.all([
+    buscarAiSettingsPorSlug(slug),
+    buscarClientesPausadosPorSlug(slug),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -63,6 +68,11 @@ export default async function WhatsAppPage({ params }: PageProps) {
         slug={slug}
         initialInstanceName={aiSettings?.evolutionInstanceName}
       />
+
+      {/* ── Fila de Atendimento Humano (se houver clientes aguardando) ── */}
+      {clientesPausados.length > 0 && (
+        <AiHandoffCard slug={slug} clientesPausados={clientesPausados} />
+      )}
 
       {/* ── Bottom Grid: Features using WhatsApp & Guidelines ── */}
       <div className="grid gap-6 lg:grid-cols-12">

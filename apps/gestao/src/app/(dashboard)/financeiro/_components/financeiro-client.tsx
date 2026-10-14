@@ -1469,7 +1469,7 @@ export function FinanceiroClient({
                   {formatCurrency(totalFolhaBase)}
                 </p>
                 <p className="mt-0.5 text-xs text-slate-500">
-                  {funcionarios.filter((f) => f.funcionario.status === "ACTIVE").length} colaboradores ativos
+                  {funcionarios.filter((f) => f.funcionario.status === "ACTIVE").length} funcionários ativos
                 </p>
               </CardContent>
             </Card>
@@ -1544,7 +1544,7 @@ export function FinanceiroClient({
                       className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
                     />
                     <Input
-                      placeholder="Buscar por colaborador ou observação..."
+                      placeholder="Buscar por funcionário ou observação..."
                       value={empSearch}
                       onChange={(e) => setEmpSearch(e.target.value)}
                       className="h-9 rounded-xl border-slate-200 bg-white pl-9 text-xs focus:bg-white"
@@ -1594,7 +1594,7 @@ export function FinanceiroClient({
                 <TableHeader>
                   <TableRow className="border-slate-100 hover:bg-transparent">
                     <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      Colaborador
+                      Funcionário
                     </TableHead>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                       Tipo / Mês Ref.
@@ -1644,7 +1644,7 @@ export function FinanceiroClient({
 
                       return (
                         <TableRow key={p.id} className="border-slate-100 hover:bg-slate-50/70">
-                          {/* Colaborador */}
+                          {/* Funcionário */}
                           <TableCell>
                             <div>
                               <p className="text-xs font-bold text-slate-900">{p.employeeName}</p>
@@ -1723,12 +1723,12 @@ export function FinanceiroClient({
             </div>
           </Card>
 
-          {/* ── Seção de Colaboradores e Ações Rápidas ──────── */}
+          {/* ── Seção de Funcionários e Ações Rápidas ──────── */}
           <Card className="overflow-hidden border-slate-200/80 bg-white shadow-sm p-4">
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h4 className="text-sm font-bold text-slate-900">
-                  Colaboradores Cadastrados
+                  Funcionários Cadastrados
                 </h4>
                 <p className="text-xs text-slate-500">
                   Clique em &quot;Pagar&quot; para liquidar proventos rapidamente via Pix ou dinheiro.
@@ -1801,7 +1801,7 @@ export function FinanceiroClient({
         <DialogContent className="max-w-lg rounded-3xl border-2 border-primary bg-white p-6 shadow-2xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold font-display text-primary">
-              Lançar Pagamento de Colaborador
+              Lançar Pagamento de Funcionário
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
               Registre a liquidação de salários, vales ou diárias com integração automática ao caixa.
@@ -1809,10 +1809,10 @@ export function FinanceiroClient({
           </DialogHeader>
 
           <form onSubmit={handleEmployeePaymentSubmit} className="space-y-4 pt-2">
-            {/* Seletor de Colaborador */}
+            {/* Seletor de Funcionário */}
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-slate-700">
-                Selecione o Colaborador
+                Selecione o Funcionário
               </Label>
               <Select
                 value={selectedEmployeeForPayment?.funcionario.id}
@@ -1837,7 +1837,7 @@ export function FinanceiroClient({
               </Select>
             </div>
 
-            {/* Info do Colaborador Selecionado + Chave Pix */}
+            {/* Info do Funcionário Selecionado + Chave Pix */}
             {selectedEmployeeForPayment && (
               <div className="rounded-2xl border border-primary/25 bg-primary/5 p-3.5 space-y-2">
                 <div className="flex items-center justify-between text-xs">
@@ -1860,7 +1860,7 @@ export function FinanceiroClient({
                   </div>
                 ) : (
                   <p className="text-[11px] text-amber-600">
-                    Aviso: Nenhuma chave Pix cadastrada para este colaborador.
+                    Aviso: Nenhuma chave Pix cadastrada para este funcionário.
                   </p>
                 )}
               </div>

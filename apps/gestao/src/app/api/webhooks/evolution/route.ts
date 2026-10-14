@@ -4,6 +4,7 @@ import {
   eq,
   isClientePausado,
   pausarBotParaCliente,
+  reativarBotParaCliente,
   restaurantsTable,
   sql,
 } from "@fsw/db";
@@ -195,15 +196,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, reason: "bot_inactive" });
     }
 
-    // Bot pausado para este cliente específico — silenciar respostas automáticas
-    const clientePausado = await isClientePausado(aiSettings.restaurantId, customerPhone);
-    if (clientePausado) {
-      console.log(
-        `[Webhook Evolution] Cliente ${customerPhone} está em atendimento humano manual. Mensagem silenciada.`,
-      );
-      return NextResponse.json({ ok: true, reason: "client_paused" });
-    }
-
     // Desempacota mensagens protegidas por ephemeralMessage, viewOnce ou interactive
     let innerMessage = messageData.message;
     if (innerMessage?.ephemeralMessage?.message) {
@@ -233,6 +225,30 @@ export async function POST(request: Request) {
       innerMessage?.editedMessage?.message?.conversation ||
       innerMessage?.editedMessage?.message?.extendedTextMessage?.text ||
       "";
+
+    // Bot pausado para este cliente específico
+    const clientePausado = await isClientePausado(aiSettings.restaurantId, customerPhone);
+    if (clientePausado) {
+      const normText = messageText.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+      const resumeBotKeywords = [
+        "cardapio", "menu", "pedido", "pedir", "bot", "robo", "robô", 
+        "voltar", "oi", "ola", "olá", "boa noite", "bom dia", "boa tarde", 
+        "iniciar", "comecar", "ver cardapio", "quero pedir", "#bot"
+      ];
+      const shouldResume = resumeBotKeywords.some((k) => normText.includes(k) || normText === k);
+
+      if (shouldResume) {
+        console.log(
+          `[Webhook Evolution] Cliente ${customerPhone} solicitou atendimento/cardápio ("${messageText}"). Reativando bot automaticamente.`,
+        );
+        await reativarBotParaCliente(aiSettings.restaurantId, customerPhone);
+      } else {
+        console.log(
+          `[Webhook Evolution] Cliente ${customerPhone} está em atendimento humano manual. Mensagem silenciada.`,
+        );
+        return NextResponse.json({ ok: true, reason: "client_paused" });
+      }
+    }
 
     const envKey = cleanKey(
       process.env.EVOLUTION_API_KEY || process.env.AUTHENTICATION_API_KEY,

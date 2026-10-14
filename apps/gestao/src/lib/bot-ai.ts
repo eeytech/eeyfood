@@ -10,6 +10,8 @@ import {
 } from "@fsw/db";
 import OpenAI from "openai";
 
+const cleanKey = (k?: string | null) => (k ? k.trim().replace(/^["']|["']$/g, "") : "");
+
 const HANDOFF_KEYWORDS = [
   "atendente",
   "falar com atendente",
@@ -23,12 +25,10 @@ const HANDOFF_KEYWORDS = [
   "atendimento humano",
 ];
 
-const consecutiveFailuresMap = new Map<string, number>();
-
 const detectaHandoff = (text: string): boolean => {
-  const lower = text.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const lower = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   return HANDOFF_KEYWORDS.some((kw) =>
-    lower.includes(kw.normalize("NFD").replace(/[̀-ͯ]/g, "")),
+    lower.includes(kw.normalize("NFD").replace(/[\u0300-\u036f]/g, "")),
   );
 };
 
@@ -42,12 +42,164 @@ interface ProcessarMensagemBotInput {
   audioUrl?: string;
 }
 
+/**
+ * Chamada nativa REST oficial da Google Generative Language API (Gemini).
+ * Extremamente rápida, confiável e compatível com chaves gratuitas do Google AI Studio.
+ */
+async function callGeminiNative(
+  geminiKey: string,
+  sysPrompt: string,
+  userMessage: string,
+  customerName: string,
+  customerPhone: string,
+): Promise<string | null> {
+  const cleaned = cleanKey(geminiKey);
+  if (!cleaned) return null;
+
+  const models = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"];
+  const userContent = `Cliente: ${customerName} (${customerPhone})\nMensagem: ${userMessage}`;
+
+  for (const m of models) {
+    // 1. Tenta v1beta com system_instruction
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(cleaned)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            system_instruction: {
+              parts: [{ text: sysPrompt }],
+            },
+            contents: [
+              {
+                role: "user",
+                parts: [{ text: userContent }],
+              },
+            ],
+            generationConfig: {
+              temperature: 0.7,
+              maxOutputTokens: 1000,
+            },
+          }),
+          signal: AbortSignal.timeout(9000),
+        },
+      );
+
+      if (res.ok) {
+        const data = await res.json();
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+        if (text) {
+          console.log(`[Bot AI] Gemini v1beta (${m}) respondeu com sucesso!`);
+          return text;
+        }
+      } else {
+        const errData = await res.json().catch(() => null);
+        console.warn(
+          `[Bot AI] Gemini v1beta (${m}) retornou status ${res.status}:`,
+          errData?.error?.message || errData,
+        );
+      }
+    } catch (err: unknown) {
+      console.warn(
+        `[Bot AI] Erro na chamada Gemini v1beta (${m}):`,
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+
+    // 2. Fallback v1 sem system_instruction (instruções injetadas no contents)
+    try {
+      const resV1 = await fetch(
+        `https://generativelanguage.googleapis.com/v1/models/${m}:generateContent?key=${encodeURIComponent(cleaned)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              {
+                role: "user",
+                parts: [{ text: `${sysPrompt}\n\n---\n\n${userContent}` }],
+              },
+            ],
+            generationConfig: {
+              temperature: 0.7,
+              maxOutputTokens: 1000,
+            },
+          }),
+          signal: AbortSignal.timeout(9000),
+        },
+      );
+
+      if (resV1.ok) {
+        const data = await resV1.json();
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+        if (text) {
+          console.log(`[Bot AI] Gemini v1 (${m}) respondeu com sucesso!`);
+          return text;
+        }
+      }
+    } catch (err: unknown) {
+      console.warn(
+        `[Bot AI] Erro na chamada Gemini v1 (${m}):`,
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Chamada à API da OpenAI (se configurada).
+ */
+async function callOpenAi(
+  openaiKey: string,
+  sysPrompt: string,
+  userMessage: string,
+  customerName: string,
+  customerPhone: string,
+): Promise<string | null> {
+  const cleaned = cleanKey(openaiKey);
+  if (!cleaned) return null;
+
+  const models = ["gpt-4o-mini", "gpt-4o"];
+  const client = new OpenAI({ apiKey: cleaned, timeout: 12000 });
+
+  for (const m of models) {
+    try {
+      const res = await client.chat.completions.create({
+        model: m,
+        messages: [
+          { role: "system", content: sysPrompt },
+          {
+            role: "user",
+            content: `Cliente: ${customerName} (${customerPhone})\nMensagem: ${userMessage}`,
+          },
+        ],
+        temperature: 0.7,
+      });
+      const text = res.choices[0]?.message?.content?.trim();
+      if (text) {
+        console.log(`[Bot AI] OpenAI (${m}) respondeu com sucesso!`);
+        return text;
+      }
+    } catch (err: unknown) {
+      console.warn(
+        `[Bot AI] Erro na chamada OpenAI (${m}):`,
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  }
+
+  return null;
+}
+
 export const processarMensagemBot = async ({
   slug,
   customerPhone,
   customerName,
   messageText,
-}: ProcessarMensagemBotInput) => {
+}: ProcessarMensagemBotInput): Promise<string | null> => {
   const restaurant = await buscarRestaurantePorSlug(slug);
   if (!restaurant) {
     console.warn(`[Bot AI] Restaurante não encontrado pelo slug: "${slug}"`);
@@ -66,415 +218,122 @@ export const processarMensagemBot = async ({
   }
 
   // Verifica se o robô está pausado para este cliente específico
-  const pausado = await isClientePausado(
-    aiSettings.restaurantId,
-    customerPhone,
-  );
+  const pausado = await isClientePausado(aiSettings.restaurantId, customerPhone);
   if (pausado) {
     console.log(`[Bot AI] Cliente ${customerPhone} está em atendimento humano manual.`);
     return null;
   }
 
-  const conversationKey = `${aiSettings.restaurantId}:${customerPhone}`;
+  const textToProcess = (messageText || "").trim();
+  if (!textToProcess) return null;
 
-  if (detectaHandoff(messageText ?? "")) {
-    consecutiveFailuresMap.delete(conversationKey);
+  // 1. Detecção explícita de pedido de atendimento humano
+  if (detectaHandoff(textToProcess)) {
+    console.log(`[Bot AI] Cliente ${customerPhone} solicitou atendimento humano.`);
     return HANDOFF_SIGNAL;
   }
 
-  // Configuração dinâmica do provedor com fallback de modelos e provedores
+  // 2. Busca cardápio atualizado e link da loja online
+  const cardapio = await buscarRestauranteComCardapioPorSlug(slug).catch(() => null);
+  const vendasUrl =
+    process.env.NEXT_PUBLIC_VENDAS_URL ||
+    process.env.VENDAS_URL ||
+    "https://fswdonalds.eeytech.com";
+  const menuUrl = `${vendasUrl.replace(/\/$/, "")}/${slug}/menu`;
+
+  let menuContext = `\n\n### INFORMAÇÕES DO RESTAURANTE E CARDÁPIO EM TEMPO REAL:
+Nome do Restaurante: ${restaurant.name}
+Link Oficial do Cardápio Online para Pedidos: ${menuUrl}
+
+DIRETRIZES FUNDAMENTAIS:
+- Quando o cliente pedir o cardápio, tiver dúvidas sobre itens ou quiser fazer pedidos, apresente os principais pratos ou categorias de forma acolhedora e envie o link oficial do cardápio: ${menuUrl}
+- Você tem permissão e dados para responder sobre produtos, itens e preços utilizando as informações abaixo.\n\n`;
+
+  if (cardapio?.menuCategories?.length) {
+    menuContext +=
+      "Categorias e Produtos disponíveis no restaurante:\n" +
+      cardapio.menuCategories
+        .map((c) => {
+          const prods = c.products
+            .map(
+              (p) =>
+                `  • ${p.name} - R$ ${Number(p.price).toFixed(2)}${p.description ? ` (${p.description})` : ""}`,
+            )
+            .join("\n");
+          return `*${c.name}*:\n${prods}`;
+        })
+        .join("\n\n");
+  }
+
+  const baseSystemPrompt = aiSettings.systemPrompt || DEFAULT_AI_SYSTEM_PROMPT;
+  const fullSystemPrompt = `${baseSystemPrompt}\n${menuContext}`;
+
+  // 3. Chaves de API configuradas
+  const geminiKey = cleanKey(
+    aiSettings.geminiApiKey || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY,
+  );
+  const openaiKey = cleanKey(aiSettings.openaiApiKey || process.env.OPENAI_API_KEY);
+
   const rawProvider = (aiSettings.aiProvider || "GOOGLE_GEMINI").toUpperCase();
   const selectedProvider = rawProvider === "OPENAI" ? "OPENAI" : "GOOGLE_GEMINI";
 
-  interface ProviderConfig {
-    name: string;
-    apiKey: string;
-    baseURL?: string;
-    models: string[];
-  }
+  let botReply: string | null = null;
 
-  const getProviderConfig = async (p: string): Promise<ProviderConfig | null> => {
-    if (p === "GOOGLE_GEMINI") {
-      const key =
-        aiSettings.geminiApiKey ||
-        process.env.GEMINI_API_KEY ||
-        process.env.GOOGLE_API_KEY ||
-        "";
-      if (!key) return null;
-      return {
-        name: "GOOGLE_GEMINI",
-        apiKey: key,
-        baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
-        models: ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash", "gemini-1.5-pro"],
-      };
+  // 4. Executa chamada na ordem de preferência do usuário
+  if (selectedProvider === "GOOGLE_GEMINI") {
+    if (geminiKey) {
+      botReply = await callGeminiNative(
+        geminiKey,
+        fullSystemPrompt,
+        textToProcess,
+        customerName,
+        customerPhone,
+      );
     }
-    if (p === "OPENAI") {
-      const key = aiSettings.openaiApiKey || process.env.OPENAI_API_KEY || "";
-      if (!key) return null;
-      return {
-        name: "OPENAI",
-        apiKey: key,
-        models: ["gpt-4o-mini", "gpt-4o"],
-      };
+    // Fallback para OpenAI se Gemini não respondeu
+    if (!botReply && openaiKey) {
+      console.log(`[Bot AI] Tentando fallback para OpenAI...`);
+      botReply = await callOpenAi(
+        openaiKey,
+        fullSystemPrompt,
+        textToProcess,
+        customerName,
+        customerPhone,
+      );
     }
-    return null;
-  };
-
-  // Monta lista de provedores ordenando o escolhido pelo usuário em primeiro lugar
-  const providerList: ProviderConfig[] = [];
-  const primaryProvider = await getProviderConfig(selectedProvider);
-  if (primaryProvider) {
-    providerList.push(primaryProvider);
-  }
-
-  // Adiciona o outro provedor configurado como reserva se disponível
-  for (const alt of ["GOOGLE_GEMINI", "OPENAI"]) {
-    if (alt !== selectedProvider) {
-      const altConfig = await getProviderConfig(alt);
-      if (altConfig) providerList.push(altConfig);
+  } else {
+    // Provedor primário: OpenAI
+    if (openaiKey) {
+      botReply = await callOpenAi(
+        openaiKey,
+        fullSystemPrompt,
+        textToProcess,
+        customerName,
+        customerPhone,
+      );
     }
-  }
-
-  if (providerList.length === 0) {
-    console.warn(
-      `[Bot AI] Nenhuma chave de API configurada para o bot no restaurante "${slug}". Acesse a aba /ai e insira sua chave gratuita do Google Gemini ou OpenAI.`,
-    );
-    return null;
-  }
-
-  const textToProcess = messageText || "";
-  if (!textToProcess) return null;
-
-  const tools: OpenAI.Chat.ChatCompletionTool[] = [
-    {
-      type: "function",
-      function: {
-        name: "listar_cardapio",
-        description:
-          "Lista todas as categorias e produtos disponíveis no cardápio do restaurante.",
-        parameters: {
-          type: "object",
-          properties: {
-            categoria: {
-              type: "string",
-              description: "Filtro opcional pelo nome da categoria (ex: Lanches, Bebidas, Pizzas).",
-            },
-          },
-        },
-      },
-    },
-    {
-      type: "function",
-      function: {
-        name: "gerar_link_confirmacao",
-        description:
-          "Salva o carrinho do cliente e gera um link para que ele confirme o pedido no app, onde poderá ajustar opcionais, informar o endereço de entrega, escolher o pagamento e finalizar a compra.",
-        parameters: {
-          type: "object",
-          properties: {
-            itens: {
-              type: "array",
-              description: "Lista de itens que o cliente deseja pedir",
-              items: {
-                type: "object",
-                properties: {
-                  produtoId: { type: "string", description: "ID do produto" },
-                  nomeProduto: { type: "string", description: "Nome do produto" },
-                  quantidade: { type: "number", description: "Quantidade" },
-                  precoUnitario: {
-                    type: "number",
-                    description: "Preço unitário do produto em reais",
-                  },
-                },
-                required: ["produtoId", "nomeProduto", "quantidade", "precoUnitario"],
-              },
-            },
-            metodoConsumo: {
-              type: "string",
-              enum: ["DELIVERY", "TAKEAWAY", "DINE_IN"],
-              description: "Método de consumo preferido pelo cliente",
-            },
-          },
-          required: ["itens", "metodoConsumo"],
-        },
-      },
-    },
-  ];
-
-  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-    {
-      role: "system",
-      content:
-        aiSettings.systemPrompt || DEFAULT_AI_SYSTEM_PROMPT,
-    },
-    {
-      role: "user",
-      content: `Cliente: ${customerName} (${customerPhone})\nMensagem: ${textToProcess}`,
-    },
-  ];
-
-  // Loop agêntico com tolerância a falhas e fallback direto
-  const MAX_ITERATIONS = 5;
-
-  for (let i = 0; i < MAX_ITERATIONS; i++) {
-    let response: OpenAI.Chat.ChatCompletion | null = null;
-
-    // 1. Tenta com tools nos provedores e modelos em ordem de prioridade
-    for (const prov of providerList) {
-      const client = new OpenAI({ apiKey: prov.apiKey, baseURL: prov.baseURL });
-      for (const m of prov.models) {
-        try {
-          response = await client.chat.completions.create({
-            model: m,
-            messages,
-            tools,
-          });
-          // Prioriza este modelo nas iterações seguintes desta chamada
-          prov.models = [m, ...prov.models.filter((item) => item !== m)];
-          break;
-        } catch (err: unknown) {
-          const errMsg = err instanceof Error ? err.message : String(err);
-          console.warn(`[Bot AI] Tentativa com tools falhou (${prov.name}/${m}): ${errMsg}`);
-        }
-      }
-      if (response) break;
-    }
-
-    // 2. Se falhar com tools, tenta sem tools como fallback conversacional
-    if (!response) {
-      console.log(`[Bot AI] Tentando fallback direto sem tools...`);
-      for (const prov of providerList) {
-        const client = new OpenAI({ apiKey: prov.apiKey, baseURL: prov.baseURL });
-        for (const m of prov.models) {
-          try {
-            response = await client.chat.completions.create({
-              model: m,
-              messages,
-            });
-            break;
-          } catch (err: unknown) {
-            const errMsg = err instanceof Error ? err.message : String(err);
-            console.warn(`[Bot AI] Fallback sem tools falhou (${prov.name}/${m}): ${errMsg}`);
-          }
-        }
-        if (response) break;
-      }
-    }
-
-    // 3. Fallback nativo REST oficial do Google Gemini (generateContent)
-    // Essencial caso o endpoint OpenAI-compatible da Generative Language retorne 404 para a chave
-    if (!response) {
-      const geminiKey =
-        aiSettings.geminiApiKey ||
-        process.env.GEMINI_API_KEY ||
-        process.env.GOOGLE_API_KEY;
-
-      if (geminiKey) {
-        console.log(`[Bot AI] Tentando fallback nativo REST do Google Gemini (generateContent)...`);
-
-        let menuContext = "";
-        try {
-          const cardapio = await buscarRestauranteComCardapioPorSlug(slug);
-          if (cardapio?.menuCategories?.length) {
-            menuContext =
-              "\n\n[CARDÁPIO DO RESTAURANTE]\n" +
-              cardapio.menuCategories
-                .map(
-                  (c) =>
-                    `*${c.name}*\n${c.products
-                      .map((p) => `- ${p.name} (R$ ${p.price}): ${p.description || ""}`)
-                      .join("\n")}`,
-                )
-                .join("\n\n");
-          }
-        } catch {
-          // ignore
-        }
-
-        const sysPrompt = (aiSettings.systemPrompt || DEFAULT_AI_SYSTEM_PROMPT) + menuContext;
-        const geminiModels = [
-          "gemini-2.0-flash",
-          "gemini-1.5-flash",
-          "gemini-2.5-flash",
-          "gemini-1.5-pro",
-        ];
-
-        const geminiContents = messages
-          .filter((m) => m.role === "user" || m.role === "assistant")
-          .map((m) => ({
-            role: m.role === "assistant" ? "model" : "user",
-            parts: [{ text: typeof m.content === "string" ? m.content : "" }],
-          }));
-
-        for (const m of geminiModels) {
-          try {
-            const res = await fetch(
-              `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(geminiKey)}`,
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  system_instruction: {
-                    parts: [{ text: sysPrompt }],
-                  },
-                  contents:
-                    geminiContents.length > 0
-                      ? geminiContents
-                      : [
-                          {
-                            role: "user",
-                            parts: [
-                              {
-                                text: `Cliente: ${customerName} (${customerPhone})\nMensagem: ${textToProcess}`,
-                              },
-                            ],
-                          },
-                        ],
-                  generationConfig: {
-                    temperature: 0.7,
-                  },
-                }),
-                signal: AbortSignal.timeout(12000),
-              },
-            );
-
-            if (res.ok) {
-              const data = await res.json();
-              const replyText =
-                data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-              if (replyText) {
-                console.log(
-                  `[Bot AI] Resposta obtida com sucesso via fallback REST do Gemini (${m})!`,
-                );
-                response = {
-                  id: `gemini-rest-${Date.now()}`,
-                  created: Date.now(),
-                  model: m,
-                  object: "chat.completion",
-                  choices: [
-                    {
-                      index: 0,
-                      finish_reason: "stop",
-                      message: {
-                        role: "assistant",
-                        content: replyText,
-                      },
-                    },
-                  ],
-                } as unknown as OpenAI.Chat.ChatCompletion;
-                break;
-              }
-            } else {
-              const errBody = await res.json().catch(() => null);
-              console.warn(
-                `[Bot AI] Fallback REST falhou (${m}): status ${res.status}`,
-                errBody?.error?.message || errBody,
-              );
-            }
-          } catch (restErr) {
-            console.warn(`[Bot AI] Erro no fallback REST com modelo ${m}:`, restErr);
-          }
-        }
-      }
-    }
-
-    if (!response) {
-      console.error(`[Bot AI] Erro definitivo ao chamar LLM: nenhum modelo/provedor respondeu.`);
-      const failures = (consecutiveFailuresMap.get(conversationKey) ?? 0) + 1;
-      consecutiveFailuresMap.set(conversationKey, failures);
-      if (failures >= 3) {
-        consecutiveFailuresMap.delete(conversationKey);
-        return HANDOFF_SIGNAL;
-      }
-      return null;
-    }
-
-    const assistantMessage = response.choices[0]?.message;
-    if (!assistantMessage) return null;
-
-    messages.push(assistantMessage);
-
-    if (!assistantMessage.tool_calls || assistantMessage.tool_calls.length === 0) {
-      consecutiveFailuresMap.delete(conversationKey);
-      return assistantMessage.content;
-    }
-
-    for (const toolCall of assistantMessage.tool_calls) {
-      if (toolCall.type !== "function") continue;
-
-      const functionName = toolCall.function.name;
-      let toolResult = "";
-
-      if (functionName === "listar_cardapio") {
-        const cardapio = await buscarRestauranteComCardapioPorSlug(slug);
-        toolResult = cardapio
-          ? cardapio.menuCategories
-              .map(
-                (c) =>
-                  `*${c.name}*\n${c.products
-                    .map((p) => `- ${p.name} (ID: ${p.id}): R$ ${p.price}`)
-                    .join("\n")}`,
-              )
-              .join("\n\n")
-          : "Cardápio não disponível no momento.";
-      } else if (functionName === "gerar_link_confirmacao") {
-        try {
-          const args = JSON.parse(toolCall.function.arguments) as {
-            itens: Array<{
-              produtoId: string;
-              nomeProduto: string;
-              quantidade: number;
-              precoUnitario: number;
-            }>;
-            metodoConsumo: "DELIVERY" | "TAKEAWAY" | "DINE_IN";
-          };
-
-          const sessionId = `wa-${customerPhone}`;
-
-          const cart = await salvarCarrinhoAbandonado({
-            sessionId,
-            slug,
-            customerName,
-            customerPhone,
-            consumptionMethod: args.metodoConsumo,
-            products: args.itens.map((it) => ({
-              id: it.produtoId,
-              name: it.nomeProduto,
-              quantity: it.quantidade,
-              price: it.precoUnitario,
-            })),
-          });
-
-          if (!cart) {
-            toolResult = JSON.stringify({
-              erro: "Não foi possível criar o carrinho. Tente novamente.",
-            });
-          } else {
-            const vendasUrl =
-              process.env.VENDAS_URL ||
-              process.env.NEXT_PUBLIC_VENDAS_URL ||
-              "https://fswdonalds.eeytech.com";
-            const cartLink = `${vendasUrl.replace(/\/$/, "")}/${slug}/menu?cartId=${cart.id}`;
-            toolResult = JSON.stringify({
-              cartId: cart.id,
-              cartLink,
-              subtotal: cart.subtotal,
-              total: cart.total,
-              itemCount: cart.itemCount,
-            });
-          }
-        } catch {
-          toolResult = JSON.stringify({ erro: "Formato de parâmetros inválido." });
-        }
-      }
-
-      messages.push({
-        role: "tool",
-        tool_call_id: toolCall.id,
-        content: toolResult,
-      });
+    // Fallback para Gemini se OpenAI não respondeu
+    if (!botReply && geminiKey) {
+      console.log(`[Bot AI] Tentando fallback para Gemini...`);
+      botReply = await callGeminiNative(
+        geminiKey,
+        fullSystemPrompt,
+        textToProcess,
+        customerName,
+        customerPhone,
+      );
     }
   }
 
-  return null;
+  // 5. Se o modelo respondeu com sucesso, retorna
+  if (botReply) {
+    return botReply;
+  }
+
+  // 6. Resposta graciosa de segurança caso a API da IA esteja temporariamente fora do ar
+  // Garante que o cliente NUNCA fique sem resposta e sempre receba o link oficial do cardápio!
+  console.warn(
+    `[Bot AI] Nenhuma LLM respondeu. Enviando mensagem de boas-vindas com cardápio para ${customerPhone}.`,
+  );
+  return `Olá, ${customerName ? customerName : "tudo bem"}! Seja muito bem-vindo ao *${restaurant.name}*! 😊\n\nAcesse nosso cardápio completo online para conferir as opções, valores e fazer seu pedido com facilidade:\n👉 ${menuUrl}\n\nSe precisar de mais alguma informação, estou à disposição!`;
 };
