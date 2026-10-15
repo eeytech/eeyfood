@@ -198,10 +198,7 @@ export function ThemeSettings() {
                       R$ 1.480,00
                     </p>
                   </div>
-                  <span
-                    className="flex h-7 w-7 items-center justify-center rounded-lg text-white shadow-xs"
-                    style={{ backgroundColor: currentThemeObj.hex }}
-                  >
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-xs">
                     <CheckIcon size={14} />
                   </span>
                 </div>

@@ -28,17 +28,17 @@ export function ModuleRestrictedNotice({
     <div className="flex min-h-[70vh] items-center justify-center p-4">
       <Card className="max-w-xl w-full border-slate-200/90 bg-white shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden">
         {/* Top accent line */}
-        <div className="h-1.5 w-full bg-gradient-to-r from-amber-500 via-primary to-rose-500" />
+        <div className="h-1.5 w-full bg-primary" />
 
         <CardContent className="p-6 sm:p-8 text-center space-y-6">
           {/* Icon Badge */}
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 border border-amber-200/60 shadow-xs">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-xs">
             <LockIcon size={32} strokeWidth={2.2} />
           </div>
 
           {/* Heading */}
           <div className="space-y-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800 border border-amber-300/80">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-3 py-1 text-xs font-bold text-primary border border-primary/25">
               <ShieldAlertIcon size={13} />
               Módulo Não Incluso no Plano
             </span>

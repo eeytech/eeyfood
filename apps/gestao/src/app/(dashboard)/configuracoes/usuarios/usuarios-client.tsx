@@ -588,7 +588,7 @@ export function UsuariosClient({
         >
           <BriefcaseIcon size={16} />
           <span>Funcionários</span>
-          <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs text-purple-700 font-medium">
+          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary font-medium">
             {funcionariosData?.funcionarios.length || 0}
           </span>
         </button>

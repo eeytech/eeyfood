@@ -75,20 +75,20 @@ export function AiHandoffCard({ slug, clientesPausados }: AiHandoffCardProps) {
     <Card
       className={
         hasPausados
-          ? "border-amber-300 bg-amber-50/60 shadow-sm overflow-hidden transition-colors"
+          ? "border-primary/40 bg-primary/[0.04] shadow-sm overflow-hidden transition-colors"
           : "border-slate-200/80 bg-white shadow-sm overflow-hidden"
       }
     >
       <CardHeader
         className={`flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-4 sm:p-5 border-b ${
-          hasPausados ? "border-amber-200/70" : "border-slate-100"
+          hasPausados ? "border-primary/20" : "border-slate-100"
         }`}
       >
         <div className="flex items-center gap-3">
           <div
             className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
               hasPausados
-                ? "bg-amber-100 text-amber-800"
+                ? "bg-primary/10 text-primary border border-primary/20"
                 : "bg-primary/10 text-primary"
             }`}
           >
@@ -102,7 +102,7 @@ export function AiHandoffCard({ slug, clientesPausados }: AiHandoffCardProps) {
             <div className="flex items-center gap-2">
               <CardTitle
                 className={`font-display text-base font-semibold ${
-                  hasPausados ? "text-amber-900" : "text-slate-900"
+                  hasPausados ? "text-primary" : "text-slate-900"
                 }`}
               >
                 Fila de Atendimento Humano
@@ -110,13 +110,13 @@ export function AiHandoffCard({ slug, clientesPausados }: AiHandoffCardProps) {
               <Badge
                 className={
                   hasPausados
-                    ? "bg-amber-200/90 text-amber-900 hover:bg-amber-200 border-0 text-xs font-semibold px-2 py-0.5"
+                    ? "bg-primary/15 text-primary hover:bg-primary/20 border border-primary/25 text-xs font-semibold px-2 py-0.5"
                     : "bg-primary/10 text-primary border-primary/20 hover:bg-primary/15 text-xs font-medium px-2 py-0.5"
                 }
               >
                 <span
                   className={`mr-1.5 h-1.5 w-1.5 rounded-full ${
-                    hasPausados ? "bg-amber-600 animate-ping" : "bg-primary"
+                    hasPausados ? "bg-primary animate-ping" : "bg-primary"
                   }`}
                 />
                 {hasPausados
@@ -128,7 +128,7 @@ export function AiHandoffCard({ slug, clientesPausados }: AiHandoffCardProps) {
             </div>
             <CardDescription
               className={`text-xs mt-0.5 ${
-                hasPausados ? "text-amber-800/90" : "text-slate-500"
+                hasPausados ? "text-slate-600" : "text-slate-500"
               }`}
             >
               {hasPausados
@@ -161,7 +161,7 @@ export function AiHandoffCard({ slug, clientesPausados }: AiHandoffCardProps) {
               size="sm"
               onClick={handleReativarTodos}
               disabled={isPendingAll}
-              className="h-8 gap-1.5 rounded-lg bg-amber-800 px-3 text-xs font-semibold text-white shadow-sm hover:bg-amber-900"
+              className="h-8 gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90"
             >
               <CheckCircle2Icon size={14} />
               {isPendingAll ? "Reativando..." : `Reativar Todos (${totalPausados})`}
@@ -173,7 +173,7 @@ export function AiHandoffCard({ slug, clientesPausados }: AiHandoffCardProps) {
       <CardContent className="p-4 sm:p-5">
         {hasPausados ? (
           <div className="space-y-3">
-            <div className="divide-y divide-amber-200/60 rounded-xl border border-amber-200 bg-white shadow-sm overflow-hidden">
+            <div className="divide-y divide-primary/10 rounded-xl border border-primary/20 bg-white shadow-sm overflow-hidden">
               {clientesPausados.map((cliente) => (
                 <ClientePausadoItem
                   key={cliente.customerPhone}
@@ -184,8 +184,8 @@ export function AiHandoffCard({ slug, clientesPausados }: AiHandoffCardProps) {
               ))}
             </div>
 
-            <div className="flex items-center gap-2 rounded-xl bg-amber-100/60 px-3.5 py-2.5 text-[11px] text-amber-900">
-              <UserIcon size={13} className="shrink-0 text-amber-700" />
+            <div className="flex items-center gap-2 rounded-xl bg-primary/10 border border-primary/20 px-3.5 py-2.5 text-[11px] text-slate-800">
+              <UserIcon size={13} className="shrink-0 text-primary" />
               <span>
                 Converse com o cliente pelo WhatsApp e, assim que o atendimento manual for finalizado, clique em <strong>&ldquo;Reativar Robô&rdquo;</strong> para que a Inteligência Artificial volte a atender automaticamente as próximas mensagens dele.
               </span>
@@ -248,9 +248,9 @@ function ClientePausadoItem({
   const whatsappUrl = `https://wa.me/${phoneDigits}`;
 
   return (
-    <div className="flex flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:justify-between hover:bg-amber-50/30 transition-colors">
+    <div className="flex flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:justify-between hover:bg-primary/[0.03] transition-colors">
       <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 text-amber-800 shrink-0 font-semibold text-xs">
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0 font-semibold text-xs border border-primary/20">
           <PhoneIcon size={14} />
         </div>
         <div>
@@ -263,7 +263,7 @@ function ClientePausadoItem({
             </span>
           </div>
           <p className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-0.5">
-            <ClockIcon size={11} className="text-amber-600 shrink-0" />
+            <ClockIcon size={11} className="text-primary shrink-0" />
             <span>Pausado em {dataFormatada}</span>
           </p>
         </div>

@@ -200,7 +200,7 @@ export function PromotionalBannersManager({
             {/* Benefícios Automáticos Detectados */}
             <div>
               <p className="text-xs font-bold uppercase tracking-wide text-slate-600 mb-2.5 flex items-center gap-1.5">
-                <CheckCircle2Icon size={14} className="text-emerald-600" />
+                <CheckCircle2Icon size={14} className="text-primary" />
                 Destaques Automáticos Detectados da Loja
               </p>
               <div className="grid gap-2.5 sm:grid-cols-3 text-xs">
@@ -208,11 +208,11 @@ export function PromotionalBannersManager({
                 <div
                   className={`flex items-start gap-2.5 rounded-xl border p-3 ${
                     isCashbackEnabled
-                      ? "border-amber-200 bg-amber-50/60 text-amber-950"
+                      ? "border-primary/30 bg-primary/5 text-slate-900"
                       : "border-slate-200 bg-slate-50 text-slate-400"
                   }`}
                 >
-                  <CoinsIcon size={16} className={isCashbackEnabled ? "text-amber-600 mt-0.5 shrink-0" : "text-slate-400 mt-0.5 shrink-0"} />
+                  <CoinsIcon size={16} className={isCashbackEnabled ? "text-primary mt-0.5 shrink-0" : "text-slate-400 mt-0.5 shrink-0"} />
                   <div>
                     <p className="font-semibold">Cashback Ativo</p>
                     <p className="text-[11px] opacity-80">
@@ -227,11 +227,11 @@ export function PromotionalBannersManager({
                 <div
                   className={`flex items-start gap-2.5 rounded-xl border p-3 ${
                     isCouponsEnabled
-                      ? "border-violet-200 bg-violet-50/60 text-violet-950"
+                      ? "border-primary/30 bg-primary/5 text-slate-900"
                       : "border-slate-200 bg-slate-50 text-slate-400"
                   }`}
                 >
-                  <TagIcon size={16} className={isCouponsEnabled ? "text-violet-600 mt-0.5 shrink-0" : "text-slate-400 mt-0.5 shrink-0"} />
+                  <TagIcon size={16} className={isCouponsEnabled ? "text-primary mt-0.5 shrink-0" : "text-slate-400 mt-0.5 shrink-0"} />
                   <div>
                     <p className="font-semibold">Cupons Promocionais</p>
                     <p className="text-[11px] opacity-80">
@@ -246,11 +246,11 @@ export function PromotionalBannersManager({
                 <div
                   className={`flex items-start gap-2.5 rounded-xl border p-3 ${
                     isDeliveryEnabled
-                      ? "border-emerald-200 bg-emerald-50/60 text-emerald-950"
+                      ? "border-primary/30 bg-primary/5 text-slate-900"
                       : "border-slate-200 bg-slate-50 text-slate-400"
                   }`}
                 >
-                  <TruckIcon size={16} className={isDeliveryEnabled ? "text-emerald-600 mt-0.5 shrink-0" : "text-slate-400 mt-0.5 shrink-0"} />
+                  <TruckIcon size={16} className={isDeliveryEnabled ? "text-primary mt-0.5 shrink-0" : "text-slate-400 mt-0.5 shrink-0"} />
                   <div>
                     <p className="font-semibold">Entrega & Benefícios</p>
                     <p className="text-[11px] opacity-80">

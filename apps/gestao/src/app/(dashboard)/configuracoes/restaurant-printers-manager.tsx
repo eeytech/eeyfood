@@ -262,8 +262,7 @@ export function RestaurantPrintersManager({
 
         <Button
           onClick={handleOpenAddModal}
-          className="h-10 gap-2 font-semibold shadow-sm"
-          style={{ backgroundColor: currentThemeConfig.hex }}
+          className="h-10 gap-2 font-semibold shadow-sm bg-primary text-primary-foreground hover:bg-primary/90"
         >
           <PlusIcon size={16} />
           <span>Nova Impressora</span>
@@ -275,8 +274,8 @@ export function RestaurantPrintersManager({
         className={cn(
           "border transition-all shadow-xs",
           agentStatus.isOnline
-            ? "border-emerald-200 bg-emerald-50/50"
-            : "border-amber-200 bg-amber-50/40",
+            ? "border-primary/30 bg-primary/5"
+            : "border-slate-200 bg-slate-50/60",
         )}
       >
         <CardContent className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -285,8 +284,8 @@ export function RestaurantPrintersManager({
               className={cn(
                 "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
                 agentStatus.isOnline
-                  ? "bg-emerald-500 text-white shadow-xs shadow-emerald-500/20"
-                  : "bg-amber-500 text-white shadow-xs shadow-amber-500/20",
+                  ? "bg-primary text-primary-foreground shadow-xs shadow-primary/20"
+                  : "bg-slate-200 text-slate-600",
               )}
             >
               <LaptopIcon size={20} />
@@ -297,11 +296,11 @@ export function RestaurantPrintersManager({
                   Agente de Impressão Local (Windows / Spooler / Rede)
                 </span>
                 {agentStatus.isOnline ? (
-                  <Badge className="bg-emerald-600 text-white border-none text-[10px] uppercase font-bold tracking-wider">
+                  <Badge className="bg-primary text-primary-foreground border-none text-[10px] uppercase font-bold tracking-wider">
                     Online (Porta 4050)
                   </Badge>
                 ) : (
-                  <Badge className="bg-amber-600 text-white border-none text-[10px] uppercase font-bold tracking-wider">
+                  <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-200 text-[10px] uppercase font-bold tracking-wider">
                     Desconectado
                   </Badge>
                 )}
@@ -315,7 +314,7 @@ export function RestaurantPrintersManager({
                 ) : (
                   <>
                     Para impressão 100% silenciosa e envio direto ao Windows Spooler (USB) e Rede sem caixas de diálogo,
-                    execute no computador do caixa: <code className="bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded font-mono font-bold">npm run print-agent</code>
+                    execute no computador do caixa: <code className="bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono font-bold">npm run print-agent</code>
                   </>
                 )}
               </p>
@@ -328,7 +327,7 @@ export function RestaurantPrintersManager({
               size="sm"
               onClick={checkAgent}
               disabled={isCheckingAgent}
-              className="h-8 gap-1.5 text-xs font-semibold border-slate-200 bg-white"
+              className="h-8 gap-1.5 text-xs font-semibold border-slate-200 bg-white hover:text-primary hover:border-primary/40"
             >
               <RefreshCwIcon size={13} className={isCheckingAgent ? "animate-spin" : ""} />
               <span>Verificar Conexão</span>
@@ -352,7 +351,7 @@ export function RestaurantPrintersManager({
                 Vias sem valores, foco em itens e observações
               </p>
             </div>
-            <div className="h-10 w-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
               <ChefHatIcon size={20} />
             </div>
           </CardContent>
@@ -371,7 +370,7 @@ export function RestaurantPrintersManager({
                 Via completa com valores, taxa e pagamento
               </p>
             </div>
-            <div className="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
               <ReceiptIcon size={20} />
             </div>
           </CardContent>
@@ -390,7 +389,7 @@ export function RestaurantPrintersManager({
                 Roteamento automatizado por função
               </p>
             </div>
-            <div className="h-10 w-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
               <PrinterIcon size={20} />
             </div>
           </CardContent>
@@ -422,8 +421,7 @@ export function RestaurantPrintersManager({
             <Button
               onClick={handleOpenAddModal}
               size="sm"
-              className="mt-4 gap-1.5 font-semibold"
-              style={{ backgroundColor: currentThemeConfig.hex }}
+              className="mt-4 gap-1.5 font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
             >
               <PlusIcon size={14} />
               <span>Cadastrar Primeira Impressora</span>
@@ -455,11 +453,10 @@ export function RestaurantPrintersManager({
                         {/* Badge de Função */}
                         <Badge
                           className={cn(
-                            "border-none text-[10px] font-bold uppercase tracking-wider px-2 py-0.5",
-                            isKitchen && "bg-emerald-100 text-emerald-800",
-                            isCashier && "bg-blue-100 text-blue-800",
-                            isBar && "bg-purple-100 text-purple-800",
-                            !isKitchen && !isCashier && !isBar && "bg-amber-100 text-amber-800",
+                            "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5",
+                            printer.isActive
+                              ? "bg-primary/10 text-primary border border-primary/20"
+                              : "bg-slate-100 text-slate-600 border border-slate-200",
                           )}
                         >
                           {isKitchen ? "Cozinha (Produção)" : isCashier ? "Caixa (Balcão)" : isBar ? "Bar (Bebidas)" : "Todas as Vias"}
@@ -470,12 +467,12 @@ export function RestaurantPrintersManager({
                       <div className="flex items-center gap-1.5 text-xs text-slate-500">
                         {isNetwork ? (
                           <span className="inline-flex items-center gap-1 text-slate-600 font-medium">
-                            <NetworkIcon size={13} className="text-emerald-600" />
+                            <NetworkIcon size={13} className="text-primary" />
                             <span>Rede TCP: <b>{printer.ipAddress}</b>:{printer.port}</span>
                           </span>
                         ) : isSpooler ? (
                           <span className="inline-flex items-center gap-1 text-slate-600 font-medium">
-                            <UsbIcon size={13} className="text-blue-600" />
+                            <UsbIcon size={13} className="text-primary" />
                             <span>USB Windows: <b>{printer.spoolerName}</b></span>
                           </span>
                         ) : (
@@ -688,7 +685,7 @@ export function RestaurantPrintersManager({
                     Nome da Impressora no Windows *
                   </Label>
                   {windowsPrinters.length > 0 && (
-                    <span className="text-[10px] text-emerald-700 font-semibold">
+                    <span className="text-[10px] text-primary font-semibold">
                       {windowsPrinters.length} detectadas via Agente
                     </span>
                   )}
@@ -833,8 +830,7 @@ export function RestaurantPrintersManager({
                 type="submit"
                 size="sm"
                 disabled={isPending}
-                className="h-9 font-semibold text-xs gap-1.5"
-                style={{ backgroundColor: currentThemeConfig.hex }}
+                className="h-9 font-semibold text-xs gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
               >
                 {isPending && <Loader2Icon size={14} className="animate-spin" />}
                 <span>{editingPrinter ? "Salvar Alterações" : "Cadastrar Impressora"}</span>

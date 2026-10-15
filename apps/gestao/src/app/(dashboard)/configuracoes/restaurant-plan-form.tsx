@@ -271,10 +271,10 @@ export const RestaurantPlanForm = ({
   return (
     <div className="space-y-6 pb-24">
       {/* ── Super Admin Shield Banner ─────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl border border-amber-300/80 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-4 sm:p-5 shadow-xs">
+      <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4 sm:p-5 shadow-xs">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white shadow-xs">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-xs shadow-primary/25">
               <ShieldCheckIcon size={24} />
             </div>
             <div>
@@ -282,7 +282,7 @@ export const RestaurantPlanForm = ({
                 <h3 className="font-display text-base font-bold text-slate-900">
                   Licenciamento & Módulos do Cliente
                 </h3>
-                <span className="rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-800">
+                <span className="rounded-full bg-primary/15 border border-primary/25 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
                   Área Exclusiva Super Admin
                 </span>
               </div>
@@ -311,7 +311,7 @@ export const RestaurantPlanForm = ({
               type="button"
               onClick={handleSave}
               disabled={isPending}
-              className="bg-amber-600 hover:bg-amber-700 text-white shadow-xs text-xs font-semibold"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs text-xs font-semibold"
             >
               {isPending ? (
                 <>
@@ -466,9 +466,9 @@ export const RestaurantPlanForm = ({
                 variant="outline"
                 size="sm"
                 onClick={handleSelectAll}
-                className="h-8 text-xs"
+                className="h-8 text-xs hover:border-primary/40 hover:text-primary"
               >
-                <UnlockIcon size={13} className="mr-1 text-emerald-600" />
+                <UnlockIcon size={13} className="mr-1 text-primary" />
                 Liberar Todos
               </Button>
 
@@ -527,7 +527,7 @@ export const RestaurantPlanForm = ({
                       onClick={() => toggleModule(mod.id)}
                       className={`group relative flex flex-col justify-between rounded-xl border p-4 transition-all duration-150 cursor-pointer select-none ${
                         isEnabled
-                          ? "border-emerald-200 bg-white shadow-xs hover:border-emerald-300 hover:shadow-sm"
+                          ? "border-primary/30 bg-white shadow-xs hover:border-primary/50 hover:shadow-sm"
                           : "border-slate-200 bg-slate-50/60 opacity-70 hover:opacity-100 hover:bg-white"
                       }`}
                     >
@@ -537,7 +537,7 @@ export const RestaurantPlanForm = ({
                             <div
                               className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors ${
                                 isEnabled
-                                  ? "bg-emerald-500/10 text-emerald-700"
+                                  ? "bg-primary/10 text-primary"
                                   : "bg-slate-200/70 text-slate-400"
                               }`}
                             >
@@ -550,7 +550,7 @@ export const RestaurantPlanForm = ({
                               <span
                                 className={`inline-block rounded-full px-2 py-0.2 text-[10px] font-bold ${
                                   isEnabled
-                                    ? "bg-emerald-100 text-emerald-800"
+                                    ? "bg-primary/10 text-primary border border-primary/20"
                                     : "bg-slate-200 text-slate-600"
                                 }`}
                               >
@@ -582,7 +582,7 @@ export const RestaurantPlanForm = ({
                         </span>
                         <span
                           className={`font-medium ${
-                            isEnabled ? "text-emerald-700" : "text-slate-400"
+                            isEnabled ? "text-primary" : "text-slate-400"
                           }`}
                         >
                           {isEnabled ? "Acesso Permitido" : "Oculto na Loja"}

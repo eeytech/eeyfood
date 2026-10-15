@@ -231,11 +231,11 @@ const ConfiguracoesPage = async ({
           {isSuperAdmin && (
             <TabsTrigger
               value="plano"
-              className="rounded-xl px-4 py-2 text-xs font-semibold text-amber-700 transition data-[state=active]:bg-amber-600 data-[state=active]:text-white data-[state=active]:shadow-xs"
+              className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 transition data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs"
             >
-              <ShieldCheckIcon size={15} className="mr-1.5 text-amber-600 data-[state=active]:text-white" />
+              <ShieldCheckIcon size={15} className="mr-1.5" />
               Plano & Módulos
-              <span className="ml-1.5 rounded-full bg-amber-500/15 px-1.5 py-0.2 text-[9px] font-bold uppercase tracking-wider text-amber-800 border border-amber-300">
+              <span className="ml-1.5 rounded-full bg-primary/10 px-1.5 py-0.2 text-[9px] font-bold uppercase tracking-wider text-primary border border-primary/20">
                 Super Admin
               </span>
             </TabsTrigger>

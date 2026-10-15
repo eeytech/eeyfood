@@ -209,7 +209,7 @@ export default function DocumentacoesClient() {
                 onClick={() => setSelectedCategory(cat.id)}
                 className={`flex shrink-0 items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-xs ${
                   isSelected
-                    ? "bg-slate-900 text-white shadow-sm"
+                    ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
                     : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 hover:text-slate-900"
                 }`}
               >
@@ -363,7 +363,7 @@ export default function DocumentacoesClient() {
                       {/* SEÇÃO 1: O QUE TEM NESTA TELA */}
                       <div className="space-y-3">
                         <div className="flex items-center gap-2">
-                          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-100 text-blue-800 text-xs">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20 text-xs">
                             <LayersIcon size={14} />
                           </span>
                           <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800">
@@ -397,10 +397,10 @@ export default function DocumentacoesClient() {
                               </div>
 
                               {feat.action && (
-                                <div className="mt-3 pl-5 text-[11px] font-medium text-emerald-800 bg-emerald-50/70 p-2 rounded-lg border border-emerald-100 flex items-start gap-1.5">
+                                <div className="mt-3 pl-5 text-[11px] font-medium text-primary bg-primary/5 p-2 rounded-lg border border-primary/20 flex items-start gap-1.5">
                                   <CheckCircle2Icon
                                     size={13}
-                                    className="shrink-0 mt-0.5 text-emerald-600"
+                                    className="shrink-0 mt-0.5 text-primary"
                                   />
                                   <span>
                                     <strong>Como interagir:</strong> {feat.action}
@@ -415,7 +415,7 @@ export default function DocumentacoesClient() {
                       {/* SEÇÃO 2: COMO USAR NO DIA A DIA */}
                       <div className="space-y-3 pt-3 border-t border-slate-200">
                         <div className="flex items-center gap-2">
-                          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800 text-xs">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20 text-xs">
                             <PlayCircleIcon size={14} />
                           </span>
                           <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800">
@@ -437,8 +437,8 @@ export default function DocumentacoesClient() {
                                 {step.description}
                               </p>
                               {step.expectedResult && (
-                                <div className="mt-2.5 p-2 rounded-lg bg-slate-50 border border-slate-200/80 text-[11px] text-slate-700 flex items-center gap-1.5">
-                                  <SparklesIcon size={13} className="text-amber-500 shrink-0" />
+                                <div className="mt-2.5 p-2 rounded-lg bg-primary/5 border border-primary/15 text-[11px] text-slate-700 flex items-center gap-1.5">
+                                  <SparklesIcon size={13} className="text-primary shrink-0" />
                                   <span>
                                     <strong>Resultado esperado:</strong> {step.expectedResult}
                                   </span>
@@ -452,7 +452,7 @@ export default function DocumentacoesClient() {
                       {/* SEÇÃO 3: DICAS & RECOMENDAÇÕES */}
                       <div className="space-y-3 pt-3 border-t border-slate-200">
                         <div className="flex items-center gap-2">
-                          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-100 text-amber-800 text-xs">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20 text-xs">
                             <LightbulbIcon size={14} />
                           </span>
                           <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800">
@@ -464,9 +464,9 @@ export default function DocumentacoesClient() {
                           {doc.proTips.map((tip, tIdx) => (
                             <div
                               key={tIdx}
-                              className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-50/50 border border-amber-200/60 text-xs text-amber-900"
+                              className="flex items-start gap-2.5 p-3 rounded-xl bg-primary/5 border border-primary/20 text-xs text-slate-800"
                             >
-                              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-amber-200 text-amber-800 text-[10px] font-bold">
+                              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary text-[10px] font-bold">
                                 ✓
                               </span>
                               <span className="leading-relaxed">{tip}</span>
@@ -481,7 +481,7 @@ export default function DocumentacoesClient() {
                           Pronto para colocar em prática?
                         </span>
                         <Link href={doc.route}>
-                          <Button size="sm" className="h-8 gap-1.5 text-xs font-bold rounded-lg shadow-xs">
+                          <Button size="sm" className="h-8 gap-1.5 text-xs font-bold rounded-lg shadow-xs bg-primary text-primary-foreground hover:bg-primary/90">
                             <span>Ir para a tela {doc.title}</span>
                             <ArrowRightIcon size={13} />
                           </Button>

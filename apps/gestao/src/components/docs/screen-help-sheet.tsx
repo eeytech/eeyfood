@@ -198,8 +198,8 @@ export function ScreenHelpSheet({
                       {feat.description}
                     </p>
                     {feat.action && (
-                      <div className="mt-2.5 pl-7 flex items-start gap-1.5 text-[11px] font-medium text-emerald-700 bg-emerald-50/80 p-2 rounded-lg border border-emerald-100">
-                        <CheckCircle2Icon size={13} className="shrink-0 mt-0.5 text-emerald-600" />
+                      <div className="mt-2.5 pl-7 flex items-start gap-1.5 text-[11px] font-medium text-primary bg-primary/5 p-2 rounded-lg border border-primary/20">
+                        <CheckCircle2Icon size={13} className="shrink-0 mt-0.5 text-primary" />
                         <span>
                           <strong>Como interagir:</strong> {feat.action}
                         </span>
@@ -225,8 +225,8 @@ export function ScreenHelpSheet({
                     {step.description}
                   </p>
                   {step.expectedResult && (
-                    <div className="mt-2.5 p-2 rounded-lg bg-slate-50 border border-slate-200/80 text-[11px] text-slate-700 flex items-center gap-1.5">
-                      <SparklesIcon size={13} className="text-amber-500 shrink-0" />
+                    <div className="mt-2.5 p-2 rounded-lg bg-primary/5 border border-primary/15 text-[11px] text-slate-700 flex items-center gap-1.5">
+                      <SparklesIcon size={13} className="text-primary shrink-0" />
                       <span>
                         <strong>Resultado esperado:</strong> {step.expectedResult}
                       </span>
@@ -238,12 +238,12 @@ export function ScreenHelpSheet({
 
             {/* ABA: DICAS E MELHORES PRÁTICAS */}
             <TabsContent value="tips" className="m-0 space-y-3">
-              <div className="rounded-xl bg-amber-50/80 border border-amber-200/80 p-4 mb-3">
-                <h4 className="text-xs font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5 mb-1">
-                  <LightbulbIcon size={14} className="text-amber-600" />
+              <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 mb-3">
+                <h4 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5 mb-1">
+                  <LightbulbIcon size={14} className="text-primary" />
                   Recomendações da Equipe EeyFood
                 </h4>
-                <p className="text-xs text-amber-800">
+                <p className="text-xs text-slate-600">
                   Práticas recomendadas para aumentar sua agilidade operacional, evitar erros e vender mais.
                 </p>
               </div>
@@ -253,7 +253,7 @@ export function ScreenHelpSheet({
                   key={idx}
                   className="flex items-start gap-3 p-3.5 rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-700"
                 >
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary text-[10px] font-bold">
                     ✓
                   </span>
                   <span className="leading-relaxed">{tip}</span>
@@ -295,7 +295,7 @@ export function ScreenHelpSheet({
                       <span>{item.question}</span>
                     </h4>
                     <p className="text-xs text-slate-600 leading-relaxed pl-4 mt-1">
-                      <strong className="text-emerald-700">R:</strong> {item.answer}
+                      <strong className="text-primary font-bold">R:</strong> {item.answer}
                     </p>
                   </div>
                 ))}

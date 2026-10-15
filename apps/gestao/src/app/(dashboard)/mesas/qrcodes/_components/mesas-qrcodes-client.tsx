@@ -814,7 +814,7 @@ export function MesasQrCodesClient({
               <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
                 Gerador de QR Code para Mesas
               </h1>
-              <Badge variant="outline" className="border-indigo-200 bg-indigo-50 text-indigo-700">
+              <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
                 Auto-Atendimento na Mesa
               </Badge>
             </div>

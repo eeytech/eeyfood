@@ -483,18 +483,18 @@ export function WhatsAppConnectionCard({
 
               {/* Alerta se o Bot estiver desligado */}
               {!isBotActive && (
-                <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50/80 p-3.5 text-amber-900">
-                  <AlertTriangleIcon className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
+                <div className="flex items-start gap-3 rounded-xl border border-primary/25 bg-primary/5 p-3.5 text-slate-800">
+                  <AlertTriangleIcon className="h-5 w-5 shrink-0 text-primary mt-0.5" />
                   <div className="flex-1 text-xs space-y-1">
-                    <p className="font-semibold text-amber-800">
+                    <p className="font-semibold text-primary">
                       O robô de inteligência artificial está desativado!
                     </p>
-                    <p className="text-amber-700">
+                    <p className="text-slate-600">
                       Quando um cliente enviar mensagem no WhatsApp, o robô não responderá. Clique no botão{" "}
                       <strong>&quot;Ativar Agora&quot;</strong> acima ou configure na aba{" "}
                       <Link
                         href={`/${slug}/ai`}
-                        className="underline font-semibold hover:text-amber-900"
+                        className="underline font-semibold text-primary hover:text-primary/80"
                       >
                         Inteligência Artificial
                       </Link>

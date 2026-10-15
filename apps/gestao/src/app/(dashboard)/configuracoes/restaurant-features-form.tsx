@@ -560,12 +560,12 @@ export const RestaurantFeaturesForm = ({
                         </div>
                       </div>
 
-                      <div className="rounded-lg bg-amber-50 border border-amber-200/80 p-3 text-xs text-amber-900 space-y-1.5">
-                        <div className="flex items-center gap-1.5 font-semibold text-amber-900">
-                          <AlertTriangleIcon className="h-4 w-4 text-amber-600 shrink-0" />
+                      <div className="rounded-lg bg-primary/5 border border-primary/20 p-3 text-xs text-slate-800 space-y-1.5">
+                        <div className="flex items-center gap-1.5 font-semibold text-primary">
+                          <AlertTriangleIcon className="h-4 w-4 text-primary shrink-0" />
                           <span>Passo obrigatório na sua InfinitePay:</span>
                         </div>
-                        <p className="text-[11px] text-amber-800 leading-relaxed">
+                        <p className="text-[11px] text-slate-600 leading-relaxed">
                           Para conseguir gerar links de pagamento nas vendas do cardápio, você deve habilitar a opção <strong>Checkout Externo</strong> no painel da sua InfinitePay.
                         </p>
                         <a
@@ -745,7 +745,7 @@ export const RestaurantFeaturesForm = ({
                         htmlFor="acceptValeRefeicao"
                         className="cursor-pointer font-semibold text-slate-950 text-sm flex items-center gap-1.5"
                       >
-                        <UtensilsIcon size={16} className="text-amber-600" />
+                        <UtensilsIcon size={16} className="text-primary" />
                         Vale Refeição (VR)
                       </Label>
                       {acceptValeRefeicao && (
@@ -782,7 +782,7 @@ export const RestaurantFeaturesForm = ({
                         htmlFor="acceptValeAlimentacao"
                         className="cursor-pointer font-semibold text-slate-950 text-sm flex items-center gap-1.5"
                       >
-                        <ShoppingBagIcon size={16} className="text-emerald-600" />
+                        <ShoppingBagIcon size={16} className="text-primary" />
                         Vale Alimentação (VA)
                       </Label>
                       {acceptValeAlimentacao && (
