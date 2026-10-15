@@ -26,7 +26,7 @@ const HANDOFF_KEYWORDS = [
   "atendimento humano",
 ];
 
-const detectaHandoff = (text: string): boolean => {
+export const detectaHandoff = (text: string): boolean => {
   const lower = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   return HANDOFF_KEYWORDS.some((kw) =>
     lower.includes(kw.normalize("NFD").replace(/[\u0300-\u036f]/g, "")),
@@ -34,6 +34,51 @@ const detectaHandoff = (text: string): boolean => {
 };
 
 export const HANDOFF_SIGNAL = "__HANDOFF_REQUIRED__";
+
+export interface ChatMessage {
+  role: "user" | "model";
+  text: string;
+  timestamp: number;
+}
+
+// Histórico de conversas em memória RAM do servidor para manter contexto e memória do diálogo
+const conversationCache = new Map<string, ChatMessage[]>();
+const MAX_CONVERSATION_TURNS = 14;
+const CONVERSATION_TTL_MS = 2 * 60 * 60 * 1000; // 2 horas de inatividade
+
+export function getConversationHistory(sessionKey: string): ChatMessage[] {
+  const history = conversationCache.get(sessionKey);
+  if (!history || history.length === 0) return [];
+  const lastMsg = history[history.length - 1];
+  if (Date.now() - lastMsg.timestamp > CONVERSATION_TTL_MS) {
+    conversationCache.delete(sessionKey);
+    return [];
+  }
+  return history;
+}
+
+export function appendToConversationHistory(
+  sessionKey: string,
+  role: "user" | "model",
+  text: string,
+) {
+  let history = conversationCache.get(sessionKey) || [];
+  if (
+    history.length > 0 &&
+    Date.now() - history[history.length - 1].timestamp > CONVERSATION_TTL_MS
+  ) {
+    history = [];
+  }
+  history.push({ role, text, timestamp: Date.now() });
+  if (history.length > MAX_CONVERSATION_TURNS) {
+    history = history.slice(-MAX_CONVERSATION_TURNS);
+  }
+  conversationCache.set(sessionKey, history);
+}
+
+export function clearConversationHistory(sessionKey: string) {
+  conversationCache.delete(sessionKey);
+}
 
 interface ProcessarMensagemBotInput {
   slug: string;
@@ -128,6 +173,40 @@ async function getAvailableGeminiModels(key: string): Promise<string[]> {
   ];
 }
 
+function buildGeminiContents(history: ChatMessage[], currentUserContent: string) {
+  const contents: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }> = [];
+
+  for (const item of history) {
+    if (!item.text?.trim()) continue;
+    // O Gemini exige alternância estrita: user -> model -> user -> model
+    if (contents.length > 0 && contents[contents.length - 1].role === item.role) {
+      contents[contents.length - 1].parts[0].text += `\n${item.text}`;
+    } else {
+      contents.push({
+        role: item.role,
+        parts: [{ text: item.text }],
+      });
+    }
+  }
+
+  // O Gemini EXIGE que o primeiro turno seja do papel "user"
+  while (contents.length > 0 && contents[0].role === "model") {
+    contents.shift();
+  }
+
+  // A última mensagem deve ser a do usuário atual
+  if (contents.length > 0 && contents[contents.length - 1].role === "user") {
+    contents[contents.length - 1].parts[0].text += `\n${currentUserContent}`;
+  } else {
+    contents.push({
+      role: "user",
+      parts: [{ text: currentUserContent }],
+    });
+  }
+
+  return contents;
+}
+
 /**
  * Chamada nativa REST oficial da Google Generative Language API (Gemini).
  * Extremamente rápida, confiável e compatível com chaves gratuitas do Google AI Studio.
@@ -138,6 +217,7 @@ async function callGeminiNative(
   userMessage: string,
   customerName: string,
   customerPhone: string,
+  history: ChatMessage[] = [],
 ): Promise<string | null> {
   const cleaned = cleanKey(geminiKey);
   if (!cleaned) {
@@ -147,9 +227,10 @@ async function callGeminiNative(
 
   const candidateModels = await getAvailableGeminiModels(cleaned);
   const userContent = `Cliente: ${customerName} (${customerPhone})\nMensagem: ${userMessage}`;
+  const contentsWithHistory = buildGeminiContents(history, userContent);
 
   for (const m of candidateModels.slice(0, 6)) {
-    // 1. Tenta v1beta com system_instruction
+    // 1. Tenta v1beta com system_instruction e histórico completo
     try {
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(cleaned)}`,
@@ -160,12 +241,7 @@ async function callGeminiNative(
             system_instruction: {
               parts: [{ text: sysPrompt }],
             },
-            contents: [
-              {
-                role: "user",
-                parts: [{ text: userContent }],
-              },
-            ],
+            contents: contentsWithHistory,
             generationConfig: {
               temperature: 0.7,
               maxOutputTokens: 1000,
@@ -196,20 +272,20 @@ async function callGeminiNative(
       );
     }
 
-    // 2. Fallback v1beta SEM system_instruction (prompt unificado em contents — sempre v1beta)
+    // 2. Fallback v1beta SEM system_instruction (prompt unificado no primeiro conteúdo do usuário)
     try {
+      const fallbackContents = JSON.parse(JSON.stringify(contentsWithHistory));
+      if (fallbackContents.length > 0 && fallbackContents[0].role === "user") {
+        fallbackContents[0].parts[0].text = `${sysPrompt}\n\n---\n\n${fallbackContents[0].parts[0].text}`;
+      }
+
       const resContents = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(cleaned)}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            contents: [
-              {
-                role: "user",
-                parts: [{ text: `${sysPrompt}\n\n---\n\n${userContent}` }],
-              },
-            ],
+            contents: fallbackContents,
             generationConfig: {
               temperature: 0.7,
               maxOutputTokens: 1000,
@@ -254,6 +330,7 @@ async function callOpenAi(
   userMessage: string,
   customerName: string,
   customerPhone: string,
+  history: ChatMessage[] = [],
 ): Promise<string | null> {
   const cleaned = cleanKey(openaiKey);
   if (!cleaned) return null;
@@ -261,17 +338,23 @@ async function callOpenAi(
   const models = ["gpt-4o-mini", "gpt-4o"];
   const client = new OpenAI({ apiKey: cleaned, timeout: 12000 });
 
+  const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+    { role: "system", content: sysPrompt },
+    ...history.map((h) => ({
+      role: (h.role === "model" ? "assistant" : "user") as "assistant" | "user",
+      content: h.text,
+    })),
+    {
+      role: "user",
+      content: `Cliente: ${customerName} (${customerPhone})\nMensagem: ${userMessage}`,
+    },
+  ];
+
   for (const m of models) {
     try {
       const res = await client.chat.completions.create({
         model: m,
-        messages: [
-          { role: "system", content: sysPrompt },
-          {
-            role: "user",
-            content: `Cliente: ${customerName} (${customerPhone})\nMensagem: ${userMessage}`,
-          },
-        ],
+        messages,
         temperature: 0.7,
       });
       const text = res.choices[0]?.message?.content?.trim();
@@ -336,8 +419,11 @@ export const processarMensagemBot = async ({
   if (!textToProcess) return null;
 
   // 1. Detecção explícita de pedido de atendimento humano
+  const sessionKey = `${restaurant.id}:${customerPhone}`;
+
   if (detectaHandoff(textToProcess)) {
     console.log(`[Bot AI] Cliente ${customerPhone} solicitou atendimento humano.`);
+    clearConversationHistory(sessionKey);
     return HANDOFF_SIGNAL;
   }
 
@@ -375,7 +461,22 @@ DIRETRIZES FUNDAMENTAIS:
   }
 
   const baseSystemPrompt = aiSettings.systemPrompt || DEFAULT_AI_SYSTEM_PROMPT;
-  const fullSystemPrompt = `${baseSystemPrompt}\n${menuContext}\n\n### INSTRUÇÃO CRÍTICA:\nResponda diretamente e em português natural do Brasil de forma prestativa, elegante e acolhedora. Você NÃO precisa invocar ferramentas externas nem usar funções de código.`;
+  const fullSystemPrompt = `${baseSystemPrompt}\n${menuContext}
+
+### REGRAS CRÍTICAS E OBRIGATÓRIAS DE FLUXO NO WHATSAPP:
+1. FAÇA APENAS UMA PERGUNTA POR VEZ (PROIBIDO JUNTAR PERGUNTAS):
+   - É terminantemente PROIBIDO fazer duas perguntas diferentes na mesma mensagem (exemplo do que é PROIBIDO: "quer adicionar uma bebida? e vai ser entrega ou retirada?").
+   - O atendimento DEVE ser em etapas graduais:
+     • Etapa 1: Ao anotar ou confirmar o prato/lanche, pergunte APENAS se deseja adicionar alguma bebida ou sobremesa. PARE AÍ e aguarde a resposta do cliente.
+     • Etapa 2: Somente APÓS o cliente responder sobre a bebida/acompanhamento, pergunte se o pedido será para ENTREGA (Delivery) ou RETIRADA no balcão. PARE AÍ e aguarde a resposta do cliente.
+2. RESPOSTAS EM ETAPAS E MÚLTIPLAS MENSAGENS:
+   - Clientes de WhatsApp frequentemente mandam respostas em mensagens separadas (ex.: mandou "sim eu quero 1 coca lata" e logo em seguida "vou retirar quando ficar pronto").
+   - Você DEVE consultar todo o histórico anterior da conversa.
+   - JAMAIS esqueça os lanches, bebidas ou preferências já informadas nas mensagens anteriores.
+   - NUNCA se perca e NUNCA repita perguntas sobre itens ou métodos que o cliente já acabou de responder.
+   - Se o cliente já informou a bebida E a forma de consumo (mesmo que em mensagens separadas), junte tudo: confirme o lanche + a bebida + o método de consumo e envie o link para finalizar o pedido!
+3. FORMATO:
+   - Mensagens curtas, calorosas e diretas para WhatsApp (máximo de 2 a 3 frases por mensagem). Não invente ferramentas nem código.`;
 
   // 3. Chaves de API configuradas
   const geminiKey = cleanKey(
@@ -386,8 +487,10 @@ DIRETRIZES FUNDAMENTAIS:
   const rawProvider = (aiSettings.aiProvider || "GOOGLE_GEMINI").toUpperCase();
   const selectedProvider = rawProvider === "OPENAI" ? "OPENAI" : "GOOGLE_GEMINI";
 
+  const history = getConversationHistory(sessionKey);
+
   console.log(
-    `[Bot AI] Atendendo ${customerPhone} no restaurante "${restaurant.name}" (${slug}). Provedor: ${selectedProvider}. Tem GeminiKey: ${!!geminiKey} (${geminiKey ? geminiKey.slice(0, 6) + "..." : "NÃO CONFIGURADA"}), Tem OpenAIKey: ${!!openaiKey}`,
+    `[Bot AI] Atendendo ${customerPhone} no restaurante "${restaurant.name}" (${slug}). Provedor: ${selectedProvider}. Histórico: ${history.length} msgs. Tem GeminiKey: ${!!geminiKey} (${geminiKey ? geminiKey.slice(0, 6) + "..." : "NÃO CONFIGURADA"}), Tem OpenAIKey: ${!!openaiKey}`,
   );
 
   let botReply: string | null = null;
@@ -401,6 +504,7 @@ DIRETRIZES FUNDAMENTAIS:
         textToProcess,
         customerName,
         customerPhone,
+        history,
       );
     }
     // Fallback para OpenAI se Gemini não respondeu
@@ -412,6 +516,7 @@ DIRETRIZES FUNDAMENTAIS:
         textToProcess,
         customerName,
         customerPhone,
+        history,
       );
     }
   } else {
@@ -423,6 +528,7 @@ DIRETRIZES FUNDAMENTAIS:
         textToProcess,
         customerName,
         customerPhone,
+        history,
       );
     }
     // Fallback para Gemini se OpenAI não respondeu
@@ -434,12 +540,15 @@ DIRETRIZES FUNDAMENTAIS:
         textToProcess,
         customerName,
         customerPhone,
+        history,
       );
     }
   }
 
-  // 5. Se o modelo respondeu com sucesso, retorna
+  // 5. Se o modelo respondeu com sucesso, salva na memória e retorna
   if (botReply) {
+    appendToConversationHistory(sessionKey, "user", textToProcess);
+    appendToConversationHistory(sessionKey, "model", botReply);
     return botReply;
   }
 

@@ -12,8 +12,162 @@ import axios from "axios";
 import { NextResponse } from "next/server";
 import OpenAI, { toFile } from "openai";
 
-import { HANDOFF_SIGNAL, processarMensagemBot } from "@/lib/bot-ai";
+import { detectaHandoff, HANDOFF_SIGNAL, processarMensagemBot } from "@/lib/bot-ai";
 import { cleanKey, normalizeWhatsAppNumber } from "@/lib/whatsapp-utils";
+
+interface PendingMessageBatch {
+  messages: string[];
+  timer: NodeJS.Timeout;
+  customerName: string;
+  customerPhone: string;
+  targetPhone: string;
+  remoteJid: string;
+  instanceName: string;
+  apiKey: string;
+  evolutionUrl: string;
+  slug: string;
+  restaurantId: string;
+}
+
+const messageDebounceMap = new Map<string, PendingMessageBatch>();
+const DEBOUNCE_DELAY_MS = 2500; // Aguarda 2.5s para agrupar mensagens consecutivas do cliente
+
+async function sendWhatsAppMessage(
+  evolutionUrl: string,
+  instanceName: string,
+  apiKey: string,
+  targetPhone: string,
+  remoteJid: string,
+  text: string,
+) {
+  try {
+    await axios.post(
+      `${evolutionUrl}/message/sendText/${encodeURIComponent(instanceName)}`,
+      { number: targetPhone, text },
+      { headers: { apikey: apiKey, "Content-Type": "application/json" }, timeout: 10000 },
+    );
+    console.log(`[Webhook Evolution] Resposta enviada com sucesso para ${targetPhone}`);
+  } catch (err: unknown) {
+    console.warn(
+      `[Webhook Evolution] Tentativa de envio para ${targetPhone} falhou. Tentando com remoteJid (${remoteJid})...`,
+    );
+    try {
+      await axios.post(
+        `${evolutionUrl}/message/sendText/${encodeURIComponent(instanceName)}`,
+        { number: remoteJid, text },
+        { headers: { apikey: apiKey, "Content-Type": "application/json" }, timeout: 10000 },
+      );
+      console.log(`[Webhook Evolution] Resposta enviada com sucesso via remoteJid para ${remoteJid}`);
+    } catch (retryErr: unknown) {
+      console.error(
+        `[Webhook Evolution] Falha definitiva ao enviar resposta para ${targetPhone} / ${remoteJid}:`,
+        retryErr instanceof Error ? retryErr.message : retryErr,
+      );
+    }
+  }
+}
+
+async function executarHandoff({
+  restaurantId,
+  slug,
+  customerPhone,
+  customerName,
+  evolutionUrl,
+  instanceName,
+  apiKey,
+  targetPhone,
+  remoteJid,
+}: {
+  restaurantId: string;
+  slug: string;
+  customerPhone: string;
+  customerName: string;
+  evolutionUrl: string;
+  instanceName: string;
+  apiKey: string;
+  targetPhone: string;
+  remoteJid: string;
+}) {
+  await pausarBotParaCliente(restaurantId, customerPhone, customerName);
+
+  const wsUrl = process.env.WEBSOCKET_URL || "http://localhost:4000";
+  await axios
+    .post(`${wsUrl}/eventos/handoff-humano`, {
+      restaurantSlug: slug,
+      customerPhone,
+      customerName,
+    })
+    .catch(() => null);
+
+  const handoffMsg =
+    "Entendido! Um atendente humano foi notificado e assumirá a conversa a partir de agora. Por favor, aguarde um momento.";
+  await sendWhatsAppMessage(
+    evolutionUrl,
+    instanceName,
+    apiKey,
+    targetPhone,
+    remoteJid,
+    handoffMsg,
+  );
+}
+
+async function processarFilaMensagens(sessionKey: string) {
+  const item = messageDebounceMap.get(sessionKey);
+  if (!item) return;
+  messageDebounceMap.delete(sessionKey);
+
+  const combinedText = item.messages.join("\n").trim();
+  if (!combinedText) return;
+
+  console.log(
+    `[Webhook Evolution] Processando lote de ${item.messages.length} mensagem(ns) de ${item.customerName} (${item.customerPhone}): "${combinedText}"`,
+  );
+
+  try {
+    const botResponse = await processarMensagemBot({
+      slug: item.slug,
+      restaurantId: item.restaurantId,
+      customerPhone: item.customerPhone,
+      customerName: item.customerName,
+      messageText: combinedText,
+    });
+
+    if (botResponse === HANDOFF_SIGNAL) {
+      await executarHandoff({
+        restaurantId: item.restaurantId,
+        slug: item.slug,
+        customerPhone: item.customerPhone,
+        customerName: item.customerName,
+        evolutionUrl: item.evolutionUrl,
+        instanceName: item.instanceName,
+        apiKey: item.apiKey,
+        targetPhone: item.targetPhone,
+        remoteJid: item.remoteJid,
+      });
+      return;
+    }
+
+    if (botResponse) {
+      await sendWhatsAppMessage(
+        item.evolutionUrl,
+        item.instanceName,
+        item.apiKey,
+        item.targetPhone,
+        item.remoteJid,
+        botResponse,
+      );
+    } else {
+      console.warn(
+        `[Webhook Evolution] Nenhuma resposta gerada pela IA para ${item.customerPhone}.`,
+      );
+    }
+  } catch (err) {
+    console.error(
+      `[Webhook Evolution] Erro ao processar mensagem do cliente ${item.customerPhone}:`,
+      err,
+    );
+  }
+}
 
 export async function GET() {
   return NextResponse.json({
@@ -350,131 +504,74 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, reason: "empty_text" });
     }
 
-    console.log(
-      `[Webhook Evolution] Processando mensagem de ${customerName} (${customerPhone}): "${messageText}"`,
-    );
-
-    const botResponse = await processarMensagemBot({
-      slug: aiSettings.slug,
-      restaurantId: aiSettings.restaurantId,
-      customerPhone,
-      customerName,
-      messageText,
-    });
-
     const targetPhone = normalizeWhatsAppNumber(customerPhone) || customerPhone;
+    const sessionKey = `${aiSettings.restaurantId}:${customerPhone}`;
 
-    if (botResponse === HANDOFF_SIGNAL) {
-      // Pausar bot para este cliente na fila de atendimento humano
-      await pausarBotParaCliente(aiSettings.restaurantId, customerPhone, customerName);
-
-      const wsUrl = process.env.WEBSOCKET_URL || "http://localhost:4000";
-      await axios
-        .post(`${wsUrl}/eventos/handoff-humano`, {
-          restaurantSlug: aiSettings.slug,
-          customerPhone,
-          customerName,
-        })
-        .catch(() => null);
-
-      try {
-        await axios.post(
-          `${evolutionUrl}/message/sendText/${encodeURIComponent(instanceName)}`,
-          {
-            number: targetPhone,
-            text: "Entendido! Um atendente humano foi notificado e assumirá a conversa a partir de agora. Por favor, aguarde um momento.",
-          },
-          {
-            headers: {
-              apikey: apiKey,
-              "Content-Type": "application/json",
-            },
-            timeout: 10000,
-          },
-        );
-      } catch {
-        // Fallback com remoteJid direto
-        await axios
-          .post(
-            `${evolutionUrl}/message/sendText/${encodeURIComponent(instanceName)}`,
-            {
-              number: remoteJid,
-              text: "Entendido! Um atendente humano foi notificado e assumirá a conversa a partir de agora. Por favor, aguarde um momento.",
-            },
-            {
-              headers: {
-                apikey: apiKey,
-                "Content-Type": "application/json",
-              },
-              timeout: 10000,
-            },
-          )
-          .catch((err) =>
-            console.error(`[Webhook Evolution] Falha ao enviar aviso de handoff:`, err?.message),
-          );
+    // 1. Se a mensagem for diretamente solicitação de atendimento humano, atende na hora sem fila
+    if (detectaHandoff(messageText)) {
+      const existing = messageDebounceMap.get(sessionKey);
+      if (existing) {
+        clearTimeout(existing.timer);
+        messageDebounceMap.delete(sessionKey);
       }
-
+      await executarHandoff({
+        restaurantId: aiSettings.restaurantId,
+        slug: aiSettings.slug,
+        customerPhone,
+        customerName,
+        evolutionUrl,
+        instanceName,
+        apiKey,
+        targetPhone,
+        remoteJid,
+      });
       return NextResponse.json({ ok: true, handoff: true });
     }
 
-    if (botResponse) {
-      try {
-        await axios.post(
-          `${evolutionUrl}/message/sendText/${encodeURIComponent(instanceName)}`,
-          {
-            number: targetPhone,
-            text: botResponse,
-          },
-          {
-            headers: {
-              apikey: apiKey,
-              "Content-Type": "application/json",
-            },
-            timeout: 10000,
-          },
+    // 2. Debounce / Buffer de mensagens rápidas consecutivas
+    const existing = messageDebounceMap.get(sessionKey);
+    if (existing) {
+      clearTimeout(existing.timer);
+      existing.messages.push(messageText);
+      existing.customerName = customerName || existing.customerName;
+      existing.targetPhone = targetPhone;
+      existing.remoteJid = remoteJid;
+      existing.timer = setTimeout(() => {
+        processarFilaMensagens(sessionKey).catch((e) =>
+          console.error(`[Webhook Evolution] Erro no processamento de lote:`, e),
         );
-        console.log(`[Webhook Evolution] Resposta enviada com sucesso para ${targetPhone}`);
-      } catch (err: unknown) {
-        console.warn(
-          `[Webhook Evolution] Tentativa de envio para ${targetPhone} falhou. Tentando com remoteJid (${remoteJid})...`,
-          err,
-        );
-        try {
-          await axios.post(
-            `${evolutionUrl}/message/sendText/${encodeURIComponent(instanceName)}`,
-            {
-              number: remoteJid,
-              text: botResponse,
-            },
-            {
-              headers: {
-                apikey: apiKey,
-                "Content-Type": "application/json",
-              },
-              timeout: 10000,
-            },
-          );
-          console.log(`[Webhook Evolution] Resposta enviada com sucesso via remoteJid para ${remoteJid}`);
-        } catch (retryErr: unknown) {
-          let errDetail = "";
-          if (axios.isAxiosError(retryErr)) {
-            errDetail = JSON.stringify(retryErr.response?.data);
-          } else if (retryErr instanceof Error) {
-            errDetail = retryErr.message;
-          }
-          console.error(
-            `[Webhook Evolution] Falha definitiva ao enviar resposta para ${targetPhone} / ${remoteJid}:`,
-            errDetail,
-          );
-        }
-      }
-    } else {
-      console.warn(
-        `[Webhook Evolution] Nenhuma resposta retornada pela IA para ${customerPhone}. Verifique chave de API e provedor na aba /ai.`,
-      );
-    }
+      }, DEBOUNCE_DELAY_MS);
 
-    return NextResponse.json({ ok: true });
+      console.log(
+        `[Webhook Evolution] Mensagem consecutiva adicionada ao buffer de ${customerPhone} (total: ${existing.messages.length} msgs). Aguardando ${DEBOUNCE_DELAY_MS}ms...`,
+      );
+      return NextResponse.json({ ok: true, queued: true, count: existing.messages.length });
+    } else {
+      const timer = setTimeout(() => {
+        processarFilaMensagens(sessionKey).catch((e) =>
+          console.error(`[Webhook Evolution] Erro no processamento de lote:`, e),
+        );
+      }, DEBOUNCE_DELAY_MS);
+
+      messageDebounceMap.set(sessionKey, {
+        messages: [messageText],
+        timer,
+        customerName,
+        customerPhone,
+        targetPhone,
+        remoteJid,
+        instanceName,
+        apiKey,
+        evolutionUrl,
+        slug: aiSettings.slug,
+        restaurantId: aiSettings.restaurantId,
+      });
+
+      console.log(
+        `[Webhook Evolution] Nova mensagem de ${customerPhone} em buffer. Aguardando ${DEBOUNCE_DELAY_MS}ms para capturar possíveis mensagens seguidas...`,
+      );
+      return NextResponse.json({ ok: true, queued: true, count: 1 });
+    }
   } catch (error) {
     console.error("[Webhook Evolution] Erro no webhook Evolution:", error);
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
