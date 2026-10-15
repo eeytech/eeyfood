@@ -1,11 +1,17 @@
 import {
   aiSettingsTable,
+  and,
+  asc,
   buscarRestauranteComCardapioPorSlug,
   buscarRestaurantePorSlug,
   db,
   DEFAULT_AI_SYSTEM_PROMPT,
   eq,
   isClientePausado,
+  isNotNull,
+  productOptionGroupsTable,
+  productOptionsTable,
+  productToOptionGroupsTable,
   restaurantsTable,
   salvarCarrinhoAbandonado,
 } from "@fsw/db";
@@ -78,6 +84,130 @@ export function appendToConversationHistory(
 
 export function clearConversationHistory(sessionKey: string) {
   conversationCache.delete(sessionKey);
+}
+
+export interface ProductOptionItem {
+  name: string;
+  price: number;
+}
+
+export interface ProductOptionGroupData {
+  name: string;
+  minOptions: number;
+  maxOptions: number;
+  options: ProductOptionItem[];
+}
+
+/**
+ * Carrega todos os grupos de adicionais e opções vinculados aos produtos do restaurante
+ * Retorna um mapa indexado por productId -> Map<groupId, GroupData>
+ */
+async function carregarOpcionaisDoCardapio(restaurantId: string): Promise<Map<string, Map<string, ProductOptionGroupData>>> {
+  try {
+    // 1. Grupos vinculados via tabela associativa ProductToOptionGroup
+    const linkedRows = await db
+      .select({
+        productId: productToOptionGroupsTable.productId,
+        groupId: productOptionGroupsTable.id,
+        groupName: productOptionGroupsTable.name,
+        minOptions: productOptionGroupsTable.minOptions,
+        maxOptions: productOptionGroupsTable.maxOptions,
+        optionId: productOptionsTable.id,
+        optionName: productOptionsTable.name,
+        optionPrice: productOptionsTable.price,
+      })
+      .from(productToOptionGroupsTable)
+      .innerJoin(
+        productOptionGroupsTable,
+        eq(productOptionGroupsTable.id, productToOptionGroupsTable.productOptionGroupId),
+      )
+      .leftJoin(
+        productOptionsTable,
+        eq(productOptionsTable.productOptionGroupId, productOptionGroupsTable.id),
+      )
+      .where(eq(productOptionGroupsTable.restaurantId, restaurantId))
+      .orderBy(
+        asc(productOptionGroupsTable.displayOrder),
+        asc(productOptionsTable.displayOrder),
+      );
+
+    // 2. Grupos vinculados diretamente via productOptionGroupsTable.productId
+    const directRows = await db
+      .select({
+        productId: productOptionGroupsTable.productId,
+        groupId: productOptionGroupsTable.id,
+        groupName: productOptionGroupsTable.name,
+        minOptions: productOptionGroupsTable.minOptions,
+        maxOptions: productOptionGroupsTable.maxOptions,
+        optionId: productOptionsTable.id,
+        optionName: productOptionsTable.name,
+        optionPrice: productOptionsTable.price,
+      })
+      .from(productOptionGroupsTable)
+      .leftJoin(
+        productOptionsTable,
+        eq(productOptionsTable.productOptionGroupId, productOptionGroupsTable.id),
+      )
+      .where(
+        and(
+          eq(productOptionGroupsTable.restaurantId, restaurantId),
+          isNotNull(productOptionGroupsTable.productId),
+        ),
+      )
+      .orderBy(
+        asc(productOptionGroupsTable.displayOrder),
+        asc(productOptionsTable.displayOrder),
+      );
+
+    const allRows = [...linkedRows, ...directRows];
+
+    const productOptionsMap = new Map<
+      string,
+      Map<
+        string,
+        {
+          name: string;
+          minOptions: number;
+          maxOptions: number;
+          options: Array<{ name: string; price: number }>;
+        }
+      >
+    >();
+
+    for (const r of allRows) {
+      if (!r.productId) continue;
+      let groupsMap = productOptionsMap.get(r.productId);
+      if (!groupsMap) {
+        groupsMap = new Map();
+        productOptionsMap.set(r.productId, groupsMap);
+      }
+
+      let group = groupsMap.get(r.groupId);
+      if (!group) {
+        group = {
+          name: r.groupName,
+          minOptions: r.minOptions ?? 0,
+          maxOptions: r.maxOptions ?? 1,
+          options: [],
+        };
+        groupsMap.set(r.groupId, group);
+      }
+
+      if (r.optionId && r.optionName) {
+        if (!group.options.some((o) => o.name === r.optionName)) {
+          group.options.push({
+            name: r.optionName,
+            price: Number(r.optionPrice || 0),
+          });
+        }
+      }
+    }
+
+    return productOptionsMap;
+  } catch (err) {
+    console.warn("[Bot AI] Aviso ao carregar opções e adicionais do cardápio:", err);
+    return new Map();
+  }
 }
 
 interface ProcessarMensagemBotInput {
@@ -445,16 +575,51 @@ DIRETRIZES FUNDAMENTAIS:
 - Você tem permissão e dados para responder sobre produtos, itens e preços utilizando as informações abaixo.\n\n`;
 
   if (cardapio?.menuCategories?.length) {
+    const optionsMap = await carregarOpcionaisDoCardapio(restaurant.id);
+
     menuContext +=
-      "Categorias e Produtos disponíveis no restaurante:\n" +
+      "Categorias, Produtos e Opções disponíveis no restaurante:\n" +
       cardapio.menuCategories
         .map((c) => {
           const prods = c.products
-            .map(
-              (p) =>
-                `  • ${p.name} - R$ ${Number(p.price).toFixed(2)}${p.description ? ` (${p.description})` : ""}`,
-            )
-            .join("\n");
+            .map((p) => {
+              let prodText = `  • ${p.name} - R$ ${Number(p.price).toFixed(2)}${p.description ? ` (${p.description})` : ""}`;
+              const productGroups = optionsMap.get(p.id);
+              if (productGroups && productGroups.size > 0) {
+                const groupLines: string[] = [];
+                for (const g of productGroups.values()) {
+                  if (g.options.length === 0) continue;
+                  const optsList = g.options
+                    .map((opt: ProductOptionItem) =>
+                      opt.price > 0
+                        ? `${opt.name} (+R$ ${opt.price.toFixed(2).replace(".", ",")})`
+                        : opt.name,
+                    )
+                    .join(", ");
+
+                  const isRequired = g.minOptions > 0;
+                  let ruleText = "";
+                  if (isRequired) {
+                    if (g.minOptions === g.maxOptions) {
+                      ruleText = `OBRIGATÓRIO escolher exatamente ${g.minOptions}`;
+                    } else {
+                      ruleText = `OBRIGATÓRIO escolher de ${g.minOptions} a ${g.maxOptions}`;
+                    }
+                  } else {
+                    ruleText = `Opcional (pode escolher até ${g.maxOptions})`;
+                  }
+
+                  groupLines.push(
+                    `    └─ ${isRequired ? "ESCOLHA OBRIGATÓRIA" : "ADICIONAIS/OPCIONAIS"}: [${g.name}] (${ruleText}): ${optsList}`,
+                  );
+                }
+                if (groupLines.length > 0) {
+                  prodText += "\n" + groupLines.join("\n");
+                }
+              }
+              return prodText;
+            })
+            .join("\n\n");
           return `*${c.name}*:\n${prods}`;
         })
         .join("\n\n");
@@ -464,18 +629,29 @@ DIRETRIZES FUNDAMENTAIS:
   const fullSystemPrompt = `${baseSystemPrompt}\n${menuContext}
 
 ### REGRAS CRÍTICAS E OBRIGATÓRIAS DE FLUXO NO WHATSAPP:
-1. FAÇA APENAS UMA PERGUNTA POR VEZ (PROIBIDO JUNTAR PERGUNTAS):
-   - É terminantemente PROIBIDO fazer duas perguntas diferentes na mesma mensagem (exemplo do que é PROIBIDO: "quer adicionar uma bebida? e vai ser entrega ou retirada?").
+1. ESCOLHA DE SABORES, PONTO DA CARNE E OPÇÕES DO ITEM (REGRA FUNDAMENTAL):
+   - SEMPRE que o cliente escolher um item que tem "ESCOLHA OBRIGATÓRIA" (como sabores de sorvete, ponto da carne de hambúrguer, opções de lanches, etc.):
+     • Você DEVE perguntar quais opções ele deseja ANTES de perguntar sobre bebidas ou entrega!
+     • Apresente com clareza as opções disponíveis e quantas ele pode escolher.
+     • Exemplo (Sorvete): "Perfeito, [Nome]! Para o Pote de Sorvete Família você pode escolher de 1 a 3 sabores. Temos Baunilha, Chocolate Belga, Morango e Flocos. Quais você gostaria?"
+     • Exemplo (Hambúrguer): "Excelente escolha! Como você prefere o ponto da carne do seu Duplo Costela? Temos Ao ponto, Bem passado ou Mal passado."
+   - JAMAIS pule essa etapa, JAMAIS adivinhe os sabores/ponto e JAMAIS avance para a entrega ou bebida sem antes definir as opções obrigatórias do item.
+
+2. FAÇA APENAS UMA PERGUNTA POR VEZ (PROIBIDO JUNTAR PERGUNTAS):
+   - É terminantemente PROIBIDO fazer duas perguntas diferentes na mesma mensagem (exemplo do que é PROIBIDO: "Qual o sabor do sorvete? E vai ser entrega ou retirada?").
    - O atendimento DEVE ser em etapas graduais:
-     • Etapa 1: Ao anotar ou confirmar o prato/lanche, pergunte APENAS se deseja adicionar alguma bebida ou sobremesa. PARE AÍ e aguarde a resposta do cliente.
-     • Etapa 2: Somente APÓS o cliente responder sobre a bebida/acompanhamento, pergunte se o pedido será para ENTREGA (Delivery) ou RETIRADA no balcão. PARE AÍ e aguarde a resposta do cliente.
-2. RESPOSTAS EM ETAPAS E MÚLTIPLAS MENSAGENS:
-   - Clientes de WhatsApp frequentemente mandam respostas em mensagens separadas (ex.: mandou "sim eu quero 1 coca lata" e logo em seguida "vou retirar quando ficar pronto").
+     • Etapa 1 (Opções do Item): Se o item tem escolhas obrigatórias (sabores, ponto da carne), pergunte APENAS as opções do item. PARE AÍ e aguarde a resposta do cliente.
+     • Etapa 2 (Bebida/Acompanhamento): Somente após definir as opções do prato/lanche, pergunte APENAS se deseja adicionar alguma bebida, sobremesa ou acompanhamento. PARE AÍ e aguarde.
+     • Etapa 3 (Método de Consumo): Somente APÓS o cliente responder sobre as bebidas/acompanhamentos, pergunte se o pedido será para ENTREGA (Delivery) ou RETIRADA no balcão. PARE AÍ e aguarde.
+
+3. RESPOSTAS EM ETAPAS E MÚLTIPLAS MENSAGENS:
+   - Clientes de WhatsApp frequentemente mandam respostas em mensagens separadas (ex.: mandou "quero baunilha e chocolate" e logo em seguida "e quero uma coca").
    - Você DEVE consultar todo o histórico anterior da conversa.
-   - JAMAIS esqueça os lanches, bebidas ou preferências já informadas nas mensagens anteriores.
+   - JAMAIS esqueça os lanches, bebidas, sabores ou preferências já informadas nas mensagens anteriores.
    - NUNCA se perca e NUNCA repita perguntas sobre itens ou métodos que o cliente já acabou de responder.
-   - Se o cliente já informou a bebida E a forma de consumo (mesmo que em mensagens separadas), junte tudo: confirme o lanche + a bebida + o método de consumo e envie o link para finalizar o pedido!
-3. FORMATO:
+   - Se o cliente já informou tudo (itens com opções, bebidas e forma de consumo), junte tudo: confirme o pedido completo detalhando os sabores/opções e envie o link para finalizar!
+
+4. FORMATO:
    - Mensagens curtas, calorosas e diretas para WhatsApp (máximo de 2 a 3 frases por mensagem). Não invente ferramentas nem código.`;
 
   // 3. Chaves de API configuradas
