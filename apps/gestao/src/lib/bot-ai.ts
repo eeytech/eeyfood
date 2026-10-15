@@ -4,6 +4,7 @@ import {
   asc,
   buscarRestauranteComCardapioPorSlug,
   buscarRestaurantePorSlug,
+  criarPedido,
   db,
   DEFAULT_AI_SYSTEM_PROMPT,
   eq,
@@ -16,6 +17,7 @@ import {
   salvarCarrinhoAbandonado,
 } from "@fsw/db";
 import OpenAI from "openai";
+import { notificarNovoPedido } from "./notificar-novo-pedido";
 
 const cleanKey = (k?: string | null) => (k ? k.trim().replace(/^["']|["']$/g, "") : "");
 
@@ -87,6 +89,7 @@ export function clearConversationHistory(sessionKey: string) {
 }
 
 export interface ProductOptionItem {
+  id: string;
   name: string;
   price: number;
 }
@@ -163,15 +166,7 @@ async function carregarOpcionaisDoCardapio(restaurantId: string): Promise<Map<st
 
     const productOptionsMap = new Map<
       string,
-      Map<
-        string,
-        {
-          name: string;
-          minOptions: number;
-          maxOptions: number;
-          options: Array<{ name: string; price: number }>;
-        }
-      >
+      Map<string, ProductOptionGroupData>
     >();
 
     for (const r of allRows) {
@@ -194,8 +189,9 @@ async function carregarOpcionaisDoCardapio(restaurantId: string): Promise<Map<st
       }
 
       if (r.optionId && r.optionName) {
-        if (!group.options.some((o) => o.name === r.optionName)) {
+        if (!group.options.some((o) => o.id === r.optionId || o.name === r.optionName)) {
           group.options.push({
+            id: r.optionId,
             name: r.optionName,
             price: Number(r.optionPrice || 0),
           });
@@ -207,6 +203,264 @@ async function carregarOpcionaisDoCardapio(restaurantId: string): Promise<Map<st
   } catch (err) {
     console.warn("[Bot AI] Aviso ao carregar opções e adicionais do cardápio:", err);
     return new Map();
+  }
+}
+
+interface FecharPedidoChatInput {
+  rawJson: string;
+  restaurant: any;
+  cardapio: any;
+  optionsMap: Map<string, Map<string, ProductOptionGroupData>>;
+  customerPhone: string;
+  customerName: string;
+  menuUrl: string;
+}
+
+const normText = (s?: string | null) =>
+  (s || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
+/**
+ * Processa o JSON estruturado gerado pela IA no chat e realiza a criação do pedido oficial
+ * no banco de dados e notificação em tempo real para a cozinha (KDS, áudio e impressora térmica).
+ */
+async function processarFechamentoPedidoNoChat({
+  rawJson,
+  restaurant,
+  cardapio,
+  optionsMap,
+  customerPhone,
+  customerName,
+  menuUrl,
+}: FecharPedidoChatInput): Promise<string> {
+  try {
+    let cleanedJson = rawJson.trim();
+    // Remove eventuais blocos markdown do tipo ```json ... ```
+    cleanedJson = cleanedJson.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+
+    const payload = JSON.parse(cleanedJson);
+    const rawProducts: Array<{
+      id?: string;
+      name?: string;
+      quantity?: number | string;
+      selectedOptions?: string[];
+      notes?: string;
+    }> = Array.isArray(payload.products) ? payload.products : [];
+
+    if (rawProducts.length === 0) {
+      throw new Error("Nenhum produto foi especificado no pedido.");
+    }
+
+    const allDbProducts =
+      cardapio?.menuCategories?.flatMap((c: any) => c.products) || [];
+
+    const finalProducts: Array<{
+      id: string;
+      name: string;
+      quantity: number;
+      selectedOptions?: string[];
+      notes?: string;
+    }> = [];
+
+    for (const item of rawProducts) {
+      const rawId = String(item.id || "").trim();
+      const rawName = String(item.name || "").trim();
+
+      // 1. Localiza o produto no cardápio
+      let matchedProduct = allDbProducts.find((p: any) => p.id === rawId);
+      if (!matchedProduct && rawName) {
+        const normN = normText(rawName);
+        matchedProduct = allDbProducts.find((p: any) => normText(p.name) === normN);
+      }
+      if (!matchedProduct && rawName) {
+        const normN = normText(rawName);
+        matchedProduct = allDbProducts.find(
+          (p: any) => normText(p.name).includes(normN) || normN.includes(normText(p.name)),
+        );
+      }
+      if (!matchedProduct && rawId) {
+        const normI = normText(rawId);
+        matchedProduct = allDbProducts.find(
+          (p: any) => normText(p.name).includes(normI) || normI.includes(normText(p.name)),
+        );
+      }
+
+      if (!matchedProduct) {
+        console.warn(`[Bot AI Fechamento] Produto não identificado no cardápio: ID="${rawId}", Nome="${rawName}"`);
+        continue;
+      }
+
+      // 2. Mapeia opções e adicionais
+      const productDbOptions: ProductOptionItem[] = [];
+      const productGroups = optionsMap.get(matchedProduct.id);
+      if (productGroups) {
+        for (const g of productGroups.values()) {
+          productDbOptions.push(...g.options);
+        }
+      }
+
+      const resolvedOptions: string[] = [];
+      const unmappedOptionNotes: string[] = [];
+
+      if (Array.isArray(item.selectedOptions)) {
+        for (const optRaw of item.selectedOptions) {
+          if (!optRaw) continue;
+          const optStr = String(optRaw).trim();
+          let matchedOpt = productDbOptions.find((o) => o.id === optStr);
+          if (!matchedOpt) {
+            const normOpt = normText(optStr);
+            matchedOpt = productDbOptions.find(
+              (o) =>
+                normText(o.name) === normOpt ||
+                normText(o.name).includes(normOpt) ||
+                normOpt.includes(normText(o.name)),
+            );
+          }
+
+          if (matchedOpt) {
+            if (!resolvedOptions.includes(matchedOpt.id)) {
+              resolvedOptions.push(matchedOpt.id);
+            }
+          } else {
+            unmappedOptionNotes.push(optStr);
+          }
+        }
+      }
+
+      const combinedNotes = [
+        item.notes?.trim(),
+        unmappedOptionNotes.length > 0 ? `Opções: ${unmappedOptionNotes.join(", ")}` : "",
+      ]
+        .filter(Boolean)
+        .join(" | ");
+
+      finalProducts.push({
+        id: matchedProduct.id,
+        name: matchedProduct.name,
+        quantity: Math.max(1, Number(item.quantity) || 1),
+        selectedOptions: resolvedOptions.length > 0 ? resolvedOptions : undefined,
+        notes: combinedNotes || undefined,
+      });
+    }
+
+    if (finalProducts.length === 0) {
+      throw new Error("Não conseguimos identificar os itens do seu pedido no cardápio.");
+    }
+
+    // 3. Método de consumo
+    let consumptionMethod: "DELIVERY" | "TAKEAWAY" = "TAKEAWAY";
+    const rawCm = String(payload.consumptionMethod || "").toUpperCase();
+    if (rawCm === "DELIVERY" || rawCm.includes("ENTREGA")) {
+      consumptionMethod = "DELIVERY";
+    }
+
+    // 4. Método de pagamento
+    let paymentMethod: "PIX" | "DINHEIRO" | "CARTAO_PRESENCIAL" = "CARTAO_PRESENCIAL";
+    const rawPm = String(payload.paymentMethod || "").toUpperCase();
+    if (rawPm.includes("PIX")) {
+      paymentMethod = "PIX";
+    } else if (rawPm.includes("DINHEIRO")) {
+      paymentMethod = "DINHEIRO";
+    } else {
+      paymentMethod = "CARTAO_PRESENCIAL";
+    }
+
+    const changeFor =
+      paymentMethod === "DINHEIRO" && payload.changeFor
+        ? Number(payload.changeFor)
+        : undefined;
+
+    const deliveryAddress =
+      consumptionMethod === "DELIVERY"
+        ? String(payload.deliveryAddress || "").trim() || undefined
+        : undefined;
+
+    const deliveryNeighborhood =
+      consumptionMethod === "DELIVERY"
+        ? String(payload.deliveryNeighborhood || "").trim() || undefined
+        : undefined;
+
+    // 5. Criação do Pedido no Banco de Dados
+    console.log(
+      `[Bot AI Fechamento] Criando pedido no banco para ${customerPhone} no restaurante "${restaurant.slug}"...`,
+    );
+
+    const order = await criarPedido({
+      slug: restaurant.slug,
+      customerName: customerName?.trim() || "Cliente WhatsApp",
+      customerPhone: customerPhone.replace(/\D/g, ""),
+      consumptionMethod,
+      paymentMethod,
+      changeFor,
+      deliveryAddress,
+      deliveryNeighborhood,
+      notes: payload.notes?.trim() || undefined,
+      products: finalProducts,
+    });
+
+    console.log(
+      `[Bot AI Fechamento] Pedido #${order.id} CRIADO com sucesso! Total: R$ ${order.total}. Disparando alerta em tempo real para a cozinha...`,
+    );
+
+    // 6. Transmissão imediata via WebSocket (KDS, Som, Impressora Térmica)
+    await notificarNovoPedido({
+      orderId: order.id,
+      restaurantSlug: restaurant.slug,
+    });
+
+    // 7. Montagem da Mensagem de Confirmação para o WhatsApp
+    const itensLines = finalProducts
+      .map((p) => {
+        let l = `• *${p.quantity}x ${p.name}*`;
+        if (p.notes) l += ` _(${p.notes})_`;
+        return l;
+      })
+      .join("\n");
+
+    const formaPgtoDesc =
+      paymentMethod === "PIX"
+        ? "PIX"
+        : paymentMethod === "DINHEIRO"
+          ? changeFor
+            ? `Dinheiro (Troco para R$ ${changeFor.toFixed(2).replace(".", ",")})`
+            : "Dinheiro"
+          : "Cartão (na entrega/maquininha)";
+
+    let pixInfo = "";
+    if (paymentMethod === "PIX") {
+      if (restaurant.pixKey?.trim()) {
+        pixInfo = `\n🔑 *Chave PIX para pagamento:*\n\`${restaurant.pixKey.trim()}\`\n_(Por favor, envie o comprovante por aqui assim que efetuar o pagamento!)_\n`;
+      } else {
+        pixInfo = `\n🔑 *Pagamento via PIX:*\nNossa equipe já está providenciando os dados do PIX e enviará em instantes por aqui!\n`;
+      }
+    }
+
+    const enderecoDesc =
+      consumptionMethod === "DELIVERY"
+        ? `🛵 *Entrega em:* ${deliveryAddress || "Endereço informado"}`
+        : "🛍️ *Método:* Retirada no balcão";
+
+    return (
+      `🎉 *PEDIDO CONFIRMADO COM SUCESSO!* 🎉\n\n` +
+      `O seu pedido *#${order.id}* já foi enviado diretamente para a nossa cozinha e a equipe já iniciou o preparo! 🧑‍🍳🔥\n\n` +
+      `📋 *Itens do Pedido:*\n${itensLines}\n\n` +
+      `💰 *Total:* R$ ${Number(order.total).toFixed(2).replace(".", ",")}\n` +
+      `${enderecoDesc}\n` +
+      `💳 *Pagamento:* ${formaPgtoDesc}\n` +
+      `⏱️ *Tempo estimado:* ${restaurant.estimatedDeliveryTime || "30 a 50 minutos"}\n` +
+      pixInfo +
+      `\nQualquer dúvida estamos à disposição por aqui. Muito obrigado pela preferência e bom apetite! 😊✨`
+    );
+  } catch (err: any) {
+    console.error("[Bot AI Fechamento] Erro ao fechar pedido pelo chat:", err);
+    const msg = err?.message || "";
+    if (msg.includes("pedido mínimo")) {
+      return `Ops, ${customerName}! ${msg} Gostaria de adicionar mais algum item ou bebida para completarmos o valor mínimo de entrega? 😊`;
+    }
+    return `Anotei todos os seus itens com muito cuidado! Para garantir que seu pedido seja processado perfeitamente com todas as opções, você também pode confirmar com 1 clique pelo nosso link oficial:\n👉 ${menuUrl}\n\nSe preferir, me avise que posso chamar um atendente humano para te auxiliar!`;
   }
 }
 
@@ -574,8 +828,9 @@ DIRETRIZES FUNDAMENTAIS:
 - Quando o cliente pedir o cardápio, tiver dúvidas sobre itens ou quiser fazer pedidos, apresente os principais pratos ou categorias de forma acolhedora e envie o link oficial do cardápio: ${menuUrl}
 - Você tem permissão e dados para responder sobre produtos, itens e preços utilizando as informações abaixo.\n\n`;
 
+  let optionsMap = new Map<string, Map<string, ProductOptionGroupData>>();
   if (cardapio?.menuCategories?.length) {
-    const optionsMap = await carregarOpcionaisDoCardapio(restaurant.id);
+    optionsMap = await carregarOpcionaisDoCardapio(restaurant.id);
 
     menuContext +=
       "Categorias, Produtos e Opções disponíveis no restaurante:\n" +
@@ -583,7 +838,7 @@ DIRETRIZES FUNDAMENTAIS:
         .map((c) => {
           const prods = c.products
             .map((p) => {
-              let prodText = `  • ${p.name} - R$ ${Number(p.price).toFixed(2)}${p.description ? ` (${p.description})` : ""}`;
+              let prodText = `  • ${p.name} [ID: ${p.id}] - R$ ${Number(p.price).toFixed(2)}${p.description ? ` (${p.description})` : ""}`;
               const productGroups = optionsMap.get(p.id);
               if (productGroups && productGroups.size > 0) {
                 const groupLines: string[] = [];
@@ -592,8 +847,8 @@ DIRETRIZES FUNDAMENTAIS:
                   const optsList = g.options
                     .map((opt: ProductOptionItem) =>
                       opt.price > 0
-                        ? `${opt.name} (+R$ ${opt.price.toFixed(2).replace(".", ",")})`
-                        : opt.name,
+                        ? `${opt.name} [ID: ${opt.id}] (+R$ ${opt.price.toFixed(2).replace(".", ",")})`
+                        : `${opt.name} [ID: ${opt.id}]`,
                     )
                     .join(", ");
 
@@ -628,31 +883,76 @@ DIRETRIZES FUNDAMENTAIS:
   const baseSystemPrompt = aiSettings.systemPrompt || DEFAULT_AI_SYSTEM_PROMPT;
   const fullSystemPrompt = `${baseSystemPrompt}\n${menuContext}
 
-### REGRAS CRÍTICAS E OBRIGATÓRIAS DE FLUXO NO WHATSAPP:
-1. ESCOLHA DE SABORES, PONTO DA CARNE E OPÇÕES DO ITEM (REGRA FUNDAMENTAL):
-   - SEMPRE que o cliente escolher um item que tem "ESCOLHA OBRIGATÓRIA" (como sabores de sorvete, ponto da carne de hambúrguer, opções de lanches, etc.):
-     • Você DEVE perguntar quais opções ele deseja ANTES de perguntar sobre bebidas ou entrega!
-     • Apresente com clareza as opções disponíveis e quantas ele pode escolher.
-     • Exemplo (Sorvete): "Perfeito, [Nome]! Para o Pote de Sorvete Família você pode escolher de 1 a 3 sabores. Temos Baunilha, Chocolate Belga, Morango e Flocos. Quais você gostaria?"
-     • Exemplo (Hambúrguer): "Excelente escolha! Como você prefere o ponto da carne do seu Duplo Costela? Temos Ao ponto, Bem passado ou Mal passado."
-   - JAMAIS pule essa etapa, JAMAIS adivinhe os sabores/ponto e JAMAIS avance para a entrega ou bebida sem antes definir as opções obrigatórias do item.
+### REGRAS CRÍTICAS E OBRIGATÓRIAS DE FLUXO NO WHATSAPP (FECHAMENTO 100% NO CHAT):
+REGRA DE OURO: FAÇA APENAS UMA PERGUNTA POR VEZ. É TERMINANTEMENTE PROIBIDO JUNTAR DUAS PERGUNTAS NA MESMA MENSAGEM.
 
-2. FAÇA APENAS UMA PERGUNTA POR VEZ (PROIBIDO JUNTAR PERGUNTAS):
-   - É terminantemente PROIBIDO fazer duas perguntas diferentes na mesma mensagem (exemplo do que é PROIBIDO: "Qual o sabor do sorvete? E vai ser entrega ou retirada?").
-   - O atendimento DEVE ser em etapas graduais:
-     • Etapa 1 (Opções do Item): Se o item tem escolhas obrigatórias (sabores, ponto da carne), pergunte APENAS as opções do item. PARE AÍ e aguarde a resposta do cliente.
-     • Etapa 2 (Bebida/Acompanhamento): Somente após definir as opções do prato/lanche, pergunte APENAS se deseja adicionar alguma bebida, sobremesa ou acompanhamento. PARE AÍ e aguarde.
-     • Etapa 3 (Método de Consumo): Somente APÓS o cliente responder sobre as bebidas/acompanhamentos, pergunte se o pedido será para ENTREGA (Delivery) ou RETIRADA no balcão. PARE AÍ e aguarde.
+1. FLUXO PASSO A PASSO PARA ANOTAR E FECHAR O PEDIDO:
+   • Etapa 1 (Opções e Sabores Obrigatórios do Item):
+     SEMPRE que o cliente escolher um item que tem "ESCOLHA OBRIGATÓRIA" (como sabores de sorvete, ponto da carne de hambúrguer, opções de lanches, etc.):
+     Você DEVE perguntar quais opções ele deseja ANTES de perguntar sobre bebidas ou entrega!
+     Apresente com clareza as opções disponíveis e quantas ele pode escolher.
+     Exemplo (Sorvete): "Perfeito, [Nome]! Para o Pote de Sorvete Família você pode escolher de 1 a 3 sabores. Temos Baunilha, Chocolate Belga, Morango e Flocos. Quais você gostaria?"
+     Exemplo (Hambúrguer): "Excelente escolha! Como você prefere o ponto da carne do seu Duplo Costela? Temos Ao ponto, Bem passado ou Mal passado."
+     JAMAIS pule essa etapa, JAMAIS adivinhe os sabores/ponto e JAMAIS avance para a entrega ou bebida sem antes definir as opções obrigatórias do item. PARE AÍ e aguarde a resposta do cliente.
+
+   • Etapa 2 (Bebida / Acompanhamento - Upsell):
+     Somente após definir as opções do prato/lanche principal, pergunte APENAS se deseja adicionar alguma bebida geladinha, sobremesa ou acompanhamento. PARE AÍ e aguarde a resposta do cliente.
+
+   • Etapa 3 (Método de Consumo):
+     Somente APÓS o cliente responder sobre as bebidas/acompanhamentos, pergunte se o pedido será para ENTREGA (Delivery) ou RETIRADA no balcão. PARE AÍ e aguarde.
+
+   • Etapa 4 (Endereço Completo se Entrega):
+     Se o cliente escolher ENTREGA, pergunte o endereço completo para envio (Rua, Número, Bairro e Complemento ou Ponto de Referência). PARE AÍ e aguarde.
+     Se o cliente escolheu RETIRADA, pule direto para a Etapa 5.
+
+   • Etapa 5 (Forma de Pagamento):
+     Pergunte qual será a forma de pagamento: PIX, Cartão (débito ou crédito na maquininha na entrega/retirada) ou Dinheiro.
+     Se o cliente disser que vai pagar em Dinheiro, pergunte se precisa de troco para quanto. PARE AÍ e aguarde.
+
+   • Etapa 6 (Resumo e Pergunta Decisiva de Confirmação):
+     Apresente o resumo claro e organizado de todo o pedido:
+     - Itens com quantidades, valores e sabores/opções escolhidos
+     - Subtotal/Total estimado
+     - Método (Entrega com o endereço informado OU Retirada no balcão)
+     - Forma de pagamento escolhida
+     E faça expressamente a pergunta decisiva:
+     "Posso confirmar o seu pedido e enviar agora mesmo para a produção na cozinha?"
+     PARE AÍ e aguarde a confirmação do cliente.
+
+2. DISPARO DO PEDIDO NA COZINHA (QUANDO O CLIENTE CONFIRMAR):
+   - Assim que o cliente responder confirmando (ex: "Sim", "Pode confirmar", "Pode mandar", "Sim por favor", "Confirmo", "Manda ver", etc.):
+     Você DEVE gerar na sua resposta o bloco [CRIAR_PEDIDO_JSON] com os dados estruturados do pedido no seguinte formato exato:
+     [CRIAR_PEDIDO_JSON]
+     {
+       "consumptionMethod": "DELIVERY",
+       "paymentMethod": "PIX",
+       "changeFor": null,
+       "deliveryAddress": "Rua das Flores, 123 - Centro",
+       "deliveryNeighborhood": "Centro",
+       "notes": "Observações gerais se houver",
+       "products": [
+         {
+           "id": "ID_DO_PRODUTO",
+           "name": "Nome do Produto",
+           "quantity": 1,
+           "selectedOptions": ["ID_DA_OPCAO_1", "ID_DA_OPCAO_2"],
+           "notes": "Sabores ou opções escolhidas (ex: Baunilha, Chocolate)"
+         }
+       ]
+     }
+     [/CRIAR_PEDIDO_JSON]
+   - O nosso servidor interceptará esse bloco automaticamente, registrará o pedido no banco de dados e acionará em tempo real o KDS e a impressora térmica da cozinha!
 
 3. RESPOSTAS EM ETAPAS E MÚLTIPLAS MENSAGENS:
    - Clientes de WhatsApp frequentemente mandam respostas em mensagens separadas (ex.: mandou "quero baunilha e chocolate" e logo em seguida "e quero uma coca").
    - Você DEVE consultar todo o histórico anterior da conversa.
    - JAMAIS esqueça os lanches, bebidas, sabores ou preferências já informadas nas mensagens anteriores.
    - NUNCA se perca e NUNCA repita perguntas sobre itens ou métodos que o cliente já acabou de responder.
-   - Se o cliente já informou tudo (itens com opções, bebidas e forma de consumo), junte tudo: confirme o pedido completo detalhando os sabores/opções e envie o link para finalizar!
 
-4. FORMATO:
-   - Mensagens curtas, calorosas e diretas para WhatsApp (máximo de 2 a 3 frases por mensagem). Não invente ferramentas nem código.`;
+4. DIRETRIZES DE FORMATAÇÃO E CÓDIGOS [ID: ...]:
+   - Os identificadores [ID: ...] no cardápio são exclusivamente para seu controle interno na geração do bloco [CRIAR_PEDIDO_JSON].
+   - NUNCA mostre os códigos [ID: ...] para o cliente nas mensagens do WhatsApp; exiba sempre os nomes amigáveis dos produtos e opções.
+   - Mantenha mensagens curtas, acolhedoras e naturais (máximo de 2 a 4 frases por mensagem).`;
 
   // 3. Chaves de API configuradas
   const geminiKey = cleanKey(
@@ -723,6 +1023,25 @@ DIRETRIZES FUNDAMENTAIS:
 
   // 5. Se o modelo respondeu com sucesso, salva na memória e retorna
   if (botReply) {
+    // Intercepta fechamento de pedido no chat se a IA gerou a tag estruturada
+    const jsonMatch = botReply.match(/\[CRIAR_PEDIDO_JSON\]([\s\S]*?)\[\/CRIAR_PEDIDO_JSON\]/i);
+    if (jsonMatch) {
+      console.log(
+        `[Bot AI] Bloco [CRIAR_PEDIDO_JSON] detectado na resposta para ${customerPhone}! Processando fechamento de pedido...`,
+      );
+      const confirmationMsg = await processarFechamentoPedidoNoChat({
+        rawJson: jsonMatch[1],
+        restaurant,
+        cardapio,
+        optionsMap,
+        customerPhone,
+        customerName,
+        menuUrl,
+      });
+
+      botReply = confirmationMsg;
+    }
+
     appendToConversationHistory(sessionKey, "user", textToProcess);
     appendToConversationHistory(sessionKey, "model", botReply);
     return botReply;
