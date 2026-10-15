@@ -356,6 +356,7 @@ export async function POST(request: Request) {
 
     const botResponse = await processarMensagemBot({
       slug: aiSettings.slug,
+      restaurantId: aiSettings.restaurantId,
       customerPhone,
       customerName,
       messageText,

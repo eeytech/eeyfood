@@ -6,6 +6,7 @@ import {
   DEFAULT_AI_SYSTEM_PROMPT,
   eq,
   isClientePausado,
+  restaurantsTable,
   salvarCarrinhoAbandonado,
 } from "@fsw/db";
 import OpenAI from "openai";
@@ -36,10 +37,73 @@ export const HANDOFF_SIGNAL = "__HANDOFF_REQUIRED__";
 
 interface ProcessarMensagemBotInput {
   slug: string;
+  restaurantId?: string;
   customerPhone: string;
   customerName: string;
   messageText?: string;
   audioUrl?: string;
+}
+
+let cachedGeminiModels: { key: string; models: string[]; timestamp: number } | null = null;
+
+async function getAvailableGeminiModels(key: string): Promise<string[]> {
+  const now = Date.now();
+  if (
+    cachedGeminiModels &&
+    cachedGeminiModels.key === key &&
+    now - cachedGeminiModels.timestamp < 300000
+  ) {
+    return cachedGeminiModels.models;
+  }
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`,
+      { signal: AbortSignal.timeout(5000) },
+    );
+    if (res.ok) {
+      const data = await res.json();
+      const rawModels: Array<{ name: string; supportedGenerationMethods?: string[] }> =
+        data?.models || [];
+      const available = rawModels
+        .filter((m) => m.supportedGenerationMethods?.includes("generateContent"))
+        .map((m) => m.name.replace(/^models\//, ""));
+
+      if (available.length > 0) {
+        const priorityPatterns = [
+          /^gemini-2\.0-flash/i,
+          /^gemini-1\.5-flash/i,
+          /^gemini-2\.5-flash/i,
+          /^gemini-1\.5-pro/i,
+        ];
+        const sorted: string[] = [];
+        for (const pat of priorityPatterns) {
+          for (const m of available) {
+            if (pat.test(m) && !sorted.includes(m)) sorted.push(m);
+          }
+        }
+        for (const m of available) {
+          if (!sorted.includes(m)) sorted.push(m);
+        }
+        cachedGeminiModels = { key, models: sorted, timestamp: now };
+        console.log(`[Bot AI] Modelos Gemini disponíveis para esta chave (${sorted.length}):`, sorted.slice(0, 4));
+        return sorted;
+      }
+    } else {
+      const err = await res.json().catch(() => null);
+      console.warn(`[Bot AI] Status ${res.status} ao consultar /v1beta/models do Gemini:`, err);
+    }
+  } catch (err) {
+    console.warn(`[Bot AI] Falha ao consultar /v1beta/models do Gemini:`, err);
+  }
+
+  return [
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+    "gemini-1.5-flash-latest",
+    "gemini-2.5-flash",
+    "gemini-1.5-pro",
+  ];
 }
 
 /**
@@ -54,17 +118,15 @@ async function callGeminiNative(
   customerPhone: string,
 ): Promise<string | null> {
   const cleaned = cleanKey(geminiKey);
-  if (!cleaned) return null;
+  if (!cleaned) {
+    console.warn("[Bot AI] callGeminiNative: Chave do Gemini vazia!");
+    return null;
+  }
 
-  const models = [
-    "gemini-1.5-flash",
-    "gemini-2.0-flash",
-    "gemini-2.5-flash",
-    "gemini-1.5-pro",
-  ];
+  const candidateModels = await getAvailableGeminiModels(cleaned);
   const userContent = `Cliente: ${customerName} (${customerPhone})\nMensagem: ${userMessage}`;
 
-  for (const m of models) {
+  for (const m of candidateModels.slice(0, 4)) {
     // 1. Tenta v1beta com system_instruction
     try {
       const res = await fetch(
@@ -87,7 +149,7 @@ async function callGeminiNative(
               maxOutputTokens: 1000,
             },
           }),
-          signal: AbortSignal.timeout(9000),
+          signal: AbortSignal.timeout(8000),
         },
       );
 
@@ -101,7 +163,7 @@ async function callGeminiNative(
       } else {
         const errData = await res.json().catch(() => null);
         console.warn(
-          `[Bot AI] Gemini v1beta (${m}) retornou status ${res.status}:`,
+          `[Bot AI] Gemini v1beta (${m}) com system_instruction retornou status ${res.status}:`,
           errData?.error?.message || errData,
         );
       }
@@ -112,10 +174,10 @@ async function callGeminiNative(
       );
     }
 
-    // 2. Fallback v1 sem system_instruction (instruções injetadas no contents)
+    // 2. Fallback v1beta SEM system_instruction (prompt unificado em contents — sempre v1beta)
     try {
-      const resV1 = await fetch(
-        `https://generativelanguage.googleapis.com/v1/models/${m}:generateContent?key=${encodeURIComponent(cleaned)}`,
+      const resContents = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(cleaned)}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -131,26 +193,33 @@ async function callGeminiNative(
               maxOutputTokens: 1000,
             },
           }),
-          signal: AbortSignal.timeout(9000),
+          signal: AbortSignal.timeout(8000),
         },
       );
 
-      if (resV1.ok) {
-        const data = await resV1.json();
+      if (resContents.ok) {
+        const data = await resContents.json();
         const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
         if (text) {
-          console.log(`[Bot AI] Gemini v1 (${m}) respondeu com sucesso!`);
+          console.log(`[Bot AI] Gemini v1beta (${m}) modo contents respondeu com sucesso!`);
           return text;
         }
+      } else {
+        const errData = await resContents.json().catch(() => null);
+        console.warn(
+          `[Bot AI] Gemini v1beta (${m}) modo contents retornou status ${resContents.status}:`,
+          errData?.error?.message || errData,
+        );
       }
     } catch (err: unknown) {
       console.warn(
-        `[Bot AI] Erro na chamada Gemini v1 (${m}):`,
+        `[Bot AI] Erro no Gemini v1beta (${m}) modo contents:`,
         err instanceof Error ? err.message : String(err),
       );
     }
   }
 
+  console.error(`[Bot AI] Todos os modelos Gemini testados falharam para ${customerPhone}.`);
   return null;
 }
 
@@ -201,13 +270,25 @@ async function callOpenAi(
 
 export const processarMensagemBot = async ({
   slug,
+  restaurantId,
   customerPhone,
   customerName,
   messageText,
 }: ProcessarMensagemBotInput): Promise<string | null> => {
-  const restaurant = await buscarRestaurantePorSlug(slug);
+  let restaurant = null;
+  if (restaurantId) {
+    const [found] = await db
+      .select()
+      .from(restaurantsTable)
+      .where(eq(restaurantsTable.id, restaurantId))
+      .limit(1);
+    restaurant = found;
+  }
   if (!restaurant) {
-    console.warn(`[Bot AI] Restaurante não encontrado pelo slug: "${slug}"`);
+    restaurant = await buscarRestaurantePorSlug(slug);
+  }
+  if (!restaurant) {
+    console.warn(`[Bot AI] Restaurante não encontrado pelo slug: "${slug}" ou id: "${restaurantId}"`);
     return null;
   }
 
@@ -217,7 +298,7 @@ export const processarMensagemBot = async ({
 
   if (!aiSettings || !aiSettings.isBotActive) {
     console.log(
-      `[Bot AI] Bot está inativo (isBotActive: false) para o restaurante "${slug}". Ative na aba /ai ou /whatsapp.`,
+      `[Bot AI] Bot está inativo (isBotActive: false) para o restaurante "${restaurant.name}" (${slug}). Ative na aba /ai ou /whatsapp.`,
     );
     return null;
   }
@@ -272,7 +353,7 @@ DIRETRIZES FUNDAMENTAIS:
   }
 
   const baseSystemPrompt = aiSettings.systemPrompt || DEFAULT_AI_SYSTEM_PROMPT;
-  const fullSystemPrompt = `${baseSystemPrompt}\n${menuContext}`;
+  const fullSystemPrompt = `${baseSystemPrompt}\n${menuContext}\n\n### INSTRUÇÃO CRÍTICA:\nResponda diretamente e em português natural do Brasil de forma prestativa, elegante e acolhedora. Você NÃO precisa invocar ferramentas externas nem usar funções de código.`;
 
   // 3. Chaves de API configuradas
   const geminiKey = cleanKey(
@@ -282,6 +363,10 @@ DIRETRIZES FUNDAMENTAIS:
 
   const rawProvider = (aiSettings.aiProvider || "GOOGLE_GEMINI").toUpperCase();
   const selectedProvider = rawProvider === "OPENAI" ? "OPENAI" : "GOOGLE_GEMINI";
+
+  console.log(
+    `[Bot AI] Atendendo ${customerPhone} no restaurante "${restaurant.name}" (${slug}). Provedor: ${selectedProvider}. Tem GeminiKey: ${!!geminiKey} (${geminiKey ? geminiKey.slice(0, 6) + "..." : "NÃO CONFIGURADA"}), Tem OpenAIKey: ${!!openaiKey}`,
+  );
 
   let botReply: string | null = null;
 
