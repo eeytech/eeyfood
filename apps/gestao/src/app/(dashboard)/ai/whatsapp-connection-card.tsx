@@ -26,6 +26,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -68,6 +69,9 @@ export function WhatsAppConnectionCard({
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [qrCodeBase64, setQrCodeBase64] = useState<string | null>(null);
   const [isGeneratingQr, setIsGeneratingQr] = useState(false);
+
+  // Modal de Confirmação para Desconectar
+  const [isDisconnectModalOpen, setIsDisconnectModalOpen] = useState(false);
 
   const [isPending, startTransition] = useTransition();
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
@@ -157,16 +161,13 @@ export function WhatsAppConnectionCard({
     }
   };
 
-  // Ação de Desconectar
+  // Ação de Desconectar (abre o diálogo personalizado)
   const handleDesconectar = () => {
-    if (
-      !confirm(
-        "Deseja realmente desconectar este WhatsApp? As mensagens automáticas e o robô de IA serão interrompidos até uma nova conexão.",
-      )
-    ) {
-      return;
-    }
+    setIsDisconnectModalOpen(true);
+  };
 
+  // Ação de Confirmação no Diálogo
+  const handleConfirmarDesconexao = () => {
     startTransition(async () => {
       try {
         const res = await desconectarWhatsAppAction(slug);
@@ -175,12 +176,13 @@ export function WhatsAppConnectionCard({
           setPhone(null);
           setProfileName(null);
           setProfilePicUrl(null);
-          toast.success("WhatsApp desconectado.");
+          setIsDisconnectModalOpen(false);
+          toast.success("WhatsApp desconectado com sucesso!");
         } else {
-          toast.error(res.error || "Erro ao desconectar.");
+          toast.error(res.error || "Erro ao desconectar WhatsApp.");
         }
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Erro ao desconectar.");
+        toast.error(err instanceof Error ? err.message : "Erro ao desconectar WhatsApp.");
       }
     });
   };
@@ -634,6 +636,70 @@ export function WhatsAppConnectionCard({
               </Button>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Personalizado de Confirmação para Desconectar WhatsApp */}
+      <Dialog open={isDisconnectModalOpen} onOpenChange={setIsDisconnectModalOpen}>
+        <DialogContent className="max-w-md p-6 bg-white text-slate-900 shadow-2xl">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-destructive/10 text-destructive border border-destructive/20">
+                <LogOutIcon size={20} />
+              </div>
+              <div>
+                <DialogTitle className="font-display text-lg font-bold text-slate-900">
+                  Desconectar WhatsApp
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500 mt-0.5">
+                  Esta ação encerrará a sessão conectada na Evolution API.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="my-2 rounded-xl border border-destructive/20 bg-destructive/5 p-4 text-xs text-destructive space-y-2">
+            <p className="font-semibold flex items-center gap-1.5 text-slate-900">
+              <AlertTriangleIcon size={15} className="text-destructive shrink-0" />
+              Atenção: Impacto no atendimento
+            </p>
+            <p className="text-slate-600 leading-relaxed">
+              Deseja realmente desconectar o número{" "}
+              <strong className="text-slate-900">{phone ? formatPhone(phone) : "deste restaurante"}</strong>?
+              As mensagens automáticas, notificações de pedidos e o robô de IA serão interrompidos até que um novo QR Code seja conectado.
+            </p>
+          </div>
+
+          <DialogFooter className="flex flex-row items-center justify-end gap-2 pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsDisconnectModalOpen(false)}
+              disabled={isPending}
+              className="text-xs"
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleConfirmarDesconexao}
+              disabled={isPending}
+              className="gap-1.5 text-xs font-semibold"
+            >
+              {isPending ? (
+                <>
+                  <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
+                  Desconectando...
+                </>
+              ) : (
+                <>
+                  <LogOutIcon className="h-3.5 w-3.5" />
+                  Sim, desconectar
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
