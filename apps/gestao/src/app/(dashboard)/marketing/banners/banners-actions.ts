@@ -33,52 +33,6 @@ export interface GeneratedBannerResult {
   source: "gemini" | "smart-engine";
 }
 
-// Banco interno de imagens de alta definição por categoria
-const CURATED_FOOD_IMAGES: Record<string, string[]> = {
-  burger: [
-    "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=1200&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?w=1200&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1550547660-d9450f859349?w=1200&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=1200&auto=format&fit=crop&q=80",
-  ],
-  pizza: [
-    "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=1200&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?w=1200&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?w=1200&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=1200&auto=format&fit=crop&q=80",
-  ],
-  sushi: [
-    "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=1200&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=1200&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1611143669185-af224c5e3252?w=1200&auto=format&fit=crop&q=80",
-  ],
-  dessert: [
-    "https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?w=1200&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=1200&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1533134242443-d4fd215305ad?w=1200&auto=format&fit=crop&q=80",
-  ],
-  meat: [
-    "https://images.unsplash.com/photo-1544025162-d76694265947?w=1200&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=1200&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1558030006-450675393462?w=1200&auto=format&fit=crop&q=80",
-  ],
-  drinks: [
-    "https://images.unsplash.com/photo-1535958636474-b021ee887b13?w=1200&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=1200&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1613478223719-2ab802602423?w=1200&auto=format&fit=crop&q=80",
-  ],
-  pasta: [
-    "https://images.unsplash.com/photo-1612874742237-6526221588e3?w=1200&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1621996346565-e3d5d6281699?w=1200&auto=format&fit=crop&q=80",
-  ],
-};
-
-function pickCuratedImage(foodType: string): string {
-  const list = CURATED_FOOD_IMAGES[foodType] || CURATED_FOOD_IMAGES.burger;
-  const randomIndex = Math.floor(Math.random() * list.length);
-  return list[randomIndex] || list[0];
-}
-
 function detectFoodCategory(text: string): string {
   const lower = text.toLowerCase();
   if (lower.includes("pizza") || lower.includes("calabresa") || lower.includes("mussarela")) return "pizza";
@@ -98,7 +52,8 @@ function generateSmartCreativeBanner(
   restaurantName: string,
   slug: string,
   input: GenerateBannerAiInput,
-  itemContext?: { name: string; price?: number; description?: string },
+  itemContext?: { name: string; price?: number; description?: string; imageUrl?: string },
+  restaurantLogo?: string | null,
 ): GeneratedBannerResult {
   const goal = input.campaignGoal || "PROMO_DISCOUNT";
   const discount = input.discountPercent ?? 15;
@@ -191,7 +146,7 @@ ${subtitle}
     socialCaption,
     themeStyle,
     layoutStyle,
-    suggestedImageUrl: pickCuratedImage(foodType),
+    suggestedImageUrl: itemContext?.imageUrl || restaurantLogo || undefined,
     suggestedCategory: foodType,
     source: "smart-engine",
   };
@@ -206,11 +161,11 @@ export async function gerarBannerComIaAction(
     throw new Error("Restaurante não encontrado.");
   }
 
-  // 1. Coletar dados de contexto do cardápio se fornecido
-  let itemContext: { name: string; price?: number; description?: string } | undefined;
-  if (input.productId || input.categoryId) {
-    const cardapioData = await buscarRestauranteComCardapioPorSlug(restaurant.slug);
-    if (input.productId && cardapioData?.menuCategories) {
+  // 1. Coletar dados de contexto do cardápio real do restaurante
+  let itemContext: { name: string; price?: number; description?: string; imageUrl?: string } | undefined;
+  const cardapioData = await buscarRestauranteComCardapioPorSlug(restaurant.slug);
+  if (cardapioData?.menuCategories) {
+    if (input.productId) {
       for (const cat of cardapioData.menuCategories) {
         const prod = cat.products?.find((p) => p.id === input.productId);
         if (prod) {
@@ -218,16 +173,30 @@ export async function gerarBannerComIaAction(
             name: prod.name,
             price: prod.price,
             description: prod.description || undefined,
+            imageUrl: prod.imageUrl || undefined,
           };
           break;
         }
       }
-    } else if (input.categoryId && cardapioData?.menuCategories) {
+    } else if (input.categoryId) {
       const cat = cardapioData.menuCategories.find((c) => c.id === input.categoryId);
       if (cat) {
+        const prodWithImg = cat.products?.find((p) => p.imageUrl);
         itemContext = {
           name: cat.name,
+          imageUrl: prodWithImg?.imageUrl || cat.imageUrl || undefined,
         };
+      }
+    } else {
+      for (const cat of cardapioData.menuCategories) {
+        const prodWithImg = cat.products?.find((p) => p.imageUrl);
+        if (prodWithImg) {
+          itemContext = {
+            name: prodWithImg.name,
+            imageUrl: prodWithImg.imageUrl || undefined,
+          };
+          break;
+        }
       }
     }
   }
@@ -244,7 +213,13 @@ export async function gerarBannerComIaAction(
 
   // Se não houver chave Gemini, roda o motor criativo nativo que é 100% gratuito e instantâneo
   if (!rawKey) {
-    return generateSmartCreativeBanner(restaurant.name, restaurant.slug, input, itemContext);
+    return generateSmartCreativeBanner(
+      restaurant.name,
+      restaurant.slug,
+      input,
+      itemContext,
+      restaurant.avatarImageUrl,
+    );
   }
 
   // 3. Chamar API oficial do Google Gemini via REST
@@ -267,8 +242,7 @@ Responda ESTRITAMENTE em formato JSON puro, sem crases de markdown e sem texto a
   "ctaText": "Chamada para ação curta (Ex: Peça pelo cardápio • Link na bio)",
   "socialCaption": "Legenda completa para postar no Instagram / WhatsApp com emojis, proposta e hashtags",
   "themeStyle": "dark-gourmet" | "vibrant-red" | "romantic" | "neon-night" | "clean-white" | "fresh-emerald" | "gold-luxury",
-  "layoutStyle": "split-modern" | "bold-promo" | "gourmet-minimal" | "neon-glow" | "fresh-clean",
-  "suggestedCategory": "burger" | "pizza" | "sushi" | "dessert" | "meat" | "drinks" | "pasta"
+  "layoutStyle": "split-modern" | "bold-promo" | "gourmet-minimal" | "neon-glow" | "fresh-clean"
 }`;
 
     const candidateModels = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
@@ -298,7 +272,6 @@ Responda ESTRITAMENTE em formato JSON puro, sem crases de markdown e sem texto a
             const cleanJson = rawText.replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
             const parsed = JSON.parse(cleanJson);
 
-            const category = parsed.suggestedCategory || detectFoodCategory(parsed.headline || "");
             return {
               success: true,
               tagText: parsed.tagText || "🔥 PROMOÇÃO ESPECIAL",
@@ -309,8 +282,7 @@ Responda ESTRITAMENTE em formato JSON puro, sem crases de markdown e sem texto a
               socialCaption: parsed.socialCaption || "",
               themeStyle: parsed.themeStyle || "dark-gourmet",
               layoutStyle: parsed.layoutStyle || "split-modern",
-              suggestedImageUrl: pickCuratedImage(category),
-              suggestedCategory: category,
+              suggestedImageUrl: itemContext?.imageUrl || restaurant.avatarImageUrl || undefined,
               source: "gemini",
             };
           }
@@ -324,5 +296,11 @@ Responda ESTRITAMENTE em formato JSON puro, sem crases de markdown e sem texto a
   }
 
   // Fallback seguro caso a chamada de API falhe
-  return generateSmartCreativeBanner(restaurant.name, restaurant.slug, input, itemContext);
+  return generateSmartCreativeBanner(
+    restaurant.name,
+    restaurant.slug,
+    input,
+    itemContext,
+    restaurant.avatarImageUrl,
+  );
 }

@@ -1,6 +1,9 @@
 "use client";
 
 import {
+  AlignCenterIcon,
+  AlignLeftIcon,
+  AlignRightIcon,
   CalendarIcon,
   CheckIcon,
   CopyIcon,
@@ -11,6 +14,7 @@ import {
   InstagramIcon,
   LayersIcon,
   LayoutGridIcon,
+  MoveVerticalIcon,
   PaletteIcon,
   PercentIcon,
   RefreshCwIcon,
@@ -19,6 +23,7 @@ import {
   SparklesIcon,
   TagIcon,
   TvIcon,
+  TypeIcon,
   UtensilsCrossedIcon,
   Wand2Icon,
 } from "lucide-react";
@@ -92,6 +97,12 @@ export type LayoutStyle =
   | "neon-glow"
   | "fresh-clean";
 
+export type TextAlignMode = "left" | "center" | "right";
+export type TextPositionMode = "bottom" | "top";
+export type BadgeLayoutMode = "inline" | "stacked";
+export type HeadlineSizeMode = "sm" | "md" | "lg" | "xl";
+export type SubtitleSizeMode = "sm" | "md" | "lg";
+
 interface SeasonalPreset {
   id: string;
   name: string;
@@ -102,10 +113,9 @@ interface SeasonalPreset {
   theme: ThemeStyle;
   layout: LayoutStyle;
   suggestedDiscount: number;
-  fallbackImage: string;
 }
 
-// Modelos prontos de alta conversão
+// Modelos prontos de alta conversão (utilizam os produtos do próprio restaurante)
 const SEASONAL_PRESETS: SeasonalPreset[] = [
   {
     id: "sextou",
@@ -117,7 +127,6 @@ const SEASONAL_PRESETS: SeasonalPreset[] = [
     theme: "vibrant-red",
     layout: "bold-promo",
     suggestedDiscount: 15,
-    fallbackImage: "https://images.unsplash.com/photo-1550547660-d9450f859349?w=1200&auto=format&fit=crop&q=80",
   },
   {
     id: "combos10",
@@ -129,7 +138,6 @@ const SEASONAL_PRESETS: SeasonalPreset[] = [
     theme: "dark-gourmet",
     layout: "split-modern",
     suggestedDiscount: 10,
-    fallbackImage: "https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?w=1200&auto=format&fit=crop&q=80",
   },
   {
     id: "quarta-burger",
@@ -141,7 +149,6 @@ const SEASONAL_PRESETS: SeasonalPreset[] = [
     theme: "neon-night",
     layout: "neon-glow",
     suggestedDiscount: 20,
-    fallbackImage: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=1200&auto=format&fit=crop&q=80",
   },
   {
     id: "namorados",
@@ -153,7 +160,6 @@ const SEASONAL_PRESETS: SeasonalPreset[] = [
     theme: "romantic",
     layout: "gourmet-minimal",
     suggestedDiscount: 15,
-    fallbackImage: "https://images.unsplash.com/photo-1544025162-d76694265947?w=1200&auto=format&fit=crop&q=80",
   },
   {
     id: "frete-gratis",
@@ -165,7 +171,6 @@ const SEASONAL_PRESETS: SeasonalPreset[] = [
     theme: "clean-white",
     layout: "fresh-clean",
     suggestedDiscount: 0,
-    fallbackImage: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=1200&auto=format&fit=crop&q=80",
   },
   {
     id: "sushi-premium",
@@ -177,159 +182,88 @@ const SEASONAL_PRESETS: SeasonalPreset[] = [
     theme: "gold-luxury",
     layout: "gourmet-minimal",
     suggestedDiscount: 10,
-    fallbackImage: "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=1200&auto=format&fit=crop&q=80",
   },
 ];
 
-// Curadoria de Imagens em Alta Definição Categorizadas
-interface CuratedFoodImage {
+// Presets fotográficos de fundos/cenários gastronômicos profissionais
+export interface BackgroundPreset {
   id: string;
-  category: "burger" | "pizza" | "sushi" | "dessert" | "meat" | "drinks" | "pasta";
-  title: string;
+  name: string;
   url: string;
 }
 
-const CURATED_FOOD_GALLERY: CuratedFoodImage[] = [
-  // Hambúrgueres
+export const BACKGROUND_PRESETS: BackgroundPreset[] = [
   {
-    id: "b1",
-    category: "burger",
-    title: "Smash Burger Duplo com Cheddar",
-    url: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=1200&auto=format&fit=crop&q=80",
+    id: "none",
+    name: "Cores & Gradiente",
+    url: "",
   },
   {
-    id: "b2",
-    category: "burger",
-    title: "Combo Artesanal com Fritas",
-    url: "https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?w=1200&auto=format&fit=crop&q=80",
+    id: "dark-wood",
+    name: "Madeira Rústica",
+    url: "https://images.unsplash.com/photo-1546484475-7f7bd55792da?w=1400&auto=format&fit=crop&q=80",
   },
   {
-    id: "b3",
-    category: "burger",
-    title: "Burger Clássico com Bacon",
-    url: "https://images.unsplash.com/photo-1550547660-d9450f859349?w=1200&auto=format&fit=crop&q=80",
+    id: "dark-slate",
+    name: "Ardósia Negra",
+    url: "https://images.unsplash.com/photo-1518640467707-6811f4a6ab73?w=1400&auto=format&fit=crop&q=80",
   },
   {
-    id: "b4",
-    category: "burger",
-    title: "Burger Gourmet com Molho Especial",
-    url: "https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=1200&auto=format&fit=crop&q=80",
-  },
-  // Pizzas
-  {
-    id: "p1",
-    category: "pizza",
-    title: "Pizza Artesanal de Calabresa",
-    url: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=1200&auto=format&fit=crop&q=80",
+    id: "black-marble",
+    name: "Mármore Escuro",
+    url: "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=1400&auto=format&fit=crop&q=80",
   },
   {
-    id: "p2",
-    category: "pizza",
-    title: "Fatia com Queijo Puxando",
-    url: "https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?w=1200&auto=format&fit=crop&q=80",
+    id: "brick-wall",
+    name: "Tijolos Rústicos",
+    url: "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=1400&auto=format&fit=crop&q=80",
   },
   {
-    id: "p3",
-    category: "pizza",
-    title: "Pizza Napolitana com Manjericão",
-    url: "https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?w=1200&auto=format&fit=crop&q=80",
+    id: "bar-bokeh",
+    name: "Luzes de Bar Noturno",
+    url: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1400&auto=format&fit=crop&q=80",
   },
   {
-    id: "p4",
-    category: "pizza",
-    title: "Pizza Quatro Queijos Forno a Lenha",
-    url: "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=1200&auto=format&fit=crop&q=80",
-  },
-  // Sushi
-  {
-    id: "s1",
-    category: "sushi",
-    title: "Barca Especial de Sushis e Sashimis",
-    url: "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=1200&auto=format&fit=crop&q=80",
+    id: "warm-amber",
+    name: "Forno a Lenha / Brasa",
+    url: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1400&auto=format&fit=crop&q=80",
   },
   {
-    id: "s2",
-    category: "sushi",
-    title: "Poke Havaiano com Salmão Fresco",
-    url: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=1200&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "s3",
-    category: "sushi",
-    title: "Combinado Gourmet Maçaricado",
-    url: "https://images.unsplash.com/photo-1611143669185-af224c5e3252?w=1200&auto=format&fit=crop&q=80",
-  },
-  // Sobremesas & Açaí
-  {
-    id: "d1",
-    category: "dessert",
-    title: "Taça de Açaí com Morangos e Granola",
-    url: "https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?w=1200&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "d2",
-    category: "dessert",
-    title: "Brownie Quente com Sorvete",
-    url: "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=1200&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "d3",
-    category: "dessert",
-    title: "Cheesecake com Frutas Vermelhas",
-    url: "https://images.unsplash.com/photo-1533134242443-d4fd215305ad?w=1200&auto=format&fit=crop&q=80",
-  },
-  // Carnes & Churrasco
-  {
-    id: "m1",
-    category: "meat",
-    title: "Picanha Nobre Fatiada na Tábua",
-    url: "https://images.unsplash.com/photo-1544025162-d76694265947?w=1200&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "m2",
-    category: "meat",
-    title: "Costela Grelhada ao Barbecue",
-    url: "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=1200&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "m3",
-    category: "meat",
-    title: "Bife Ancho Grelhado com Ervas",
-    url: "https://images.unsplash.com/photo-1558030006-450675393462?w=1200&auto=format&fit=crop&q=80",
-  },
-  // Bebidas & Chopp
-  {
-    id: "dr1",
-    category: "drinks",
-    title: "Chopp Artesanal Gelado",
-    url: "https://images.unsplash.com/photo-1535958636474-b021ee887b13?w=1200&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "dr2",
-    category: "drinks",
-    title: "Drink Tropical Refrescante com Frutas",
-    url: "https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=1200&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "dr3",
-    category: "drinks",
-    title: "Suco Natural de Laranja Fresco",
-    url: "https://images.unsplash.com/photo-1613478223719-2ab802602423?w=1200&auto=format&fit=crop&q=80",
-  },
-  // Massas & Italiano
-  {
-    id: "pa1",
-    category: "pasta",
-    title: "Espaguete Carbonara com Parmesão",
-    url: "https://images.unsplash.com/photo-1612874742237-6526221588e3?w=1200&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "pa2",
-    category: "pasta",
-    title: "Fettuccine Cremoso com Cogumelos",
-    url: "https://images.unsplash.com/photo-1621996346565-e3d5d6281699?w=1200&auto=format&fit=crop&q=80",
+    id: "white-marble",
+    name: "Mármore Branco Clean",
+    url: "https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?w=1400&auto=format&fit=crop&q=80",
   },
 ];
+
+// Helper para desenhar etiqueta com nome do produto sobre a imagem no Canvas
+function drawProductPill(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  maxW: number = 380,
+) {
+  if (!text) return;
+  ctx.save();
+  ctx.font = "bold 16px sans-serif";
+  const metrics = ctx.measureText(text);
+  const textW = Math.min(metrics.width, maxW);
+  const pillW = textW + 20;
+  const pillH = 32;
+
+  ctx.fillStyle = "rgba(15, 23, 42, 0.75)";
+  ctx.beginPath();
+  ctx.roundRect(x, y - pillH, pillW, pillH, 8);
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillText(text, x + 10, y - 10, maxW);
+  ctx.restore();
+}
 
 // Helper para desenhar imagem em modo Cover no Canvas
 function drawImageCover(
@@ -366,7 +300,7 @@ function drawImageCover(
   ctx.restore();
 }
 
-// Helper para quebra de texto elegante no Canvas (nunca corta texto)
+// Helper para quebra de texto elegante no Canvas com suporte a alinhamento (esquerda, centro, direita)
 function renderWrappedText(
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -375,7 +309,10 @@ function renderWrappedText(
   maxWidth: number,
   lineHeight: number,
   maxLines: number = 2,
+  align: "left" | "center" | "right" = "left",
 ): number {
+  ctx.save();
+  ctx.textAlign = align;
   const words = text.split(" ");
   let currentLine = "";
   let lineCount = 0;
@@ -398,6 +335,7 @@ function renderWrappedText(
     ctx.fillText(currentLine.trim(), x, currentY);
     currentY += lineHeight;
   }
+  ctx.restore();
   return currentY;
 }
 
@@ -410,27 +348,61 @@ export function BannersGeneratorClient({
   // Formato / Dimensão
   const [aspectRatio, setAspectRatio] = useState<AspectRatioMode>("1:1");
 
-  // Modo da Campanha
-  const [campaignMode, setCampaignMode] = useState<CampaignMode>("CATEGORY");
+  // Modo de Fotos no Banner: 1 foto (destaque) ou 2 fotos (combo/duplo)
+  const [photoCountMode, setPhotoCountMode] = useState<"1" | "2">("1");
 
-  // Categoria e Produto Selecionados
+  // Categoria Selecionada ("ALL" ou ID da categoria)
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(
-    menuCategories[0]?.id || "",
-  );
-  const selectedCategory = useMemo(
-    () => menuCategories.find((c) => c.id === selectedCategoryId) || menuCategories[0],
-    [menuCategories, selectedCategoryId],
+    menuCategories[0]?.id || "ALL",
   );
 
-  const [selectedProductId, setSelectedProductId] = useState<string>("");
+  // Produtos de todas as categorias
   const allProducts = useMemo(() => {
     return menuCategories.flatMap((c) => c.products || []);
   }, [menuCategories]);
 
-  const selectedProduct = useMemo(
-    () => allProducts.find((p) => p.id === selectedProductId) || allProducts[0],
-    [allProducts, selectedProductId],
+  // Categoria Atual
+  const selectedCategory = useMemo(() => {
+    if (selectedCategoryId === "ALL") return null;
+    return menuCategories.find((c) => c.id === selectedCategoryId) || null;
+  }, [menuCategories, selectedCategoryId]);
+
+  // Produtos da categoria atual ou todos
+  const categoryProducts = useMemo(() => {
+    if (!selectedCategory) return allProducts;
+    return selectedCategory.products || [];
+  }, [selectedCategory, allProducts]);
+
+  // Produtos que têm imagem cadastrada
+  const productsWithImage = useMemo(() => {
+    return allProducts.filter((p) => Boolean(p.imageUrl));
+  }, [allProducts]);
+
+  // Produto 1 (Slot 1)
+  const [selectedProduct1Id, setSelectedProduct1Id] = useState<string>(() => {
+    const firstWithImg = menuCategories[0]?.products?.find((p) => p.imageUrl);
+    return firstWithImg?.id || menuCategories[0]?.products?.[0]?.id || allProducts[0]?.id || "";
+  });
+
+  // Produto 2 (Slot 2 para combo)
+  const [selectedProduct2Id, setSelectedProduct2Id] = useState<string>(() => {
+    const secondWithImg = menuCategories[0]?.products?.filter((p) => p.imageUrl)?.[1];
+    return secondWithImg?.id || menuCategories[0]?.products?.[1]?.id || allProducts[1]?.id || "";
+  });
+
+  const selectedProduct1 = useMemo(
+    () => allProducts.find((p) => p.id === selectedProduct1Id) || allProducts[0] || null,
+    [allProducts, selectedProduct1Id],
   );
+
+  const selectedProduct2 = useMemo(
+    () => allProducts.find((p) => p.id === selectedProduct2Id) || allProducts[1] || null,
+    [allProducts, selectedProduct2Id],
+  );
+
+  // Imagens customizadas (URL externa se o usuário quiser inserir manualmente)
+  const [customImageUrl1, setCustomImageUrl1] = useState<string>("");
+  const [customImageUrl2, setCustomImageUrl2] = useState<string>("");
 
   // Textos e Conteúdo do Banner
   const [tagText, setTagText] = useState("🔥 PROMOÇÃO ESPECIAL");
@@ -443,14 +415,21 @@ export function BannersGeneratorClient({
   // Desconto
   const [discountPercent, setDiscountPercent] = useState<number>(10);
 
+  // Cenário & Fundo Fotográfico
+  const [selectedBgId, setSelectedBgId] = useState<string>("none");
+  const [customBgUrl, setCustomBgUrl] = useState<string>("");
+  const [bgOverlayOpacity, setBgOverlayOpacity] = useState<number>(65);
+
+  // Posicionamento & Tipografia dos Textos
+  const [textAlign, setTextAlign] = useState<TextAlignMode>("left");
+  const [textPosition, setTextPosition] = useState<TextPositionMode>("bottom");
+  const [badgeLayout, setBadgeLayout] = useState<BadgeLayoutMode>("inline");
+  const [headlineSize, setHeadlineSize] = useState<HeadlineSizeMode>("md");
+  const [subtitleSize, setSubtitleSize] = useState<SubtitleSizeMode>("md");
+
   // Estilo Visual e Layout
   const [themeStyle, setThemeStyle] = useState<ThemeStyle>("dark-gourmet");
   const [layoutStyle, setLayoutStyle] = useState<LayoutStyle>("split-modern");
-
-  // Imagem
-  const [customImageUrl, setCustomImageUrl] = useState<string>("");
-  const [selectedProductImageUrl, setSelectedProductImageUrl] = useState<string>("");
-  const [galleryCategory, setGalleryCategory] = useState<string>("burger");
 
   // Toggles Visuais
   const [showLogo, setShowLogo] = useState(true);
@@ -467,38 +446,90 @@ export function BannersGeneratorClient({
   const [aiGoal, setAiGoal] = useState<"PROMO_DISCOUNT" | "LAUNCH" | "WEEKEND" | "FREE_SHIPPING" | "COMBO" | "CUSTOM">("PROMO_DISCOUNT");
   const [isGeneratingAi, startAiTransition] = useTransition();
 
-  // Atualizar textos automaticamente quando mudar o modo
-  useEffect(() => {
-    if (campaignMode === "CATEGORY" && selectedCategory) {
-      const catName = selectedCategory.name.toUpperCase();
-      setTagText(`🔥 PROMOÇÃO EM ${catName}`);
-      setHeadline(`TODOS OS ${catName} COM ${discountPercent}% OFF`);
-      setSubtitle(`Peça agora e aproveite os melhores ${selectedCategory.name.toLowerCase()} preparados com carinho!`);
-      setBadgeText(`${discountPercent}% OFF`);
+  // Helper para selecionar produto (slot 1 ou slot 2)
+  const handleSelectProduct = (product: MenuProductItem, slot?: 1 | 2) => {
+    if (photoCountMode === "1" || slot === 1) {
+      setSelectedProduct1Id(product.id);
+      setCustomImageUrl1("");
 
-      // Escolher a foto do primeiro produto que tiver imagem
-      const prodWithImg = selectedCategory.products?.find((p) => p.imageUrl);
-      if (prodWithImg?.imageUrl) {
-        setSelectedProductImageUrl(prodWithImg.imageUrl);
-      }
-    } else if (campaignMode === "PRODUCT" && selectedProduct) {
-      const prodName = selectedProduct.name.toUpperCase();
-      const originalPrice = selectedProduct.price || 0;
+      const prodName = product.name.toUpperCase();
+      const originalPrice = product.price || 0;
       const discountedPrice = originalPrice * (1 - discountPercent / 100);
 
       setTagText("⚡ DESTAQUE DO CARDÁPIO");
-      setHeadline(`${prodName}`);
-      setSubtitle(selectedProduct.description || "Sabor inconfundível preparado com ingredientes selecionados e entrega rápida.");
+      setHeadline(prodName);
+      if (product.description) {
+        setSubtitle(product.description);
+      }
       setBadgeText(
         discountPercent > 0
           ? `${discountPercent}% OFF • R$ ${discountedPrice.toFixed(2).replace(".", ",")}`
           : `R$ ${originalPrice.toFixed(2).replace(".", ",")}`,
       );
-      if (selectedProduct.imageUrl) {
-        setSelectedProductImageUrl(selectedProduct.imageUrl);
+    } else {
+      setSelectedProduct2Id(product.id);
+      setCustomImageUrl2("");
+
+      if (selectedProduct1) {
+        setTagText("🍔 COMBO ESPECIAL");
+        setHeadline(`COMBO: ${selectedProduct1.name.toUpperCase()} + ${product.name.toUpperCase()}`);
+        const total = (selectedProduct1.price || 0) + (product.price || 0);
+        const comboDiscounted = total * (1 - discountPercent / 100);
+        setBadgeText(
+          discountPercent > 0
+            ? `COMBO ${discountPercent}% OFF • R$ ${comboDiscounted.toFixed(2).replace(".", ",")}`
+            : `COMBO • R$ ${total.toFixed(2).replace(".", ",")}`,
+        );
+        setSubtitle(`Peça agora este super combo com ${selectedProduct1.name} e ${product.name} com desconto e entrega rápida!`);
       }
     }
-  }, [campaignMode, selectedCategory, selectedProduct, discountPercent]);
+  };
+
+  // Helper para selecionar categoria e atualizar sugestões
+  const handleSelectCategory = (categoryId: string) => {
+    setSelectedCategoryId(categoryId);
+    if (categoryId === "ALL") {
+      setTagText("🔥 PROMOÇÃO ESPECIAL");
+      setHeadline(`DESTAQUES DO CARDÁPIO COM ${discountPercent}% OFF`);
+      setSubtitle("Aproveite os pratos mais pedidos preparados com ingredientes selecionados e entrega rápida!");
+      return;
+    }
+
+    const cat = menuCategories.find((c) => c.id === categoryId);
+    if (!cat) return;
+
+    const catProds = cat.products || [];
+    const prodsWithImg = catProds.filter((p) => p.imageUrl);
+
+    if (prodsWithImg.length > 0) {
+      setSelectedProduct1Id(prodsWithImg[0].id);
+      setCustomImageUrl1("");
+      if (prodsWithImg.length > 1) {
+        setSelectedProduct2Id(prodsWithImg[1].id);
+        setCustomImageUrl2("");
+      }
+    } else if (catProds.length > 0) {
+      setSelectedProduct1Id(catProds[0].id);
+      if (catProds.length > 1) {
+        setSelectedProduct2Id(catProds[1].id);
+      }
+    }
+
+    const catName = cat.name.toUpperCase();
+    const isCombo = catName.includes("COMBO") || catName.includes("DUPLO") || catName.includes("KIT");
+
+    if (isCombo && (prodsWithImg.length >= 2 || catProds.length >= 2)) {
+      setPhotoCountMode("2");
+      setTagText(`🍔 COMBO ESPECIAL`);
+      setHeadline(`COMBOS DE ${catName} COM ${discountPercent}% OFF`);
+      setSubtitle(`Peça os melhores combos de ${cat.name.toLowerCase()} preparados com carinho e entrega rápida!`);
+    } else {
+      setTagText(`🔥 PROMOÇÃO EM ${catName}`);
+      setHeadline(`TODOS OS ${catName} COM ${discountPercent}% OFF`);
+      setSubtitle(`Peça agora e aproveite os melhores itens de ${cat.name.toLowerCase()} preparados com carinho!`);
+    }
+    setBadgeText(`${discountPercent}% OFF`);
+  };
 
   // Aplicar Preset Sazonal
   const handleApplyPreset = (preset: SeasonalPreset) => {
@@ -509,7 +540,6 @@ export function BannersGeneratorClient({
     setThemeStyle(preset.theme);
     setLayoutStyle(preset.layout);
     setDiscountPercent(preset.suggestedDiscount);
-    setCustomImageUrl(preset.fallbackImage);
     toast.success(`Modelo "${preset.name}" aplicado!`);
   };
 
@@ -522,8 +552,8 @@ export function BannersGeneratorClient({
           topic: aiTopic,
           campaignGoal: aiGoal,
           discountPercent,
-          productId: campaignMode === "PRODUCT" ? selectedProductId : undefined,
-          categoryId: campaignMode === "CATEGORY" ? selectedCategoryId : undefined,
+          productId: selectedProduct1Id || undefined,
+          categoryId: selectedCategoryId !== "ALL" ? selectedCategoryId : undefined,
         });
 
         if (result.success) {
@@ -535,7 +565,7 @@ export function BannersGeneratorClient({
           setThemeStyle(result.themeStyle);
           setLayoutStyle(result.layoutStyle);
           if (result.suggestedImageUrl) {
-            setCustomImageUrl(result.suggestedImageUrl);
+            setCustomImageUrl1(result.suggestedImageUrl);
           }
           setIsAiDialogOpen(false);
           toast.success(
@@ -551,17 +581,31 @@ export function BannersGeneratorClient({
     });
   };
 
-  // Imagem ativa para o banner
-  const activeBannerImage = useMemo(() => {
-    if (customImageUrl.trim()) return customImageUrl.trim();
-    if (selectedProductImageUrl) return selectedProductImageUrl;
-    if (campaignMode === "PRODUCT" && selectedProduct?.imageUrl) return selectedProduct.imageUrl;
-    if (campaignMode === "CATEGORY") {
-      const p = selectedCategory?.products?.find((item) => item.imageUrl);
-      if (p?.imageUrl) return p.imageUrl;
+  // Imagens ativas para renderização (100% integradas aos produtos do restaurante)
+  const activeBannerImage1 = useMemo(() => {
+    if (customImageUrl1.trim()) return customImageUrl1.trim();
+    if (selectedProduct1?.imageUrl) return selectedProduct1.imageUrl;
+    // Fallback: primeiro produto com foto do cardápio ou logo do restaurante
+    return productsWithImage[0]?.imageUrl || restaurantLogo || "";
+  }, [customImageUrl1, selectedProduct1, productsWithImage, restaurantLogo]);
+
+  const activeBannerImage2 = useMemo(() => {
+    if (photoCountMode !== "2") return "";
+    if (customImageUrl2.trim()) return customImageUrl2.trim();
+    if (selectedProduct2?.imageUrl) return selectedProduct2.imageUrl;
+    const second = productsWithImage.find((p) => p.id !== selectedProduct1?.id);
+    return second?.imageUrl || "";
+  }, [photoCountMode, customImageUrl2, selectedProduct2, productsWithImage, selectedProduct1]);
+
+  // Cenário / Fundo Fotográfico Ativo
+  const activeBgImageUrl = useMemo(() => {
+    if (customBgUrl.trim()) return customBgUrl.trim();
+    if (selectedBgId && selectedBgId !== "none") {
+      const found = BACKGROUND_PRESETS.find((b) => b.id === selectedBgId);
+      return found?.url || "";
     }
-    return "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=1200&auto=format&fit=crop&q=80";
-  }, [customImageUrl, selectedProductImageUrl, campaignMode, selectedProduct, selectedCategory]);
+    return "";
+  }, [customBgUrl, selectedBgId]);
 
   // Paleta de Estilos do Tema
   const themeClasses = useMemo(() => {
@@ -729,6 +773,39 @@ ${showBadge && badgeText ? `✨ Destaque: ${badgeText}\n` : ""}🛵 Peça direto
       ctx.fillStyle = bgGrad;
       ctx.fillRect(0, 0, width, height);
 
+      // Helper para carregar imagens com crossOrigin
+      const loadImage = (url: string): Promise<HTMLImageElement | null> => {
+        return new Promise((resolve) => {
+          if (!url) return resolve(null);
+          const img = new window.Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => resolve(img);
+          img.onerror = () => {
+            const fallback = new window.Image();
+            fallback.onload = () => resolve(fallback);
+            fallback.onerror = () => resolve(null);
+            fallback.src = url;
+          };
+          img.src = url;
+        });
+      };
+
+      // 1.1 Fundo Fotográfico / Cenário com Opacidade Customizável
+      if (activeBgImageUrl) {
+        const loadedBg = await loadImage(activeBgImageUrl);
+        if (loadedBg) {
+          drawImageCover(ctx, loadedBg, 0, 0, width, height);
+          ctx.save();
+          const opacity = Math.min(Math.max(bgOverlayOpacity / 100, 0), 1);
+          ctx.fillStyle =
+            themeStyle === "clean-white"
+              ? `rgba(255, 255, 255, ${opacity})`
+              : `rgba(0, 0, 0, ${opacity})`;
+          ctx.fillRect(0, 0, width, height);
+          ctx.restore();
+        }
+      }
+
       // Iluminação Ambiente / Glow no fundo
       ctx.save();
       const glowGrad = ctx.createRadialGradient(
@@ -745,105 +822,185 @@ ${showBadge && badgeText ? `✨ Destaque: ${badgeText}\n` : ""}🛵 Peça direto
       ctx.fillRect(0, 0, width, height);
       ctx.restore();
 
-      // 2. Carregar Imagem com crossOrigin
-      let loadedImage: HTMLImageElement | null = null;
-      try {
-        const img = new window.Image();
-        img.crossOrigin = "anonymous";
-        await new Promise((resolve) => {
-          img.onload = () => {
-            loadedImage = img;
-            resolve(true);
-          };
-          img.onerror = () => resolve(false);
-          img.src = activeBannerImage;
-        });
-      } catch (e) {
-        console.warn("Falha ao carregar imagem para canvas:", e);
-      }
+      // Carregar Imagens dos Produtos do cardápio
+      const loadedImage1 = await loadImage(activeBannerImage1);
+      const loadedImage2 =
+        photoCountMode === "2" && activeBannerImage2
+          ? await loadImage(activeBannerImage2)
+          : null;
+
+      // Métricas Tipográficas Customizadas
+      const headlineMetrics169 = {
+        sm: { font: "bold 30px sans-serif", lh: 38 },
+        md: { font: "bold 38px sans-serif", lh: 46 },
+        lg: { font: "bold 44px sans-serif", lh: 52 },
+        xl: { font: "900 50px sans-serif", lh: 58 },
+      }[headlineSize];
+
+      const subtitleMetrics169 = {
+        sm: { font: "normal 16px sans-serif", lh: 22 },
+        md: { font: "normal 20px sans-serif", lh: 28 },
+        lg: { font: "normal 24px sans-serif", lh: 32 },
+      }[subtitleSize];
+
+      const headlineMetrics11 = {
+        sm: { font: "bold 32px sans-serif", lh: 40 },
+        md: { font: "bold 40px sans-serif", lh: 48 },
+        lg: { font: "bold 48px sans-serif", lh: 56 },
+        xl: { font: "900 58px sans-serif", lh: 66 },
+      }[headlineSize];
+
+      const subtitleMetrics11 = {
+        sm: { font: "normal 18px sans-serif", lh: 24 },
+        md: { font: "normal 22px sans-serif", lh: 30 },
+        lg: { font: "normal 26px sans-serif", lh: 34 },
+      }[subtitleSize];
+
+      const headlineMetrics916 = {
+        sm: { font: "bold 46px sans-serif", lh: 58 },
+        md: { font: "bold 56px sans-serif", lh: 68 },
+        lg: { font: "bold 68px sans-serif", lh: 80 },
+        xl: { font: "900 80px sans-serif", lh: 92 },
+      }[headlineSize];
+
+      const subtitleMetrics916 = {
+        sm: { font: "normal 24px sans-serif", lh: 34 },
+        md: { font: "normal 30px sans-serif", lh: 42 },
+        lg: { font: "normal 36px sans-serif", lh: 48 },
+      }[subtitleSize];
 
       // ========================================================
       // COMPOSIÇÃO 16:9 (Paisagem Web / Facebook / Banner Horizontal)
       // LAYOUT HORIZONTAL 2-COLUNAS: TEXTOS À ESQUERDA, FOTO À DIREITA
       // ========================================================
       if (aspectRatio === "16:9") {
-        // Coluna Direita: Imagem de Destaque
+        // Coluna Direita: Imagem de Destaque (ou 2 Fotos Empilhadas para Combo)
         const imgX = 640;
         const imgY = 60;
         const imgW = 490;
         const imgH = 555;
 
-        if (loadedImage) {
-          drawImageCover(ctx, loadedImage, imgX, imgY, imgW, imgH, 28);
-          // Borda decorativa
-          ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+        if (photoCountMode === "2" && loadedImage2) {
+          const gap = 20;
+          const cardH = Math.floor((imgH - gap) / 2);
+          if (loadedImage1) {
+            drawImageCover(ctx, loadedImage1, imgX, imgY, imgW, cardH, 20);
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.roundRect(imgX, imgY, imgW, cardH, 20);
+            ctx.stroke();
+            if (selectedProduct1?.name) {
+              drawProductPill(ctx, selectedProduct1.name, imgX + 16, imgY + cardH - 14, 380);
+            }
+          }
+          if (loadedImage2) {
+            const y2 = imgY + cardH + gap;
+            drawImageCover(ctx, loadedImage2, imgX, y2, imgW, cardH, 20);
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.roundRect(imgX, y2, imgW, cardH, 20);
+            ctx.stroke();
+            if (selectedProduct2?.name) {
+              drawProductPill(ctx, selectedProduct2.name, imgX + 16, y2 + cardH - 14, 380);
+            }
+          }
+        } else if (loadedImage1) {
+          drawImageCover(ctx, loadedImage1, imgX, imgY, imgW, imgH, 28);
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
           ctx.lineWidth = 3;
           ctx.beginPath();
           ctx.roundRect(imgX, imgY, imgW, imgH, 28);
           ctx.stroke();
+          if (selectedProduct1?.name) {
+            drawProductPill(ctx, selectedProduct1.name, imgX + 18, imgY + imgH - 18, 400);
+          }
         }
 
         // Coluna Esquerda: Textos, Selos e CTA
         const leftX = 70;
         const maxTextW = 530;
+        const textAnchorX =
+          textAlign === "center"
+            ? leftX + maxTextW / 2
+            : textAlign === "right"
+            ? leftX + maxTextW
+            : leftX;
 
         // Selo / Tag Superior
         ctx.fillStyle = themeStyle === "clean-white" ? "#dc2626" : themeClasses.accentColor;
         ctx.font = "bold 20px sans-serif";
-        ctx.fillText(tagText.toUpperCase(), leftX, 90);
+        ctx.textAlign = textAlign;
+        ctx.fillText(tagText.toUpperCase(), textAnchorX, 90);
 
         // Logo e Nome do Restaurante
         if (showLogo) {
           ctx.fillStyle = themeStyle === "clean-white" ? "#0f172a" : "#ffffff";
           ctx.font = "bold 28px sans-serif";
-          ctx.fillText(restaurantName, leftX, 135);
+          ctx.textAlign = textAlign;
+          ctx.fillText(restaurantName, textAnchorX, 135);
         }
 
         // Badge de Desconto / Preço
         let contentStartY = 200;
         if (showBadge && badgeText) {
+          ctx.font = "bold 20px sans-serif";
+          const badgeMetrics = ctx.measureText(badgeText);
+          const badgeW = Math.max(badgeMetrics.width + 36, 170);
+          const badgeH = 44;
+          let badgeDrawX = leftX;
+          if (textAlign === "center") {
+            badgeDrawX = leftX + (maxTextW - badgeW) / 2;
+          } else if (textAlign === "right") {
+            badgeDrawX = leftX + maxTextW - badgeW;
+          }
+
           ctx.fillStyle = themeStyle === "clean-white" ? "#e11d48" : themeClasses.accentColor;
           ctx.beginPath();
-          ctx.roundRect(leftX, contentStartY - 32, 230, 44, 22);
+          ctx.roundRect(badgeDrawX, contentStartY - 32, badgeW, badgeH, 22);
           ctx.fill();
 
           ctx.fillStyle = themeStyle === "gold-luxury" ? "#000000" : "#ffffff";
-          ctx.font = "bold 20px sans-serif";
-          ctx.fillText(badgeText, leftX + 18, contentStartY - 3);
+          ctx.textAlign = "center";
+          ctx.fillText(badgeText, badgeDrawX + badgeW / 2, contentStartY - 3);
           contentStartY += 60;
         }
 
-        // Headline Principal (com quebra de linha elegante)
+        // Headline Principal (com alinhamento e tamanho customizados)
         ctx.fillStyle = themeStyle === "clean-white" ? "#0f172a" : "#ffffff";
-        ctx.font = "bold 38px sans-serif";
+        ctx.font = headlineMetrics169.font;
         const afterHeadlineY = renderWrappedText(
           ctx,
           headline,
-          leftX,
+          textAnchorX,
           contentStartY,
           maxTextW,
-          46,
+          headlineMetrics169.lh,
           2,
+          textAlign,
         );
 
         // Subtítulo
         ctx.fillStyle = themeStyle === "clean-white" ? "#475569" : "#cbd5e1";
-        ctx.font = "normal 20px sans-serif";
+        ctx.font = subtitleMetrics169.font;
         renderWrappedText(
           ctx,
           subtitle,
-          leftX,
+          textAnchorX,
           afterHeadlineY + 12,
           maxTextW,
-          28,
+          subtitleMetrics169.lh,
           2,
+          textAlign,
         );
 
         // CTA Rodapé
         if (showCta) {
           ctx.fillStyle = themeStyle === "clean-white" ? "#dc2626" : themeClasses.accentColor;
           ctx.font = "bold 20px sans-serif";
-          ctx.fillText(ctaText, leftX, 580);
+          ctx.textAlign = textAlign;
+          ctx.fillText(ctaText, textAnchorX, 580);
         }
       }
 
@@ -854,75 +1011,188 @@ ${showBadge && badgeText ? `✨ Destaque: ${badgeText}\n` : ""}🛵 Peça direto
       else if (aspectRatio === "1:1") {
         const paddingX = 90;
         const contentW = width - paddingX * 2;
+        const textAnchorX =
+          textAlign === "center"
+            ? width / 2
+            : textAlign === "right"
+            ? width - paddingX
+            : paddingX;
 
-        // Topo: Tag e Nome do Restaurante
-        ctx.fillStyle = themeStyle === "clean-white" ? "#dc2626" : themeClasses.accentColor;
-        ctx.font = "bold 22px sans-serif";
-        ctx.fillText(tagText.toUpperCase(), paddingX, 85);
-
-        if (showLogo) {
-          ctx.fillStyle = themeStyle === "clean-white" ? "#0f172a" : "#ffffff";
-          ctx.font = "bold 30px sans-serif";
-          ctx.fillText(restaurantName, paddingX, 130);
-        }
-
-        // Imagem Central
-        const imgY = 175;
-        const imgH = 460;
-        if (loadedImage) {
-          drawImageCover(ctx, loadedImage, paddingX, imgY, contentW, imgH, 26);
-          ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.roundRect(paddingX, imgY, contentW, imgH, 26);
-          ctx.stroke();
-        }
-
-        // Badge Flutuante ou no Bloco Inferior
-        let textStartY = 705;
-        if (showBadge && badgeText) {
+        const drawBadgePill11 = (y: number) => {
+          ctx.save();
+          ctx.font = "bold 22px sans-serif";
+          const metrics = ctx.measureText(badgeText);
+          const badgeW = Math.max(metrics.width + 40, 180);
+          const badgeH = 46;
+          let badgeX = paddingX;
+          if (textAlign === "center") {
+            badgeX = (width - badgeW) / 2;
+          } else if (textAlign === "right") {
+            badgeX = width - paddingX - badgeW;
+          }
           ctx.fillStyle = themeStyle === "clean-white" ? "#e11d48" : themeClasses.accentColor;
           ctx.beginPath();
-          ctx.roundRect(paddingX, textStartY - 34, 240, 46, 23);
+          ctx.roundRect(badgeX, y - 34, badgeW, badgeH, 23);
           ctx.fill();
 
           ctx.fillStyle = themeStyle === "gold-luxury" ? "#000000" : "#ffffff";
-          ctx.font = "bold 22px sans-serif";
-          ctx.fillText(badgeText, paddingX + 20, textStartY - 3);
-          textStartY += 60;
-        }
+          ctx.textAlign = "center";
+          ctx.fillText(badgeText, badgeX + badgeW / 2, y - 3);
+          ctx.restore();
+        };
 
-        // Headline Principal
-        ctx.fillStyle = themeStyle === "clean-white" ? "#0f172a" : "#ffffff";
-        ctx.font = "bold 40px sans-serif";
-        const afterHeadlineY = renderWrappedText(
-          ctx,
-          headline,
-          paddingX,
-          textStartY,
-          contentW,
-          48,
-          2,
-        );
+        const drawPhotos11 = (imgY: number, imgH: number) => {
+          if (photoCountMode === "2" && loadedImage2) {
+            const gap = 20;
+            const colW = Math.floor((contentW - gap) / 2);
+            if (loadedImage1) {
+              drawImageCover(ctx, loadedImage1, paddingX, imgY, colW, imgH, 22);
+              ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+              ctx.lineWidth = 2.5;
+              ctx.beginPath();
+              ctx.roundRect(paddingX, imgY, colW, imgH, 22);
+              ctx.stroke();
+              if (selectedProduct1?.name) {
+                drawProductPill(ctx, selectedProduct1.name, paddingX + 14, imgY + imgH - 14, 340);
+              }
+            }
+            if (loadedImage2) {
+              const x2 = paddingX + colW + gap;
+              drawImageCover(ctx, loadedImage2, x2, imgY, colW, imgH, 22);
+              ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+              ctx.lineWidth = 2.5;
+              ctx.beginPath();
+              ctx.roundRect(x2, imgY, colW, imgH, 22);
+              ctx.stroke();
+              if (selectedProduct2?.name) {
+                drawProductPill(ctx, selectedProduct2.name, x2 + 14, imgY + imgH - 14, 340);
+              }
+            }
+          } else if (loadedImage1) {
+            drawImageCover(ctx, loadedImage1, paddingX, imgY, contentW, imgH, 26);
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.roundRect(paddingX, imgY, contentW, imgH, 26);
+            ctx.stroke();
+            if (selectedProduct1?.name) {
+              drawProductPill(ctx, selectedProduct1.name, paddingX + 18, imgY + imgH - 18, 400);
+            }
+          }
+        };
 
-        // Subtítulo
-        ctx.fillStyle = themeStyle === "clean-white" ? "#475569" : "#cbd5e1";
-        ctx.font = "normal 22px sans-serif";
-        renderWrappedText(
-          ctx,
-          subtitle,
-          paddingX,
-          afterHeadlineY + 12,
-          contentW,
-          30,
-          2,
-        );
-
-        // CTA Rodapé
-        if (showCta) {
+        if (textPosition === "bottom") {
+          // Topo: Tag e Nome do Restaurante
           ctx.fillStyle = themeStyle === "clean-white" ? "#dc2626" : themeClasses.accentColor;
           ctx.font = "bold 22px sans-serif";
-          ctx.fillText(ctaText, paddingX, 1000);
+          ctx.textAlign = textAlign;
+          ctx.fillText(tagText.toUpperCase(), textAnchorX, 85);
+
+          if (showLogo) {
+            ctx.fillStyle = themeStyle === "clean-white" ? "#0f172a" : "#ffffff";
+            ctx.font = "bold 30px sans-serif";
+            ctx.textAlign = textAlign;
+            ctx.fillText(restaurantName, textAnchorX, 130);
+          }
+
+          // Imagem Central
+          drawPhotos11(175, 460);
+
+          // Bloco Inferior de Textos
+          let textStartY = 705;
+          if (showBadge && badgeText) {
+            drawBadgePill11(textStartY);
+            textStartY += 60;
+          }
+
+          ctx.fillStyle = themeStyle === "clean-white" ? "#0f172a" : "#ffffff";
+          ctx.font = headlineMetrics11.font;
+          const afterHeadlineY = renderWrappedText(
+            ctx,
+            headline,
+            textAnchorX,
+            textStartY,
+            contentW,
+            headlineMetrics11.lh,
+            2,
+            textAlign,
+          );
+
+          ctx.fillStyle = themeStyle === "clean-white" ? "#475569" : "#cbd5e1";
+          ctx.font = subtitleMetrics11.font;
+          renderWrappedText(
+            ctx,
+            subtitle,
+            textAnchorX,
+            afterHeadlineY + 12,
+            contentW,
+            subtitleMetrics11.lh,
+            2,
+            textAlign,
+          );
+
+          if (showCta) {
+            ctx.fillStyle = themeStyle === "clean-white" ? "#dc2626" : themeClasses.accentColor;
+            ctx.font = "bold 22px sans-serif";
+            ctx.textAlign = textAlign;
+            ctx.fillText(ctaText, textAnchorX, 1000);
+          }
+        } else {
+          // Layout Invertido: Textos no topo, Fotos na base
+          ctx.fillStyle = themeStyle === "clean-white" ? "#dc2626" : themeClasses.accentColor;
+          ctx.font = "bold 20px sans-serif";
+          ctx.textAlign = textAlign;
+          ctx.fillText(tagText.toUpperCase(), textAnchorX, 75);
+
+          if (showLogo) {
+            ctx.fillStyle = themeStyle === "clean-white" ? "#0f172a" : "#ffffff";
+            ctx.font = "bold 28px sans-serif";
+            ctx.textAlign = textAlign;
+            ctx.fillText(restaurantName, textAnchorX, 115);
+          }
+
+          let curY = 175;
+          if (showBadge && badgeText) {
+            drawBadgePill11(curY);
+            curY += 55;
+          }
+
+          ctx.fillStyle = themeStyle === "clean-white" ? "#0f172a" : "#ffffff";
+          ctx.font = headlineMetrics11.font;
+          const afterHeadlineY = renderWrappedText(
+            ctx,
+            headline,
+            textAnchorX,
+            curY,
+            contentW,
+            headlineMetrics11.lh,
+            2,
+            textAlign,
+          );
+
+          ctx.fillStyle = themeStyle === "clean-white" ? "#475569" : "#cbd5e1";
+          ctx.font = subtitleMetrics11.font;
+          const afterSubtitleY = renderWrappedText(
+            ctx,
+            subtitle,
+            textAnchorX,
+            afterHeadlineY + 12,
+            contentW,
+            subtitleMetrics11.lh,
+            2,
+            textAlign,
+          );
+
+          const photoY = Math.max(afterSubtitleY + 25, 410);
+          const photoH = 955 - photoY;
+          drawPhotos11(photoY, photoH);
+
+          if (showCta) {
+            ctx.fillStyle = themeStyle === "clean-white" ? "#dc2626" : themeClasses.accentColor;
+            ctx.font = "bold 22px sans-serif";
+            ctx.textAlign = textAlign;
+            ctx.fillText(ctaText, textAnchorX, 1025);
+          }
         }
       }
 
@@ -933,75 +1203,186 @@ ${showBadge && badgeText ? `✨ Destaque: ${badgeText}\n` : ""}🛵 Peça direto
       else {
         const paddingX = 90;
         const contentW = width - paddingX * 2;
+        const textAnchorX =
+          textAlign === "center"
+            ? width / 2
+            : textAlign === "right"
+            ? width - paddingX
+            : paddingX;
 
-        // Top Safe Area (Instagram UI)
-        ctx.fillStyle = themeStyle === "clean-white" ? "#dc2626" : themeClasses.accentColor;
-        ctx.font = "bold 26px sans-serif";
-        ctx.fillText(tagText.toUpperCase(), paddingX, 220);
-
-        if (showLogo) {
-          ctx.fillStyle = themeStyle === "clean-white" ? "#0f172a" : "#ffffff";
-          ctx.font = "bold 36px sans-serif";
-          ctx.fillText(restaurantName, paddingX, 275);
-        }
-
-        // Imagem Central Grande
-        const imgY = 340;
-        const imgH = 860;
-        if (loadedImage) {
-          drawImageCover(ctx, loadedImage, paddingX, imgY, contentW, imgH, 36);
-          ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
-          ctx.lineWidth = 4;
-          ctx.beginPath();
-          ctx.roundRect(paddingX, imgY, contentW, imgH, 36);
-          ctx.stroke();
-        }
-
-        // Badge de Destaque
-        let textStartY = 1290;
-        if (showBadge && badgeText) {
+        const drawBadgePill916 = (y: number) => {
+          ctx.save();
+          ctx.font = "bold 28px sans-serif";
+          const metrics = ctx.measureText(badgeText);
+          const badgeW = Math.max(metrics.width + 50, 240);
+          const badgeH = 58;
+          let badgeX = paddingX;
+          if (textAlign === "center") {
+            badgeX = (width - badgeW) / 2;
+          } else if (textAlign === "right") {
+            badgeX = width - paddingX - badgeW;
+          }
           ctx.fillStyle = themeStyle === "clean-white" ? "#e11d48" : themeClasses.accentColor;
           ctx.beginPath();
-          ctx.roundRect(paddingX, textStartY - 46, 300, 58, 29);
+          ctx.roundRect(badgeX, y - 46, badgeW, badgeH, 29);
           ctx.fill();
 
           ctx.fillStyle = themeStyle === "gold-luxury" ? "#000000" : "#ffffff";
-          ctx.font = "bold 28px sans-serif";
-          ctx.fillText(badgeText, paddingX + 26, textStartY - 7);
-          textStartY += 80;
-        }
+          ctx.textAlign = "center";
+          ctx.fillText(badgeText, badgeX + badgeW / 2, y - 7);
+          ctx.restore();
+        };
 
-        // Headline Principal Grande
-        ctx.fillStyle = themeStyle === "clean-white" ? "#0f172a" : "#ffffff";
-        ctx.font = "bold 56px sans-serif";
-        const afterHeadlineY = renderWrappedText(
-          ctx,
-          headline,
-          paddingX,
-          textStartY,
-          contentW,
-          68,
-          2,
-        );
+        const drawPhotos916 = (imgY: number, totalH: number) => {
+          if (photoCountMode === "2" && loadedImage2) {
+            const gap = 24;
+            const cardH = Math.floor((totalH - gap) / 2);
+            if (loadedImage1) {
+              drawImageCover(ctx, loadedImage1, paddingX, imgY, contentW, cardH, 28);
+              ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+              ctx.lineWidth = 3;
+              ctx.beginPath();
+              ctx.roundRect(paddingX, imgY, contentW, cardH, 28);
+              ctx.stroke();
+              if (selectedProduct1?.name) {
+                drawProductPill(ctx, selectedProduct1.name, paddingX + 20, imgY + cardH - 20, 420);
+              }
+            }
+            if (loadedImage2) {
+              const y2 = imgY + cardH + gap;
+              drawImageCover(ctx, loadedImage2, paddingX, y2, contentW, cardH, 28);
+              ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+              ctx.lineWidth = 3;
+              ctx.beginPath();
+              ctx.roundRect(paddingX, y2, contentW, cardH, 28);
+              ctx.stroke();
+              if (selectedProduct2?.name) {
+                drawProductPill(ctx, selectedProduct2.name, paddingX + 20, y2 + cardH - 20, 420);
+              }
+            }
+          } else if (loadedImage1) {
+            drawImageCover(ctx, loadedImage1, paddingX, imgY, contentW, totalH, 36);
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.roundRect(paddingX, imgY, contentW, totalH, 36);
+            ctx.stroke();
+            if (selectedProduct1?.name) {
+              drawProductPill(ctx, selectedProduct1.name, paddingX + 24, imgY + totalH - 24, 460);
+            }
+          }
+        };
 
-        // Subtítulo
-        ctx.fillStyle = themeStyle === "clean-white" ? "#475569" : "#cbd5e1";
-        ctx.font = "normal 30px sans-serif";
-        renderWrappedText(
-          ctx,
-          subtitle,
-          paddingX,
-          afterHeadlineY + 20,
-          contentW,
-          42,
-          2,
-        );
-
-        // CTA Rodapé Safe
-        if (showCta) {
+        if (textPosition === "bottom") {
+          // Layout Padrão: Fotos no centro, Textos na base
           ctx.fillStyle = themeStyle === "clean-white" ? "#dc2626" : themeClasses.accentColor;
-          ctx.font = "bold 28px sans-serif";
-          ctx.fillText(ctaText, paddingX, 1750);
+          ctx.font = "bold 26px sans-serif";
+          ctx.textAlign = textAlign;
+          ctx.fillText(tagText.toUpperCase(), textAnchorX, 220);
+
+          if (showLogo) {
+            ctx.fillStyle = themeStyle === "clean-white" ? "#0f172a" : "#ffffff";
+            ctx.font = "bold 36px sans-serif";
+            ctx.textAlign = textAlign;
+            ctx.fillText(restaurantName, textAnchorX, 275);
+          }
+
+          drawPhotos916(340, 860);
+
+          let textStartY = 1290;
+          if (showBadge && badgeText) {
+            drawBadgePill916(textStartY);
+            textStartY += 80;
+          }
+
+          ctx.fillStyle = themeStyle === "clean-white" ? "#0f172a" : "#ffffff";
+          ctx.font = headlineMetrics916.font;
+          const afterHeadlineY = renderWrappedText(
+            ctx,
+            headline,
+            textAnchorX,
+            textStartY,
+            contentW,
+            headlineMetrics916.lh,
+            2,
+            textAlign,
+          );
+
+          ctx.fillStyle = themeStyle === "clean-white" ? "#475569" : "#cbd5e1";
+          ctx.font = subtitleMetrics916.font;
+          renderWrappedText(
+            ctx,
+            subtitle,
+            textAnchorX,
+            afterHeadlineY + 20,
+            contentW,
+            subtitleMetrics916.lh,
+            2,
+            textAlign,
+          );
+
+          if (showCta) {
+            ctx.fillStyle = themeStyle === "clean-white" ? "#dc2626" : themeClasses.accentColor;
+            ctx.font = "bold 28px sans-serif";
+            ctx.textAlign = textAlign;
+            ctx.fillText(ctaText, textAnchorX, 1750);
+          }
+        } else {
+          // Layout Invertido: Textos no topo, Fotos na base
+          ctx.fillStyle = themeStyle === "clean-white" ? "#dc2626" : themeClasses.accentColor;
+          ctx.font = "bold 26px sans-serif";
+          ctx.textAlign = textAlign;
+          ctx.fillText(tagText.toUpperCase(), textAnchorX, 200);
+
+          if (showLogo) {
+            ctx.fillStyle = themeStyle === "clean-white" ? "#0f172a" : "#ffffff";
+            ctx.font = "bold 34px sans-serif";
+            ctx.textAlign = textAlign;
+            ctx.fillText(restaurantName, textAnchorX, 250);
+          }
+
+          let curY = 330;
+          if (showBadge && badgeText) {
+            drawBadgePill916(curY);
+            curY += 75;
+          }
+
+          ctx.fillStyle = themeStyle === "clean-white" ? "#0f172a" : "#ffffff";
+          ctx.font = headlineMetrics916.font;
+          const afterHeadlineY = renderWrappedText(
+            ctx,
+            headline,
+            textAnchorX,
+            curY,
+            contentW,
+            headlineMetrics916.lh,
+            2,
+            textAlign,
+          );
+
+          ctx.fillStyle = themeStyle === "clean-white" ? "#475569" : "#cbd5e1";
+          ctx.font = subtitleMetrics916.font;
+          const afterSubtitleY = renderWrappedText(
+            ctx,
+            subtitle,
+            textAnchorX,
+            afterHeadlineY + 20,
+            contentW,
+            subtitleMetrics916.lh,
+            2,
+            textAlign,
+          );
+
+          const photoY = Math.max(afterSubtitleY + 40, 680);
+          const totalH = 1680 - photoY;
+          drawPhotos916(photoY, totalH);
+
+          if (showCta) {
+            ctx.fillStyle = themeStyle === "clean-white" ? "#dc2626" : themeClasses.accentColor;
+            ctx.font = "bold 28px sans-serif";
+            ctx.textAlign = textAlign;
+            ctx.fillText(ctaText, textAnchorX, 1770);
+          }
         }
       }
 
@@ -1322,123 +1703,592 @@ ${showBadge && badgeText ? `✨ Destaque: ${badgeText}\n` : ""}🛵 Peça direto
             </CardContent>
           </Card>
 
-          {/* 3. Galeria de Imagens em Alta Resolução */}
+          {/* 3. Seleção de Produtos e Fotos do Cardápio */}
           <Card className="border-slate-200/80 bg-white shadow-xs">
-            <CardHeader className="pb-3 pt-4 px-4">
+            <CardHeader className="pb-3 pt-4 px-4 flex flex-row items-center justify-between">
               <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                <ImageIcon size={14} />
-                <span>Banco de Imagens em Alta Definição</span>
+                <UtensilsCrossedIcon size={14} className="text-primary" />
+                <span>Fotos dos Produtos do Cardápio</span>
               </CardTitle>
+              <Badge variant="outline" className="text-[10px] font-semibold text-slate-600 bg-slate-50">
+                {productsWithImage.length} fotos cadastradas
+              </Badge>
             </CardHeader>
-            <CardContent className="space-y-3 px-4 pb-4">
-              <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-                {[
-                  { id: "burger", label: "🍔 Burgers" },
-                  { id: "pizza", label: "🍕 Pizzas" },
-                  { id: "sushi", label: "🍣 Sushi & Poke" },
-                  { id: "meat", label: "🥩 Carnes" },
-                  { id: "dessert", label: "🍰 Doces & Açaí" },
-                  { id: "drinks", label: "🍹 Bebidas" },
-                  { id: "pasta", label: "🍝 Massas" },
-                ].map((cat) => (
+            <CardContent className="space-y-4 px-4 pb-4">
+              {/* Quantidade de fotos: 1 foto ou 2 fotos (combo) */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold text-slate-700">Composição das Fotos</Label>
+                  <span className="text-[10px] text-slate-400">
+                    {photoCountMode === "1" ? "1 foto de destaque" : "2 fotos lado a lado / combo"}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
                   <button
-                    key={cat.id}
                     type="button"
-                    onClick={() => setGalleryCategory(cat.id)}
+                    onClick={() => setPhotoCountMode("1")}
+                    className={cn(
+                      "flex items-center justify-center gap-2 rounded-xl border py-2 px-3 text-xs font-bold transition-all",
+                      photoCountMode === "1"
+                        ? "border-primary bg-primary/10 text-primary shadow-xs ring-1 ring-primary/30"
+                        : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100",
+                    )}
+                  >
+                    <ImageIcon size={14} />
+                    <span>1 Foto (Destaque)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPhotoCountMode("2");
+                      if (!selectedProduct2Id || selectedProduct2Id === selectedProduct1Id) {
+                        const other = productsWithImage.find((p) => p.id !== selectedProduct1Id);
+                        if (other) {
+                          setSelectedProduct2Id(other.id);
+                          setCustomImageUrl2("");
+                        }
+                      }
+                    }}
+                    className={cn(
+                      "flex items-center justify-center gap-2 rounded-xl border py-2 px-3 text-xs font-bold transition-all",
+                      photoCountMode === "2"
+                        ? "border-primary bg-primary/10 text-primary shadow-xs ring-1 ring-primary/30"
+                        : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100",
+                    )}
+                  >
+                    <LayersIcon size={14} />
+                    <span>2 Fotos (Combo / Duplo)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Filtro por Categoria */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold text-slate-700">Categoria do Cardápio</Label>
+                  <span className="text-[10px] text-slate-400">
+                    {categoryProducts.length} itens encontrados
+                  </span>
+                </div>
+                <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                  <button
+                    type="button"
+                    onClick={() => handleSelectCategory("ALL")}
                     className={cn(
                       "rounded-full px-3 py-1 text-xs font-semibold transition-all whitespace-nowrap",
-                      galleryCategory === cat.id
+                      selectedCategoryId === "ALL"
                         ? "bg-primary text-primary-foreground shadow-xs"
                         : "bg-slate-100 text-slate-600 hover:bg-slate-200",
                     )}
                   >
-                    {cat.label}
+                    Todas ({allProducts.length})
                   </button>
-                ))}
-              </div>
-
-              {/* Grid de Fotos em Alta Resolução */}
-              <div className="grid grid-cols-4 gap-2">
-                {CURATED_FOOD_GALLERY.filter((img) => img.category === galleryCategory).map((img) => (
-                  <button
-                    key={img.id}
-                    type="button"
-                    onClick={() => {
-                      setCustomImageUrl(img.url);
-                      setSelectedProductImageUrl("");
-                    }}
-                    className={cn(
-                      "group relative h-16 overflow-hidden rounded-xl border-2 transition-all",
-                      activeBannerImage === img.url
-                        ? "border-primary ring-2 ring-primary/40"
-                        : "border-slate-200 hover:border-slate-400",
-                    )}
-                    title={img.title}
-                  >
-                    <Image
-                      src={img.url}
-                      alt={img.title}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform"
-                    />
-                  </button>
-                ))}
-              </div>
-
-              {/* Fotos dos Produtos do Próprio Cardápio */}
-              {selectedCategory?.products && selectedCategory.products.length > 0 && (
-                <div className="pt-2 border-t border-slate-100 space-y-1.5">
-                  <Label className="text-[11px] font-semibold text-slate-500">
-                    Ou use fotos dos seus produtos cadastrados:
-                  </Label>
-                  <div className="flex gap-2 overflow-x-auto pb-1">
-                    {selectedCategory.products
-                      .filter((p) => p.imageUrl)
-                      .map((p) => (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedProductImageUrl(p.imageUrl || "");
-                            setCustomImageUrl("");
-                          }}
-                          className={cn(
-                            "group relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 transition-all",
-                            activeBannerImage === p.imageUrl
-                              ? "border-primary ring-2 ring-primary/40"
-                              : "border-slate-200 hover:border-slate-400",
-                          )}
-                          title={p.name}
-                        >
-                          <Image
-                            src={p.imageUrl || ""}
-                            alt={p.name}
-                            fill
-                            className="object-cover"
-                          />
-                        </button>
-                      ))}
-                  </div>
+                  {menuCategories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => handleSelectCategory(cat.id)}
+                      className={cn(
+                        "rounded-full px-3 py-1 text-xs font-semibold transition-all whitespace-nowrap",
+                        selectedCategoryId === cat.id
+                          ? "bg-primary text-primary-foreground shadow-xs"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+                      )}
+                    >
+                      {cat.name} ({cat.products?.length || 0})
+                    </button>
+                  ))}
                 </div>
-              )}
+              </div>
+
+              {/* Slots de Itens Selecionados Atualmente */}
+              <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-2.5 space-y-2">
+                <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600">
+                  <span>Itens selecionados para a arte:</span>
+                  <span className="text-[10px] text-slate-400">Clique nos produtos para escolher</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {/* Slot 1 */}
+                  <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 p-2">
+                    <div className="relative h-11 w-11 rounded-lg overflow-hidden border border-primary/20 shrink-0 bg-slate-200">
+                      {activeBannerImage1 ? (
+                        <Image src={activeBannerImage1} alt="Foto 1" fill className="object-cover" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-slate-400 text-[10px]">
+                          Sem foto
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1">
+                        <span className="rounded bg-primary px-1.5 py-0.2 text-[9px] font-bold text-primary-foreground">
+                          Foto 1
+                        </span>
+                        <span className="text-xs font-bold text-slate-800 truncate">
+                          {selectedProduct1?.name || "Nenhum selecionado"}
+                        </span>
+                      </div>
+                      <p className="text-[11px] font-semibold text-primary mt-0.5">
+                        {selectedProduct1?.price
+                          ? `R$ ${selectedProduct1.price.toFixed(2).replace(".", ",")}`
+                          : "Selecione abaixo"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Slot 2 */}
+                  {photoCountMode === "2" ? (
+                    <div className="flex items-center gap-2 rounded-lg border border-indigo-500/30 bg-indigo-50/50 p-2">
+                      <div className="relative h-11 w-11 rounded-lg overflow-hidden border border-indigo-500/20 shrink-0 bg-slate-200">
+                        {activeBannerImage2 ? (
+                          <Image src={activeBannerImage2} alt="Foto 2" fill className="object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-slate-400 text-[10px]">
+                            Sem foto
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1">
+                          <span className="rounded bg-indigo-600 px-1.5 py-0.2 text-[9px] font-bold text-white">
+                            Foto 2
+                          </span>
+                          <span className="text-xs font-bold text-slate-800 truncate">
+                            {selectedProduct2?.name || "Nenhum selecionado"}
+                          </span>
+                        </div>
+                        <p className="text-[11px] font-semibold text-indigo-700 mt-0.5">
+                          {selectedProduct2?.price
+                            ? `R$ ${selectedProduct2.price.toFixed(2).replace(".", ",")}`
+                            : "Selecione abaixo"}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="hidden sm:flex items-center justify-center rounded-lg border border-dashed border-slate-200 p-2 text-center text-[11px] text-slate-400">
+                      <span>Ative &quot;2 Fotos&quot; para criar combo</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Lista Interativa de Produtos com Imagens */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-slate-700">
+                  Produtos do cardápio ({categoryProducts.length}):
+                </Label>
+
+                {categoryProducts.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-slate-200 p-4 text-center text-xs text-slate-400">
+                    Nenhum produto cadastrado nesta categoria.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[300px] overflow-y-auto p-1 scrollbar-thin">
+                    {categoryProducts.map((p) => {
+                      const isSlot1 = selectedProduct1Id === p.id;
+                      const isSlot2 = photoCountMode === "2" && selectedProduct2Id === p.id;
+
+                      return (
+                        <div
+                          key={p.id}
+                          className={cn(
+                            "group relative flex flex-col justify-between rounded-xl border p-2 transition-all cursor-pointer text-left",
+                            isSlot1
+                              ? "border-primary bg-primary/5 ring-2 ring-primary/40 shadow-xs"
+                              : isSlot2
+                              ? "border-indigo-600 bg-indigo-50/50 ring-2 ring-indigo-500/40 shadow-xs"
+                              : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-xs",
+                          )}
+                          onClick={() => {
+                            if (photoCountMode === "1") {
+                              handleSelectProduct(p, 1);
+                            } else {
+                              if (!isSlot1 && !isSlot2) {
+                                handleSelectProduct(p, 2);
+                              }
+                            }
+                          }}
+                        >
+                          {/* Thumbnail */}
+                          <div className="relative h-20 w-full rounded-lg overflow-hidden bg-slate-100 mb-1.5 border border-slate-100">
+                            {p.imageUrl ? (
+                              <Image
+                                src={p.imageUrl}
+                                alt={p.name}
+                                fill
+                                className="object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full flex-col items-center justify-center text-slate-400 p-1">
+                                <ImageIcon size={18} className="text-slate-300 mb-1" />
+                                <span className="text-[9px] text-center text-slate-400">Sem foto</span>
+                              </div>
+                            )}
+
+                            {/* Badges de Seleção */}
+                            {isSlot1 && (
+                              <span className="absolute top-1 left-1 rounded bg-primary px-1.5 py-0.5 text-[9px] font-bold text-primary-foreground shadow-xs">
+                                Foto 1
+                              </span>
+                            )}
+                            {isSlot2 && (
+                              <span className="absolute top-1 left-1 rounded bg-indigo-600 px-1.5 py-0.5 text-[9px] font-bold text-white shadow-xs">
+                                Foto 2
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Título & Preço */}
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-slate-800 truncate" title={p.name}>
+                              {p.name}
+                            </p>
+                            <p className="text-[11px] font-semibold text-primary">
+                              R$ {p.price.toFixed(2).replace(".", ",")}
+                            </p>
+                          </div>
+
+                          {/* Botões de Ação para Escolher Slot */}
+                          {photoCountMode === "2" && (
+                            <div className="mt-2 flex gap-1 pt-1.5 border-t border-slate-100">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSelectProduct(p, 1);
+                                }}
+                                className={cn(
+                                  "flex-1 rounded py-0.5 text-[9px] font-bold transition-all",
+                                  isSlot1
+                                    ? "bg-primary text-white"
+                                    : "bg-slate-100 text-slate-700 hover:bg-slate-200",
+                                )}
+                              >
+                                Foto 1
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSelectProduct(p, 2);
+                                }}
+                                className={cn(
+                                  "flex-1 rounded py-0.5 text-[9px] font-bold transition-all",
+                                  isSlot2
+                                    ? "bg-indigo-600 text-white"
+                                    : "bg-slate-100 text-slate-700 hover:bg-slate-200",
+                                )}
+                              >
+                                Foto 2
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
 
               {/* URL Customizada */}
-              <div className="space-y-1 pt-1">
+              <div className="space-y-1 pt-1 border-t border-slate-100">
                 <Label htmlFor="customImageUrl" className="text-[11px] font-semibold text-slate-500">
-                  Ou cole um link de foto externa:
+                  Ou informe um link direto de foto externa:
                 </Label>
                 <Input
                   id="customImageUrl"
-                  value={customImageUrl}
-                  onChange={(e) => setCustomImageUrl(e.target.value)}
-                  placeholder="https://images.unsplash.com/..."
+                  value={customImageUrl1}
+                  onChange={(e) => setCustomImageUrl1(e.target.value)}
+                  placeholder="https://..."
                   className="h-8 rounded-xl border-slate-200 text-xs"
                 />
               </div>
             </CardContent>
           </Card>
 
-          {/* 4. Textos e Chamadas da Arte */}
+          {/* 4. Cenário & Fundo Fotográfico */}
+          <Card className="border-slate-200/80 bg-white shadow-xs">
+            <CardHeader className="pb-3 pt-4 px-4 flex flex-row items-center justify-between">
+              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                <ImageIcon size={14} className="text-primary" />
+                <span>Fundo & Cenário da Arte</span>
+              </CardTitle>
+              {selectedBgId !== "none" && (
+                <Badge variant="outline" className="text-[10px] font-semibold text-primary border-primary/30 bg-primary/5">
+                  Fundo Ativo
+                </Badge>
+              )}
+            </CardHeader>
+            <CardContent className="space-y-4 px-4 pb-4">
+              {/* Presets de Texturas Gastronômicas */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-slate-700">Texturas & Cenários Fotográficos</Label>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {BACKGROUND_PRESETS.map((preset) => {
+                    const isSelected = selectedBgId === preset.id && !customBgUrl.trim();
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedBgId(preset.id);
+                          setCustomBgUrl("");
+                        }}
+                        className={cn(
+                          "group relative flex flex-col items-center rounded-xl border p-1.5 text-center transition-all overflow-hidden",
+                          isSelected
+                            ? "border-primary bg-primary/10 ring-2 ring-primary/40 shadow-xs"
+                            : "border-slate-200 bg-slate-50/60 hover:border-slate-300 hover:bg-slate-100",
+                        )}
+                      >
+                        <div className="relative h-12 w-full rounded-lg overflow-hidden border border-slate-200/80 mb-1.5 bg-slate-900">
+                          {preset.url ? (
+                            <Image
+                              src={preset.url}
+                              alt={preset.name}
+                              fill
+                              className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                          ) : (
+                            <div className="h-full w-full bg-gradient-to-br from-slate-900 via-slate-800 to-amber-950 flex items-center justify-center">
+                              <span className="text-[10px] text-white font-bold">Gradiente</span>
+                            </div>
+                          )}
+                          {isSelected && (
+                            <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                              <span className="h-4 w-4 rounded-full bg-primary flex items-center justify-center text-white">
+                                <CheckIcon size={10} strokeWidth={3} />
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-[11px] font-bold text-slate-800 truncate w-full">
+                          {preset.name}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Opacidade do Fundo / Overlay */}
+              {selectedBgId !== "none" && (
+                <div className="space-y-1.5 pt-1 border-t border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold text-slate-700">
+                      Escurecimento do Fundo (Contraste)
+                    </Label>
+                    <span className="text-xs font-bold text-primary">{bgOverlayOpacity}%</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    Ajuste o contraste para que os produtos e textos fiquem 100% legíveis:
+                  </p>
+                  <div className="flex gap-2">
+                    {[30, 50, 65, 80, 90].map((op) => (
+                      <button
+                        key={op}
+                        type="button"
+                        onClick={() => setBgOverlayOpacity(op)}
+                        className={cn(
+                          "flex-1 rounded-lg border py-1 text-center text-xs font-bold transition-all",
+                          bgOverlayOpacity === op
+                            ? "border-primary bg-primary text-primary-foreground shadow-xs"
+                            : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100",
+                        )}
+                      >
+                        {op}%
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* URL Customizada de Fundo */}
+              <div className="space-y-1 pt-1 border-t border-slate-100">
+                <Label htmlFor="customBgUrl" className="text-[11px] font-semibold text-slate-500">
+                  Ou informe um link direto de imagem de fundo personalizada:
+                </Label>
+                <Input
+                  id="customBgUrl"
+                  value={customBgUrl}
+                  onChange={(e) => setCustomBgUrl(e.target.value)}
+                  placeholder="https://... (ex: foto do seu restaurante ou textura)"
+                  className="h-8 rounded-xl border-slate-200 text-xs"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 5. Posicionamento & Tipografia dos Textos */}
+          <Card className="border-slate-200/80 bg-white shadow-xs">
+            <CardHeader className="pb-3 pt-4 px-4">
+              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                <SlidersHorizontalIcon size={14} className="text-primary" />
+                <span>Posicionamento & Tipografia dos Textos</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 px-4 pb-4">
+              {/* Alinhamento dos Textos */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-slate-700">Alinhamento dos Textos</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTextAlign("left")}
+                    className={cn(
+                      "flex items-center justify-center gap-1.5 rounded-xl border p-2 text-xs font-bold transition-all",
+                      textAlign === "left"
+                        ? "border-primary bg-primary/10 text-primary ring-1 ring-primary/40 shadow-xs"
+                        : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100",
+                    )}
+                  >
+                    <AlignLeftIcon size={14} />
+                    <span>Esquerda</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTextAlign("center")}
+                    className={cn(
+                      "flex items-center justify-center gap-1.5 rounded-xl border p-2 text-xs font-bold transition-all",
+                      textAlign === "center"
+                        ? "border-primary bg-primary/10 text-primary ring-1 ring-primary/40 shadow-xs"
+                        : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100",
+                    )}
+                  >
+                    <AlignCenterIcon size={14} />
+                    <span>Centro</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTextAlign("right")}
+                    className={cn(
+                      "flex items-center justify-center gap-1.5 rounded-xl border p-2 text-xs font-bold transition-all",
+                      textAlign === "right"
+                        ? "border-primary bg-primary/10 text-primary ring-1 ring-primary/40 shadow-xs"
+                        : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100",
+                    )}
+                  >
+                    <AlignRightIcon size={14} />
+                    <span>Direita</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Posição dos Textos vs Foto */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-slate-700">Posição do Bloco de Texto (Feed & Stories)</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTextPosition("bottom")}
+                    className={cn(
+                      "flex flex-col items-center justify-center rounded-xl border p-2 text-center transition-all",
+                      textPosition === "bottom"
+                        ? "border-primary bg-primary/10 text-primary ring-1 ring-primary/40 shadow-xs"
+                        : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100",
+                    )}
+                  >
+                    <span className="text-xs font-bold">Texto Abaixo</span>
+                    <span className="text-[10px] text-slate-400">Fotos no centro, textos na base</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTextPosition("top")}
+                    className={cn(
+                      "flex flex-col items-center justify-center rounded-xl border p-2 text-center transition-all",
+                      textPosition === "top"
+                        ? "border-primary bg-primary/10 text-primary ring-1 ring-primary/40 shadow-xs"
+                        : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100",
+                    )}
+                  >
+                    <span className="text-xs font-bold">Texto Acima</span>
+                    <span className="text-[10px] text-slate-400">Textos no topo, fotos na base</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Disposição dos Selos (Lado a lado vs Empilhado) */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-slate-700">Disposição dos Selos (Tag & Badge)</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBadgeLayout("inline")}
+                    className={cn(
+                      "rounded-xl border p-2 text-center transition-all",
+                      badgeLayout === "inline"
+                        ? "border-primary bg-primary/10 text-primary ring-1 ring-primary/40 shadow-xs"
+                        : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100",
+                    )}
+                  >
+                    <span className="text-xs font-bold">Lado a Lado</span>
+                    <span className="block text-[10px] text-slate-400">Dispostos na mesma linha</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBadgeLayout("stacked")}
+                    className={cn(
+                      "rounded-xl border p-2 text-center transition-all",
+                      badgeLayout === "stacked"
+                        ? "border-primary bg-primary/10 text-primary ring-1 ring-primary/40 shadow-xs"
+                        : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100",
+                    )}
+                  >
+                    <span className="text-xs font-bold">Um Embaixo do Outro</span>
+                    <span className="block text-[10px] text-slate-400">Empilhados verticalmente</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Tamanhos das Fontes */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-100">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-slate-700">Tamanho do Título</Label>
+                  <div className="flex gap-1.5">
+                    {(["sm", "md", "lg", "xl"] as const).map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => setHeadlineSize(size)}
+                        className={cn(
+                          "flex-1 rounded-lg border py-1.5 text-center text-xs font-bold transition-all",
+                          headlineSize === size
+                            ? "border-primary bg-primary text-primary-foreground shadow-xs"
+                            : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100",
+                        )}
+                      >
+                        {size.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-slate-700">Tamanho do Subtítulo</Label>
+                  <div className="flex gap-1.5">
+                    {(["sm", "md", "lg"] as const).map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => setSubtitleSize(size)}
+                        className={cn(
+                          "flex-1 rounded-lg border py-1.5 text-center text-xs font-bold transition-all",
+                          subtitleSize === size
+                            ? "border-primary bg-primary text-primary-foreground shadow-xs"
+                            : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100",
+                        )}
+                      >
+                        {size.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 6. Textos e Chamadas da Arte */}
           <Card className="border-slate-200/80 bg-white shadow-xs">
             <CardHeader className="pb-3 pt-4 px-4">
               <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
@@ -1592,6 +2442,27 @@ ${showBadge && badgeText ? `✨ Destaque: ${badgeText}\n` : ""}🛵 Peça direto
                       themeClasses.gradient,
                     )}
                   />
+
+                  {/* Fundo Fotográfico / Cenário com Opacidade Customizável */}
+                  {activeBgImageUrl && (
+                    <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+                      <Image
+                        src={activeBgImageUrl}
+                        alt="Fundo Fotográfico"
+                        fill
+                        className="object-cover"
+                        priority
+                      />
+                      <div
+                        className={cn(
+                          "absolute inset-0",
+                          themeStyle === "clean-white" ? "bg-white" : "bg-black",
+                        )}
+                        style={{ opacity: bgOverlayOpacity / 100 }}
+                      />
+                    </div>
+                  )}
+
                   {/* Ambient Glow */}
                   <div
                     className="pointer-events-none absolute -top-12 -right-12 h-48 w-48 rounded-full blur-2xl opacity-35"
@@ -1599,24 +2470,60 @@ ${showBadge && badgeText ? `✨ Destaque: ${badgeText}\n` : ""}🛵 Peça direto
                   />
 
                   {/* Coluna Esquerda: Textos, Selo, Logo, CTA */}
-                  <div className="relative z-10 flex-1 flex flex-col justify-between min-w-0 pr-1">
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <span
-                          className={cn(
-                            "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[9px] font-bold tracking-wider uppercase truncate",
-                            themeClasses.tagBg,
+                  <div
+                    className={cn(
+                      "relative z-10 flex-1 flex flex-col justify-between min-w-0 pr-1",
+                      textAlign === "center"
+                        ? "text-center items-center"
+                        : textAlign === "right"
+                        ? "text-right items-end"
+                        : "text-left items-start",
+                    )}
+                  >
+                    <div className="space-y-1.5 w-full">
+                      <div
+                        className={cn(
+                          "flex items-center gap-2",
+                          textAlign === "center"
+                            ? "justify-center"
+                            : textAlign === "right"
+                            ? "justify-end"
+                            : "justify-between",
+                        )}
+                      >
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span
+                            className={cn(
+                              "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[9px] font-bold tracking-wider uppercase truncate",
+                              themeClasses.tagBg,
+                            )}
+                          >
+                            {tagText}
+                          </span>
+                          {badgeLayout === "inline" && showBadge && badgeText && (
+                            <span
+                              className={cn(
+                                "rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider shadow-xs",
+                                themeClasses.badgeBg,
+                              )}
+                            >
+                              {badgeText}
+                            </span>
                           )}
-                        >
-                          {tagText}
-                        </span>
+                        </div>
                         <span className="text-[9px] font-semibold text-slate-400 truncate">
                           {socialHandle}
                         </span>
                       </div>
 
                       {showLogo && (
-                        <div className="flex items-center gap-1.5">
+                        <div
+                          className={cn(
+                            "flex items-center gap-1.5",
+                            textAlign === "center" && "justify-center",
+                            textAlign === "right" && "justify-end",
+                          )}
+                        >
                           {restaurantLogo ? (
                             <div className="h-6 w-6 rounded-full overflow-hidden border border-white/20 bg-white/10 shrink-0">
                               <Image
@@ -1640,9 +2547,15 @@ ${showBadge && badgeText ? `✨ Destaque: ${badgeText}\n` : ""}🛵 Peça direto
                     </div>
 
                     {/* Headline & Subtitle */}
-                    <div className="space-y-1 my-auto">
-                      {showBadge && badgeText && (
-                        <div className="inline-flex mb-1">
+                    <div className="space-y-1 my-auto w-full">
+                      {badgeLayout === "stacked" && showBadge && badgeText && (
+                        <div
+                          className={cn(
+                            "inline-flex mb-1",
+                            textAlign === "center" && "w-full justify-center",
+                            textAlign === "right" && "w-full justify-end",
+                          )}
+                        >
                           <span
                             className={cn(
                               "rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider shadow-xs",
@@ -1656,8 +2569,12 @@ ${showBadge && badgeText ? `✨ Destaque: ${badgeText}\n` : ""}🛵 Peça direto
 
                       <h3
                         className={cn(
-                          "font-display font-extrabold uppercase tracking-tight leading-tight line-clamp-2 text-sm sm:text-base",
-                          layoutStyle === "bold-promo" && "text-base sm:text-lg tracking-normal font-black",
+                          "font-display font-extrabold uppercase tracking-tight leading-tight line-clamp-2",
+                          headlineSize === "sm" && "text-xs sm:text-sm",
+                          headlineSize === "md" && "text-sm sm:text-base",
+                          headlineSize === "lg" && "text-base sm:text-lg",
+                          headlineSize === "xl" && "text-lg sm:text-xl font-black",
+                          layoutStyle === "bold-promo" && "font-black tracking-normal",
                           themeClasses.titleColor,
                         )}
                       >
@@ -1666,7 +2583,10 @@ ${showBadge && badgeText ? `✨ Destaque: ${badgeText}\n` : ""}🛵 Peça direto
 
                       <p
                         className={cn(
-                          "text-[10px] line-clamp-2 leading-snug font-medium",
+                          "line-clamp-2 leading-snug font-medium",
+                          subtitleSize === "sm" && "text-[9px] sm:text-[10px]",
+                          subtitleSize === "md" && "text-[10px] sm:text-[11px]",
+                          subtitleSize === "lg" && "text-[11px] sm:text-xs",
                           themeClasses.subColor,
                         )}
                       >
@@ -1676,7 +2596,13 @@ ${showBadge && badgeText ? `✨ Destaque: ${badgeText}\n` : ""}🛵 Peça direto
 
                     {/* CTA Inferior */}
                     {showCta && (
-                      <div className="pt-1.5 border-t border-white/10 flex items-center gap-1.5 text-[10px] font-bold">
+                      <div
+                        className={cn(
+                          "pt-1.5 border-t border-white/10 flex items-center gap-1.5 text-[10px] font-bold w-full",
+                          textAlign === "center" && "justify-center",
+                          textAlign === "right" && "justify-end",
+                        )}
+                      >
                         <ShoppingBagIcon size={12} style={{ color: themeClasses.accentColor }} />
                         <span className="truncate" style={{ color: themeClasses.accentColor }}>
                           {ctaText}
@@ -1685,19 +2611,78 @@ ${showBadge && badgeText ? `✨ Destaque: ${badgeText}\n` : ""}🛵 Peça direto
                     )}
                   </div>
 
-                  {/* Coluna Direita: Foto Principal com Borda Estilosa */}
-                  <div className="relative z-10 w-[42%] shrink-0 flex items-center justify-center">
-                    <div className="relative w-full h-full rounded-2xl overflow-hidden border border-white/20 shadow-xl group">
-                      <Image
-                        src={activeBannerImage}
-                        alt="Foto do Prato"
-                        fill
-                        className="object-cover transition-transform duration-500 group-hover:scale-105"
-                        priority
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+                  {/* Coluna Direita: Imagem do Produto (ou 2 Fotos Empilhadas) */}
+                  {photoCountMode === "2" && activeBannerImage2 ? (
+                    <div className="relative z-10 w-[42%] shrink-0 flex flex-col gap-2 justify-center h-full">
+                      <div className="relative flex-1 w-full rounded-xl overflow-hidden border border-white/20 shadow-md group">
+                        {activeBannerImage1 ? (
+                          <Image
+                            src={activeBannerImage1}
+                            alt={selectedProduct1?.name || "Foto 1"}
+                            fill
+                            className="object-cover transition-transform duration-500 group-hover:scale-105"
+                            priority
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-slate-800 text-[10px] text-slate-400">
+                            Foto 1
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
+                        {selectedProduct1?.name && (
+                          <span className="absolute bottom-1 left-1.5 rounded bg-black/70 backdrop-blur-xs px-1.5 py-0.5 text-[8px] font-bold text-white truncate max-w-[85%]">
+                            {selectedProduct1.name}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="relative flex-1 w-full rounded-xl overflow-hidden border border-white/20 shadow-md group">
+                        {activeBannerImage2 ? (
+                          <Image
+                            src={activeBannerImage2}
+                            alt={selectedProduct2?.name || "Foto 2"}
+                            fill
+                            className="object-cover transition-transform duration-500 group-hover:scale-105"
+                            priority
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-slate-800 text-[10px] text-slate-400">
+                            Foto 2
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
+                        {selectedProduct2?.name && (
+                          <span className="absolute bottom-1 left-1.5 rounded bg-black/70 backdrop-blur-xs px-1.5 py-0.5 text-[8px] font-bold text-white truncate max-w-[85%]">
+                            {selectedProduct2.name}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="relative z-10 w-[42%] shrink-0 flex items-center justify-center">
+                      <div className="relative w-full h-full rounded-2xl overflow-hidden border border-white/20 shadow-xl group">
+                        {activeBannerImage1 ? (
+                          <Image
+                            src={activeBannerImage1}
+                            alt={selectedProduct1?.name || "Foto do Prato"}
+                            fill
+                            className="object-cover transition-transform duration-500 group-hover:scale-105"
+                            priority
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-slate-800 text-xs text-slate-400">
+                            Sem foto
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+                        {selectedProduct1?.name && (
+                          <span className="absolute bottom-1.5 left-2 rounded bg-black/70 backdrop-blur-xs px-2 py-0.5 text-[9px] font-bold text-white truncate max-w-[85%]">
+                            {selectedProduct1.name}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 /* ========================================================
@@ -1720,6 +2705,26 @@ ${showBadge && badgeText ? `✨ Destaque: ${badgeText}\n` : ""}🛵 Peça direto
                     )}
                   />
 
+                  {/* Fundo Fotográfico / Cenário com Opacidade Customizável */}
+                  {activeBgImageUrl && (
+                    <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+                      <Image
+                        src={activeBgImageUrl}
+                        alt="Fundo Fotográfico"
+                        fill
+                        className="object-cover"
+                        priority
+                      />
+                      <div
+                        className={cn(
+                          "absolute inset-0",
+                          themeStyle === "clean-white" ? "bg-white" : "bg-black",
+                        )}
+                        style={{ opacity: bgOverlayOpacity / 100 }}
+                      />
+                    </div>
+                  )}
+
                   {/* Efeito Glow / Iluminação Ambiente */}
                   <div
                     className="pointer-events-none absolute -top-20 -left-20 h-56 w-56 rounded-full blur-3xl opacity-30"
@@ -1728,15 +2733,36 @@ ${showBadge && badgeText ? `✨ Destaque: ${badgeText}\n` : ""}🛵 Peça direto
 
                   {/* ── Topo do Banner: Logo + Selo ─────────────── */}
                   <div className="relative z-10 flex items-start justify-between gap-2 shrink-0">
-                    <div className="flex flex-col gap-1">
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[9px] sm:text-[10px] font-bold tracking-wider uppercase",
-                          themeClasses.tagBg,
+                    <div
+                      className={cn(
+                        "flex flex-col gap-1 w-full",
+                        textAlign === "center"
+                          ? "items-center text-center"
+                          : textAlign === "right"
+                          ? "items-end text-right"
+                          : "items-start text-left",
+                      )}
+                    >
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[9px] sm:text-[10px] font-bold tracking-wider uppercase",
+                            themeClasses.tagBg,
+                          )}
+                        >
+                          <span>{tagText}</span>
+                        </span>
+                        {badgeLayout === "inline" && showBadge && badgeText && (
+                          <span
+                            className={cn(
+                              "rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider shadow-xs",
+                              themeClasses.badgeBg,
+                            )}
+                          >
+                            {badgeText}
+                          </span>
                         )}
-                      >
-                        <span>{tagText}</span>
-                      </span>
+                      </div>
 
                       {showLogo && (
                         <div className="flex items-center gap-2 mt-1">
@@ -1762,77 +2788,412 @@ ${showBadge && badgeText ? `✨ Destaque: ${badgeText}\n` : ""}🛵 Peça direto
                       )}
                     </div>
 
-                    <div className="text-right">
+                    <div className="text-right shrink-0">
                       <span className="text-[9px] font-semibold tracking-wider uppercase text-slate-400">
                         {socialHandle}
                       </span>
                     </div>
                   </div>
 
-                  {/* ── Centro do Banner: Imagem do Produto em Destaque ── */}
-                  <div className="relative z-10 my-auto flex items-center justify-center py-2 shrink-0">
-                    <div
-                      className={cn(
-                        "relative w-full rounded-2xl overflow-hidden border border-white/15 shadow-2xl group",
-                        aspectRatio === "1:1" ? "h-[160px] sm:h-[180px] max-w-[92%]" : "h-[220px] sm:h-[260px] max-w-[95%]",
-                      )}
-                    >
-                      <Image
-                        src={activeBannerImage}
-                        alt="Banner Promocional"
-                        fill
-                        className="object-cover transition-transform duration-500 group-hover:scale-105"
-                        priority
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
-                    </div>
-                  </div>
+                  {/* ── Renderização Condicional por Posição dos Textos ── */}
+                  {textPosition === "top" ? (
+                    <>
+                      {/* Bloco de Textos no Topo */}
+                      <div
+                        className={cn(
+                          "relative z-10 flex flex-col space-y-1 py-1 shrink-0 w-full",
+                          textAlign === "center"
+                            ? "items-center text-center"
+                            : textAlign === "right"
+                            ? "items-end text-right"
+                            : "items-start text-left",
+                        )}
+                      >
+                        {badgeLayout === "stacked" && showBadge && badgeText && (
+                          <div className="inline-flex">
+                            <span
+                              className={cn(
+                                "rounded-full px-3 py-0.5 text-[10px] sm:text-xs font-black uppercase tracking-wider shadow-md",
+                                themeClasses.badgeBg,
+                              )}
+                            >
+                              {badgeText}
+                            </span>
+                          </div>
+                        )}
 
-                  {/* ── Base do Banner: Título, Descrição e CTA ─── */}
-                  <div className="relative z-10 space-y-1.5 pt-1 shrink-0">
-                    {showBadge && badgeText && (
-                      <div className="inline-flex">
-                        <span
+                        <h3
                           className={cn(
-                            "rounded-full px-3 py-0.5 text-[10px] sm:text-xs font-black uppercase tracking-wider shadow-md",
-                            themeClasses.badgeBg,
+                            "font-display font-extrabold uppercase tracking-tight leading-tight line-clamp-2",
+                            aspectRatio === "9:16"
+                              ? headlineSize === "sm"
+                                ? "text-base sm:text-lg"
+                                : headlineSize === "md"
+                                ? "text-lg sm:text-xl"
+                                : headlineSize === "lg"
+                                ? "text-xl sm:text-2xl"
+                                : "text-2xl sm:text-3xl font-black"
+                              : headlineSize === "sm"
+                              ? "text-sm sm:text-base"
+                              : headlineSize === "md"
+                              ? "text-base sm:text-lg"
+                              : headlineSize === "lg"
+                              ? "text-lg sm:text-xl"
+                              : "text-xl sm:text-2xl font-black",
+                            layoutStyle === "bold-promo" && "font-black tracking-normal",
+                            themeClasses.titleColor,
                           )}
                         >
-                          {badgeText}
-                        </span>
-                      </div>
-                    )}
+                          {headline}
+                        </h3>
 
-                    <h3
+                        <p
+                          className={cn(
+                            "text-[11px] line-clamp-2 leading-relaxed font-medium",
+                            subtitleSize === "sm" && "text-[9px] sm:text-[10px]",
+                            subtitleSize === "md" && "text-[10px] sm:text-[11px]",
+                            subtitleSize === "lg" && "text-[11px] sm:text-xs",
+                            themeClasses.subColor,
+                          )}
+                        >
+                          {subtitle}
+                        </p>
+                      </div>
+
+                      {/* Fotos na Base */}
+                      {photoCountMode === "2" && activeBannerImage2 ? (
+                        aspectRatio === "1:1" ? (
+                          <div className="relative z-10 my-auto flex items-center justify-center py-1 shrink-0 w-full">
+                            <div className="grid grid-cols-2 gap-2 w-full max-w-[94%] h-[150px] sm:h-[170px]">
+                              <div className="relative h-full w-full rounded-xl overflow-hidden border border-white/20 shadow-xl group">
+                                {activeBannerImage1 ? (
+                                  <Image
+                                    src={activeBannerImage1}
+                                    alt={selectedProduct1?.name || "Foto 1"}
+                                    fill
+                                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                    priority
+                                  />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center bg-slate-800 text-[10px] text-slate-400">
+                                    Foto 1
+                                  </div>
+                                )}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
+                                {selectedProduct1?.name && (
+                                  <span className="absolute bottom-1 left-1.5 rounded bg-black/70 backdrop-blur-xs px-1.5 py-0.5 text-[8px] font-bold text-white truncate max-w-[85%]">
+                                    {selectedProduct1.name}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="relative h-full w-full rounded-xl overflow-hidden border border-white/20 shadow-xl group">
+                                {activeBannerImage2 ? (
+                                  <Image
+                                    src={activeBannerImage2}
+                                    alt={selectedProduct2?.name || "Foto 2"}
+                                    fill
+                                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                    priority
+                                  />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center bg-slate-800 text-[10px] text-slate-400">
+                                    Foto 2
+                                  </div>
+                                )}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
+                                {selectedProduct2?.name && (
+                                  <span className="absolute bottom-1 left-1.5 rounded bg-black/70 backdrop-blur-xs px-1.5 py-0.5 text-[8px] font-bold text-white truncate max-w-[85%]">
+                                    {selectedProduct2.name}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="relative z-10 my-auto flex flex-col gap-2 py-1 shrink-0 w-full max-w-[95%] h-[230px] sm:h-[260px]">
+                            <div className="relative flex-1 w-full rounded-2xl overflow-hidden border border-white/20 shadow-xl group">
+                              {activeBannerImage1 ? (
+                                <Image
+                                  src={activeBannerImage1}
+                                  alt={selectedProduct1?.name || "Foto 1"}
+                                  fill
+                                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                  priority
+                                />
+                              ) : (
+                                <div className="flex h-full w-full items-center justify-center bg-slate-800 text-[10px] text-slate-400">
+                                  Foto 1
+                                </div>
+                              )}
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
+                              {selectedProduct1?.name && (
+                                <span className="absolute bottom-1.5 left-2 rounded bg-black/70 backdrop-blur-xs px-2 py-0.5 text-[9px] font-bold text-white truncate max-w-[85%]">
+                                  {selectedProduct1.name}
+                                </span>
+                              )}
+                            </div>
+                            <div className="relative flex-1 w-full rounded-2xl overflow-hidden border border-white/20 shadow-xl group">
+                              {activeBannerImage2 ? (
+                                <Image
+                                  src={activeBannerImage2}
+                                  alt={selectedProduct2?.name || "Foto 2"}
+                                  fill
+                                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                  priority
+                                />
+                              ) : (
+                                <div className="flex h-full w-full items-center justify-center bg-slate-800 text-[10px] text-slate-400">
+                                  Foto 2
+                                </div>
+                              )}
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
+                              {selectedProduct2?.name && (
+                                <span className="absolute bottom-1.5 left-2 rounded bg-black/70 backdrop-blur-xs px-2 py-0.5 text-[9px] font-bold text-white truncate max-w-[85%]">
+                                  {selectedProduct2.name}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      ) : (
+                        <div className="relative z-10 my-auto flex items-center justify-center py-2 shrink-0">
+                          <div
+                            className={cn(
+                              "relative w-full rounded-2xl overflow-hidden border border-white/15 shadow-2xl group",
+                              aspectRatio === "1:1" ? "h-[155px] sm:h-[175px] max-w-[92%]" : "h-[220px] sm:h-[260px] max-w-[95%]",
+                            )}
+                          >
+                            {activeBannerImage1 ? (
+                              <Image
+                                src={activeBannerImage1}
+                                alt={selectedProduct1?.name || "Banner Promocional"}
+                                fill
+                                className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                priority
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center bg-slate-800 text-xs text-slate-400">
+                                Sem foto
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
+                            {selectedProduct1?.name && (
+                              <span className="absolute bottom-2 left-2 rounded bg-black/70 backdrop-blur-xs px-2 py-0.5 text-[9px] font-bold text-white truncate max-w-[85%]">
+                                {selectedProduct1.name}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {/* Fotos no Centro */}
+                      {photoCountMode === "2" && activeBannerImage2 ? (
+                        aspectRatio === "1:1" ? (
+                          <div className="relative z-10 my-auto flex items-center justify-center py-1 shrink-0 w-full">
+                            <div className="grid grid-cols-2 gap-2 w-full max-w-[94%] h-[160px] sm:h-[180px]">
+                              <div className="relative h-full w-full rounded-xl overflow-hidden border border-white/20 shadow-xl group">
+                                {activeBannerImage1 ? (
+                                  <Image
+                                    src={activeBannerImage1}
+                                    alt={selectedProduct1?.name || "Foto 1"}
+                                    fill
+                                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                    priority
+                                  />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center bg-slate-800 text-[10px] text-slate-400">
+                                    Foto 1
+                                  </div>
+                                )}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
+                                {selectedProduct1?.name && (
+                                  <span className="absolute bottom-1 left-1.5 rounded bg-black/70 backdrop-blur-xs px-1.5 py-0.5 text-[8px] font-bold text-white truncate max-w-[85%]">
+                                    {selectedProduct1.name}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="relative h-full w-full rounded-xl overflow-hidden border border-white/20 shadow-xl group">
+                                {activeBannerImage2 ? (
+                                  <Image
+                                    src={activeBannerImage2}
+                                    alt={selectedProduct2?.name || "Foto 2"}
+                                    fill
+                                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                    priority
+                                  />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center bg-slate-800 text-[10px] text-slate-400">
+                                    Foto 2
+                                  </div>
+                                )}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
+                                {selectedProduct2?.name && (
+                                  <span className="absolute bottom-1 left-1.5 rounded bg-black/70 backdrop-blur-xs px-1.5 py-0.5 text-[8px] font-bold text-white truncate max-w-[85%]">
+                                    {selectedProduct2.name}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="relative z-10 my-auto flex flex-col gap-2.5 py-1 shrink-0 w-full max-w-[95%] h-[240px] sm:h-[280px]">
+                            <div className="relative flex-1 w-full rounded-2xl overflow-hidden border border-white/20 shadow-xl group">
+                              {activeBannerImage1 ? (
+                                <Image
+                                  src={activeBannerImage1}
+                                  alt={selectedProduct1?.name || "Foto 1"}
+                                  fill
+                                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                  priority
+                                />
+                              ) : (
+                                <div className="flex h-full w-full items-center justify-center bg-slate-800 text-[10px] text-slate-400">
+                                  Foto 1
+                                </div>
+                              )}
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
+                              {selectedProduct1?.name && (
+                                <span className="absolute bottom-1.5 left-2 rounded bg-black/70 backdrop-blur-xs px-2 py-0.5 text-[9px] font-bold text-white truncate max-w-[85%]">
+                                  {selectedProduct1.name}
+                                </span>
+                              )}
+                            </div>
+                            <div className="relative flex-1 w-full rounded-2xl overflow-hidden border border-white/20 shadow-xl group">
+                              {activeBannerImage2 ? (
+                                <Image
+                                  src={activeBannerImage2}
+                                  alt={selectedProduct2?.name || "Foto 2"}
+                                  fill
+                                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                  priority
+                                />
+                              ) : (
+                                <div className="flex h-full w-full items-center justify-center bg-slate-800 text-[10px] text-slate-400">
+                                  Foto 2
+                                </div>
+                              )}
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
+                              {selectedProduct2?.name && (
+                                <span className="absolute bottom-1.5 left-2 rounded bg-black/70 backdrop-blur-xs px-2 py-0.5 text-[9px] font-bold text-white truncate max-w-[85%]">
+                                  {selectedProduct2.name}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      ) : (
+                        <div className="relative z-10 my-auto flex items-center justify-center py-2 shrink-0">
+                          <div
+                            className={cn(
+                              "relative w-full rounded-2xl overflow-hidden border border-white/15 shadow-2xl group",
+                              aspectRatio === "1:1" ? "h-[160px] sm:h-[180px] max-w-[92%]" : "h-[220px] sm:h-[260px] max-w-[95%]",
+                            )}
+                          >
+                            {activeBannerImage1 ? (
+                              <Image
+                                src={activeBannerImage1}
+                                alt={selectedProduct1?.name || "Banner Promocional"}
+                                fill
+                                className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                priority
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center bg-slate-800 text-xs text-slate-400">
+                                Sem foto
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
+                            {selectedProduct1?.name && (
+                              <span className="absolute bottom-2 left-2 rounded bg-black/70 backdrop-blur-xs px-2 py-0.5 text-[9px] font-bold text-white truncate max-w-[85%]">
+                                {selectedProduct1.name}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Bloco de Textos na Base */}
+                      <div
+                        className={cn(
+                          "relative z-10 flex flex-col space-y-1.5 pt-1 shrink-0 w-full",
+                          textAlign === "center"
+                            ? "items-center text-center"
+                            : textAlign === "right"
+                            ? "items-end text-right"
+                            : "items-start text-left",
+                        )}
+                      >
+                        {badgeLayout === "stacked" && showBadge && badgeText && (
+                          <div className="inline-flex">
+                            <span
+                              className={cn(
+                                "rounded-full px-3 py-0.5 text-[10px] sm:text-xs font-black uppercase tracking-wider shadow-md",
+                                themeClasses.badgeBg,
+                              )}
+                            >
+                              {badgeText}
+                            </span>
+                          </div>
+                        )}
+
+                        <h3
+                          className={cn(
+                            "font-display font-extrabold uppercase tracking-tight leading-tight line-clamp-2",
+                            aspectRatio === "9:16"
+                              ? headlineSize === "sm"
+                                ? "text-lg sm:text-xl"
+                                : headlineSize === "md"
+                                ? "text-xl sm:text-2xl"
+                                : headlineSize === "lg"
+                                ? "text-2xl sm:text-3xl"
+                                : "text-3xl sm:text-4xl font-black"
+                              : headlineSize === "sm"
+                              ? "text-sm sm:text-base"
+                              : headlineSize === "md"
+                              ? "text-base sm:text-lg"
+                              : headlineSize === "lg"
+                              ? "text-lg sm:text-xl"
+                              : "text-xl sm:text-2xl font-black",
+                            layoutStyle === "bold-promo" && "font-black tracking-normal text-lg sm:text-xl",
+                            themeClasses.titleColor,
+                          )}
+                        >
+                          {headline}
+                        </h3>
+
+                        <p
+                          className={cn(
+                            "text-[11px] line-clamp-2 leading-relaxed font-medium",
+                            subtitleSize === "sm" && "text-[9px] sm:text-[10px]",
+                            subtitleSize === "md" && "text-[10px] sm:text-[11px]",
+                            subtitleSize === "lg" && "text-[11px] sm:text-xs",
+                            themeClasses.subColor,
+                          )}
+                        >
+                          {subtitle}
+                        </p>
+                      </div>
+                    </>
+                  )}
+
+                  {/* CTA Inferior */}
+                  {showCta && (
+                    <div
                       className={cn(
-                        "font-display font-extrabold uppercase tracking-tight leading-tight line-clamp-2",
-                        aspectRatio === "9:16" ? "text-lg sm:text-xl" : "text-base sm:text-lg",
-                        layoutStyle === "bold-promo" && "font-black tracking-normal text-lg sm:text-xl",
-                        themeClasses.titleColor,
+                        "relative z-10 pt-2 flex items-center justify-between border-t border-white/10 text-[10px] sm:text-[11px] font-bold w-full",
+                        textAlign === "center" && "justify-center",
+                        textAlign === "right" && "justify-end",
                       )}
                     >
-                      {headline}
-                    </h3>
-
-                    <p
-                      className={cn(
-                        "text-[11px] line-clamp-2 leading-relaxed font-medium",
-                        themeClasses.subColor,
-                      )}
-                    >
-                      {subtitle}
-                    </p>
-
-                    {showCta && (
-                      <div className="pt-2 flex items-center justify-between border-t border-white/10 text-[10px] sm:text-[11px] font-bold">
-                        <span className="flex items-center gap-1.5 truncate" style={{ color: themeClasses.accentColor }}>
-                          <ShoppingBagIcon size={13} />
-                          <span className="truncate">{ctaText}</span>
-                        </span>
-                        <span className="text-slate-400 shrink-0">{socialHandle}</span>
-                      </div>
-                    )}
-                  </div>
+                      <span className="flex items-center gap-1.5 truncate" style={{ color: themeClasses.accentColor }}>
+                        <ShoppingBagIcon size={13} />
+                        <span className="truncate">{ctaText}</span>
+                      </span>
+                      {textAlign === "left" && <span className="text-slate-400 shrink-0">{socialHandle}</span>}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
