@@ -56,7 +56,12 @@ async function callGeminiNative(
   const cleaned = cleanKey(geminiKey);
   if (!cleaned) return null;
 
-  const models = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"];
+  const models = [
+    "gemini-1.5-flash",
+    "gemini-2.0-flash",
+    "gemini-2.5-flash",
+    "gemini-1.5-pro",
+  ];
   const userContent = `Cliente: ${customerName} (${customerPhone})\nMensagem: ${userMessage}`;
 
   for (const m of models) {
@@ -235,11 +240,12 @@ export const processarMensagemBot = async ({
 
   // 2. Busca cardápio atualizado e link da loja online
   const cardapio = await buscarRestauranteComCardapioPorSlug(slug).catch(() => null);
-  const vendasUrl =
+  const rawVendasUrl = (
     process.env.NEXT_PUBLIC_VENDAS_URL ||
     process.env.VENDAS_URL ||
-    "https://fswdonalds.eeytech.com";
-  const menuUrl = `${vendasUrl.replace(/\/$/, "")}/${slug}/menu`;
+    "https://fswdonalds.eeytech.com"
+  ).replace(/\/$/, "");
+  const menuUrl = `${rawVendasUrl}/`;
 
   let menuContext = `\n\n### INFORMAÇÕES DO RESTAURANTE E CARDÁPIO EM TEMPO REAL:
 Nome do Restaurante: ${restaurant.name}
