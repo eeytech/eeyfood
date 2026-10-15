@@ -67,13 +67,34 @@ async function getAvailableGeminiModels(key: string): Promise<string[]> {
         data?.models || [];
       const available = rawModels
         .filter((m) => m.supportedGenerationMethods?.includes("generateContent"))
-        .map((m) => m.name.replace(/^models\//, ""));
+        .map((m) => m.name.replace(/^models\//, ""))
+        .filter((name) => {
+          const lower = name.toLowerCase();
+          // Excluir modelos específicos de áudio/imagem/tts e versões descontinuadas
+          if (
+            lower.includes("tts") ||
+            lower.includes("image") ||
+            lower.includes("audio") ||
+            lower.includes("embed") ||
+            lower.includes("imagen") ||
+            lower.includes("robotics")
+          ) {
+            return false;
+          }
+          // O Google descontinuou gemini-2.5-flash para novos usuários
+          if (lower.startsWith("gemini-2.5-flash")) {
+            return false;
+          }
+          return true;
+        });
 
       if (available.length > 0) {
         const priorityPatterns = [
+          /^gemini-3\.8-flash/i,
+          /^gemini-3\.5-flash/i,
+          /^gemini-3.*-flash/i,
           /^gemini-2\.0-flash/i,
           /^gemini-1\.5-flash/i,
-          /^gemini-2\.5-flash/i,
           /^gemini-1\.5-pro/i,
         ];
         const sorted: string[] = [];
@@ -86,7 +107,7 @@ async function getAvailableGeminiModels(key: string): Promise<string[]> {
           if (!sorted.includes(m)) sorted.push(m);
         }
         cachedGeminiModels = { key, models: sorted, timestamp: now };
-        console.log(`[Bot AI] Modelos Gemini disponíveis para esta chave (${sorted.length}):`, sorted.slice(0, 4));
+        console.log(`[Bot AI] Modelos Gemini de texto disponíveis (${sorted.length}):`, sorted);
         return sorted;
       }
     } else {
@@ -98,10 +119,11 @@ async function getAvailableGeminiModels(key: string): Promise<string[]> {
   }
 
   return [
+    "gemini-3.8-flash",
+    "gemini-3.5-flash-lite",
     "gemini-2.0-flash",
     "gemini-1.5-flash",
     "gemini-1.5-flash-latest",
-    "gemini-2.5-flash",
     "gemini-1.5-pro",
   ];
 }
@@ -126,7 +148,7 @@ async function callGeminiNative(
   const candidateModels = await getAvailableGeminiModels(cleaned);
   const userContent = `Cliente: ${customerName} (${customerPhone})\nMensagem: ${userMessage}`;
 
-  for (const m of candidateModels.slice(0, 4)) {
+  for (const m of candidateModels.slice(0, 6)) {
     // 1. Tenta v1beta com system_instruction
     try {
       const res = await fetch(

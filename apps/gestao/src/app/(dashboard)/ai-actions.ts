@@ -273,18 +273,33 @@ export const testAiProviderKeyAction = async (
 
       const availableModels = rawModels
         .filter((m) => m.supportedGenerationMethods?.includes("generateContent"))
-        .map((m) => m.name.replace(/^models\//, ""));
+        .map((m) => m.name.replace(/^models\//, ""))
+        .filter((name) => {
+          const lower = name.toLowerCase();
+          if (
+            lower.includes("tts") ||
+            lower.includes("image") ||
+            lower.includes("audio") ||
+            lower.includes("embed") ||
+            lower.includes("imagen") ||
+            lower.includes("robotics")
+          ) {
+            return false;
+          }
+          if (lower.startsWith("gemini-2.5-flash")) {
+            return false;
+          }
+          return true;
+        });
 
       // Prioriza modelos comprovadamente estáveis e com alta disponibilidade gratuita:
-      // 1. gemini-1.5-flash (alta compatibilidade e disponibilidade imediata)
-      // 2. gemini-2.0-flash (nova geração rápida)
-      // 3. gemini-1.5-pro
-      // 4. gemini-2.5-flash (se habilitado pelo Google para a conta)
       const priorityPatterns = [
-        /^gemini-1\.5-flash/i,
+        /^gemini-3\.8-flash/i,
+        /^gemini-3\.5-flash/i,
+        /^gemini-3.*-flash/i,
         /^gemini-2\.0-flash/i,
+        /^gemini-1\.5-flash/i,
         /^gemini-1\.5-pro/i,
-        /^gemini-2\.5-flash/i,
       ];
 
       const candidatesToTry: string[] = [];
@@ -307,10 +322,12 @@ export const testAiProviderKeyAction = async (
       // Se a lista de modelos veio vazia, tenta os nomes padrão
       if (candidatesToTry.length === 0) {
         candidatesToTry.push(
-          "gemini-1.5-flash",
+          "gemini-3.8-flash",
+          "gemini-3.5-flash-lite",
           "gemini-2.0-flash",
-          "gemini-1.5-pro",
-          "gemini-2.5-flash"
+          "gemini-1.5-flash",
+          "gemini-1.5-flash-latest",
+          "gemini-1.5-pro"
         );
       }
 
