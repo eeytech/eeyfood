@@ -225,6 +225,61 @@ const normText = (s?: string | null) =>
     .trim();
 
 /**
+ * Remove qualquer vazamento de raciocínio interno, rascunhos ("Draft 1", "Draft 2")
+ * ou metadados de pensamento da IA antes de enviar para o cliente final.
+ */
+function cleanInternalReasoning(text: string): string {
+  if (!text) return "";
+  let cleaned = text.trim();
+
+  // Remove tags <thought>...</thought>
+  cleaned = cleaned.replace(/<thought>[\s\S]*?<\/thought>/gi, "").trim();
+
+  // Se contiver blocos de rascunho como "Draft 1:", "Draft 2:", etc., pega a mensagem final após o último draft
+  if (/Draft \d+/i.test(cleaned)) {
+    const drafts = cleaned.split(/Draft \d+.*?:/i);
+    if (drafts.length > 1) {
+      cleaned = drafts[drafts.length - 1].trim();
+    }
+  }
+
+  // Se contiver análise interna da IA antes da resposta ao cliente (ex: listagens de constraint, tone, action)
+  if (
+    cleaned.includes("Constraint Check:") ||
+    cleaned.includes("Intelligent Virtual Attendant") ||
+    cleaned.includes("Tone: Welcoming")
+  ) {
+    const lines = cleaned.split("\n");
+    let realMsgStartIndex = -1;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      // Detecta onde começa a fala real para o cliente
+      if (
+        /^(?:["“])?(?:Olá|Oi|Boa tarde|Bom dia|Boa noite|Seja bem-vindo|Opa|Tudo bem)/i.test(line) &&
+        !line.includes(":") &&
+        !line.includes("Greeting")
+      ) {
+        realMsgStartIndex = i;
+        break;
+      }
+    }
+    if (realMsgStartIndex !== -1) {
+      cleaned = lines.slice(realMsgStartIndex).join("\n").trim();
+    }
+  }
+
+  // Remove aspas envolventes se a IA tiver colocado toda a resposta entre aspas
+  if (
+    (cleaned.startsWith('"') && cleaned.endsWith('"')) ||
+    (cleaned.startsWith('“') && cleaned.endsWith('”'))
+  ) {
+    cleaned = cleaned.slice(1, -1).trim();
+  }
+
+  return cleaned;
+}
+
+/**
  * Utilitário resiliente para extrair e reparar JSON caso a IA tenha truncado a resposta
  * ou fechamento de chaves/aspas esteja incompleto.
  */
@@ -616,14 +671,16 @@ async function getAvailableGeminiModels(key: string): Promise<string[]> {
         .map((m) => m.name.replace(/^models\//, ""))
         .filter((name) => {
           const lower = name.toLowerCase();
-          // Excluir modelos específicos de áudio/imagem/tts e versões descontinuadas
+          // Excluir modelos específicos de áudio/imagem/tts, experimentais e de raciocínio (thinking)
           if (
             lower.includes("tts") ||
             lower.includes("image") ||
             lower.includes("audio") ||
             lower.includes("embed") ||
             lower.includes("imagen") ||
-            lower.includes("robotics")
+            lower.includes("robotics") ||
+            lower.includes("thinking") ||
+            lower.includes("exp")
           ) {
             return false;
           }
@@ -636,11 +693,12 @@ async function getAvailableGeminiModels(key: string): Promise<string[]> {
 
       if (available.length > 0) {
         const priorityPatterns = [
-          /^gemini-2\.0-flash/i,
+          /^gemini-1\.5-flash$/i,
+          /^gemini-1\.5-flash-latest$/i,
+          /^gemini-2\.0-flash$/i,
+          /^gemini-1\.5-pro$/i,
           /^gemini-1\.5-flash/i,
-          /^gemini-1\.5-pro/i,
-          /^gemini-2/i,
-          /^gemini-1/i,
+          /^gemini-2\.0-flash/i,
         ];
         const sorted: string[] = [];
         for (const pat of priorityPatterns) {
@@ -664,9 +722,9 @@ async function getAvailableGeminiModels(key: string): Promise<string[]> {
   }
 
   return [
-    "gemini-2.0-flash",
     "gemini-1.5-flash",
     "gemini-1.5-flash-latest",
+    "gemini-2.0-flash",
     "gemini-1.5-pro",
   ];
 }
@@ -765,9 +823,18 @@ async function callGeminiNative(
           console.log(`[Bot AI] Gemini (${m}) finishReason: ${finishReason}`);
         }
         const parts = candidate?.content?.parts;
-        const text = Array.isArray(parts)
-          ? parts.map((p: any) => p.text || "").join("").trim()
-          : candidate?.content?.parts?.[0]?.text?.trim();
+        // FILTRO ABSOLUTO: descarta qualquer bloco marcado com 'thought: true' (raciocínio interno da IA)
+        const validParts = Array.isArray(parts)
+          ? parts.filter((p: any) => !p.thought)
+          : [];
+        let text = validParts.map((p: any) => p.text || "").join("").trim();
+        if (!text && candidate?.content?.parts?.[0]?.text && !candidate?.content?.parts?.[0]?.thought) {
+          text = candidate.content.parts[0].text.trim();
+        }
+        // Remove quaisquer tags residuais de pensamento
+        if (text) {
+          text = text.replace(/<thought>[\s\S]*?<\/thought>/gi, "").trim();
+        }
 
         if (text) {
           console.log(`[Bot AI] Gemini v1beta (${m}) respondeu com sucesso! (${text.length} chars)`);
@@ -815,9 +882,16 @@ async function callGeminiNative(
         const data = await resContents.json();
         const candidate = data?.candidates?.[0];
         const parts = candidate?.content?.parts;
-        const text = Array.isArray(parts)
-          ? parts.map((p: any) => p.text || "").join("").trim()
-          : candidate?.content?.parts?.[0]?.text?.trim();
+        const validParts = Array.isArray(parts)
+          ? parts.filter((p: any) => !p.thought)
+          : [];
+        let text = validParts.map((p: any) => p.text || "").join("").trim();
+        if (!text && candidate?.content?.parts?.[0]?.text && !candidate?.content?.parts?.[0]?.thought) {
+          text = candidate.content.parts[0].text.trim();
+        }
+        if (text) {
+          text = text.replace(/<thought>[\s\S]*?<\/thought>/gi, "").trim();
+        }
 
         if (text) {
           console.log(`[Bot AI] Gemini v1beta (${m}) modo contents respondeu com sucesso! (${text.length} chars)`);
@@ -1207,6 +1281,9 @@ REGRA DE OURO: FAÇA APENAS UMA PERGUNTA POR VEZ. É TERMINANTEMENTE PROIBIDO JU
         }
       }
     }
+
+    // Limpeza de segurança: remove qualquer resquício de raciocínio interno ou rascunhos da IA
+    botReply = cleanInternalReasoning(botReply);
 
     // Garantia absoluta de segurança: NUNCA enviar código ou tags internas para o cliente WhatsApp
     if (botReply.includes("[CRIAR_PEDIDO_JSON]")) {
