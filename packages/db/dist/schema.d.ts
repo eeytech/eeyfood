@@ -573,6 +573,11 @@ export declare const restaurantsTable: import("drizzle-orm/pg-core").PgTableWith
                 linkUrl?: string;
                 buttonText?: string;
                 isActive: boolean;
+                textColor?: string;
+                align?: "left" | "center" | string;
+                categoryId?: string;
+                categoryName?: string;
+                discountPercent?: number;
             }[];
             driverParam: unknown;
             notNull: false;

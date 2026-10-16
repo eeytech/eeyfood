@@ -155,14 +155,6 @@ export const AVAILABLE_MODULES: SystemModule[] = [
     iconName: "GiftIcon",
   },
   {
-    id: "marketing_banners",
-    name: "Gerador de Banners",
-    description: "Criação assistida de banners visuais promocionais para divulgação de pratos no topo do aplicativo e cardápio.",
-    category: "marketing",
-    categoryLabel: "Marketing & Fidelidade",
-    iconName: "SparklesIcon",
-  },
-  {
     id: "marketing",
     name: "Rastreamento & Pixels",
     description: "Conexão de tags de conversão do Meta Ads (Facebook/Instagram), Google Ads e TikTok para remarketing profissional.",
@@ -302,7 +294,6 @@ export function getModuleForRoute(pathname: string): string | null {
   // Rotas aninhadas específicas
   if (sub === "configuracoes/documentacoes") return "documentacoes";
   if (sub === "configuracoes/usuarios") return "usuarios";
-  if (sub === "marketing/banners") return "marketing_banners";
   if (sub === "mesas/qrcodes") return "mesas";
   if (sub === "cardapio/impressao") return "cardapio";
   if (sub === "estoque/compras") return "estoque";

@@ -763,7 +763,6 @@ export const SCREEN_DOCUMENTATIONS: ScreenDocumentation[] = [
     ],
     relatedRoutes: [
       { label: "Impressão do Cardápio", href: "/cardapio/impressao" },
-      { label: "Gerador de Banners", href: "/marketing/banners" },
       { label: "Estoque", href: "/estoque" },
     ],
   },
@@ -1349,61 +1348,6 @@ export const SCREEN_DOCUMENTATIONS: ScreenDocumentation[] = [
     ],
   },
   {
-    id: "marketing-banners",
-    route: "/marketing/banners",
-    title: "Gerador de Banners Promocionais com IA",
-    category: "marketing",
-    categoryLabel: "Marketing e Clientes",
-    badge: "Design com IA",
-    iconName: "SparklesIcon",
-    summary:
-      "Crie artes e banners promocionais profissionais com Inteligência Artificial para o topo do seu cardápio digital e redes sociais em segundos, sem precisar de designer gráfico.",
-    features: [
-      {
-        name: "Geração Visual com IA",
-        badge: "Inteligência Artificial",
-        description:
-          "Descreva o prato ou promoção (ex: 'Festival de Hambúrguer Artesanal com Batata Frita Crocante') e a IA desenha o banner.",
-        action: "Digite o texto da promoção e clique em 'Gerar com IA'.",
-      },
-      {
-        name: "Publicação Instantânea no Cardápio",
-        badge: "1-Clique",
-        description:
-          "Ative o banner gerado direto no carrossel superior do cardápio digital dos seus clientes.",
-        action: "Clique em 'Publicar no Cardápio'.",
-      },
-      {
-        name: "Download em Alta Resolução para Redes",
-        badge: "Download",
-        description:
-          "Baixe a arte pronta no tamanho ideal para postar no Instagram Stories, Feed ou Status do WhatsApp da loja.",
-        action: "Clique em 'Baixar Imagem'.",
-      },
-    ],
-    howToUse: [
-      {
-        title: "1. Descrever a Promoção",
-        description:
-          "Selecione o estilo visual desejado e escreva a frase chamativa da sua oferta da semana.",
-        expectedResult: "A IA processa e renderiza opções profissionais.",
-      },
-      {
-        title: "2. Revisar e Publicar",
-        description:
-          "Escolha a melhor arte e clique em 'Publicar no Cardápio'.",
-        expectedResult: "Os clientes que abrirem o app verão o banner imediatamente no topo.",
-      },
-    ],
-    proTips: [
-      "Troque os banners toda semana para dar aspecto dinâmico ao cardápio e aumentar as vendas do prato promovido.",
-    ],
-    relatedRoutes: [
-      { label: "Cardápio", href: "/cardapio" },
-      { label: "Campanhas", href: "/campanhas" },
-    ],
-  },
-  {
     id: "campanhas",
     route: "/campanhas",
     title: "Campanhas Promocionais & Disparos",
@@ -1970,7 +1914,6 @@ export const SCREEN_DOCUMENTATIONS: ScreenDocumentation[] = [
     ],
     relatedRoutes: [
       { label: "WhatsApp", href: "/whatsapp" },
-      { label: "Banners com IA", href: "/marketing/banners" },
     ],
   },
   {
@@ -2129,9 +2072,6 @@ export function getDocForPathname(pathname: string): ScreenDocumentation | undef
   }
   if (normalized.startsWith("/mesas")) {
     return SCREEN_DOCUMENTATIONS.find((d) => d.id === "mesas");
-  }
-  if (normalized.startsWith("/marketing/banners")) {
-    return SCREEN_DOCUMENTATIONS.find((d) => d.id === "marketing-banners");
   }
   if (normalized.startsWith("/configuracoes/usuarios")) {
     return SCREEN_DOCUMENTATIONS.find((d) => d.id === "configuracoes-usuarios");
