@@ -435,6 +435,11 @@ export interface PromotionalBannerItem {
   linkUrl?: string;
   buttonText?: string;
   isActive: boolean;
+  textColor?: "white" | "dark" | "amber" | string;
+  align?: "left" | "center";
+  categoryId?: string;
+  categoryName?: string;
+  discountPercent?: number;
 }
 
 export type RestaurantPrinter = InferSelectModel<typeof restaurantPrintersTable>;

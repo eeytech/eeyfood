@@ -55,11 +55,23 @@ interface RestaurantFeaturesFormProps {
     isDineInEnabled: boolean;
     pizzaPricingRule?: "MAX" | "AVERAGE";
   };
+  menuCategories?: Array<{
+    id: string;
+    name: string;
+    imageUrl?: string | null;
+    products?: Array<{
+      id: string;
+      name: string;
+      imageUrl?: string | null;
+      price?: number | null;
+    }>;
+  }>;
 }
 
 export const RestaurantFeaturesForm = ({
   slug,
   initialValues,
+  menuCategories = [],
 }: RestaurantFeaturesFormProps) => {
   const [onlinePaymentGateway, setOnlinePaymentGateway] = useState<
     "MERCADO_PAGO" | "INFINITEPAY" | "DISABLED"
@@ -847,6 +859,7 @@ export const RestaurantFeaturesForm = ({
                 isCashbackEnabled={initialValues.isCashbackEnabled}
                 isCouponsEnabled={initialValues.isCouponsEnabled}
                 isDeliveryEnabled={isDeliveryEnabled}
+                menuCategories={menuCategories}
                 disabled={isPending}
               />
             </div>

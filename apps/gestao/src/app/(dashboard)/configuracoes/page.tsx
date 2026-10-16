@@ -11,7 +11,7 @@ import {
   ToggleRightIcon,
 } from "lucide-react";
 import { notFound } from "next/navigation";
-import { buscarImpressorasPorSlug } from "@fsw/db";
+import { buscarImpressorasPorSlug, buscarRestauranteComCardapioPorSlug } from "@fsw/db";
 
 import {
   Card,
@@ -57,13 +57,30 @@ const ConfiguracoesPage = async ({
       ? resolvedSearchParams.tab
       : "estabelecimento";
 
-  const config = await buscarConfiguracoesRestaurante(slug);
+  const [config, cardapioData] = await Promise.all([
+    buscarConfiguracoesRestaurante(slug),
+    buscarRestauranteComCardapioPorSlug(slug).catch(() => null),
+  ]);
 
   if (!config) {
     return notFound();
   }
 
   const { restaurant, operatingHours } = config;
+  const menuCategories =
+    cardapioData?.menuCategories?.map((c) => ({
+      id: c.id,
+      name: c.name,
+      imageUrl: c.imageUrl,
+      products:
+        c.products?.map((p) => ({
+          id: p.id,
+          name: p.name,
+          imageUrl: p.imageUrl,
+          price: p.price,
+        })) || [],
+    })) || [];
+
   const printers = await buscarImpressorasPorSlug(slug);
 
   const activeDaysCount = operatingHours.length;
@@ -280,6 +297,7 @@ const ConfiguracoesPage = async ({
               isDineInEnabled: restaurant.isDineInEnabled,
               pizzaPricingRule: restaurant.pizzaPricingRule as "MAX" | "AVERAGE",
             }}
+            menuCategories={menuCategories}
           />
         </TabsContent>
 

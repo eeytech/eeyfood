@@ -37,6 +37,9 @@ interface SlideItem {
   cardIcon: React.ReactNode;
   imageUrl?: string;
   linkUrl?: string;
+  textColor?: string;
+  align?: "left" | "center";
+  categoryId?: string;
 }
 
 export default function PromotionalCarousel({
@@ -84,12 +87,15 @@ export default function PromotionalCarousel({
         } else if (custom.gradient === "primary") {
           grad = "from-primary via-rose-600 to-amber-600";
           iconBg = "bg-white/20 text-white";
+        } else if (custom.gradient === "dark") {
+          grad = "from-slate-950 via-slate-900 to-zinc-900";
+          iconBg = "bg-white/15 text-white";
         }
 
         list.push({
           id: custom.id,
           badge: custom.tag || "DESTAQUE ESPECIAL",
-          badgeIcon: <SparklesIcon size={13} className="text-amber-300" />,
+          badgeIcon: <SparklesIcon size={13} className="text-amber-300 shrink-0" />,
           title: custom.title,
           subtitle: custom.subtitle || "Aproveite esta oferta exclusiva hoje no cardápio!",
           buttonText: custom.buttonText || "Aproveitar",
@@ -98,6 +104,9 @@ export default function PromotionalCarousel({
           cardIcon: <SparklesIcon size={32} />,
           imageUrl: custom.imageUrl,
           linkUrl: custom.linkUrl,
+          textColor: custom.textColor || "white",
+          align: (custom.align as "left" | "center") || "left",
+          categoryId: custom.categoryId,
         });
       }
     }
@@ -111,13 +120,15 @@ export default function PromotionalCarousel({
       list.push({
         id: "benefit-cashback",
         badge: "CASHBACK GARANTIDO",
-        badgeIcon: <CoinsIcon size={13} className="text-amber-200" />,
+        badgeIcon: <CoinsIcon size={13} className="text-amber-200 shrink-0" />,
         title: `Ganhe ${restaurant.cashbackPercent}% de volta no seu bolso`,
         subtitle: `Faça seu pedido agora e acumule saldo na carteira para economizar nas próximas compras!`,
         buttonText: "Aproveitar Cashback",
         gradientClass: "from-amber-600 via-orange-500 to-amber-500",
         iconBgClass: "bg-amber-400/20 text-amber-100",
         cardIcon: <CoinsIcon size={34} className="text-amber-200" />,
+        textColor: "white",
+        align: "left",
       });
     }
 
@@ -134,13 +145,15 @@ export default function PromotionalCarousel({
       list.push({
         id: "benefit-frete-gratis",
         badge: "FRETE GRÁTIS",
-        badgeIcon: <TruckIcon size={13} className="text-emerald-200" />,
+        badgeIcon: <TruckIcon size={13} className="text-emerald-200 shrink-0" />,
         title: `Entrega Grátis acima de ${formatCurrency(freeDeliveryThreshold)}`,
         subtitle: `Monte seu pedido com seus pratos e bebidas favoritos e ganhe entrega gratuita!`,
         buttonText: "Ver Cardápio",
         gradientClass: "from-emerald-700 via-teal-600 to-emerald-600",
         iconBgClass: "bg-emerald-400/20 text-emerald-100",
         cardIcon: <TruckIcon size={34} className="text-emerald-200" />,
+        textColor: "white",
+        align: "left",
       });
     }
 
@@ -148,29 +161,48 @@ export default function PromotionalCarousel({
     if (restaurant.isCouponsEnabled) {
       list.push({
         id: "benefit-cupons",
-        badge: "ECONOMIZE MAIS",
-        badgeIcon: <TagIcon size={13} className="text-violet-200" />,
-        title: "Cupons de Desconto disponíveis",
-        subtitle: "Aproveite cupons promocionais válidos e insira o código direto no checkout do app.",
+        badge: "CUPONS DE DESCONTO",
+        badgeIcon: <TagIcon size={13} className="text-violet-200 shrink-0" />,
+        title: "Cupons Promocionais disponíveis",
+        subtitle: "Aproveite cupons de desconto válidos e insira o código direto no checkout do app.",
         buttonText: "Escolher Itens",
         gradientClass: "from-violet-700 via-purple-600 to-indigo-600",
         iconBgClass: "bg-violet-400/20 text-violet-100",
         cardIcon: <TagIcon size={34} className="text-violet-200" />,
+        textColor: "white",
+        align: "left",
       });
     }
 
-    // 5. Cardápio Artesanal & Destaque
-    list.push({
-      id: "benefit-qualidade",
-      badge: "SABOR & QUALIDADE",
-      badgeIcon: <FlameIcon size={13} className="text-rose-200" />,
-      title: "Pratos preparados na hora para você",
-      subtitle: "Ingredientes selecionados, embalagens seguras e entrega rápida para sua melhor experiência.",
-      buttonText: "Explorar Cardápio",
-      gradientClass: "from-rose-600 via-red-600 to-amber-600",
-      iconBgClass: "bg-rose-400/20 text-rose-100",
-      cardIcon: <FlameIcon size={34} className="text-rose-200" />,
+    // 5. Benefício: Combos & Ofertas (se existir categoria de combos / promoções no cardápio)
+    const comboCategory = restaurant.menuCategories?.find((c) => {
+      const name = c.name.toLowerCase();
+      return (
+        name.includes("combo") ||
+        name.includes("promo") ||
+        name.includes("oferta") ||
+        name.includes("especial")
+      );
     });
+
+    if (comboCategory) {
+      list.push({
+        id: "benefit-combos",
+        badge: "COMBOS EM OFERTA",
+        badgeIcon: <FlameIcon size={13} className="text-amber-200 shrink-0" />,
+        title: `Combos & Ofertas Especiais`,
+        subtitle: `Economize pedindo nossos combos completos com acompanhamentos e bebidas inclusas!`,
+        buttonText: `Ver ${comboCategory.name}`,
+        gradientClass: "from-rose-600 via-orange-600 to-amber-600",
+        iconBgClass: "bg-amber-400/20 text-amber-100",
+        cardIcon: <FlameIcon size={34} className="text-amber-200" />,
+        linkUrl: `#category-${comboCategory.id}`,
+        imageUrl: comboCategory.imageUrl || comboCategory.products?.find((p) => p.imageUrl)?.imageUrl || undefined,
+        categoryId: comboCategory.id,
+        textColor: "white",
+        align: "left",
+      });
+    }
 
     return list;
   }, [
@@ -181,6 +213,7 @@ export default function PromotionalCarousel({
     restaurant.cashbackPercent,
     restaurant.freeDeliveryThreshold,
     restaurant.isCouponsEnabled,
+    restaurant.menuCategories,
   ]);
 
   const totalSlides = slides.length;
@@ -197,11 +230,13 @@ export default function PromotionalCarousel({
   }, []);
 
   const handleNext = useCallback(() => {
+    if (totalSlides <= 1) return;
     const next = (currentIndex + 1) % totalSlides;
     scrollToSlide(next);
   }, [currentIndex, totalSlides, scrollToSlide]);
 
   const handlePrev = useCallback(() => {
+    if (totalSlides <= 1) return;
     const prev = (currentIndex - 1 + totalSlides) % totalSlides;
     scrollToSlide(prev);
   }, [currentIndex, totalSlides, scrollToSlide]);
@@ -230,22 +265,65 @@ export default function PromotionalCarousel({
   }, [isPaused, totalSlides, handleNext]);
 
   const handleSlideAction = (slide: SlideItem) => {
+    // 1. Link externo (http/https)
     if (slide.linkUrl) {
-      if (slide.linkUrl.startsWith("#")) {
-        const el = document.querySelector(slide.linkUrl);
-        if (el) {
-          el.scrollIntoView({ behavior: "smooth", block: "start" });
-          return;
-        }
-      } else if (slide.linkUrl.startsWith("http")) {
+      if (slide.linkUrl.startsWith("http://") || slide.linkUrl.startsWith("https://")) {
         window.open(slide.linkUrl, "_blank", "noopener,noreferrer");
         return;
       }
+
+      // 2. Âncora direta para elemento (#category-xxx ou category-xxx)
+      const targetId = slide.linkUrl.startsWith("#")
+        ? slide.linkUrl.slice(1)
+        : slide.linkUrl;
+
+      const el =
+        document.getElementById(targetId) ||
+        document.getElementById(`category-${targetId}`) ||
+        (targetId ? document.querySelector(slide.linkUrl) : null);
+
+      if (el) {
+        const stickyNavHeight = 90;
+        const rect = el.getBoundingClientRect();
+        const targetTop = rect.top + window.pageYOffset - stickyNavHeight;
+        window.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" });
+
+        const categoryId = targetId.startsWith("category-")
+          ? targetId.replace("category-", "")
+          : targetId;
+        const mobileBtn = document.getElementById(`mobile-category-btn-${categoryId}`);
+        if (mobileBtn) {
+          mobileBtn.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+        }
+        return;
+      }
     }
-    // Ação padrão: rolar suavemente até as categorias do cardápio
-    const categoriesSection = document.getElementById("menu-categories-anchor");
+
+    // 3. Vínculo direto de categoria
+    if (slide.categoryId) {
+      const el = document.getElementById(`category-${slide.categoryId}`);
+      if (el) {
+        const stickyNavHeight = 90;
+        const rect = el.getBoundingClientRect();
+        const targetTop = rect.top + window.pageYOffset - stickyNavHeight;
+        window.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" });
+
+        const mobileBtn = document.getElementById(`mobile-category-btn-${slide.categoryId}`);
+        if (mobileBtn) {
+          mobileBtn.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+        }
+        return;
+      }
+    }
+
+    // 4. Ação padrão: rolar suavemente até o início das categorias do cardápio
+    const categoriesSection =
+      document.getElementById("menu-categories-anchor") ||
+      document.getElementById("menu-categories");
     if (categoriesSection) {
-      categoriesSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      const rect = categoriesSection.getBoundingClientRect();
+      const targetTop = rect.top + window.pageYOffset - 80;
+      window.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" });
     } else {
       window.scrollBy({ top: 320, behavior: "smooth" });
     }
@@ -271,79 +349,153 @@ export default function PromotionalCarousel({
         className="no-scrollbar flex w-full overflow-x-auto scroll-smooth snap-x snap-mandatory"
         style={{ scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch" }}
       >
-        {slides.map((slide) => (
-          <div
-            key={slide.id}
-            className={`relative min-w-full flex-none snap-center overflow-hidden bg-gradient-to-r ${slide.gradientClass} p-5 text-white sm:p-6 lg:p-7 transition-all`}
-          >
-            {/* Imagem de fundo opcional caso configurada */}
-            {slide.imageUrl && (
-              <div className="absolute inset-0 z-0 opacity-25 mix-blend-overlay">
-                <Image
-                  src={slide.imageUrl}
-                  alt={slide.title}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-            )}
+        {slides.map((slide) => {
+          const isCentered = slide.align === "center";
+          const isDarkText = slide.textColor === "dark";
+          const isAmberText = slide.textColor === "amber";
 
-            {/* Efeitos decorativos sutis em background (glass glow) */}
+          return (
             <div
-              className="pointer-events-none absolute -right-12 -top-12 h-56 w-56 rounded-full bg-white/10 blur-2xl"
-              aria-hidden="true"
-            />
-            <div
-              className="pointer-events-none absolute -bottom-10 right-20 h-40 w-40 rounded-full bg-black/10 blur-xl"
-              aria-hidden="true"
-            />
+              key={slide.id}
+              className={`relative min-w-full flex-none snap-center overflow-hidden bg-gradient-to-r ${slide.gradientClass} p-4 sm:p-6 lg:p-7 pb-8 sm:pb-6 transition-all min-h-[160px] sm:min-h-[185px] flex flex-col justify-center`}
+            >
+              {/* Imagem de fundo opcional caso configurada */}
+              {slide.imageUrl && (
+                <>
+                  <div className="absolute inset-0 z-0">
+                    <Image
+                      src={slide.imageUrl}
+                      alt={slide.title}
+                      fill
+                      className="object-cover object-center"
+                      sizes="(max-width: 768px) 100vw, 1200px"
+                    />
+                  </div>
+                  {/* Overlay gradiente com alto contraste para garantir 100% de legibilidade no mobile */}
+                  <div
+                    className={
+                      isCentered
+                        ? "absolute inset-0 z-0 bg-black/65 backdrop-blur-[1px]"
+                        : "absolute inset-0 z-0 bg-gradient-to-r from-black/90 via-black/75 to-black/35 sm:to-black/20"
+                    }
+                  />
+                </>
+              )}
 
-            <div className="relative z-10 flex items-center justify-between gap-4">
-              {/* Conteúdo textual e ação */}
-              <div className="flex-1 space-y-2 sm:space-y-3">
-                {/* Badge de categoria/benefício */}
-                <div className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white backdrop-blur-md shadow-xs">
-                  {slide.badgeIcon}
-                  <span>{slide.badge}</span>
-                </div>
-
-                {/* Título */}
-                <h3 className="font-display text-lg font-bold tracking-tight text-white sm:text-2xl lg:text-3xl drop-shadow-xs line-clamp-1 sm:line-clamp-2">
-                  {slide.title}
-                </h3>
-
-                {/* Subtítulo */}
-                <p className="text-xs text-white/90 sm:text-sm line-clamp-2 max-w-xl leading-relaxed drop-shadow-2xs">
-                  {slide.subtitle}
-                </p>
-
-                {/* Botão de chamada para ação */}
-                <div className="pt-1 sm:pt-2">
-                  <button
-                    type="button"
-                    onClick={() => handleSlideAction(slide)}
-                    className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs sm:text-sm font-bold text-slate-900 shadow-md transition-all hover:bg-white/95 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-white/80"
-                  >
-                    <span>{slide.buttonText}</span>
-                    {slide.linkUrl && slide.linkUrl.startsWith("http") ? (
-                      <ExternalLinkIcon size={14} className="text-slate-600" />
-                    ) : (
-                      <ArrowRightIcon size={14} className="text-slate-600" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Ícone decorativo ou ilustração (desktop/tablet) */}
+              {/* Efeitos decorativos sutis em background (glass glow) */}
               <div
-                className={`hidden sm:flex h-20 w-20 lg:h-24 lg:w-24 shrink-0 items-center justify-center rounded-2xl border border-white/25 shadow-inner backdrop-blur-md transition-transform duration-300 group-hover:scale-110 ${slide.iconBgClass}`}
+                className="pointer-events-none absolute -right-12 -top-12 h-56 w-56 rounded-full bg-white/10 blur-2xl"
                 aria-hidden="true"
+              />
+              <div
+                className="pointer-events-none absolute -bottom-10 right-20 h-40 w-40 rounded-full bg-black/15 blur-xl"
+                aria-hidden="true"
+              />
+
+              <div
+                className={`relative z-10 flex ${
+                  isCentered
+                    ? "flex-col items-center text-center justify-center"
+                    : "items-center justify-between gap-3 sm:gap-4"
+                } w-full`}
               >
-                {slide.cardIcon}
+                {/* Conteúdo textual e ação com alta responsividade */}
+                <div
+                  className={`flex-1 space-y-1.5 sm:space-y-2.5 max-w-full ${
+                    isCentered
+                      ? "flex flex-col items-center text-center"
+                      : "text-left"
+                  }`}
+                >
+                  {/* Badge de categoria/benefício */}
+                  <div
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider backdrop-blur-md shadow-xs ${
+                      isDarkText
+                        ? "border-slate-900/20 bg-slate-900/10 text-slate-900"
+                        : isAmberText
+                        ? "border-amber-400/30 bg-amber-400/20 text-amber-200"
+                        : "border-white/25 bg-white/20 text-white"
+                    }`}
+                  >
+                    {slide.badgeIcon}
+                    <span className="truncate max-w-[220px] sm:max-w-none">{slide.badge}</span>
+                  </div>
+
+                  {/* Título responsivo sem corte agressivo */}
+                  <h3
+                    className={`font-display text-base sm:text-xl md:text-2xl lg:text-3xl font-extrabold tracking-tight leading-tight sm:leading-snug break-words ${
+                      isDarkText
+                        ? "text-slate-950"
+                        : isAmberText
+                        ? "text-amber-100"
+                        : "text-white drop-shadow-xs"
+                    }`}
+                  >
+                    {slide.title}
+                  </h3>
+
+                  {/* Subtítulo nítido */}
+                  {slide.subtitle && (
+                    <p
+                      className={`text-xs sm:text-sm leading-relaxed max-w-xl break-words line-clamp-3 sm:line-clamp-none ${
+                        isDarkText
+                          ? "text-slate-800"
+                          : isAmberText
+                          ? "text-amber-200/90"
+                          : "text-white/95 drop-shadow-2xs"
+                      }`}
+                    >
+                      {slide.subtitle}
+                    </p>
+                  )}
+
+                  {/* Botão de chamada para ação */}
+                  <div className={`pt-1 sm:pt-1.5 ${isCentered ? "w-auto" : ""}`}>
+                    <button
+                      type="button"
+                      onClick={() => handleSlideAction(slide)}
+                      className={`inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 focus:outline-none focus:ring-2 ${
+                        isDarkText
+                          ? "bg-slate-950 text-white hover:bg-slate-800 focus:ring-slate-900"
+                          : "bg-white text-slate-900 hover:bg-white/95 focus:ring-white/80"
+                      }`}
+                    >
+                      <span>{slide.buttonText}</span>
+                      {slide.linkUrl && slide.linkUrl.startsWith("http") ? (
+                        <ExternalLinkIcon size={14} className={isDarkText ? "text-slate-300" : "text-slate-700"} />
+                      ) : (
+                        <ArrowRightIcon size={14} className={isDarkText ? "text-slate-300" : "text-slate-700"} />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Elemento visual decorativo ou thumbnail de produto (se não centralizado) */}
+                {!isCentered && (
+                  <div className="shrink-0 flex items-center justify-center">
+                    {slide.imageUrl ? (
+                      <div className="relative h-16 w-16 sm:h-20 sm:w-20 lg:h-24 lg:w-24 rounded-2xl overflow-hidden border-2 border-white/30 shadow-lg shrink-0 bg-black/20">
+                        <Image
+                          src={slide.imageUrl}
+                          alt={slide.title}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div
+                        className={`hidden sm:flex h-16 w-16 sm:h-20 sm:w-20 lg:h-24 lg:w-24 shrink-0 items-center justify-center rounded-2xl border border-white/25 shadow-inner backdrop-blur-md transition-transform duration-300 group-hover:scale-105 ${slide.iconBgClass}`}
+                        aria-hidden="true"
+                      >
+                        {slide.cardIcon}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Setas de navegação (visíveis no hover ou telas maiores) */}
@@ -353,7 +505,7 @@ export default function PromotionalCarousel({
             type="button"
             onClick={handlePrev}
             aria-label="Banner anterior"
-            className="absolute left-3 top-1/2 -translate-y-1/2 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-black/30 text-white backdrop-blur-md border border-white/20 opacity-0 group-hover:opacity-100 transition-all hover:bg-black/50 active:scale-90"
+            className="absolute left-3 top-1/2 -translate-y-1/2 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-md border border-white/20 opacity-0 group-hover:opacity-100 transition-all hover:bg-black/55 active:scale-90"
           >
             <ChevronLeftIcon size={18} />
           </button>
@@ -361,13 +513,13 @@ export default function PromotionalCarousel({
             type="button"
             onClick={handleNext}
             aria-label="Próximo banner"
-            className="absolute right-3 top-1/2 -translate-y-1/2 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-black/30 text-white backdrop-blur-md border border-white/20 opacity-0 group-hover:opacity-100 transition-all hover:bg-black/50 active:scale-90"
+            className="absolute right-3 top-1/2 -translate-y-1/2 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-md border border-white/20 opacity-0 group-hover:opacity-100 transition-all hover:bg-black/55 active:scale-90"
           >
             <ChevronRightIcon size={18} />
           </button>
 
-          {/* Indicadores de bolinha / pílula na base do carrossel */}
-          <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5">
+          {/* Indicadores de bolinha na base do carrossel */}
+          <div className="absolute bottom-2 sm:bottom-2.5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5">
             {slides.map((_, i) => (
               <button
                 key={i}

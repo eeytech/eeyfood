@@ -313,6 +313,11 @@ export const restaurantsTable = pgTable("Restaurant", {
       linkUrl?: string;
       buttonText?: string;
       isActive: boolean;
+      textColor?: string;
+      align?: "left" | "center" | string;
+      categoryId?: string;
+      categoryName?: string;
+      discountPercent?: number;
     }>
   >(),
   isDeliveryEnabled: boolean("isDeliveryEnabled").default(true).notNull(),
