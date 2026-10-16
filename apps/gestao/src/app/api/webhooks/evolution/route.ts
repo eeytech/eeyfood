@@ -468,8 +468,11 @@ export async function POST(request: Request) {
                 },
                 { timeout: 15000 },
               );
-              messageText =
-                geminiRes.data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+              const audioCandidate = geminiRes.data?.candidates?.[0];
+              const audioParts = audioCandidate?.content?.parts;
+              messageText = Array.isArray(audioParts)
+                ? audioParts.map((p: any) => p.text || "").join("").trim()
+                : audioCandidate?.content?.parts?.[0]?.text?.trim() || "";
             } catch (geminiErr) {
               console.warn("[Webhook Evolution] Aviso ao transcrever com Gemini:", geminiErr);
             }

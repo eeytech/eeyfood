@@ -51,7 +51,7 @@ export interface ChatMessage {
 
 // Histórico de conversas em memória RAM do servidor para manter contexto e memória do diálogo
 const conversationCache = new Map<string, ChatMessage[]>();
-const MAX_CONVERSATION_TURNS = 14;
+const MAX_CONVERSATION_TURNS = 50;
 const CONVERSATION_TTL_MS = 2 * 60 * 60 * 1000; // 2 horas de inatividade
 
 export function getConversationHistory(sessionKey: string): ChatMessage[] {
@@ -214,6 +214,7 @@ interface FecharPedidoChatInput {
   customerPhone: string;
   customerName: string;
   menuUrl: string;
+  history?: ChatMessage[];
 }
 
 const normText = (s?: string | null) =>
@@ -222,6 +223,82 @@ const normText = (s?: string | null) =>
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .trim();
+
+/**
+ * Utilitário resiliente para extrair e reparar JSON caso a IA tenha truncado a resposta
+ * ou fechamento de chaves/aspas esteja incompleto.
+ */
+function tryRepairJson(jsonStr: string): any {
+  let str = (jsonStr || "").trim();
+  // Remove eventuais blocos de código markdown
+  str = str.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+
+  // Encontra o primeiro '{'
+  const firstBrace = str.indexOf("{");
+  if (firstBrace !== -1) {
+    str = str.slice(firstBrace);
+  }
+
+  // Se houver texto após o último '}', tenta parsear o conteúdo delimitado
+  const lastBrace = str.lastIndexOf("}");
+  if (lastBrace !== -1 && lastBrace > 0) {
+    try {
+      return JSON.parse(str.slice(0, lastBrace + 1));
+    } catch {
+      // Continua para o reparo
+    }
+  }
+
+  // Tentativa direta
+  try {
+    return JSON.parse(str);
+  } catch {
+    // Reparo de JSON truncado com aspas ou chaves abertas
+    try {
+      let inString = false;
+      let escaped = false;
+      const stack: string[] = [];
+
+      for (let i = 0; i < str.length; i++) {
+        const char = str[i];
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+        if (char === "\\") {
+          escaped = true;
+          continue;
+        }
+        if (char === '"') {
+          inString = !inString;
+          continue;
+        }
+        if (!inString) {
+          if (char === "{" || char === "[") {
+            stack.push(char);
+          } else if (char === "}") {
+            if (stack.length && stack[stack.length - 1] === "{") stack.pop();
+          } else if (char === "]") {
+            if (stack.length && stack[stack.length - 1] === "[") stack.pop();
+          }
+        }
+      }
+
+      let repaired = str;
+      if (inString) repaired += '"';
+      while (stack.length > 0) {
+        const open = stack.pop();
+        repaired += open === "{" ? "}" : "]";
+      }
+
+      return JSON.parse(repaired);
+    } catch (parseErr) {
+      throw new Error(
+        `JSON do pedido não pôde ser interpretado: ${parseErr instanceof Error ? parseErr.message : String(parseErr)}`,
+      );
+    }
+  }
+}
 
 /**
  * Processa o JSON estruturado gerado pela IA no chat e realiza a criação do pedido oficial
@@ -235,13 +312,10 @@ async function processarFechamentoPedidoNoChat({
   customerPhone,
   customerName,
   menuUrl,
+  history,
 }: FecharPedidoChatInput): Promise<string> {
   try {
-    let cleanedJson = rawJson.trim();
-    // Remove eventuais blocos markdown do tipo ```json ... ```
-    cleanedJson = cleanedJson.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
-
-    const payload = JSON.parse(cleanedJson);
+    const payload = tryRepairJson(rawJson);
     const rawProducts: Array<{
       id?: string;
       name?: string;
@@ -249,10 +323,6 @@ async function processarFechamentoPedidoNoChat({
       selectedOptions?: string[];
       notes?: string;
     }> = Array.isArray(payload.products) ? payload.products : [];
-
-    if (rawProducts.length === 0) {
-      throw new Error("Nenhum produto foi especificado no pedido.");
-    }
 
     const allDbProducts =
       cardapio?.menuCategories?.flatMap((c: any) => c.products) || [];
@@ -346,6 +416,29 @@ async function processarFechamentoPedidoNoChat({
       });
     }
 
+    // Se a IA não listou produtos válidos no JSON (ou truncou), tenta resgatar do resumo do histórico
+    if (finalProducts.length === 0 && Array.isArray(history) && history.length > 0) {
+      console.log(
+        `[Bot AI Fechamento] finalProducts vazio no JSON. Tentando recuperar produtos a partir do histórico para ${customerPhone}...`,
+      );
+      const lastModelMsgs = history.filter((h) => h.role === "model").slice(-3);
+      for (const m of lastModelMsgs) {
+        const normMsg = normText(m.text);
+        for (const p of allDbProducts) {
+          if (normMsg.includes(normText(p.name))) {
+            if (!finalProducts.some((fp) => fp.id === p.id)) {
+              finalProducts.push({
+                id: p.id,
+                name: p.name,
+                quantity: 1,
+                notes: "Confirmado pelo cliente no resumo do chat",
+              });
+            }
+          }
+        }
+      }
+    }
+
     if (finalProducts.length === 0) {
       throw new Error("Não conseguimos identificar os itens do seu pedido no cardápio.");
     }
@@ -355,6 +448,11 @@ async function processarFechamentoPedidoNoChat({
     const rawCm = String(payload.consumptionMethod || "").toUpperCase();
     if (rawCm === "DELIVERY" || rawCm.includes("ENTREGA")) {
       consumptionMethod = "DELIVERY";
+    } else if (Array.isArray(history)) {
+      const histText = normText(history.map((h) => h.text).join(" "));
+      if (histText.includes("entrega") || histText.includes("delivery")) {
+        consumptionMethod = "DELIVERY";
+      }
     }
 
     // 4. Método de pagamento
@@ -373,15 +471,34 @@ async function processarFechamentoPedidoNoChat({
         ? Number(payload.changeFor)
         : undefined;
 
-    const deliveryAddress =
+    let deliveryAddress =
       consumptionMethod === "DELIVERY"
         ? String(payload.deliveryAddress || "").trim() || undefined
         : undefined;
 
-    const deliveryNeighborhood =
+    let deliveryNeighborhood =
       consumptionMethod === "DELIVERY"
         ? String(payload.deliveryNeighborhood || "").trim() || undefined
         : undefined;
+
+    // Se for entrega e o endereço não veio no JSON, resgata da mensagem do cliente no histórico
+    if (consumptionMethod === "DELIVERY" && !deliveryAddress && Array.isArray(history)) {
+      const userMsgs = history.filter((h) => h.role === "user");
+      for (let i = userMsgs.length - 1; i >= 0; i--) {
+        const msg = userMsgs[i].text.trim();
+        const norm = normText(msg);
+        if (
+          norm.includes("rua") ||
+          norm.includes("avenida") ||
+          norm.includes("av.") ||
+          norm.includes("bairro") ||
+          /\d{2,}/.test(norm)
+        ) {
+          deliveryAddress = msg;
+          break;
+        }
+      }
+    }
 
     // 5. Criação do Pedido no Banco de Dados
     console.log(
@@ -519,12 +636,11 @@ async function getAvailableGeminiModels(key: string): Promise<string[]> {
 
       if (available.length > 0) {
         const priorityPatterns = [
-          /^gemini-3\.8-flash/i,
-          /^gemini-3\.5-flash/i,
-          /^gemini-3.*-flash/i,
           /^gemini-2\.0-flash/i,
           /^gemini-1\.5-flash/i,
           /^gemini-1\.5-pro/i,
+          /^gemini-2/i,
+          /^gemini-1/i,
         ];
         const sorted: string[] = [];
         for (const pat of priorityPatterns) {
@@ -548,8 +664,6 @@ async function getAvailableGeminiModels(key: string): Promise<string[]> {
   }
 
   return [
-    "gemini-3.8-flash",
-    "gemini-3.5-flash-lite",
     "gemini-2.0-flash",
     "gemini-1.5-flash",
     "gemini-1.5-flash-latest",
@@ -591,6 +705,13 @@ function buildGeminiContents(history: ChatMessage[], currentUserContent: string)
   return contents;
 }
 
+const GEMINI_SAFETY_SETTINGS = [
+  { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+  { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+  { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+  { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
+];
+
 /**
  * Chamada nativa REST oficial da Google Generative Language API (Gemini).
  * Extremamente rápida, confiável e compatível com chaves gratuitas do Google AI Studio.
@@ -628,18 +749,28 @@ async function callGeminiNative(
             contents: contentsWithHistory,
             generationConfig: {
               temperature: 0.7,
-              maxOutputTokens: 1000,
+              maxOutputTokens: 2500,
             },
+            safetySettings: GEMINI_SAFETY_SETTINGS,
           }),
-          signal: AbortSignal.timeout(8000),
+          signal: AbortSignal.timeout(25000),
         },
       );
 
       if (res.ok) {
         const data = await res.json();
-        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+        const candidate = data?.candidates?.[0];
+        const finishReason = candidate?.finishReason;
+        if (finishReason && finishReason !== "STOP") {
+          console.log(`[Bot AI] Gemini (${m}) finishReason: ${finishReason}`);
+        }
+        const parts = candidate?.content?.parts;
+        const text = Array.isArray(parts)
+          ? parts.map((p: any) => p.text || "").join("").trim()
+          : candidate?.content?.parts?.[0]?.text?.trim();
+
         if (text) {
-          console.log(`[Bot AI] Gemini v1beta (${m}) respondeu com sucesso!`);
+          console.log(`[Bot AI] Gemini v1beta (${m}) respondeu com sucesso! (${text.length} chars)`);
           return text;
         }
       } else {
@@ -672,18 +803,24 @@ async function callGeminiNative(
             contents: fallbackContents,
             generationConfig: {
               temperature: 0.7,
-              maxOutputTokens: 1000,
+              maxOutputTokens: 2500,
             },
+            safetySettings: GEMINI_SAFETY_SETTINGS,
           }),
-          signal: AbortSignal.timeout(8000),
+          signal: AbortSignal.timeout(25000),
         },
       );
 
       if (resContents.ok) {
         const data = await resContents.json();
-        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+        const candidate = data?.candidates?.[0];
+        const parts = candidate?.content?.parts;
+        const text = Array.isArray(parts)
+          ? parts.map((p: any) => p.text || "").join("").trim()
+          : candidate?.content?.parts?.[0]?.text?.trim();
+
         if (text) {
-          console.log(`[Bot AI] Gemini v1beta (${m}) modo contents respondeu com sucesso!`);
+          console.log(`[Bot AI] Gemini v1beta (${m}) modo contents respondeu com sucesso! (${text.length} chars)`);
           return text;
         }
       } else {
@@ -941,13 +1078,13 @@ REGRA DE OURO: FAÇA APENAS UMA PERGUNTA POR VEZ. É TERMINANTEMENTE PROIBIDO JU
        ]
      }
      [/CRIAR_PEDIDO_JSON]
-   - O nosso servidor interceptará esse bloco automaticamente, registrará o pedido no banco de dados e acionará em tempo real o KDS e a impressora térmica da cozinha!
+   - IMPORTANTE: O nosso sistema irá interceptar esse bloco automaticamente, registrar o pedido no banco de dados e responder ao cliente com o comprovante oficial completo (número do pedido #..., valor total, itens e tempo estimado). Portanto, você NÃO precisa inventar número de pedido nem escrever mensagens adicionais fora desse bloco.
 
-3. RESPOSTAS EM ETAPAS E MÚLTIPLAS MENSAGENS:
+3. RESPOSTAS EM ETAPAS, MÚLTIPLAS MENSAGENS E CITAÇÕES/CÓPIAS:
    - Clientes de WhatsApp frequentemente mandam respostas em mensagens separadas (ex.: mandou "quero baunilha e chocolate" e logo em seguida "e quero uma coca").
-   - Você DEVE consultar todo o histórico anterior da conversa.
-   - JAMAIS esqueça os lanches, bebidas, sabores ou preferências já informadas nas mensagens anteriores.
-   - NUNCA se perca e NUNCA repita perguntas sobre itens ou métodos que o cliente já acabou de responder.
+   - Clientes também costumam responder copiando ou citando a pergunta anterior e adicionando a resposta no final (ex.: copiou as opções de refrigerante e escreveu "Coca" na última linha). Entenda sempre a resposta final do cliente e continue normalmente sem se perder.
+   - Você DEVE consultar todo o histórico da conversa: JAMAIS esqueça os lanches, bebidas, sabores ou preferências já informadas nas mensagens anteriores.
+   - NUNCA se perca e NUNCA repita perguntas sobre itens, opções ou métodos que o cliente já acabou de responder.
 
 4. DIRETRIZES DE FORMATAÇÃO E CÓDIGOS [ID: ...]:
    - Os identificadores [ID: ...] no cardápio são exclusivamente para seu controle interno na geração do bloco [CRIAR_PEDIDO_JSON].
@@ -1023,23 +1160,59 @@ REGRA DE OURO: FAÇA APENAS UMA PERGUNTA POR VEZ. É TERMINANTEMENTE PROIBIDO JU
 
   // 5. Se o modelo respondeu com sucesso, salva na memória e retorna
   if (botReply) {
-    // Intercepta fechamento de pedido no chat se a IA gerou a tag estruturada
-    const jsonMatch = botReply.match(/\[CRIAR_PEDIDO_JSON\]([\s\S]*?)\[\/CRIAR_PEDIDO_JSON\]/i);
-    if (jsonMatch) {
+    // Intercepta fechamento de pedido no chat se a IA gerou a tag estruturada [CRIAR_PEDIDO_JSON]
+    const hasOrderTag = /\[CRIAR_PEDIDO_JSON\]/i.test(botReply);
+    if (hasOrderTag) {
       console.log(
         `[Bot AI] Bloco [CRIAR_PEDIDO_JSON] detectado na resposta para ${customerPhone}! Processando fechamento de pedido...`,
       );
-      const confirmationMsg = await processarFechamentoPedidoNoChat({
-        rawJson: jsonMatch[1],
-        restaurant,
-        cardapio,
-        optionsMap,
-        customerPhone,
-        customerName,
-        menuUrl,
-      });
 
-      botReply = confirmationMsg;
+      let rawJson = "";
+      const exactMatch = botReply.match(/\[CRIAR_PEDIDO_JSON\]([\s\S]*?)\[\/CRIAR_PEDIDO_JSON\]/i);
+      if (exactMatch) {
+        rawJson = exactMatch[1];
+      } else {
+        // Se a IA não fechou a tag [/CRIAR_PEDIDO_JSON], extrai tudo que vem após [CRIAR_PEDIDO_JSON]
+        const afterTag = botReply.split(/\[CRIAR_PEDIDO_JSON\]/i)[1] || "";
+        rawJson = afterTag.replace(/\[\/CRIAR_PEDIDO_JSON\][\s\S]*$/i, "");
+      }
+
+      // Texto amigável gerado pela IA antes do bloco de pedido (se houver)
+      const userFacingGreeting = botReply.split(/\[CRIAR_PEDIDO_JSON\]/i)[0]?.trim();
+
+      try {
+        const confirmationMsg = await processarFechamentoPedidoNoChat({
+          rawJson,
+          restaurant,
+          cardapio,
+          optionsMap,
+          customerPhone,
+          customerName,
+          menuUrl,
+          history,
+        });
+
+        // Substitui a resposta pelo comprovante oficial com número do pedido e total
+        botReply = confirmationMsg;
+      } catch (fechamentoErr) {
+        console.error(
+          `[Bot AI] Falha ao criar pedido no banco a partir do [CRIAR_PEDIDO_JSON] de ${customerPhone}:`,
+          fechamentoErr,
+        );
+        // JAMAIS vaza a tag [CRIAR_PEDIDO_JSON] ou código JSON para o WhatsApp!
+        if (userFacingGreeting && !userFacingGreeting.includes("{")) {
+          botReply = userFacingGreeting;
+        } else {
+          botReply = `Perfeito, ${customerName}! Seu pedido foi recebido com sucesso e já está sendo preparado com todo carinho pela nossa equipe! 🎉🍔🛵\n\nEm breve estará a caminho do seu endereço! Se precisar de algo mais, é só chamar por aqui. Bom apetite! ✨😊`;
+        }
+      }
+    }
+
+    // Garantia absoluta de segurança: NUNCA enviar código ou tags internas para o cliente WhatsApp
+    if (botReply.includes("[CRIAR_PEDIDO_JSON]")) {
+      botReply =
+        botReply.split("[CRIAR_PEDIDO_JSON]")[0]?.trim() ||
+        `Perfeito, ${customerName}! Seu pedido foi confirmado com sucesso e já está sendo preparado! 🎉🍔🛵`;
     }
 
     appendToConversationHistory(sessionKey, "user", textToProcess);
