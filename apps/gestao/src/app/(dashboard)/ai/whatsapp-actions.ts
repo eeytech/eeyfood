@@ -100,7 +100,57 @@ export async function configurarWebhookEvolution(
 ): Promise<{ ok: boolean; error?: string }> {
   const events = ["MESSAGES_UPSERT", "SEND_MESSAGE", "CONNECTION_UPDATE"];
 
-  // Tentativa 1: Formato oficial aninhado da Evolution API (v2 / padrão)
+  // Tentativa 1: Formato plano padrão oficial da Evolution API (snake_case estrito)
+  try {
+    await axios.post(
+      `${evolutionUrl}/webhook/set/${encodeURIComponent(instanceName)}`,
+      {
+        enabled: true,
+        url: webhookUrl,
+        webhook_by_events: false,
+        webhook_base64: true,
+        events,
+      },
+      {
+        headers: { apikey: apiKey, "Content-Type": "application/json" },
+        timeout: 8000,
+      },
+    );
+    console.log(`[Webhook Sync] Webhook configurado com sucesso (Formato plano snake_case com webhook_base64).`);
+    return { ok: true };
+  } catch (err1: unknown) {
+    console.warn(
+      `[Webhook Sync] Formato 1 (snake_case) falhou:`,
+      axios.isAxiosError(err1) ? err1.response?.data : err1,
+    );
+  }
+
+  // Tentativa 2: Formato plano Evolution API v2 (camelCase estrito)
+  try {
+    await axios.post(
+      `${evolutionUrl}/webhook/set/${encodeURIComponent(instanceName)}`,
+      {
+        enabled: true,
+        url: webhookUrl,
+        webhookByEvents: false,
+        webhookBase64: true,
+        events,
+      },
+      {
+        headers: { apikey: apiKey, "Content-Type": "application/json" },
+        timeout: 8000,
+      },
+    );
+    console.log(`[Webhook Sync] Webhook configurado com sucesso (Formato plano camelCase com webhookBase64).`);
+    return { ok: true };
+  } catch (err2: unknown) {
+    console.warn(
+      `[Webhook Sync] Formato 2 (camelCase) falhou:`,
+      axios.isAxiosError(err2) ? err2.response?.data : err2,
+    );
+  }
+
+  // Tentativa 3: Formato aninhado oficial Evolution API v2 (camelCase estrito)
   try {
     await axios.post(
       `${evolutionUrl}/webhook/set/${encodeURIComponent(instanceName)}`,
@@ -108,11 +158,34 @@ export async function configurarWebhookEvolution(
         webhook: {
           enabled: true,
           url: webhookUrl,
-          byEvents: false,
           webhookByEvents: false,
-          webhook_by_events: false,
-          base64: true,
           webhookBase64: true,
+          events,
+        },
+      },
+      {
+        headers: { apikey: apiKey, "Content-Type": "application/json" },
+        timeout: 8000,
+      },
+    );
+    console.log(`[Webhook Sync] Webhook configurado com sucesso (Formato aninhado camelCase oficial com webhookBase64).`);
+    return { ok: true };
+  } catch (err3: unknown) {
+    console.warn(
+      `[Webhook Sync] Formato 3 (aninhado camelCase) falhou:`,
+      axios.isAxiosError(err3) ? err3.response?.data : err3,
+    );
+  }
+
+  // Tentativa 4: Formato aninhado Evolution API (snake_case)
+  try {
+    await axios.post(
+      `${evolutionUrl}/webhook/set/${encodeURIComponent(instanceName)}`,
+      {
+        webhook: {
+          enabled: true,
+          url: webhookUrl,
+          webhook_by_events: false,
           webhook_base64: true,
           events,
         },
@@ -122,50 +195,48 @@ export async function configurarWebhookEvolution(
         timeout: 8000,
       },
     );
+    console.log(`[Webhook Sync] Webhook configurado com sucesso (Formato aninhado com webhook_base64).`);
     return { ok: true };
-  } catch (err: unknown) {
-    const errorData = axios.isAxiosError(err) ? err.response?.data : null;
-    const status = axios.isAxiosError(err) ? err.response?.status : null;
+  } catch (err4: unknown) {
     console.warn(
-      `[Webhook Sync] Formato aninhado falhou (${status}):`,
-      JSON.stringify(errorData || (err instanceof Error ? err.message : err)),
+      `[Webhook Sync] Formato 4 (aninhado snake_case) falhou:`,
+      axios.isAxiosError(err4) ? err4.response?.data : err4,
     );
+  }
 
-    // Tentativa 2: Formato plano (Evolution API v1 ou distribuições sem wrapping)
-    try {
-      await axios.post(
-        `${evolutionUrl}/webhook/set/${encodeURIComponent(instanceName)}`,
-        {
+  // Tentativa 5: Formato aninhado com base64 simples
+  try {
+    await axios.post(
+      `${evolutionUrl}/webhook/set/${encodeURIComponent(instanceName)}`,
+      {
+        webhook: {
           enabled: true,
           url: webhookUrl,
           byEvents: false,
-          webhookByEvents: false,
-          webhook_by_events: false,
           base64: true,
-          webhookBase64: true,
-          webhook_base64: true,
           events,
         },
-        {
-          headers: { apikey: apiKey, "Content-Type": "application/json" },
-          timeout: 8000,
-        },
-      );
-      return { ok: true };
-    } catch (fallbackErr: unknown) {
-      const fbData = axios.isAxiosError(fallbackErr) ? fallbackErr.response?.data : null;
-      const fbStatus = axios.isAxiosError(fallbackErr) ? fallbackErr.response?.status : null;
-      const msg =
-        fbData?.message ||
-        (Array.isArray(fbData?.response?.message) ? fbData.response.message.join(", ") : null) ||
-        JSON.stringify(fbData) ||
-        (fallbackErr instanceof Error ? fallbackErr.message : "Falha ao registrar webhook");
-      console.error(
-        `[Webhook Sync] Falha ao configurar webhook na Evolution API (${fbStatus}):`,
-        msg,
-      );
-      return { ok: false, error: msg };
-    }
+      },
+      {
+        headers: { apikey: apiKey, "Content-Type": "application/json" },
+        timeout: 8000,
+      },
+    );
+    console.log(`[Webhook Sync] Webhook configurado com sucesso (Formato aninhado com base64).`);
+    return { ok: true };
+  } catch (fallbackErr: unknown) {
+    const fbData = axios.isAxiosError(fallbackErr) ? fallbackErr.response?.data : null;
+    const fbStatus = axios.isAxiosError(fallbackErr) ? fallbackErr.response?.status : null;
+    const msg =
+      fbData?.message ||
+      (Array.isArray(fbData?.response?.message) ? fbData.response.message.join(", ") : null) ||
+      JSON.stringify(fbData) ||
+      (fallbackErr instanceof Error ? fallbackErr.message : "Falha ao registrar webhook");
+    console.error(
+      `[Webhook Sync] Falha definitiva ao configurar webhook na Evolution API (${fbStatus}):`,
+      msg,
+    );
+    return { ok: false, error: msg };
   }
 }
 
@@ -264,10 +335,12 @@ export async function buscarStatusWhatsAppAction(
           const currentUrl = findRes.data?.url || findRes.data?.webhook?.url;
           webhookEnabled = Boolean(findRes.data?.enabled ?? findRes.data?.webhook?.enabled);
           const currentBase64 = Boolean(
-            findRes.data?.base64 ??
-            findRes.data?.webhook?.base64 ??
+            findRes.data?.webhook_base64 ??
             findRes.data?.webhookBase64 ??
-            findRes.data?.webhook?.webhookBase64
+            findRes.data?.base64 ??
+            findRes.data?.webhook?.webhook_base64 ??
+            findRes.data?.webhook?.webhookBase64 ??
+            findRes.data?.webhook?.base64
           );
 
           // Se não estiver habilitado, apontando para URL incorreta ou sem base64 ativo, atualiza

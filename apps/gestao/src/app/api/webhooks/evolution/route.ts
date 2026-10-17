@@ -89,14 +89,147 @@ function markMessageAsProcessed(messageId?: string) {
   processedMessageIds.set(messageId, Date.now());
 }
 
+function findBase64InObject(obj: any, maxDepth = 6): string | undefined {
+  if (!obj || maxDepth <= 0) return undefined;
+  if (typeof obj === "string") {
+    const s = obj.trim();
+    if (s.startsWith("data:audio/") && s.includes(";base64,")) {
+      return s;
+    }
+    if (s.length > 200 && /^[A-Za-z0-9+/=\r\n]+$/.test(s.slice(0, 200))) {
+      return s;
+    }
+    return undefined;
+  }
+  if (typeof obj === "object") {
+    const ignoreKeys = [
+      "jpegThumbnail",
+      "thumbnail",
+      "profilePicUrl",
+      "qr",
+      "qrcode",
+      "imageMessage",
+      "videoMessage",
+      "documentMessage",
+    ];
+    const priorityKeys = [
+      "base64",
+      "audio",
+      "media",
+      "data",
+      "audioMessage",
+      "pttMessage",
+      "message",
+    ];
+
+    for (const key of priorityKeys) {
+      if (obj[key] && !ignoreKeys.includes(key)) {
+        const found = findBase64InObject(obj[key], maxDepth - 1);
+        if (found) return found;
+      }
+    }
+    for (const key of Object.keys(obj)) {
+      if (!priorityKeys.includes(key) && !ignoreKeys.includes(key)) {
+        const found = findBase64InObject(obj[key], maxDepth - 1);
+        if (found) return found;
+      }
+    }
+  }
+  return undefined;
+}
+
+const webhookBase64VerifiedInstances = new Set<string>();
+
 async function autoEnableWebhookBase64(
   evolutionUrl: string,
   instanceName: string,
   apiKey: string,
 ) {
+  const events = ["MESSAGES_UPSERT", "SEND_MESSAGE", "CONNECTION_UPDATE"];
+  const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://gestao.fswdonalds.eeytech.com"}/api/webhooks/evolution`;
+
+  // Formato 1: Padrão oficial Evolution API (plano snake_case)
   try {
-    const events = ["MESSAGES_UPSERT", "SEND_MESSAGE", "CONNECTION_UPDATE"];
-    const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://gestao.fswdonalds.eeytech.com"}/api/webhooks/evolution`;
+    await axios.post(
+      `${evolutionUrl}/webhook/set/${encodeURIComponent(instanceName)}`,
+      {
+        enabled: true,
+        url: webhookUrl,
+        webhook_by_events: false,
+        webhook_base64: true,
+        events,
+      },
+      { headers: { apikey: apiKey, "Content-Type": "application/json" }, timeout: 6000 },
+    );
+    console.log(`[Webhook Evolution] Webhook auto-sincronizado (Formato 1 snake_case) com webhook_base64: true para "${instanceName}"`);
+    return;
+  } catch (err1) {
+    console.warn(`[Webhook Evolution] Formato 1 (snake_case) falhou:`, axios.isAxiosError(err1) ? err1.response?.data : err1);
+  }
+
+  // Formato 2: Evolution API v2 (plano camelCase)
+  try {
+    await axios.post(
+      `${evolutionUrl}/webhook/set/${encodeURIComponent(instanceName)}`,
+      {
+        enabled: true,
+        url: webhookUrl,
+        webhookByEvents: false,
+        webhookBase64: true,
+        events,
+      },
+      { headers: { apikey: apiKey, "Content-Type": "application/json" }, timeout: 6000 },
+    );
+    console.log(`[Webhook Evolution] Webhook auto-sincronizado (Formato 2 camelCase) com webhookBase64: true para "${instanceName}"`);
+    return;
+  } catch (err2) {
+    console.warn(`[Webhook Evolution] Formato 2 (camelCase) falhou:`, axios.isAxiosError(err2) ? err2.response?.data : err2);
+  }
+
+  // Formato 3: Evolution API v2 aninhado oficial (camelCase)
+  try {
+    await axios.post(
+      `${evolutionUrl}/webhook/set/${encodeURIComponent(instanceName)}`,
+      {
+        webhook: {
+          enabled: true,
+          url: webhookUrl,
+          webhookByEvents: false,
+          webhookBase64: true,
+          events,
+        },
+      },
+      { headers: { apikey: apiKey, "Content-Type": "application/json" }, timeout: 6000 },
+    );
+    console.log(`[Webhook Evolution] Webhook auto-sincronizado (Formato 3 aninhado camelCase) com webhookBase64 para "${instanceName}"`);
+    return;
+  } catch (err3) {
+    console.warn(`[Webhook Evolution] Formato 3 (aninhado camelCase) falhou:`, axios.isAxiosError(err3) ? err3.response?.data : err3);
+  }
+
+  // Formato 4: Evolution API aninhado com webhook_base64
+  try {
+    await axios.post(
+      `${evolutionUrl}/webhook/set/${encodeURIComponent(instanceName)}`,
+      {
+        webhook: {
+          enabled: true,
+          url: webhookUrl,
+          webhook_by_events: false,
+          webhook_base64: true,
+          events,
+        },
+      },
+      { headers: { apikey: apiKey, "Content-Type": "application/json" }, timeout: 6000 },
+    );
+    console.log(`[Webhook Evolution] Webhook auto-sincronizado (Formato 4 aninhado snake_case) com webhook_base64 para "${instanceName}"`);
+    return;
+  } catch (err4) {
+    console.warn(`[Webhook Evolution] Formato 4 (aninhado snake_case) falhou:`, axios.isAxiosError(err4) ? err4.response?.data : err4);
+  }
+
+  // Formato 5: Evolution API aninhado com base64 simples
+  try {
     await axios.post(
       `${evolutionUrl}/webhook/set/${encodeURIComponent(instanceName)}`,
       {
@@ -105,27 +238,50 @@ async function autoEnableWebhookBase64(
           url: webhookUrl,
           byEvents: false,
           base64: true,
-          webhookBase64: true,
-          webhook_base64: true,
           events,
         },
-        enabled: true,
-        url: webhookUrl,
-        byEvents: false,
-        base64: true,
-        webhookBase64: true,
-        webhook_base64: true,
-        events,
       },
-      {
-        headers: { apikey: apiKey, "Content-Type": "application/json" },
-        timeout: 5000,
-      },
+      { headers: { apikey: apiKey, "Content-Type": "application/json" }, timeout: 6000 },
     );
-    console.log(`[Webhook Evolution] Webhook auto-sincronizado com base64: true para instância "${instanceName}"`);
-  } catch (err) {
-    console.warn(`[Webhook Evolution] Falha ao auto-sincronizar base64 no webhook:`, err instanceof Error ? err.message : err);
+    console.log(`[Webhook Evolution] Webhook auto-sincronizado (Formato 5 aninhado base64) para "${instanceName}"`);
+    return;
+  } catch (err5) {
+    console.warn(`[Webhook Evolution] Formato 5 falhou:`, axios.isAxiosError(err5) ? err5.response?.data : err5);
   }
+}
+
+async function ensureInstanceWebhookBase64(
+  evolutionUrl: string,
+  instanceName: string,
+  apiKey: string,
+) {
+  if (!instanceName || webhookBase64VerifiedInstances.has(instanceName)) return;
+  webhookBase64VerifiedInstances.add(instanceName);
+  try {
+    const findRes = await axios.get(
+      `${evolutionUrl}/webhook/find/${encodeURIComponent(instanceName)}`,
+      { headers: { apikey: apiKey }, timeout: 4000 },
+    );
+    const data = findRes.data;
+    const isBase64Active = Boolean(
+      data?.webhook_base64 ??
+      data?.webhookBase64 ??
+      data?.base64 ??
+      data?.webhook?.webhook_base64 ??
+      data?.webhook?.webhookBase64 ??
+      data?.webhook?.base64,
+    );
+    if (isBase64Active) {
+      console.log(`[Webhook Evolution] Webhook da instância "${instanceName}" já possui base64 ativo.`);
+      return;
+    }
+  } catch {
+    // Se find falhou, continua e tenta setar
+  }
+
+  await autoEnableWebhookBase64(evolutionUrl, instanceName, apiKey).catch((e) =>
+    console.warn(`[Webhook Evolution] Falha ao auto-ativar base64:`, e),
+  );
 }
 
 async function fetchBase64FromEvolution(
@@ -142,20 +298,22 @@ async function fetchBase64FromEvolution(
   const payloads = [
     // 1. Formato padrão Evolution API v2: { message: { key: { id } }, convertToMp4: false }
     messageId ? { message: { key: { id: messageId } }, convertToMp4: false } : null,
-    // 2. Formato com key completa: id, remoteJid, fromMe: false
-    messageId ? { message: { key: { id: messageId, remoteJid, fromMe: false } }, convertToMp4: false } : null,
-    // 3. Formato com convertToMp4: true
+    // 2. Formato com convertToMp4: true (força conversão e geração do base64)
     messageId ? { message: { key: { id: messageId } }, convertToMp4: true } : null,
-    // 4. Formato com payload messageData completo (v1 ou Baileys sem store)
+    // 3. Formato simples sem flag convertToMp4
+    messageId ? { message: { key: { id: messageId } } } : null,
+    // 4. Formato com key completa: id, remoteJid, fromMe: false
+    messageId ? { message: { key: { id: messageId, remoteJid, fromMe: false } }, convertToMp4: false } : null,
+    // 5. Formato com payload messageData completo (v1 ou Baileys sem store)
     messageData?.message ? { message: messageData, convertToMp4: false } : null,
-    // 5. Formato com key + message
+    // 6. Formato com key + message
     messageData?.key && messageData?.message ? { message: { key: messageData.key, message: messageData.message }, convertToMp4: false } : null,
   ].filter(Boolean);
 
   for (let attempt = 0; attempt < 2; attempt++) {
     if (attempt > 0) {
-      // Pausa 800ms antes da 2ª tentativa para dar tempo da Evolution persistir a mídia
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      // Pausa 900ms antes da 2ª tentativa para dar tempo da Evolution persistir a mídia
+      await new Promise((resolve) => setTimeout(resolve, 900));
     }
 
     for (const body of payloads) {
@@ -169,20 +327,31 @@ async function fetchBase64FromEvolution(
           },
         );
         const data = res.data as any;
-        const base64 = data?.base64 || data?.response?.base64 || data?.data?.base64;
-        const mimetype = data?.mimetype || data?.response?.mimetype || data?.data?.mimetype;
+        let base64: string | undefined;
+        if (typeof data === "string" && data.length > 50) {
+          base64 = data;
+        } else if (Buffer.isBuffer(data)) {
+          base64 = data.toString("base64");
+        } else if (data && typeof data === "object") {
+          base64 = data?.base64 || data?.response?.base64 || data?.data?.base64 || data?.media || data?.audio;
+        }
+
+        const mimetype =
+          (data && typeof data === "object"
+            ? data?.mimetype || data?.response?.mimetype || data?.data?.mimetype
+            : undefined) || "audio/ogg";
+
         if (base64) {
-          console.log(`[Webhook Evolution] getBase64FromMediaMessage sucesso (tentativa ${attempt + 1})!`);
+          console.log(`[Webhook Evolution] getBase64FromMediaMessage sucesso na tentativa ${attempt + 1}! (${base64.length} chars)`);
           return { base64, mimetype };
         }
       } catch (err: unknown) {
         const status = axios.isAxiosError(err) ? err.response?.status : null;
-        if (status && status !== 400) {
-          console.warn(
-            `[Webhook Evolution] getBase64FromMediaMessage falhou (${status}):`,
-            axios.isAxiosError(err) ? err.response?.data : err,
-          );
-        }
+        const errData = axios.isAxiosError(err) ? err.response?.data : null;
+        console.warn(
+          `[Webhook Evolution] getBase64FromMediaMessage tentativa ${attempt + 1} falhou (${status}):`,
+          errData || (err instanceof Error ? err.message : err),
+        );
       }
     }
   }
@@ -293,6 +462,39 @@ async function transcribeAudioWithGemini(
     }
   }
 
+  return null;
+}
+
+async function transcribeAudioWithGroq(
+  groqKey: string,
+  base64Data: string,
+  mimeType: string,
+): Promise<string | null> {
+  try {
+    const ext = mimeType.includes("mp4") ? "mp4" : mimeType.includes("mp3") ? "mp3" : "ogg";
+    const buffer = Buffer.from(base64Data, "base64");
+    const audioFile = await toFile(buffer, `audio.${ext}`, { type: mimeType });
+    const groq = new OpenAI({
+      apiKey: groqKey,
+      baseURL: "https://api.groq.com/openai/v1",
+      timeout: 15000,
+    });
+    const transcription = await groq.audio.transcriptions.create({
+      file: audioFile,
+      model: "whisper-large-v3-turbo",
+      language: "pt",
+    });
+    const text = transcription.text?.trim();
+    if (text) {
+      console.log(`[Webhook Evolution] Áudio transcrito com sucesso via Groq Whisper: "${text}"`);
+      return text;
+    }
+  } catch (err: unknown) {
+    const errMsg = axios.isAxiosError(err)
+      ? JSON.stringify(err.response?.data || err.message)
+      : String(err);
+    console.warn("[Webhook Evolution] Falha ao transcrever com Groq Whisper:", errMsg);
+  }
   return null;
 }
 
@@ -520,6 +722,7 @@ export async function POST(request: Request) {
         evolutionApiKey: aiSettingsTable.evolutionApiKey,
         aiProvider: aiSettingsTable.aiProvider,
         geminiApiKey: aiSettingsTable.geminiApiKey,
+        groqApiKey: aiSettingsTable.groqApiKey,
         openaiApiKey: aiSettingsTable.openaiApiKey,
         isBotActive: aiSettingsTable.isBotActive,
         isBotPaused: aiSettingsTable.isBotPaused,
@@ -548,6 +751,7 @@ export async function POST(request: Request) {
           evolutionApiKey: aiSettingsTable.evolutionApiKey,
           aiProvider: aiSettingsTable.aiProvider,
           geminiApiKey: aiSettingsTable.geminiApiKey,
+          groqApiKey: aiSettingsTable.groqApiKey,
           openaiApiKey: aiSettingsTable.openaiApiKey,
           isBotActive: aiSettingsTable.isBotActive,
           isBotPaused: aiSettingsTable.isBotPaused,
@@ -590,6 +794,7 @@ export async function POST(request: Request) {
               evolutionApiKey: aiSettingsTable.evolutionApiKey,
               aiProvider: aiSettingsTable.aiProvider,
               geminiApiKey: aiSettingsTable.geminiApiKey,
+              groqApiKey: aiSettingsTable.groqApiKey,
               openaiApiKey: aiSettingsTable.openaiApiKey,
               isBotActive: aiSettingsTable.isBotActive,
               isBotPaused: aiSettingsTable.isBotPaused,
@@ -684,6 +889,11 @@ export async function POST(request: Request) {
     );
     const apiKey = envKey || cleanKey(aiSettings.evolutionApiKey);
 
+    // Assegura em segundo plano que o webhook da instância esteja configurado com webhook_base64: true
+    if (evolutionUrl && instanceName && apiKey) {
+      void ensureInstanceWebhookBase64(evolutionUrl, instanceName, apiKey);
+    }
+
     const targetPhone = normalizeWhatsAppNumber(customerPhone) || customerPhone;
     const sessionKey = `${aiSettings.restaurantId}:${customerPhone}`;
 
@@ -698,6 +908,7 @@ export async function POST(request: Request) {
 
       // 1. Tenta obter o Base64: verifica todos os locais possíveis no payload do webhook da Evolution
       let rawBase64: string | undefined =
+        (typeof audioMessage === "string" && audioMessage.length > 200 ? audioMessage : undefined) ||
         audioMessage?.base64 ||
         innerMessage?.audioMessage?.base64 ||
         innerMessage?.pttMessage?.base64 ||
@@ -713,7 +924,10 @@ export async function POST(request: Request) {
         body?.message?.base64 ||
         (Array.isArray(body?.data) && body?.data?.[0]?.base64) ||
         (Array.isArray(body?.data) && body?.data?.[0]?.message?.audioMessage?.base64) ||
-        (Array.isArray(body?.data) && body?.data?.[0]?.message?.base64);
+        (Array.isArray(body?.data) && body?.data?.[0]?.message?.base64) ||
+        findBase64InObject(audioMessage) ||
+        findBase64InObject(messageData) ||
+        findBase64InObject(body);
 
       let rawMimeType: string =
         audioMessage?.mimetype ||
@@ -726,7 +940,10 @@ export async function POST(request: Request) {
         messageData?.mediaUrl ||
         body?.data?.mediaUrl ||
         messageData?.url ||
-        body?.data?.url;
+        body?.data?.url ||
+        audioMessage?.url ||
+        audioMessage?.mediaUrl ||
+        innerMessage?.audioMessage?.mediaUrl;
 
       if (
         !rawBase64 &&
@@ -772,6 +989,7 @@ export async function POST(request: Request) {
 
       const cleanBase64 = String(rawBase64 || "")
         .replace(/^data:[^;]+;base64,/, "")
+        .replace(/\s+/g, "")
         .trim();
 
       // Sanitiza MIME type: remove parâmetros como '; codecs=opus' que quebram o Gemini
@@ -794,6 +1012,9 @@ export async function POST(request: Request) {
             process.env.GEMINI_API_KEY ||
             process.env.GOOGLE_API_KEY,
         );
+        const groqKey = cleanKey(
+          aiSettings.groqApiKey || process.env.GROQ_API_KEY,
+        );
         const openaiKey = cleanKey(
           aiSettings.openaiApiKey || process.env.OPENAI_API_KEY,
         );
@@ -812,7 +1033,21 @@ export async function POST(request: Request) {
           }
         }
 
-        // 2. Fallback para OpenAI Whisper (se configurada e ainda sem transcrição)
+        // 2. Groq Whisper (ultra-rápido ~300ms e altíssima precisão em português)
+        if (!messageText && (provider === "GROQ" || groqKey)) {
+          if (groqKey) {
+            const transcribed = await transcribeAudioWithGroq(
+              groqKey,
+              cleanBase64,
+              cleanMimeType,
+            );
+            if (transcribed) {
+              messageText = transcribed;
+            }
+          }
+        }
+
+        // 3. Fallback para OpenAI Whisper (se configurada e ainda sem transcrição)
         if (!messageText && openaiKey) {
           try {
             const ext = cleanMimeType.includes("mp4")
