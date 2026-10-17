@@ -711,7 +711,7 @@ export async function POST(request: Request) {
       body?.server_url ||
       process.env.EVOLUTION_API_URL ||
       process.env.EVOLUTION_URL ||
-      "http://localhost:8080";
+      "https://evolution.fswdonalds.eeytech.com";
     const evolutionUrl = cleanKey(rawUrl).replace(/\/+$/, "");
 
     // 1. Busca configurações de IA correspondentes à instância (busca exata)

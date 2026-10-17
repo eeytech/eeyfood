@@ -68,7 +68,7 @@ function getEvolutionConfig(
   const rawUrl =
     process.env.EVOLUTION_API_URL ||
     process.env.EVOLUTION_URL ||
-    "http://localhost:8080";
+    "https://evolution.fswdonalds.eeytech.com";
   const evolutionUrl = cleanKey(rawUrl).replace(/\/+$/, "");
 
   // A chave mestra do servidor tem prioridade
