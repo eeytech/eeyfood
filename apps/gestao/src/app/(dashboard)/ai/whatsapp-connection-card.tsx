@@ -681,7 +681,6 @@ export function WhatsAppConnectionCard({
         open={isDisconnectModalOpen}
         onOpenChange={setIsDisconnectModalOpen}
         title="Desconectar WhatsApp"
-        icon={<LogOutIcon size={20} />}
         description={
           <>
             Deseja realmente desconectar o número{" "}
