@@ -8,8 +8,12 @@ import {
   db,
   DEFAULT_AI_SYSTEM_PROMPT,
   eq,
+  getBrazilTime,
+  getNextOpeningTime,
   isClientePausado,
   isNotNull,
+  isRestaurantOpen,
+  operatingHoursTable,
   productOptionGroupsTable,
   productOptionsTable,
   productToOptionGroupsTable,
@@ -727,6 +731,9 @@ async function processarFechamentoPedidoNoChat({
     if (msg.includes("pedido mínimo")) {
       return `Ops, ${customerName}! ${msg} Gostaria de adicionar mais algum item ou bebida para completarmos o valor mínimo de entrega? 😊`;
     }
+    if (msg.toLowerCase().includes("fechado")) {
+      return `Olá, ${customerName}! No momento o *${restaurant.name}* está fechado e nossa cozinha não está recebendo novos pedidos. Você pode conferir nosso cardápio completo pelo link oficial:\n👉 ${menuUrl}\n\nAssim que abrirmos, teremos o maior prazer em preparar o seu pedido! 😊`;
+    }
     return `Anotei todos os seus itens com muito cuidado! Para garantir que seu pedido seja processado perfeitamente com todas as opções, você também pode confirmar com 1 clique pelo nosso link oficial:\n👉 ${menuUrl}\n\nSe preferir, me avise que posso chamar um atendente humano para te auxiliar!`;
   }
 }
@@ -1126,6 +1133,83 @@ export const processarMensagemBot = async ({
   ).replace(/\/$/, "");
   const menuUrl = `${rawVendasUrl}/`;
 
+  // 2.1. Verifica horário de funcionamento do restaurante em tempo real
+  const operatingHours = await db
+    .select()
+    .from(operatingHoursTable)
+    .where(eq(operatingHoursTable.restaurantId, restaurant.id))
+    .orderBy(asc(operatingHoursTable.dayOfWeek));
+
+  const { isOpen, closeTime } = isRestaurantOpen(
+    restaurant.status,
+    operatingHours,
+  );
+  const nextOpening = getNextOpeningTime(operatingHours);
+
+  let nextOpeningText = "";
+  if (nextOpening) {
+    const { dayOfWeek } = getBrazilTime();
+    const dias = [
+      "Domingo",
+      "Segunda-feira",
+      "Terça-feira",
+      "Quarta-feira",
+      "Quinta-feira",
+      "Sexta-feira",
+      "Sábado",
+    ];
+    const diaTexto =
+      nextOpening.dayOfWeek === dayOfWeek
+        ? "hoje"
+        : nextOpening.dayOfWeek === (dayOfWeek + 1) % 7
+          ? "amanhã"
+          : `neste(a) ${dias[nextOpening.dayOfWeek]}`;
+    nextOpeningText = `Abriremos ${diaTexto} às ${nextOpening.openTime}`;
+  }
+
+  const diasNomes = [
+    "Domingo",
+    "Segunda-feira",
+    "Terça-feira",
+    "Quarta-feira",
+    "Quinta-feira",
+    "Sexta-feira",
+    "Sábado",
+  ];
+  const operatingHoursSummary =
+    operatingHours.length > 0
+      ? operatingHours
+          .map(
+            (h) => `• ${diasNomes[h.dayOfWeek]}: das ${h.openTime} às ${h.closeTime}`,
+          )
+          .join("\n")
+      : "• Não configurado";
+
+  let storeStatusContext = "";
+  if (isOpen) {
+    storeStatusContext = `\n### STATUS DE FUNCIONAMENTO DO RESTAURANTE EM TEMPO REAL:
+Status Atual: 🟢 ABERTO NO MOMENTO (Cozinha operando normalmente e recebendo pedidos)
+${closeTime ? `Horário previsto de encerramento hoje: ${closeTime}` : ""}
+Horários da semana:
+${operatingHoursSummary}\n`;
+  } else {
+    storeStatusContext = `\n### STATUS DE FUNCIONAMENTO DO RESTAURANTE EM TEMPO REAL:
+Status Atual: 🔴 FECHADO NO MOMENTO (Fora do expediente / Cozinha fechada)
+${nextOpeningText ? `Previsão de reabertura: ${nextOpeningText}` : ""}
+Horários da semana:
+${operatingHoursSummary}
+
+🚨 ATENÇÃO MÁXIMA - O RESTAURANTE ESTÁ FECHADO NO MOMENTO:
+1. O restaurante encontra-se FORA do horário de atendimento. A cozinha está FECHADA e NÃO pode aceitar pedidos para agora.
+2. Logo na PRIMEIRA MENSAGEM ou caso o cliente saúde/tente pedir:
+   - Informe cordialmente e de imediato que o restaurante está FECHADO no momento.
+   - Informe a previsão de reabertura: "${nextOpeningText || "consulte nossos horários de funcionamento"}".
+   - Envie o link oficial do cardápio online (${menuUrl}) isolado em linha própria para que o cliente possa navegar pelos pratos e preços.
+3. É TERMINANTEMENTE PROIBIDO iniciar o fluxo de anotação de pedido (NÃO pergunte sabores obrigatórios, NÃO pergunte bebidas, NÃO pergunte se é entrega/retirada, NÃO pergunte endereço nem forma de pagamento).
+4. NUNCA gere o bloco [CRIAR_PEDIDO_JSON].
+5. Se o cliente tiver dúvidas sobre ingredientes, itens do cardápio ou horários, responda com gentileza, mas SEMPRE reiterando que os pedidos só poderão ser realizados assim que o restaurante abrir.\n`;
+  }
+
   let menuContext = `\n\n### INFORMAÇÕES DO RESTAURANTE E CARDÁPIO EM TEMPO REAL:
 Nome do Restaurante: ${restaurant.name}
 Link Oficial do Cardápio Online para Pedidos: ${menuUrl}
@@ -1200,7 +1284,9 @@ DIRETRIZES FUNDAMENTAIS:
     baseSystemPrompt = DEFAULT_AI_SYSTEM_PROMPT;
   }
 
-  const fullSystemPrompt = `${baseSystemPrompt}\n${menuContext}
+  const fullSystemPrompt = `${baseSystemPrompt}
+${storeStatusContext}
+${menuContext}
 
 ### REGRAS CRÍTICAS E OBRIGATÓRIAS DE FLUXO NO WHATSAPP (FECHAMENTO 100% NO CHAT):
 REGRA DE OURO: FAÇA APENAS UMA PERGUNTA POR VEZ. É TERMINANTEMENTE PROIBIDO JUNTAR DUAS PERGUNTAS NA MESMA MENSAGEM.
@@ -1208,15 +1294,24 @@ REGRA DE OURO: FAÇA APENAS UMA PERGUNTA POR VEZ. É TERMINANTEMENTE PROIBIDO JU
 1. REGRAS PARA A PRIMEIRA MENSAGEM VS MENSAGENS EM ANDAMENTO:
    • SE FOR O PRIMEIRO CONTATO DO CLIENTE (início da conversa):
      - Dê as boas-vindas com simpatia ao ${restaurant.name}.
-     - Apresente os principais pratos/categorias ou pergunte como pode ajudar.
+${
+  isOpen
+    ? `     - Apresente os principais pratos/categorias ou pergunte como pode ajudar.
      - Envie o link oficial do cardápio online isolado em linha própria:
        👉 ${menuUrl}
      - OBRIGATÓRIO: Termine a primeira mensagem com esta instrução:
-       💡 *Dica:* Para um atendimento mais ágil e sem falhas, por favor envie *uma mensagem de cada vez* e aguarde minha resposta antes de mandar a próxima. 😊
+       💡 *Dica:* Para um atendimento mais ágil e sem falhas, por favor envie *uma mensagem de cada vez* e aguarde minha resposta antes de mandar a próxima. 😊`
+    : `     - AVISO OBRIGATÓRIO DE RESTAURANTE FECHADO: Informe imediatamente que o restaurante está FECHADO no momento e que a cozinha não está recebendo pedidos agora.
+     - Informe quando irá abrir: "${nextOpeningText || "consulte nossos horários"}".
+     - Convide o cliente a conferir o cardápio oficial para ir escolhendo os pratos com calma:
+       👉 ${menuUrl}
+     - JAMAIS pergunte o que ele deseja pedir e JAMAIS inicie anotação de pedido enquanto fechado.`
+}
    • SE A CONVERSA JÁ ESTIVER EM ANDAMENTO:
      - JAMAIS repita saudações formais longas ("Olá!", "Boa noite!", "Seja bem-vindo...").
      - JAMAIS reenvie a instrução de "uma mensagem de cada vez".
      - Vá direto ao ponto, respondendo objetivamente ao que o cliente falou.
+${!isOpen ? `     - Se o cliente tentar pedir itens ou fechar pedido, lembre-o com carinho que a cozinha está fechada e informe a previsão de reabertura (${nextOpeningText || "em breve"}).` : ""}
 
 2. REGRAS ESPECIAIS PARA PIZZAS (1 OU 2 SABORES / MEIO A MEIO):
    - Nossas pizzas PODEM ser pedidas inteiras (1 sabor) OU divididas em até 2 sabores (meio a meio)!
@@ -1392,47 +1487,54 @@ REGRA DE OURO: FAÇA APENAS UMA PERGUNTA POR VEZ. É TERMINANTEMENTE PROIBIDO JU
     // Intercepta fechamento de pedido no chat se a IA gerou a tag estruturada [CRIAR_PEDIDO_JSON]
     const hasOrderTag = /\[CRIAR_PEDIDO_JSON\]/i.test(botReply);
     if (hasOrderTag) {
-      console.log(
-        `[Bot AI] Bloco [CRIAR_PEDIDO_JSON] detectado na resposta para ${customerPhone}! Processando fechamento de pedido...`,
-      );
-
-      let rawJson = "";
-      const exactMatch = botReply.match(/\[CRIAR_PEDIDO_JSON\]([\s\S]*?)\[\/CRIAR_PEDIDO_JSON\]/i);
-      if (exactMatch) {
-        rawJson = exactMatch[1];
-      } else {
-        // Se a IA não fechou a tag [/CRIAR_PEDIDO_JSON], extrai tudo que vem após [CRIAR_PEDIDO_JSON]
-        const afterTag = botReply.split(/\[CRIAR_PEDIDO_JSON\]/i)[1] || "";
-        rawJson = afterTag.replace(/\[\/CRIAR_PEDIDO_JSON\][\s\S]*$/i, "");
-      }
-
-      // Texto amigável gerado pela IA antes do bloco de pedido (se houver)
-      const userFacingGreeting = botReply.split(/\[CRIAR_PEDIDO_JSON\]/i)[0]?.trim();
-
-      try {
-        const confirmationMsg = await processarFechamentoPedidoNoChat({
-          rawJson,
-          restaurant,
-          cardapio,
-          optionsMap,
-          customerPhone,
-          customerName,
-          menuUrl,
-          history,
-        });
-
-        // Substitui a resposta pelo comprovante oficial com número do pedido e total
-        botReply = confirmationMsg;
-      } catch (fechamentoErr) {
-        console.error(
-          `[Bot AI] Falha ao criar pedido no banco a partir do [CRIAR_PEDIDO_JSON] de ${customerPhone}:`,
-          fechamentoErr,
+      if (!isOpen) {
+        console.warn(
+          `[Bot AI] Bloco [CRIAR_PEDIDO_JSON] interceptado e recusado pois o restaurante está FECHADO para ${customerPhone}.`,
         );
-        // JAMAIS vaza a tag [CRIAR_PEDIDO_JSON] ou código JSON para o WhatsApp!
-        if (userFacingGreeting && !userFacingGreeting.includes("{")) {
-          botReply = userFacingGreeting;
+        botReply = `Olá, ${customerName}! No momento o *${restaurant.name}* está *fechado* e nossa cozinha não está recebendo novos pedidos. 🕒\n\n${nextOpeningText ? `*Previsão de abertura:* ${nextOpeningText}\n\n` : ""}Você pode ir escolhendo os pratos pelo nosso cardápio online oficial:\n👉 ${menuUrl}\n\nAssim que abrirmos, teremos o maior prazer em preparar o seu pedido! 😊`;
+      } else {
+        console.log(
+          `[Bot AI] Bloco [CRIAR_PEDIDO_JSON] detectado na resposta para ${customerPhone}! Processando fechamento de pedido...`,
+        );
+
+        let rawJson = "";
+        const exactMatch = botReply.match(/\[CRIAR_PEDIDO_JSON\]([\s\S]*?)\[\/CRIAR_PEDIDO_JSON\]/i);
+        if (exactMatch) {
+          rawJson = exactMatch[1];
         } else {
-          botReply = `Perfeito, ${customerName}! Seu pedido foi recebido com sucesso e já está sendo preparado com todo carinho pela nossa equipe! 🎉🍔🛵\n\nEm breve estará a caminho do seu endereço! Se precisar de algo mais, é só chamar por aqui. Bom apetite! ✨😊`;
+          // Se a IA não fechou a tag [/CRIAR_PEDIDO_JSON], extrai tudo que vem após [CRIAR_PEDIDO_JSON]
+          const afterTag = botReply.split(/\[CRIAR_PEDIDO_JSON\]/i)[1] || "";
+          rawJson = afterTag.replace(/\[\/CRIAR_PEDIDO_JSON\][\s\S]*$/i, "");
+        }
+
+        // Texto amigável gerado pela IA antes do bloco de pedido (se houver)
+        const userFacingGreeting = botReply.split(/\[CRIAR_PEDIDO_JSON\]/i)[0]?.trim();
+
+        try {
+          const confirmationMsg = await processarFechamentoPedidoNoChat({
+            rawJson,
+            restaurant,
+            cardapio,
+            optionsMap,
+            customerPhone,
+            customerName,
+            menuUrl,
+            history,
+          });
+
+          // Substitui a resposta pelo comprovante oficial com número do pedido e total
+          botReply = confirmationMsg;
+        } catch (fechamentoErr) {
+          console.error(
+            `[Bot AI] Falha ao criar pedido no banco a partir do [CRIAR_PEDIDO_JSON] de ${customerPhone}:`,
+            fechamentoErr,
+          );
+          // JAMAIS vaza a tag [CRIAR_PEDIDO_JSON] ou código JSON para o WhatsApp!
+          if (userFacingGreeting && !userFacingGreeting.includes("{")) {
+            botReply = userFacingGreeting;
+          } else {
+            botReply = `Perfeito, ${customerName}! Seu pedido foi recebido com sucesso e já está sendo preparado com todo carinho pela nossa equipe! 🎉🍔🛵\n\nEm breve estará a caminho do seu endereço! Se precisar de algo mais, é só chamar por aqui. Bom apetite! ✨😊`;
+          }
         }
       }
     }
@@ -1450,13 +1552,30 @@ REGRA DE OURO: FAÇA APENAS UMA PERGUNTA POR VEZ. É TERMINANTEMENTE PROIBIDO JU
       return HANDOFF_SIGNAL;
     }
 
-    // Se for o primeiro contato, garante a dica de 1 mensagem por vez
+    // Se o restaurante estiver fechado, garante que o aviso esteja presente na mensagem
+    if (!isOpen) {
+      const normReply = botReply.toLowerCase();
+      const mentionsClosed =
+        normReply.includes("fechad") ||
+        normReply.includes("horário") ||
+        normReply.includes("horario") ||
+        normReply.includes("abrim") ||
+        normReply.includes("abrir") ||
+        normReply.includes("abre ");
+
+      if (!mentionsClosed) {
+        const closedWarning = `*Aviso:* No momento estamos *fechados* e não estamos aceitando pedidos. ${nextOpeningText ? `(${nextOpeningText})` : ""}\n\n`;
+        botReply = `${closedWarning}${botReply.trim()}`;
+      }
+    }
+
+    // Se for o primeiro contato e estiver ABERTO, garante a dica de 1 mensagem por vez
     const TIP_MSG =
       "💡 *Dica:* Para um atendimento mais ágil e sem falhas, por favor envie *uma mensagem de cada vez* e aguarde minha resposta antes de mandar a próxima. 😊";
 
     const isFirstInteraction = history.length === 0;
 
-    if (isFirstInteraction) {
+    if (isFirstInteraction && isOpen) {
       if (
         !botReply.includes("uma mensagem de cada vez") &&
         !botReply.includes("uma mensagem por vez")
@@ -1493,6 +1612,12 @@ REGRA DE OURO: FAÇA APENAS UMA PERGUNTA POR VEZ. É TERMINANTEMENTE PROIBIDO JU
   console.warn(
     `[Bot AI] Nenhuma LLM respondeu. Enviando mensagem de boas-vindas com cardápio para ${customerPhone}.`,
   );
+  if (!isOpen) {
+    return sanitizeLinksInMessage(
+      `Olá, ${customerName ? customerName : "tudo bem"}! Seja muito bem-vindo ao *${restaurant.name}*! 😊\n\nNo momento nosso restaurante está *fechado* e a cozinha não está recebendo pedidos. ${nextOpeningText ? `(${nextOpeningText})\n\n` : "\n\n"}Você pode acessar nosso cardápio oficial para conhecer nossas opções e valores:\n👉 ${menuUrl}\n\nAssim que abrirmos teremos o maior prazer em te atender! ✨`,
+    );
+  }
+
   return sanitizeLinksInMessage(
     `Olá, ${customerName ? customerName : "tudo bem"}! Seja muito bem-vindo ao *${restaurant.name}*! 😊\n\nAcesse nosso cardápio completo online para conferir as opções, valores e fazer seu pedido com facilidade:\n👉 ${menuUrl}\n\n💡 *Dica:* Para um atendimento mais ágil e sem falhas, por favor envie *uma mensagem de cada vez* e aguarde minha resposta antes de mandar a próxima. 😊`,
   );
