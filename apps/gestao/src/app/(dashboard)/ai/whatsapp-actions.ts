@@ -108,8 +108,10 @@ export async function configurarWebhookEvolution(
         webhook: {
           enabled: true,
           url: webhookUrl,
+          byEvents: false,
           webhookByEvents: false,
           webhook_by_events: false,
+          base64: true,
           webhookBase64: true,
           webhook_base64: true,
           events,
@@ -136,8 +138,10 @@ export async function configurarWebhookEvolution(
         {
           enabled: true,
           url: webhookUrl,
+          byEvents: false,
           webhookByEvents: false,
           webhook_by_events: false,
+          base64: true,
           webhookBase64: true,
           webhook_base64: true,
           events,
@@ -259,11 +263,17 @@ export async function buscarStatusWhatsAppAction(
           );
           const currentUrl = findRes.data?.url || findRes.data?.webhook?.url;
           webhookEnabled = Boolean(findRes.data?.enabled ?? findRes.data?.webhook?.enabled);
+          const currentBase64 = Boolean(
+            findRes.data?.base64 ??
+            findRes.data?.webhook?.base64 ??
+            findRes.data?.webhookBase64 ??
+            findRes.data?.webhook?.webhookBase64
+          );
 
-          // Se não estiver habilitado ou apontando para URL antiga/incorreta, atualiza
-          if (!webhookEnabled || currentUrl !== webhookUrl) {
+          // Se não estiver habilitado, apontando para URL incorreta ou sem base64 ativo, atualiza
+          if (!webhookEnabled || currentUrl !== webhookUrl || !currentBase64) {
             console.log(
-              `[WhatsApp Status] Webhook precisa de sincronização (${currentUrl} -> ${webhookUrl}). Atualizando...`,
+              `[WhatsApp Status] Webhook precisa de sincronização (${currentUrl} -> ${webhookUrl}, base64: ${currentBase64}). Atualizando...`,
             );
             await configurarWebhookEvolution(evolutionUrl, instanceName, apiKey, webhookUrl);
             webhookEnabled = true;
