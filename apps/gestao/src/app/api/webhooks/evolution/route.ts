@@ -68,6 +68,82 @@ async function sendWhatsAppMessage(
   }
 }
 
+async function fetchBase64FromEvolution(
+  evolutionUrl: string,
+  instanceName: string,
+  apiKey: string,
+  messageData: any,
+): Promise<{ base64?: string; mimetype?: string } | null> {
+  const messageId = messageData?.key?.id;
+
+  // Tentativa 1: Envia key com ID da mensagem (formato padrão Evolution API v2)
+  if (messageId) {
+    try {
+      const res = await axios.post(
+        `${evolutionUrl}/chat/getBase64FromMediaMessage/${encodeURIComponent(instanceName)}`,
+        {
+          message: {
+            key: {
+              id: messageId,
+            },
+          },
+          convertToMp4: false,
+        },
+        { headers: { apikey: apiKey, "Content-Type": "application/json" }, timeout: 10000 },
+      );
+      const data = res.data as any;
+      const base64 = data?.base64 || data?.response?.base64 || data?.data?.base64;
+      const mimetype = data?.mimetype || data?.response?.mimetype || data?.data?.mimetype;
+      if (base64) return { base64, mimetype };
+    } catch {
+      // continua para a próxima tentativa
+    }
+  }
+
+  // Tentativa 2: Envia o payload completo (Evolution API v1 / compatibilidade)
+  try {
+    const res = await axios.post(
+      `${evolutionUrl}/chat/getBase64FromMediaMessage/${encodeURIComponent(instanceName)}`,
+      {
+        message: messageData,
+        convertToMp4: false,
+      },
+      { headers: { apikey: apiKey, "Content-Type": "application/json" }, timeout: 10000 },
+    );
+    const data = res.data as any;
+    const base64 = data?.base64 || data?.response?.base64 || data?.data?.base64;
+    const mimetype = data?.mimetype || data?.response?.mimetype || data?.data?.mimetype;
+    if (base64) return { base64, mimetype };
+  } catch {
+    // continua para a tentativa 3
+  }
+
+  // Tentativa 3: Envia key + message
+  try {
+    const res = await axios.post(
+      `${evolutionUrl}/chat/getBase64FromMediaMessage/${encodeURIComponent(instanceName)}`,
+      {
+        message: {
+          key: messageData?.key,
+          message: messageData?.message,
+        },
+      },
+      { headers: { apikey: apiKey, "Content-Type": "application/json" }, timeout: 10000 },
+    );
+    const data = res.data as any;
+    const base64 = data?.base64 || data?.response?.base64 || data?.data?.base64;
+    const mimetype = data?.mimetype || data?.response?.mimetype || data?.data?.mimetype;
+    if (base64) return { base64, mimetype };
+  } catch (err: unknown) {
+    console.warn(
+      "[Webhook Evolution] Falha ao obter base64 via getBase64FromMediaMessage:",
+      err instanceof Error ? err.message : err,
+    );
+  }
+
+  return null;
+}
+
 async function executarHandoff({
   restaurantId,
   slug,
@@ -446,106 +522,197 @@ export async function POST(request: Request) {
     );
     const apiKey = envKey || cleanKey(aiSettings.evolutionApiKey);
 
+    const targetPhone = normalizeWhatsAppNumber(customerPhone) || customerPhone;
+    const sessionKey = `${aiSettings.restaurantId}:${customerPhone}`;
+
     // Intercepta mensagens de áudio/voz e transcreve de acordo com o provedor
     const audioMessage =
       innerMessage?.audioMessage || innerMessage?.pttMessage;
 
     if (!messageText && audioMessage) {
-      try {
-        const mediaResponse = await axios.post<{ base64: string; mimetype: string }>(
-          `${evolutionUrl}/chat/getBase64FromMediaMessage/${encodeURIComponent(instanceName)}`,
-          { message: { key: messageData.key, message: messageData.message } },
-          { headers: { apikey: apiKey, "Content-Type": "application/json" }, timeout: 10000 },
+      console.log(
+        `[Webhook Evolution] Mensagem de áudio detectada de ${customerPhone}. Iniciando processo de transcrição...`,
+      );
+
+      // 1. Tenta obter o Base64: primeiro verifica se a Evolution já enviou direto no payload do webhook
+      let rawBase64: string | undefined =
+        audioMessage?.base64 ||
+        innerMessage?.audioMessage?.base64 ||
+        innerMessage?.pttMessage?.base64 ||
+        messageData?.base64 ||
+        messageData?.message?.base64 ||
+        messageData?.message?.audioMessage?.base64 ||
+        messageData?.message?.pttMessage?.base64 ||
+        body?.data?.base64 ||
+        body?.data?.message?.base64 ||
+        body?.data?.message?.audioMessage?.base64 ||
+        body?.data?.message?.pttMessage?.base64;
+
+      let rawMimeType: string =
+        audioMessage?.mimetype ||
+        innerMessage?.audioMessage?.mimetype ||
+        innerMessage?.pttMessage?.mimetype ||
+        "audio/ogg";
+
+      // 2. Se não veio no payload do webhook, busca na Evolution API
+      if (!rawBase64) {
+        const mediaResult = await fetchBase64FromEvolution(
+          evolutionUrl,
+          instanceName,
+          apiKey,
+          messageData,
+        );
+        if (mediaResult?.base64) {
+          rawBase64 = mediaResult.base64;
+          if (mediaResult.mimetype) {
+            rawMimeType = mediaResult.mimetype;
+          }
+        }
+      }
+
+      const cleanBase64 = String(rawBase64 || "")
+        .replace(/^data:[^;]+;base64,/, "")
+        .trim();
+
+      // Sanitiza MIME type: remove parâmetros como '; codecs=opus' que quebram o Gemini
+      let cleanMimeType = (rawMimeType || "audio/ogg")
+        .split(";")[0]
+        .trim()
+        .toLowerCase();
+      if (!cleanMimeType.startsWith("audio/")) {
+        cleanMimeType = "audio/ogg";
+      }
+
+      if (cleanBase64) {
+        console.log(
+          `[Webhook Evolution] Base64 do áudio obtido com sucesso (${cleanBase64.length} chars, mime: "${cleanMimeType}").`,
         );
 
-        const base64Data = mediaResponse.data.base64;
-        const mimeType = mediaResponse.data.mimetype || "audio/ogg";
-        const ext = mimeType.includes("mp4")
-          ? "mp4"
-          : mimeType.includes("mp3")
-            ? "mp3"
-            : "ogg";
-
         const provider = (aiSettings.aiProvider || "GOOGLE_GEMINI").toUpperCase();
+        const geminiKey = cleanKey(
+          aiSettings.geminiApiKey ||
+            process.env.GEMINI_API_KEY ||
+            process.env.GOOGLE_API_KEY,
+        );
+        const openaiKey = cleanKey(
+          aiSettings.openaiApiKey || process.env.OPENAI_API_KEY,
+        );
 
-        // 1. Se for Google Gemini (ou fallback): usa transcrição nativa multimodal gratuita
-        if (
-          !messageText &&
-          (provider === "GOOGLE_GEMINI" ||
-            aiSettings.geminiApiKey ||
-            process.env.GEMINI_API_KEY ||
-            process.env.GOOGLE_API_KEY)
-        ) {
-          const geminiKey =
-            aiSettings.geminiApiKey ||
-            process.env.GEMINI_API_KEY ||
-            process.env.GOOGLE_API_KEY;
+        // 1. Google Gemini (multimodal de alta fidelidade e gratuito)
+        if (!messageText && (provider === "GOOGLE_GEMINI" || geminiKey)) {
           if (geminiKey) {
-            try {
-              const geminiRes = await axios.post<{
-                candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-              }>(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
-                {
-                  contents: [
-                    {
-                      parts: [
-                        {
-                          text: "Transcreva com máxima fidelidade em português o áudio a seguir. Retorne unicamente o texto falado, sem comentários ou formatação adicional.",
-                        },
-                        {
-                          inline_data: {
-                            mime_type: mimeType,
-                            data: base64Data,
+            const geminiModels = ["gemini-2.0-flash", "gemini-1.5-flash"];
+            for (const model of geminiModels) {
+              try {
+                const geminiRes = await axios.post<{
+                  candidates?: Array<{ content?: { parts?: Array<{ text?: string; thought?: boolean }> } }>;
+                }>(
+                  `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(geminiKey)}`,
+                  {
+                    contents: [
+                      {
+                        parts: [
+                          {
+                            text: "Transcreva com máxima fidelidade em português o áudio a seguir. Retorne unicamente o texto falado, sem comentários adicionais ou aspas.",
                           },
-                        },
-                      ],
-                    },
-                  ],
-                },
-                { timeout: 15000 },
-              );
-              const audioCandidate = geminiRes.data?.candidates?.[0];
-              const audioParts = audioCandidate?.content?.parts;
-              messageText = Array.isArray(audioParts)
-                ? audioParts.map((p: any) => p.text || "").join("").trim()
-                : audioCandidate?.content?.parts?.[0]?.text?.trim() || "";
-            } catch (geminiErr) {
-              console.warn("[Webhook Evolution] Aviso ao transcrever com Gemini:", geminiErr);
+                          {
+                            inline_data: {
+                              mime_type: cleanMimeType,
+                              data: cleanBase64,
+                            },
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                  { headers: { "Content-Type": "application/json" }, timeout: 20000 },
+                );
+
+                const audioCandidate = geminiRes.data?.candidates?.[0];
+                const parts = audioCandidate?.content?.parts;
+                const validParts = Array.isArray(parts) ? parts.filter((p: any) => !p.thought) : [];
+                let text = validParts.map((p: any) => p.text || "").join("").trim();
+                if (!text && audioCandidate?.content?.parts?.[0]?.text) {
+                  text = audioCandidate.content.parts[0].text.trim();
+                }
+                if (text) {
+                  messageText = text.replace(/<thought>[\s\S]*?<\/thought>/gi, "").trim();
+                  console.log(
+                    `[Webhook Evolution] Áudio transcrito com sucesso via Gemini (${model}): "${messageText}"`,
+                  );
+                  break;
+                }
+              } catch (geminiErr: unknown) {
+                const errMsg = axios.isAxiosError(geminiErr)
+                  ? JSON.stringify(geminiErr.response?.data || geminiErr.message)
+                  : String(geminiErr);
+                console.warn(
+                  `[Webhook Evolution] Falha ao transcrever com Gemini (${model}):`,
+                  errMsg,
+                );
+              }
             }
           }
         }
 
-        // 2. Fallback para OpenAI Whisper (se configurada)
-        if (!messageText && (aiSettings.openaiApiKey || process.env.OPENAI_API_KEY)) {
+        // 2. Fallback para OpenAI Whisper (se configurada e ainda sem transcrição)
+        if (!messageText && openaiKey) {
           try {
-            const buffer = Buffer.from(base64Data, "base64");
-            const audioFile = await toFile(buffer, `audio.${ext}`, { type: mimeType });
-            const openai = new OpenAI({
-              apiKey: aiSettings.openaiApiKey || process.env.OPENAI_API_KEY,
-            });
+            const ext = cleanMimeType.includes("mp4")
+              ? "mp4"
+              : cleanMimeType.includes("mp3")
+                ? "mp3"
+                : "ogg";
+            const buffer = Buffer.from(cleanBase64, "base64");
+            const audioFile = await toFile(buffer, `audio.${ext}`, { type: cleanMimeType });
+            const openai = new OpenAI({ apiKey: openaiKey, timeout: 15000 });
             const transcription = await openai.audio.transcriptions.create({
               file: audioFile,
               model: "whisper-1",
               language: "pt",
             });
-            messageText = transcription.text;
-          } catch (openaiErr) {
-            console.warn("[Webhook Evolution] Aviso ao transcrever com OpenAI Whisper:", openaiErr);
+            if (transcription.text?.trim()) {
+              messageText = transcription.text.trim();
+              console.log(
+                `[Webhook Evolution] Áudio transcrito com sucesso via OpenAI Whisper: "${messageText}"`,
+              );
+            }
+          } catch (openaiErr: unknown) {
+            const errMsg = axios.isAxiosError(openaiErr)
+              ? JSON.stringify(openaiErr.response?.data || openaiErr.message)
+              : String(openaiErr);
+            console.warn("[Webhook Evolution] Falha ao transcrever com OpenAI Whisper:", errMsg);
           }
         }
-      } catch (audioError) {
-        console.error("[Webhook Evolution] Erro ao obter/processar áudio:", audioError);
+      } else {
+        console.warn(
+          `[Webhook Evolution] Não foi possível extrair o conteúdo base64 do áudio recebido de ${customerPhone}.`,
+        );
       }
     }
 
     if (!messageText) {
+      if (audioMessage) {
+        console.warn(
+          `[Webhook Evolution] Áudio de ${customerPhone} não pôde ser decodificado. Enviando mensagem de aviso imediata...`,
+        );
+        await sendWhatsAppMessage(
+          evolutionUrl,
+          instanceName,
+          apiKey,
+          targetPhone,
+          remoteJid,
+          "Recebi seu áudio, mas não consegui compreendê-lo com nitidez. 🙏\nVocê poderia escrever o seu pedido por mensagem de texto ou mandar novamente?",
+        );
+        return NextResponse.json({
+          ok: true,
+          reason: "audio_transcription_fallback_notified",
+        });
+      }
+
       console.log(`[Webhook Evolution] Mensagem vazia recebida de ${customerPhone}.`);
       return NextResponse.json({ ok: true, reason: "empty_text" });
     }
-
-    const targetPhone = normalizeWhatsAppNumber(customerPhone) || customerPhone;
-    const sessionKey = `${aiSettings.restaurantId}:${customerPhone}`;
 
     // 1. Se a mensagem for diretamente solicitação de atendimento humano, atende na hora sem fila
     if (detectaHandoff(messageText)) {

@@ -7,7 +7,9 @@ import {
   criarPedido,
   db,
   DEFAULT_AI_SYSTEM_PROMPT,
+  deliveryFeeRulesTable,
   eq,
+  freeDeliveryRulesTable,
   getBrazilTime,
   getNextOpeningTime,
   isClientePausado,
@@ -519,9 +521,30 @@ async function processarFechamentoPedidoNoChat({
         }
       }
 
+      // Se for pizza ou não tiver opções diretas, busca opções de outros produtos da mesma categoria ou pizzas
+      if (normText(matchedProduct.name).includes("pizza") || productDbOptions.length === 0) {
+        for (const [prodId, groups] of optionsMap.entries()) {
+          const otherProd = allDbProducts.find((p: any) => p.id === prodId);
+          if (
+            otherProd &&
+            (otherProd.menuCategoryId === matchedProduct.menuCategoryId ||
+              (normText(matchedProduct.name).includes("pizza") && normText(otherProd.name).includes("pizza")))
+          ) {
+            for (const g of groups.values()) {
+              for (const opt of g.options) {
+                if (!productDbOptions.some((o) => o.id === opt.id)) {
+                  productDbOptions.push(opt);
+                }
+              }
+            }
+          }
+        }
+      }
+
       const resolvedOptions: string[] = [];
       const unmappedOptionNotes: string[] = [];
 
+      // 1. Resolução a partir de selectedOptions informado no JSON
       if (Array.isArray(item.selectedOptions)) {
         for (const optRaw of item.selectedOptions) {
           if (!optRaw) continue;
@@ -547,9 +570,72 @@ async function processarFechamentoPedidoNoChat({
         }
       }
 
+      // 2. TRAVA DE SEGURANÇA INTELIGENTE 1: Varredura nas notas e observações do item
+      // Se a IA mencionou uma borda/adicional nas notas mas não passou o ID em selectedOptions, vincula e cobra!
+      const textToScan = normText(`${item.notes || ""} ${rawName} ${unmappedOptionNotes.join(" ")}`);
+      for (const dbOpt of productDbOptions) {
+        if (resolvedOptions.includes(dbOpt.id)) continue;
+        const normOptName = normText(dbOpt.name);
+        if (normOptName.length >= 3) {
+          if (textToScan.includes(normOptName)) {
+            resolvedOptions.push(dbOpt.id);
+            console.log(
+              `[Bot AI Trava de Segurança] Opcional identificado nas observações e vinculado: "${dbOpt.name}" (ID: ${dbOpt.id}, +R$ ${dbOpt.price}) no produto "${matchedProduct.name}"`,
+            );
+          } else {
+            const keywords = normOptName.split(" ").filter((w) => w.length >= 4);
+            const matchesAll = keywords.length > 0 && keywords.every((kw) => textToScan.includes(kw));
+            if (matchesAll) {
+              resolvedOptions.push(dbOpt.id);
+              console.log(
+                `[Bot AI Trava de Segurança] Opcional vinculado por palavras-chave nas observações: "${dbOpt.name}" (+R$ ${dbOpt.price})`,
+              );
+            }
+          }
+        }
+      }
+
+      // 3. TRAVA DE SEGURANÇA INTELIGENTE 2: Varredura no histórico recente do chat
+      // Se o cliente pediu uma borda ou adicional pago na conversa, mas a IA esqueceu de incluir no JSON
+      if (Array.isArray(history) && history.length > 0) {
+        const recentHistoryText = normText(
+          history
+            .slice(-8)
+            .map((h) => h.text)
+            .join(" "),
+        );
+        for (const dbOpt of productDbOptions) {
+          if (resolvedOptions.includes(dbOpt.id)) continue;
+          if (dbOpt.price > 0 || normText(dbOpt.name).includes("borda")) {
+            const normOptName = normText(dbOpt.name);
+            const keywords = normOptName.split(" ").filter((w) => w.length >= 4);
+            const hasAllKeywords = keywords.length > 0 && keywords.every((kw) => recentHistoryText.includes(kw));
+            if (recentHistoryText.includes(normOptName) || hasAllKeywords) {
+              resolvedOptions.push(dbOpt.id);
+              console.log(
+                `[Bot AI Trava de Segurança] Adicional pago resgatado do histórico do chat e vinculado: "${dbOpt.name}" (+R$ ${dbOpt.price})`,
+              );
+            }
+          }
+        }
+      }
+
+      // Limpa de unmappedOptionNotes opções que foram vinculadas via trava de segurança
+      const cleanedUnmapped = unmappedOptionNotes.filter(
+        (u) =>
+          !resolvedOptions.some((ro) => {
+            const opt = productDbOptions.find((p) => p.id === ro);
+            return (
+              opt &&
+              (normText(opt.name) === normText(u) ||
+                normText(u).includes(normText(opt.name)))
+            );
+          }),
+      );
+
       const combinedNotes = [
         item.notes?.trim(),
-        unmappedOptionNotes.length > 0 ? `Opções: ${unmappedOptionNotes.join(", ")}` : "",
+        cleanedUnmapped.length > 0 ? `Opções: ${cleanedUnmapped.join(", ")}` : "",
       ]
         .filter(Boolean)
         .join(" | ");
@@ -644,6 +730,40 @@ async function processarFechamentoPedidoNoChat({
           deliveryAddress = msg;
           break;
         }
+      }
+    }
+
+    // Auto-recuperação de bairro: se deliveryNeighborhood não veio especificado, tenta identificar a partir do endereço e regras do restaurante
+    if (consumptionMethod === "DELIVERY" && !deliveryNeighborhood) {
+      const fullAddressToSearch = normText(
+        `${deliveryAddress || ""} ${payload.deliveryAddress || ""} ${
+          Array.isArray(history) ? history.filter((h) => h.role === "user").map((h) => h.text).join(" ") : ""
+        }`,
+      );
+
+      try {
+        const feeRules = await db
+          .select({ neighborhood: deliveryFeeRulesTable.neighborhood })
+          .from(deliveryFeeRulesTable)
+          .where(
+            and(
+              eq(deliveryFeeRulesTable.restaurantId, restaurant.id),
+              eq(deliveryFeeRulesTable.isActive, true),
+              eq(deliveryFeeRulesTable.type, "NEIGHBORHOOD"),
+            ),
+          );
+
+        for (const r of feeRules) {
+          if (r.neighborhood && fullAddressToSearch.includes(normText(r.neighborhood))) {
+            deliveryNeighborhood = r.neighborhood;
+            console.log(
+              `[Bot AI Fechamento] Bairro identificado no endereço e vinculado automaticamente: "${deliveryNeighborhood}"`,
+            );
+            break;
+          }
+        }
+      } catch (err) {
+        console.warn("[Bot AI Fechamento] Falha ao extrair bairro das regras:", err);
       }
     }
 
@@ -1133,12 +1253,34 @@ export const processarMensagemBot = async ({
   ).replace(/\/$/, "");
   const menuUrl = `${rawVendasUrl}/`;
 
-  // 2.1. Verifica horário de funcionamento do restaurante em tempo real
-  const operatingHours = await db
-    .select()
-    .from(operatingHoursTable)
-    .where(eq(operatingHoursTable.restaurantId, restaurant.id))
-    .orderBy(asc(operatingHoursTable.dayOfWeek));
+  // 2.1. Verifica horário de funcionamento e regras de entrega em tempo real
+  const [operatingHours, feeRulesRaw, freeDeliveryRulesRaw] = await Promise.all([
+    db
+      .select()
+      .from(operatingHoursTable)
+      .where(eq(operatingHoursTable.restaurantId, restaurant.id))
+      .orderBy(asc(operatingHoursTable.dayOfWeek)),
+    db
+      .select()
+      .from(deliveryFeeRulesTable)
+      .where(
+        and(
+          eq(deliveryFeeRulesTable.restaurantId, restaurant.id),
+          eq(deliveryFeeRulesTable.isActive, true),
+        ),
+      )
+      .orderBy(asc(deliveryFeeRulesTable.displayOrder)),
+    db
+      .select()
+      .from(freeDeliveryRulesTable)
+      .where(
+        and(
+          eq(freeDeliveryRulesTable.restaurantId, restaurant.id),
+          eq(freeDeliveryRulesTable.isActive, true),
+        ),
+      )
+      .catch(() => []),
+  ]);
 
   const { isOpen, closeTime } = isRestaurantOpen(
     restaurant.status,
@@ -1284,8 +1426,40 @@ DIRETRIZES FUNDAMENTAIS:
     baseSystemPrompt = DEFAULT_AI_SYSTEM_PROMPT;
   }
 
+  let deliveryRulesContext = "\n### REGRAS E TAXAS DE ENTREGA (DELIVERY) DO RESTAURANTE:\n";
+  const fixedDeliveryFee = Number(restaurant.deliveryFee ?? 0);
+  deliveryRulesContext += `• Taxa de Entrega Fixa Padrão: ${fixedDeliveryFee > 0 ? `R$ ${fixedDeliveryFee.toFixed(2).replace(".", ",")}` : "R$ 0,00 (Sem taxa fixa)"} (aplicada para entregas que não se enquadrem nas regras específicas de bairro/zona abaixo).\n`;
+
+  if (feeRulesRaw.length > 0) {
+    deliveryRulesContext += "• Zonas e Regras de Frete cadastradas no restaurante:\n";
+    for (const rule of feeRulesRaw) {
+      let desc = "";
+      if (rule.type === "NEIGHBORHOOD") desc = `Bairro: ${rule.neighborhood}`;
+      else if (rule.type === "RADIUS_KM") desc = `Raio de até ${rule.maxDistanceKm} km da loja`;
+      else if (rule.type === "CEP_RANGE") desc = `Faixa de CEP: ${rule.cepFrom} a ${rule.cepTo}`;
+
+      const fee = Number(rule.fee).toFixed(2).replace(".", ",");
+      const minOrder = Number(rule.minimumOrderValue || 0);
+      const minStr = minOrder > 0 ? ` | Pedido mínimo: R$ ${minOrder.toFixed(2).replace(".", ",")}` : "";
+      const freeThresh = rule.freeDeliveryThreshold !== null ? Number(rule.freeDeliveryThreshold) : null;
+      const freeStr = freeThresh !== null ? ` | Frete GRÁTIS para pedidos a partir de R$ ${freeThresh.toFixed(2).replace(".", ",")}` : "";
+
+      deliveryRulesContext += `  - ${rule.name} (${desc}): Taxa R$ ${fee}${minStr}${freeStr}\n`;
+    }
+  }
+
+  if (freeDeliveryRulesRaw.length > 0) {
+    deliveryRulesContext += "• Promoções Ativas de Frete Grátis:\n";
+    for (const fRule of freeDeliveryRulesRaw) {
+      if (fRule.criterion === "MIN_ORDER_VALUE") {
+        deliveryRulesContext += `  - ${fRule.name}: Frete GRÁTIS geral em qualquer entrega para pedidos a partir de R$ ${Number(fRule.minOrderValue).toFixed(2).replace(".", ",")}\n`;
+      }
+    }
+  }
+
   const fullSystemPrompt = `${baseSystemPrompt}
 ${storeStatusContext}
+${deliveryRulesContext}
 ${menuContext}
 
 ### REGRAS CRÍTICAS E OBRIGATÓRIAS DE FLUXO NO WHATSAPP (FECHAMENTO 100% NO CHAT):
@@ -1319,12 +1493,15 @@ ${!isOpen ? `     - Se o cliente tentar pedir itens ou fechar pedido, lembre-o c
      Apresente os sabores disponíveis E pergunte expressamente:
      "Você gostaria da sua pizza inteira de um único sabor ou prefere dividir em 2 sabores (meio a meio)? 🍕"
    - QUANDO O CLIENTE ESCOLHER 2 SABORES (ex: "metade calabresa e metade portuguesa" ou "meio a meio frango e quatro queijos"):
-     ACEITE IMEDIATAMENTE e anote com entusiasmo!
-     Exemplo: "Excelente escolha! Pizza meio a meio (metade Calabresa e metade Portuguesa) anotada! 🍕✨"
-     JAMAIS diga que não é permitido ou que o sistema só aceita pizzas inteiras. Pizzas meio a meio são 100% aceitas!
-     Em seguida, pergunte sobre a borda recheada (se houver no cardápio) ou bebidas.
-   - NO BLOCO [CRIAR_PEDIDO_JSON] PARA PIZZA DE 2 SABORES:
-     Use o ID do sabor principal (se preços diferentes, use o de maior valor). No campo "name", use "Pizza Meio a Meio". E no campo "notes", coloque obrigatoriamente: "Meio a Meio: Metade [Sabor 1] / Metade [Sabor 2]" e borda se houver.
+      ACEITE IMEDIATAMENTE e anote com entusiasmo!
+      Exemplo: "Excelente escolha! Pizza meio a meio (metade Calabresa e metade Portuguesa) anotada! 🍕✨"
+      JAMAIS diga que não é permitido ou que o sistema só aceita pizzas inteiras. Pizzas meio a meio são 100% aceitas!
+      Em seguida, pergunte sobre a borda recheada (se houver bordas cadastradas no cardápio).
+      ATENÇÃO OBRIGATÓRIA AOS PREÇOS DAS BORDAS: Apresente SEMPRE as opções de borda acompanhadas do respectivo valor adicional (+R$ XX,XX)!
+      Exemplo: "Você gostaria de adicionar alguma borda recheada na sua pizza? Temos as opções: Catupiry Original (+R$ 8,00), Cheddar Cremoso (+R$ 8,00) ou Chocolate ao Leite (+R$ 10,00). 😊"
+      NUNCA pergunte sobre bordas sem exibir os preços de cada uma!
+    - NO BLOCO [CRIAR_PEDIDO_JSON] PARA PIZZA DE 2 SABORES:
+      Use o ID do sabor principal (se preços diferentes, use o de maior valor). No campo "name", use "Pizza Meio a Meio". No campo "selectedOptions", inclua OBRIGATORIAMENTE o ID da borda escolhida se houver. E no campo "notes", coloque obrigatoriamente: "Meio a Meio: Metade [Sabor 1] / Metade [Sabor 2]" e a borda se houver.
 
 3. REGRA CRÍTICA - ALTERAÇÃO OU CANCELAMENTO DE PEDIDO JÁ CONFIRMADO:
    - Se o cliente solicitar alterar, mudar, cancelar ou editar um pedido que já foi confirmado ou enviado para a produção:
@@ -1339,13 +1516,19 @@ ${!isOpen ? `     - Se o cliente tentar pedir itens ou fechar pedido, lembre-o c
    - NUNCA coloque pontos finais, vírgulas, parênteses ou emojis colados no final do link (ex: "http://.../.", "http://.../)" ou "http://.../🍕").
 
 5. FLUXO PASSO A PASSO PARA ANOTAR E FECHAR O PEDIDO:
-   • Etapa 1 (Opções e Sabores Obrigatórios do Item):
-     SEMPRE que o cliente escolher um item que tem "ESCOLHA OBRIGATÓRIA" (como sabores de sorvete, ponto da carne de hambúrguer, opções de lanches, etc.):
+   • Etapa 1 (Opções, Sabores e Adicionais do Item):
+     SEMPRE que o cliente escolher um item que possui opções ou adicionais disponíveis no cardápio:
      Você DEVE perguntar quais opções ele deseja ANTES de perguntar sobre bebidas ou entrega!
-     Apresente com clareza as opções disponíveis e quantas ele pode escolher.
-     Exemplo (Sorvete): "Perfeito, [Nome]! Para o Pote de Sorvete Família você pode escolher de 1 a 3 sabores. Temos Baunilha, Chocolate Belga, Morango e Flocos. Quais você gostaria?"
-     Exemplo (Hambúrguer): "Excelente escolha! Como você prefere o ponto da carne do seu Duplo Costela? Temos Ao ponto, Bem passado ou Mal passado."
-     JAMAIS pule essa etapa, JAMAIS adivinhe os sabores/ponto e JAMAIS avance para a entrega ou bebida sem antes definir as opções obrigatórias do item. PARE AÍ e aguarde a resposta do cliente.
+     - REGRAS DE PREÇO PARA OPCIONAIS E ADICIONAIS:
+       * OPÇÕES GRATUITAS OU INCLUSAS (ex: ponto da carne de hambúrguer [Ao ponto, Bem passado, Mal passado], sabores inclusos de sorvete, caldas sem acréscimo):
+         Apresente apenas os nomes com clareza, SEM colocar valor adicional.
+         Exemplo (Hambúrguer): "Excelente escolha! Como você prefere o ponto da carne do seu Duplo Costela? Temos Ao ponto, Bem passado ou Mal passado."
+         Exemplo (Sorvete): "Perfeito! Para o Pote de Sorvete Família você pode escolher de 1 a 3 sabores. Temos Baunilha, Chocolate Belga, Morango e Flocos. Quais você gostaria?"
+       * ADICIONAIS E BORDAS PAGAS (opções com valor extra > 0 cadastrado no cardápio):
+         É TERMINANTEMENTE OBRIGATÓRIO apresentar cada opção paga acompanhada do seu respectivo valor adicional (+R$ XX,XX)!
+         Exemplo (Bordas de Pizza): "Você gostaria de adicionar alguma borda recheada na sua pizza? Temos as opções: Catupiry Original (+R$ 8,00), Cheddar Cremoso (+R$ 8,00) ou Chocolate ao Leite (+R$ 10,00). 😊"
+         Exemplo (Adicionais de Lanche): "Deseja turbinar seu lanche com algum adicional? Temos Bacon Extra (+R$ 4,50), Cheddar Fatiado (+R$ 3,00) ou Hambúrguer Extra (+R$ 8,00)."
+     JAMAIS pule essa etapa, JAMAIS adivinhe os sabores/ponto/borda e JAMAIS avance para a entrega ou bebida sem antes definir as opções do item. PARE AÍ e aguarde a resposta do cliente.
 
    • Etapa 2 (Bebida / Acompanhamento - Upsell):
      Somente após definir as opções do prato/lanche principal, pergunte APENAS se deseja adicionar alguma bebida geladinha, sobremesa ou acompanhamento. PARE AÍ e aguarde a resposta do cliente.
@@ -1354,7 +1537,8 @@ ${!isOpen ? `     - Se o cliente tentar pedir itens ou fechar pedido, lembre-o c
      Somente APÓS o cliente responder sobre as bebidas/acompanhamentos, pergunte se o pedido será para ENTREGA (Delivery) ou RETIRADA no balcão. PARE AÍ e aguarde.
 
    • Etapa 4 (Endereço Completo se Entrega):
-     Se o cliente escolher ENTREGA, pergunte o endereço completo para envio (Rua, Número, Bairro e Complemento ou Ponto de Referência). PARE AÍ e aguarde.
+     Se o cliente escolher ENTREGA, pergunte o endereço completo para envio (Rua, Número, BAIRRO e Complemento ou Ponto de Referência).
+     - É FUNDAMENTAL solicitar o BAIRRO para calcular o valor exato da taxa de entrega! PARE AÍ e aguarde.
      Se o cliente escolheu RETIRADA, pule direto para a Etapa 5.
 
    • Etapa 5 (Forma de Pagamento e Troco):
@@ -1367,10 +1551,17 @@ ${!isOpen ? `     - Se o cliente tentar pedir itens ou fechar pedido, lembre-o c
        Você DEVE somar os produtos escolhidos e informar o valor total IMEDIATAMENTE!
        JAMAIS diga frases como "para calcular o valor preciso saber o troco". O valor do pedido é a soma dos produtos e NÃO depende do troco!
 
-   • Etapa 6 (Resumo Completo e Confirmação OBRIGATÓRIA antes de enviar para a cozinha):
-     SEMPRE que tiver todos os dados do pedido (itens, opções, endereço/retirada e forma de pagamento com troco se houver), você DEVE apresentar o resumo claro e organizado:
-     - Itens com quantidades, valores e sabores/opções escolhidos
-     - Subtotal/Total exato do pedido
+   • Etapa 6 (Resumo Completo e Confirmação OBRIGATÓRIA com SOMA MATEMÁTICA REAL):
+     SEMPRE que tiver todos os dados do pedido (itens, opções/bordas, endereço/retirada e forma de pagamento com troco se houver), você DEVE apresentar o resumo claro e organizado:
+     - Itens com quantidades, valores e sabores/opções/bordas escolhidos (detalhando o valor da borda/adicional pago)
+     - Se o método for ENTREGA:
+       Informe a linha com o frete calculado com base nas regras acima:
+       * Se o bairro do cliente for atendido por regra de bairro (ex: Bairro Pinheiros): aplique a taxa da regra (ex: R$ 7,90, ou R$ 0,00 se o valor dos produtos atingir o frete grátis do bairro de R$ 100,00).
+       * Se for outro bairro: aplique a Taxa Fixa Padrão (ex: R$ 4,99).
+       * Se o valor dos produtos atingir a regra geral de Frete Grátis (ex: R$ 1.000,00): informe Frete GRÁTIS!
+       * Exemplo: "🛵 Taxa de Entrega (Bairro Pinheiros): R$ 7,90" (ou "🛵 Frete Grátis!")
+     - SOMA MATEMÁTICA RIGOROSA: some Produtos + Opcionais/Bordas Pagas + Bebidas + Taxa de Entrega (se entrega) = Total Real.
+       JAMAIS esqueça de somar os adicionais e o frete no total do resumo!
      - Método (Entrega no endereço informado OU Retirada no balcão)
      - Forma de pagamento escolhida (e troco se houver)
      E faça OBRIGATORIAMENTE a pergunta decisiva:
@@ -1381,6 +1572,8 @@ ${!isOpen ? `     - Se o cliente tentar pedir itens ou fechar pedido, lembre-o c
 6. DISPARO DO PEDIDO NA COZINHA (SOMENTE APÓS O CLIENTE CONFIRMAR O RESUMO):
    - REGRA INVIOLÁVEL: O bloco [CRIAR_PEDIDO_JSON] SÓ PODE SER GERADO se o cliente responder CONFIRMANDO expressamente o Resumo da Etapa 6 (ex.: "Sim", "Pode confirmar", "Pode mandar", "Sim por favor", "Confirmo", "Manda ver", etc.).
    - Se a mensagem do cliente for informando o troco (ex: "Troco para 200", "Tenho 50 reais"), NUNCA gere o bloco [CRIAR_PEDIDO_JSON] nessa resposta! Em vez disso, monte o Resumo Completo (Etapa 6) e pergunte se pode enviar para a produção.
+   - REGRA DE VINCULAÇÃO DE ADICIONAIS E BORDAS NO JSON:
+     Se o cliente escolheu qualquer borda ou opcional (ex: Borda Catupiry Original [ID: ...]), você DEVE OBRIGATORIAMENTE incluir o ID dessa opção no array "selectedOptions": ["ID_DA_BORDA_OU_OPCAO"], além de anotar nas "notes". Isso garante a cobrança correta no caixa!
    - Assim que o cliente responder confirmando expressamente:
      Você DEVE gerar na sua resposta o bloco [CRIAR_PEDIDO_JSON] com os dados estruturados do pedido no seguinte formato exato:
      [CRIAR_PEDIDO_JSON]
@@ -1397,7 +1590,7 @@ ${!isOpen ? `     - Se o cliente tentar pedir itens ou fechar pedido, lembre-o c
            "name": "Nome do Produto",
            "quantity": 1,
            "selectedOptions": ["ID_DA_OPCAO_1", "ID_DA_OPCAO_2"],
-           "notes": "Sabores ou opções escolhidas (ex: Baunilha, Chocolate)"
+           "notes": "Sabores ou opções escolhidas (ex: Metade Frango / Metade Calabresa com Borda Catupiry Original)"
          }
        ]
      }
@@ -1413,7 +1606,12 @@ ${!isOpen ? `     - Se o cliente tentar pedir itens ou fechar pedido, lembre-o c
 8. DIRETRIZES DE FORMATAÇÃO E CÓDIGOS [ID: ...]:
    - Os identificadores [ID: ...] no cardápio são exclusivamente para seu controle interno na geração do bloco [CRIAR_PEDIDO_JSON].
    - NUNCA mostre os códigos [ID: ...] para o cliente nas mensagens do WhatsApp; exiba sempre os nomes amigáveis dos produtos e opções.
-   - Mantenha mensagens curtas, acolhedoras e naturais (máximo de 2 a 4 frases por mensagem).`;
+   - Mantenha mensagens curtas, acolhedoras e naturais (máximo de 2 a 4 frases por mensagem).
+
+9. MENSAGENS DE ÁUDIO E VOZ:
+   - O nosso sistema transcreve automaticamente os áudios e mensagens de voz enviados pelos clientes para texto.
+   - JAMAIS diga frases como "não consigo ouvir áudios", "sou apenas um robô de texto" ou "escreva pois não consigo escutar".
+   - Você aceita áudios e mensagens de texto com a mesma naturalidade! Se o cliente perguntar se você ouviu o áudio dele ou se pode enviar áudio, confirme amigavelmente e dê sequência ao atendimento normalmente.`;
 
   // 3. Chaves de API configuradas
   const geminiKey = cleanKey(
