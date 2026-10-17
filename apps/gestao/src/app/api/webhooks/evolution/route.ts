@@ -633,7 +633,116 @@ async function processarFilaMensagens(sessionKey: string) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  if (url.searchParams.get("debug") === "audio") {
+    const diagnostics: any = { timestamp: new Date().toISOString() };
+    try {
+      // 1. Busca aiSettings no banco
+      const [settings] = await db
+        .select({
+          slug: restaurantsTable.slug,
+          restaurantId: restaurantsTable.id,
+          geminiApiKey: aiSettingsTable.geminiApiKey,
+          groqApiKey: aiSettingsTable.groqApiKey,
+          openaiApiKey: aiSettingsTable.openaiApiKey,
+          evolutionApiKey: aiSettingsTable.evolutionApiKey,
+          evolutionInstanceName: aiSettingsTable.evolutionInstanceName,
+          aiProvider: aiSettingsTable.aiProvider,
+        })
+        .from(aiSettingsTable)
+        .innerJoin(restaurantsTable, eq(aiSettingsTable.restaurantId, restaurantsTable.id))
+        .limit(1);
+
+      diagnostics.restaurant = settings?.slug;
+      diagnostics.provider = settings?.aiProvider;
+      diagnostics.hasGemini = Boolean(settings?.geminiApiKey);
+      diagnostics.geminiKeyPrefix = settings?.geminiApiKey ? settings.geminiApiKey.slice(0, 8) + "..." : null;
+      diagnostics.hasOpenai = Boolean(settings?.openaiApiKey);
+      diagnostics.hasGroq = Boolean(settings?.groqApiKey);
+
+      const apiKey = cleanKey(
+        process.env.EVOLUTION_API_KEY ||
+        settings?.evolutionApiKey ||
+        "J@0seW#5creT&10te_et01&Terc5#Wes0@J",
+      );
+      const instance = settings?.evolutionInstanceName || "eeyfood-bot";
+      const evoUrl = "https://evolution.fswdonalds.eeytech.com";
+
+      // 2. Busca o último áudio recebido
+      const msgRes = await axios.post(
+        `${evoUrl}/chat/findMessages/${encodeURIComponent(instance)}`,
+        { where: {} },
+        { headers: { apikey: apiKey }, timeout: 8000 },
+      );
+      const records = msgRes.data?.messages?.records || msgRes.data || [];
+      const lastAudio = records.find((m: any) => m.messageType === "audioMessage");
+      diagnostics.lastAudioId = lastAudio?.key?.id;
+
+      if (lastAudio?.key?.id) {
+        // 3. Tenta getBase64FromMediaMessage
+        const base64Res = await axios.post(
+          `${evoUrl}/chat/getBase64FromMediaMessage/${encodeURIComponent(instance)}`,
+          { message: { key: { id: lastAudio.key.id } }, convertToMp4: false },
+          { headers: { apikey: apiKey }, timeout: 10000 },
+        );
+        const b64 = base64Res.data?.base64;
+        diagnostics.base64Length = b64 ? b64.length : 0;
+        diagnostics.mimetype = base64Res.data?.mimetype;
+
+        if (b64 && settings?.geminiApiKey) {
+          // 4. Testa diretamente o Gemini
+          const geminiKey = settings.geminiApiKey;
+          const cleanB64 = String(b64)
+            .replace(/^data:[^;]+;base64,/, "")
+            .replace(/\s+/g, "")
+            .trim();
+          let cleanMime = (base64Res.data?.mimetype || "audio/ogg")
+            .split(";")[0]
+            .trim()
+            .toLowerCase();
+          if (!cleanMime.startsWith("audio/")) cleanMime = "audio/ogg";
+
+          diagnostics.geminiAttempt = {};
+          for (const model of ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"]) {
+            try {
+              const res = await axios.post(
+                `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(geminiKey)}`,
+                {
+                  contents: [
+                    {
+                      role: "user",
+                      parts: [
+                        { text: "Transcreva com fidelidade o áudio a seguir em português. Retorne apenas o texto falado." },
+                        { inlineData: { mimeType: cleanMime, data: cleanB64 } },
+                      ],
+                    },
+                  ],
+                },
+                { headers: { "Content-Type": "application/json" }, timeout: 20000 },
+              );
+              diagnostics.geminiAttempt[model] = {
+                status: res.status,
+                text: res.data?.candidates?.[0]?.content?.parts?.[0]?.text,
+              };
+              if (diagnostics.geminiAttempt[model].text) break;
+            } catch (gErr: any) {
+              diagnostics.geminiAttempt[model] = {
+                status: gErr.response?.status,
+                data: gErr.response?.data,
+                message: gErr.message,
+              };
+            }
+          }
+        }
+      }
+
+      return NextResponse.json({ ok: true, diagnostics });
+    } catch (e: any) {
+      return NextResponse.json({ ok: false, error: e.message, stack: e.stack, diagnostics });
+    }
+  }
+
   return NextResponse.json({
     status: "online",
     endpoint: "Evolution API Webhook Receiver",
