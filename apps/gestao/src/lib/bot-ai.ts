@@ -32,10 +32,38 @@ const HANDOFF_KEYWORDS = [
   "falar com alguém",
   "quero atendimento",
   "atendimento humano",
+  "alterar pedido",
+  "mudar pedido",
+  "cancelar pedido",
+  "trocar pedido",
+  "modificar pedido",
+  "alterar o pedido",
+  "mudar o pedido",
+  "cancelar o pedido",
+  "trocar o pedido",
+  "modificar o pedido",
+  "alterar meu pedido",
+  "mudar meu pedido",
+  "cancelar meu pedido",
+  "trocar meu pedido",
+  "editar pedido",
+  "editar o pedido",
+  "editar meu pedido",
+  "mudar endereco",
+  "mudar endereço",
+  "trocar endereco",
+  "trocar endereço",
+  "cancelamento",
 ];
+
+const ALTER_OR_CANCEL_ORDER_REGEX =
+  /(?:altera(?:r)?|muda(?:r)?|cancela(?:r)?|troca(?:r)?|modifica(?:r)?|edita(?:r)?)\s+(?:o\s+|meu\s+|algum\s+|esse\s+|o\s+item\s+do\s+)?pedido/i;
 
 export const detectaHandoff = (text: string): boolean => {
   const lower = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (ALTER_OR_CANCEL_ORDER_REGEX.test(text)) {
+    return true;
+  }
   return HANDOFF_KEYWORDS.some((kw) =>
     lower.includes(kw.normalize("NFD").replace(/[\u0300-\u036f]/g, "")),
   );
@@ -280,6 +308,45 @@ function cleanInternalReasoning(text: string): string {
 }
 
 /**
+ * Garante que nenhum link enviado ao WhatsApp fique grudado com pontuações ('.', ')', ',', '!', '?'),
+ * parênteses ou emojis, isolando os links de forma limpa em linhas dedicadas.
+ */
+export function sanitizeLinksInMessage(text: string): string {
+  if (!text) return "";
+  let res = text;
+
+  // 1. Extrai links presos entre parênteses: "(cardápio: https://...)" ou "(https://...)"
+  res = res.replace(/\((?:[^)]*?)?(https?:\/\/[^\s\)]+)(?:[^)]*?)?\)/gi, "\n\n👉 $1\n\n");
+
+  // 2. Remove pontuações coladas imediatamente no final do link: ., ), ,, !, ?, ;, :
+  res = res.replace(/(https?:\/\/[^\s]+?)([.,\)!?:;]+)(?=\s|$)/gi, "$1 $2");
+
+  // 3. Remove emojis ou caracteres não-URL colados imediatamente no final da URL sem espaço
+  res = res.replace(/(https?:\/\/[^\s]+?)([^\w\s\/\-_=~#@%&?+.:]+)(?=\s|$)/gi, "$1 $2");
+
+  // 4. Quebra links que estejam na mesma linha com outros textos para que fiquem isolados com espaço
+  res = res.replace(
+    /(?:^|\n)([^\n]*?)(https?:\/\/[^\s]+)([^\n]*?)(?:\n|$)/g,
+    (match, before, url, after) => {
+      const b = before.replace(/👉/g, "").trim();
+      const a = after.trim();
+      const cleanUrl = url.trim().replace(/[.,\)!?:;]+$/, "");
+      const parts: string[] = [];
+      if (b) parts.push(b);
+      parts.push(`👉 ${cleanUrl}`);
+      if (a) parts.push(a);
+      return `\n\n${parts.join("\n\n")}\n\n`;
+    },
+  );
+
+  // 5. Normaliza excesso de marcadores e quebras de linha
+  res = res.replace(/(?:👉\s*)+/g, "👉 ");
+  res = res.replace(/\n{3,}/g, "\n\n").trim();
+
+  return res;
+}
+
+/**
  * Utilitário resiliente para extrair e reparar JSON caso a IA tenha truncado a resposta
  * ou fechamento de chaves/aspas esteja incompleto.
  */
@@ -411,6 +478,27 @@ async function processarFechamentoPedidoNoChat({
         matchedProduct = allDbProducts.find(
           (p: any) => normText(p.name).includes(normI) || normI.includes(normText(p.name)),
         );
+      }
+
+      // Suporte especial para Pizza Meio a Meio (2 sabores):
+      // Se não encontrou pelo nome "Pizza Meio a Meio", localiza através dos sabores descritos nas notas
+      if (
+        !matchedProduct &&
+        (normText(rawName).includes("meio a meio") ||
+          normText(item.notes).includes("meio a meio") ||
+          normText(item.notes).includes("metade"))
+      ) {
+        const notesStr = normText(item.notes) + " " + normText(rawName);
+        matchedProduct = allDbProducts.find(
+          (p: any) =>
+            normText(p.name).includes("pizza") &&
+            notesStr.includes(normText(p.name).replace("pizza", "").trim()),
+        );
+        if (!matchedProduct) {
+          matchedProduct = allDbProducts.find(
+            (p: any) => Boolean((p as any).isPizzaCategory) || normText(p.name).includes("pizza"),
+          );
+        }
       }
 
       if (!matchedProduct) {
@@ -586,8 +674,15 @@ async function processarFechamentoPedidoNoChat({
     // 7. Montagem da Mensagem de Confirmação para o WhatsApp
     const itensLines = finalProducts
       .map((p) => {
+        const isHalfAndHalf =
+          normText(p.name).includes("meio a meio") ||
+          normText(p.notes).includes("meio a meio") ||
+          normText(p.notes).includes("metade");
+
         let l = `• *${p.quantity}x ${p.name}*`;
-        if (p.notes) l += ` _(${p.notes})_`;
+        if (p.notes) {
+          l += isHalfAndHalf ? `\n   └─ 🍕 ${p.notes}` : `\n   └─ Obs: ${p.notes}`;
+        }
         return l;
       })
       .join("\n");
@@ -1047,6 +1142,15 @@ DIRETRIZES FUNDAMENTAIS:
       "Categorias, Produtos e Opções disponíveis no restaurante:\n" +
       cardapio.menuCategories
         .map((c) => {
+          const isPizzaCategory =
+            Boolean((c as any).isPizzaCategory) ||
+            c.name.toLowerCase().includes("pizza");
+
+          let catHeader = `*${c.name}*`;
+          if (isPizzaCategory) {
+            catHeader += ` 🍕 (CATEGORIA DE PIZZAS - PERMITE 1 SABOR INTEIRO OU DIVIDIR EM 2 SABORES MEIO A MEIO! SEMPRE OFEREÇA 2 SABORES AO CLIENTE)`;
+          }
+
           const prods = c.products
             .map((p) => {
               let prodText = `  • ${p.name} [ID: ${p.id}] - R$ ${Number(p.price).toFixed(2)}${p.description ? ` (${p.description})` : ""}`;
@@ -1086,18 +1190,60 @@ DIRETRIZES FUNDAMENTAIS:
               return prodText;
             })
             .join("\n\n");
-          return `*${c.name}*:\n${prods}`;
+          return `${catHeader}:\n${prods}`;
         })
         .join("\n\n");
   }
 
-  const baseSystemPrompt = aiSettings.systemPrompt || DEFAULT_AI_SYSTEM_PROMPT;
+  let baseSystemPrompt = aiSettings.systemPrompt || DEFAULT_AI_SYSTEM_PROMPT;
+  if (baseSystemPrompt.includes("Burger Craft SP") || baseSystemPrompt.includes("Craft Bot")) {
+    baseSystemPrompt = DEFAULT_AI_SYSTEM_PROMPT;
+  }
+
   const fullSystemPrompt = `${baseSystemPrompt}\n${menuContext}
 
 ### REGRAS CRÍTICAS E OBRIGATÓRIAS DE FLUXO NO WHATSAPP (FECHAMENTO 100% NO CHAT):
 REGRA DE OURO: FAÇA APENAS UMA PERGUNTA POR VEZ. É TERMINANTEMENTE PROIBIDO JUNTAR DUAS PERGUNTAS NA MESMA MENSAGEM.
 
-1. FLUXO PASSO A PASSO PARA ANOTAR E FECHAR O PEDIDO:
+1. REGRAS PARA A PRIMEIRA MENSAGEM VS MENSAGENS EM ANDAMENTO:
+   • SE FOR O PRIMEIRO CONTATO DO CLIENTE (início da conversa):
+     - Dê as boas-vindas com simpatia ao ${restaurant.name}.
+     - Apresente os principais pratos/categorias ou pergunte como pode ajudar.
+     - Envie o link oficial do cardápio online isolado em linha própria:
+       👉 ${menuUrl}
+     - OBRIGATÓRIO: Termine a primeira mensagem com esta instrução:
+       💡 *Dica:* Para um atendimento mais ágil e sem falhas, por favor envie *uma mensagem de cada vez* e aguarde minha resposta antes de mandar a próxima. 😊
+   • SE A CONVERSA JÁ ESTIVER EM ANDAMENTO:
+     - JAMAIS repita saudações formais longas ("Olá!", "Boa noite!", "Seja bem-vindo...").
+     - JAMAIS reenvie a instrução de "uma mensagem de cada vez".
+     - Vá direto ao ponto, respondendo objetivamente ao que o cliente falou.
+
+2. REGRAS ESPECIAIS PARA PIZZAS (1 OU 2 SABORES / MEIO A MEIO):
+   - Nossas pizzas PODEM ser pedidas inteiras (1 sabor) OU divididas em até 2 sabores (meio a meio)!
+   - QUANDO O CLIENTE PEDIR PIZZA OU PERGUNTAR SOBRE PIZZAS:
+     Apresente os sabores disponíveis E pergunte expressamente:
+     "Você gostaria da sua pizza inteira de um único sabor ou prefere dividir em 2 sabores (meio a meio)? 🍕"
+   - QUANDO O CLIENTE ESCOLHER 2 SABORES (ex: "metade calabresa e metade portuguesa" ou "meio a meio frango e quatro queijos"):
+     ACEITE IMEDIATAMENTE e anote com entusiasmo!
+     Exemplo: "Excelente escolha! Pizza meio a meio (metade Calabresa e metade Portuguesa) anotada! 🍕✨"
+     JAMAIS diga que não é permitido ou que o sistema só aceita pizzas inteiras. Pizzas meio a meio são 100% aceitas!
+     Em seguida, pergunte sobre a borda recheada (se houver no cardápio) ou bebidas.
+   - NO BLOCO [CRIAR_PEDIDO_JSON] PARA PIZZA DE 2 SABORES:
+     Use o ID do sabor principal (se preços diferentes, use o de maior valor). No campo "name", use "Pizza Meio a Meio". E no campo "notes", coloque obrigatoriamente: "Meio a Meio: Metade [Sabor 1] / Metade [Sabor 2]" e borda se houver.
+
+3. REGRA CRÍTICA - ALTERAÇÃO OU CANCELAMENTO DE PEDIDO JÁ CONFIRMADO:
+   - Se o cliente solicitar alterar, mudar, cancelar ou editar um pedido que já foi confirmado ou enviado para a produção:
+     Você NÃO PODE alterar o pedido e NÃO PODE registrar um novo pedido corretivo.
+     Você DEVE responder educadamente:
+     "Por motivos de segurança e agilidade da cozinha, pedidos já enviados para produção não podem ser alterados automaticamente por aqui. Estou chamando um atendente humano agora mesmo para verificar com a nossa equipe! Por favor, aguarde um momento."
+     e emitir a tag __HANDOFF_REQUIRED__.
+
+4. REGRAS DE FORMATAÇÃO DE LINKS:
+   - O link do cardápio online (${menuUrl}) DEVE SEMPRE estar isolado em sua própria linha, cercado por linhas em branco.
+   - NUNCA coloque parênteses ao redor do link, como "(http://...)".
+   - NUNCA coloque pontos finais, vírgulas, parênteses ou emojis colados no final do link (ex: "http://.../.", "http://.../)" ou "http://.../🍕").
+
+5. FLUXO PASSO A PASSO PARA ANOTAR E FECHAR O PEDIDO:
    • Etapa 1 (Opções e Sabores Obrigatórios do Item):
      SEMPRE que o cliente escolher um item que tem "ESCOLHA OBRIGATÓRIA" (como sabores de sorvete, ponto da carne de hambúrguer, opções de lanches, etc.):
      Você DEVE perguntar quais opções ele deseja ANTES de perguntar sobre bebidas ou entrega!
@@ -1130,7 +1276,7 @@ REGRA DE OURO: FAÇA APENAS UMA PERGUNTA POR VEZ. É TERMINANTEMENTE PROIBIDO JU
      "Posso confirmar o seu pedido e enviar agora mesmo para a produção na cozinha?"
      PARE AÍ e aguarde a confirmação do cliente.
 
-2. DISPARO DO PEDIDO NA COZINHA (QUANDO O CLIENTE CONFIRMAR):
+6. DISPARO DO PEDIDO NA COZINHA (QUANDO O CLIENTE CONFIRMAR):
    - Assim que o cliente responder confirmando (ex: "Sim", "Pode confirmar", "Pode mandar", "Sim por favor", "Confirmo", "Manda ver", etc.):
      Você DEVE gerar na sua resposta o bloco [CRIAR_PEDIDO_JSON] com os dados estruturados do pedido no seguinte formato exato:
      [CRIAR_PEDIDO_JSON]
@@ -1154,13 +1300,13 @@ REGRA DE OURO: FAÇA APENAS UMA PERGUNTA POR VEZ. É TERMINANTEMENTE PROIBIDO JU
      [/CRIAR_PEDIDO_JSON]
    - IMPORTANTE: O nosso sistema irá interceptar esse bloco automaticamente, registrar o pedido no banco de dados e responder ao cliente com o comprovante oficial completo (número do pedido #..., valor total, itens e tempo estimado). Portanto, você NÃO precisa inventar número de pedido nem escrever mensagens adicionais fora desse bloco.
 
-3. RESPOSTAS EM ETAPAS, MÚLTIPLAS MENSAGENS E CITAÇÕES/CÓPIAS:
+7. RESPOSTAS EM ETAPAS, MÚLTIPLAS MENSAGENS E CITAÇÕES/CÓPIAS:
    - Clientes de WhatsApp frequentemente mandam respostas em mensagens separadas (ex.: mandou "quero baunilha e chocolate" e logo em seguida "e quero uma coca").
    - Clientes também costumam responder copiando ou citando a pergunta anterior e adicionando a resposta no final (ex.: copiou as opções de refrigerante e escreveu "Coca" na última linha). Entenda sempre a resposta final do cliente e continue normalmente sem se perder.
    - Você DEVE consultar todo o histórico da conversa: JAMAIS esqueça os lanches, bebidas, sabores ou preferências já informadas nas mensagens anteriores.
    - NUNCA se perca e NUNCA repita perguntas sobre itens, opções ou métodos que o cliente já acabou de responder.
 
-4. DIRETRIZES DE FORMATAÇÃO E CÓDIGOS [ID: ...]:
+8. DIRETRIZES DE FORMATAÇÃO E CÓDIGOS [ID: ...]:
    - Os identificadores [ID: ...] no cardápio são exclusivamente para seu controle interno na geração do bloco [CRIAR_PEDIDO_JSON].
    - NUNCA mostre os códigos [ID: ...] para o cliente nas mensagens do WhatsApp; exiba sempre os nomes amigáveis dos produtos e opções.
    - Mantenha mensagens curtas, acolhedoras e naturais (máximo de 2 a 4 frases por mensagem).`;
@@ -1285,6 +1431,42 @@ REGRA DE OURO: FAÇA APENAS UMA PERGUNTA POR VEZ. É TERMINANTEMENTE PROIBIDO JU
     // Limpeza de segurança: remove qualquer resquício de raciocínio interno ou rascunhos da IA
     botReply = cleanInternalReasoning(botReply);
 
+    // Se a IA sinalizou necessidade de handoff (ex: cliente pediu para alterar/cancelar pedido já confirmado)
+    if (
+      botReply.includes("__HANDOFF_REQUIRED__") ||
+      botReply.includes("[HANDOFF_REQUIRED]")
+    ) {
+      console.log(`[Bot AI] Handoff signal detectado na resposta para ${customerPhone}.`);
+      clearConversationHistory(sessionKey);
+      return HANDOFF_SIGNAL;
+    }
+
+    // Se for o primeiro contato, garante a dica de 1 mensagem por vez
+    const TIP_MSG =
+      "💡 *Dica:* Para um atendimento mais ágil e sem falhas, por favor envie *uma mensagem de cada vez* e aguarde minha resposta antes de mandar a próxima. 😊";
+
+    const isFirstInteraction = history.length === 0;
+
+    if (isFirstInteraction) {
+      if (
+        !botReply.includes("uma mensagem de cada vez") &&
+        !botReply.includes("uma mensagem por vez")
+      ) {
+        botReply = `${botReply.trim()}\n\n${TIP_MSG}`;
+      }
+    } else {
+      // Se já está em conversa, remove eventuais saudações completas repetidas geradas pela IA
+      botReply = botReply
+        .replace(
+          /^(?:["“])?(?:Olá|Oi|Boa noite|Bom dia|Boa tarde)[^!\n]+! Seja muito bem-vindo[^\n]+\n*/i,
+          "",
+        )
+        .trim();
+    }
+
+    // Sanitiza links para que NUNCA fiquem grudados com '.', ')', ',', emojis, etc.
+    botReply = sanitizeLinksInMessage(botReply);
+
     // Garantia absoluta de segurança: NUNCA enviar código ou tags internas para o cliente WhatsApp
     if (botReply.includes("[CRIAR_PEDIDO_JSON]")) {
       botReply =
@@ -1302,5 +1484,7 @@ REGRA DE OURO: FAÇA APENAS UMA PERGUNTA POR VEZ. É TERMINANTEMENTE PROIBIDO JU
   console.warn(
     `[Bot AI] Nenhuma LLM respondeu. Enviando mensagem de boas-vindas com cardápio para ${customerPhone}.`,
   );
-  return `Olá, ${customerName ? customerName : "tudo bem"}! Seja muito bem-vindo ao *${restaurant.name}*! 😊\n\nAcesse nosso cardápio completo online para conferir as opções, valores e fazer seu pedido com facilidade:\n👉 ${menuUrl}\n\nSe precisar de mais alguma informação, estou à disposição!`;
+  return sanitizeLinksInMessage(
+    `Olá, ${customerName ? customerName : "tudo bem"}! Seja muito bem-vindo ao *${restaurant.name}*! 😊\n\nAcesse nosso cardápio completo online para conferir as opções, valores e fazer seu pedido com facilidade:\n👉 ${menuUrl}\n\n💡 *Dica:* Para um atendimento mais ágil e sem falhas, por favor envie *uma mensagem de cada vez* e aguarde minha resposta antes de mandar a próxima. 😊`,
+  );
 };

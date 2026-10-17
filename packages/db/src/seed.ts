@@ -20,6 +20,7 @@ import {
   customerLedgerEntriesTable,
   customerLedgersTable,
   customersTable,
+  DEFAULT_AI_SYSTEM_PROMPT,
   deliveryFeeRulesTable,
   diningTablesTable,
   financialCategoriesTable,
@@ -186,14 +187,10 @@ const main = async () => {
     await tx.insert(aiSettingsTable).values({
       restaurantId: restaurant.id,
       openaiApiKey: "sk-test-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-      evolutionInstanceName: "burgercraft-bot",
+      evolutionInstanceName: "eeyfood-bot",
       evolutionApiKey: "evol_api_key_ficticio_9876543210",
-      botName: "Craft Bot",
-      systemPrompt:
-        "Você é o Craft Bot, atendente virtual da Burger Craft SP. Seja simpático e objetivo. " +
-        "Cardápio principal: Big Craft R$35, Duplo Costela R$42, Frango Crispy R$32, " +
-        "Combo Clássico R$52, Fritas G R$14, Fritas P R$8, Coca-Cola R$6, Água R$4. " +
-        "Capture nome, telefone e endereço para delivery. Confirme o pedido antes de finalizar.",
+      botName: "EeyFood Bot",
+      systemPrompt: DEFAULT_AI_SYSTEM_PROMPT,
       isBotActive: true,
       isBotPaused: false,
       conversationStatus: "BOT_ACTIVE",

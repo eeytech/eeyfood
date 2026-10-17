@@ -66,7 +66,11 @@ export default async function WhatsAppPage({ params }: PageProps) {
       {/* ── WhatsApp QR Code & Connection Card ────────────── */}
       <WhatsAppConnectionCard
         slug={slug}
-        initialInstanceName={aiSettings?.evolutionInstanceName}
+        initialInstanceName={
+          !aiSettings?.evolutionInstanceName || aiSettings.evolutionInstanceName === "burgercraft-bot"
+            ? "eeyfood-bot"
+            : aiSettings.evolutionInstanceName
+        }
       />
 
       {/* ── Fila de Atendimento Humano (se houver clientes aguardando) ── */}

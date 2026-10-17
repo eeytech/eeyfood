@@ -81,9 +81,12 @@ export const notificarStatusWhatsAppPedido = async ({
       .replace(/^["']|["']$/g, "");
     const apiKey = envApiKey || storedApiKey;
 
-    const instanceName = (aiSettings?.evolutionInstanceName || "")
+    let instanceName = (aiSettings?.evolutionInstanceName || "")
       .trim()
       .replace(/^["']|["']$/g, "");
+    if (!instanceName || instanceName === "burgercraft-bot") {
+      instanceName = "eeyfood-bot";
+    }
 
     // Se a instância ou a chave não estiverem preenchidas, WhatsApp não está conectado
     if (!instanceName || !apiKey) {

@@ -30,7 +30,8 @@ interface PendingMessageBatch {
 }
 
 const messageDebounceMap = new Map<string, PendingMessageBatch>();
-const DEBOUNCE_DELAY_MS = 2500; // Aguarda 2.5s para agrupar mensagens consecutivas do cliente
+const DEBOUNCE_DELAY_MS = 3000; // Aguarda 3s para agrupar mensagens consecutivas do cliente
+const activeProcessingSessions = new Set<string>();
 
 async function sendWhatsAppMessage(
   evolutionUrl: string,
@@ -77,6 +78,7 @@ async function executarHandoff({
   apiKey,
   targetPhone,
   remoteJid,
+  triggerText,
 }: {
   restaurantId: string;
   slug: string;
@@ -87,6 +89,7 @@ async function executarHandoff({
   apiKey: string;
   targetPhone: string;
   remoteJid: string;
+  triggerText?: string;
 }) {
   await pausarBotParaCliente(restaurantId, customerPhone, customerName);
 
@@ -99,8 +102,13 @@ async function executarHandoff({
     })
     .catch(() => null);
 
-  const handoffMsg =
-    "Entendido! Um atendente humano foi notificado e assumirá a conversa a partir de agora. Por favor, aguarde um momento.";
+  const isAlterOrCancelOrder =
+    /altera|muda|cancela|troca|modifica|edita/i.test(triggerText || "");
+
+  const handoffMsg = isAlterOrCancelOrder
+    ? "Entendido! Por motivos de segurança e agilidade da cozinha, pedidos já confirmados ou em produção não podem ser alterados automaticamente pelo robô. Estou transferindo você agora mesmo para um atendente humano verificar a alteração com a equipe. Por favor, aguarde um momento! 👨‍💼"
+    : "Entendido! Um atendente humano foi notificado e assumirá a conversa a partir de agora. Por favor, aguarde um momento.";
+
   await sendWhatsAppMessage(
     evolutionUrl,
     instanceName,
@@ -112,6 +120,18 @@ async function executarHandoff({
 }
 
 async function processarFilaMensagens(sessionKey: string) {
+  if (activeProcessingSessions.has(sessionKey)) {
+    console.log(
+      `[Webhook Evolution] Sessão ${sessionKey} já está processando mensagem. Reagendando...`,
+    );
+    setTimeout(() => {
+      processarFilaMensagens(sessionKey).catch((e) =>
+        console.error(`[Webhook Evolution] Erro no processamento reagendado:`, e),
+      );
+    }, 1200);
+    return;
+  }
+
   const item = messageDebounceMap.get(sessionKey);
   if (!item) return;
   messageDebounceMap.delete(sessionKey);
@@ -119,11 +139,13 @@ async function processarFilaMensagens(sessionKey: string) {
   const combinedText = item.messages.join("\n").trim();
   if (!combinedText) return;
 
-  console.log(
-    `[Webhook Evolution] Processando lote de ${item.messages.length} mensagem(ns) de ${item.customerName} (${item.customerPhone}): "${combinedText}"`,
-  );
+  activeProcessingSessions.add(sessionKey);
 
   try {
+    console.log(
+      `[Webhook Evolution] Processando lote de ${item.messages.length} mensagem(ns) de ${item.customerName} (${item.customerPhone}): "${combinedText}"`,
+    );
+
     const botResponse = await processarMensagemBot({
       slug: item.slug,
       restaurantId: item.restaurantId,
@@ -132,7 +154,7 @@ async function processarFilaMensagens(sessionKey: string) {
       messageText: combinedText,
     });
 
-    if (botResponse === HANDOFF_SIGNAL) {
+    if (botResponse === HANDOFF_SIGNAL || botResponse?.includes(HANDOFF_SIGNAL)) {
       await executarHandoff({
         restaurantId: item.restaurantId,
         slug: item.slug,
@@ -143,6 +165,7 @@ async function processarFilaMensagens(sessionKey: string) {
         apiKey: item.apiKey,
         targetPhone: item.targetPhone,
         remoteJid: item.remoteJid,
+        triggerText: combinedText,
       });
       return;
     }
@@ -166,6 +189,17 @@ async function processarFilaMensagens(sessionKey: string) {
       `[Webhook Evolution] Erro ao processar mensagem do cliente ${item.customerPhone}:`,
       err,
     );
+  } finally {
+    activeProcessingSessions.delete(sessionKey);
+
+    // Se novas mensagens chegaram enquanto a IA respondia, agenda o processamento do restante
+    if (messageDebounceMap.has(sessionKey)) {
+      setTimeout(() => {
+        processarFilaMensagens(sessionKey).catch((e) =>
+          console.error(`[Webhook Evolution] Erro ao processar lote subsequente:`, e),
+        );
+      }, 500);
+    }
   }
 }
 
@@ -255,7 +289,10 @@ export async function POST(request: Request) {
       })
       .from(aiSettingsTable)
       .innerJoin(restaurantsTable, eq(aiSettingsTable.restaurantId, restaurantsTable.id))
-      .where(sql`lower(trim(${aiSettingsTable.evolutionInstanceName})) = ${instanceName.toLowerCase()}`)
+      .where(
+        sql`lower(trim(${aiSettingsTable.evolutionInstanceName})) = ${instanceName.toLowerCase()}
+            OR (${instanceName.toLowerCase()} = 'eeyfood-bot' AND lower(trim(${aiSettingsTable.evolutionInstanceName})) = 'burgercraft-bot')`
+      )
       .limit(1);
 
     // 2. Fallback resiliente: busca por correspondência flexível ou restaurante único
@@ -527,6 +564,7 @@ export async function POST(request: Request) {
         apiKey,
         targetPhone,
         remoteJid,
+        triggerText: messageText,
       });
       return NextResponse.json({ ok: true, handoff: true });
     }

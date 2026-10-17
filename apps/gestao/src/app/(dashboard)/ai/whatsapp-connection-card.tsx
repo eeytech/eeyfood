@@ -19,6 +19,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,7 +27,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -48,13 +48,19 @@ export function WhatsAppConnectionCard({
   slug,
   initialInstanceName,
 }: WhatsAppConnectionCardProps) {
+  const normalizedInitialInstance =
+    initialInstanceName && initialInstanceName !== "burgercraft-bot"
+      ? initialInstanceName
+      : "eeyfood-bot";
+
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
   const [phone, setPhone] = useState<string | null>(null);
   const [profileName, setProfileName] = useState<string | null>(null);
   const [profilePicUrl, setProfilePicUrl] = useState<string | null>(null);
   const [instanceName, setInstanceName] = useState<string>(
-    initialInstanceName || `restaurante_${slug}`,
+    normalizedInitialInstance,
   );
+  const [isRefreshingStatus, setIsRefreshingStatus] = useState<boolean>(false);
 
   // Status adicional da IA e Webhook
   const [isBotActive, setIsBotActive] = useState<boolean>(false);
@@ -79,9 +85,16 @@ export function WhatsAppConnectionCard({
   // Consulta o status de conexão
   const checkStatus = useCallback(
     async (silent = false) => {
+      if (!silent) setIsRefreshingStatus(true);
       try {
         const res = await buscarStatusWhatsAppAction(slug);
-        if (res.instanceName) setInstanceName(res.instanceName);
+        if (res.instanceName) {
+          setInstanceName(
+            res.instanceName === "burgercraft-bot"
+              ? "eeyfood-bot"
+              : res.instanceName,
+          );
+        }
         if (res.isBotActive !== undefined) setIsBotActive(res.isBotActive);
         if (res.hasAiApiKey !== undefined) setHasAiApiKey(res.hasAiApiKey);
         if (res.aiProvider) setAiProvider(res.aiProvider);
@@ -99,15 +112,33 @@ export function WhatsAppConnectionCard({
             setIsQrModalOpen(false);
             setQrCodeBase64(null);
             toast.success("WhatsApp conectado com sucesso!");
+          } else if (!silent) {
+            toast.success("Status atualizado: WhatsApp conectado com sucesso!");
           }
         } else {
           setIsConnected(false);
+          if (!silent) {
+            if (res.error) {
+              toast.error(`Falha ao verificar conexão: ${res.error}`);
+            } else {
+              toast.info("Status atualizado: WhatsApp desconectado.");
+            }
+          }
         }
       } catch (err) {
         if (!silent) {
           console.error("Erro ao checar status:", err);
+          toast.error(
+            err instanceof Error
+              ? err.message
+              : "Erro ao atualizar status da conexão.",
+          );
         }
         setIsConnected(false);
+      } finally {
+        if (!silent) {
+          setIsRefreshingStatus(false);
+        }
       }
     },
     [slug, isQrModalOpen],
@@ -152,7 +183,13 @@ export function WhatsAppConnectionCard({
       }
 
       setQrCodeBase64(res.base64);
-      if (res.instanceName) setInstanceName(res.instanceName);
+      if (res.instanceName) {
+        setInstanceName(
+          res.instanceName === "burgercraft-bot"
+            ? "eeyfood-bot"
+            : res.instanceName,
+        );
+      }
       toast.info("Aponte seu WhatsApp para o QR Code.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao gerar QR Code.");
@@ -279,12 +316,12 @@ export function WhatsAppConnectionCard({
               variant="outline"
               size="sm"
               onClick={() => void checkStatus(false)}
-              disabled={isPending}
+              disabled={isRefreshingStatus || isPending}
               title="Atualizar status da conexão"
               className="h-9 px-3 gap-1.5 text-xs"
             >
-              <RefreshCwIcon className={`h-3.5 w-3.5 ${isPending ? "animate-spin" : ""}`} />
-              Atualizar
+              <RefreshCwIcon className={`h-3.5 w-3.5 ${isRefreshingStatus ? "animate-spin" : ""}`} />
+              {isRefreshingStatus ? "Atualizando..." : "Atualizar"}
             </Button>
           </div>
         </CardHeader>
@@ -639,69 +676,27 @@ export function WhatsAppConnectionCard({
         </DialogContent>
       </Dialog>
 
-      {/* Modal Personalizado de Confirmação para Desconectar WhatsApp */}
-      <Dialog open={isDisconnectModalOpen} onOpenChange={setIsDisconnectModalOpen}>
-        <DialogContent className="max-w-md p-6 bg-white text-slate-900 shadow-2xl">
-          <DialogHeader>
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-destructive/10 text-destructive border border-destructive/20">
-                <LogOutIcon size={20} />
-              </div>
-              <div>
-                <DialogTitle className="font-display text-lg font-bold text-slate-900">
-                  Desconectar WhatsApp
-                </DialogTitle>
-                <DialogDescription className="text-xs text-slate-500 mt-0.5">
-                  Esta ação encerrará a sessão conectada na Evolution API.
-                </DialogDescription>
-              </div>
-            </div>
-          </DialogHeader>
-
-          <div className="my-2 rounded-xl border border-destructive/20 bg-destructive/5 p-4 text-xs text-destructive space-y-2">
-            <p className="font-semibold flex items-center gap-1.5 text-slate-900">
-              <AlertTriangleIcon size={15} className="text-destructive shrink-0" />
-              Atenção: Impacto no atendimento
-            </p>
-            <p className="text-slate-600 leading-relaxed">
-              Deseja realmente desconectar o número{" "}
-              <strong className="text-slate-900">{phone ? formatPhone(phone) : "deste restaurante"}</strong>?
-              As mensagens automáticas, notificações de pedidos e o robô de IA serão interrompidos até que um novo QR Code seja conectado.
-            </p>
-          </div>
-
-          <DialogFooter className="flex flex-row items-center justify-end gap-2 pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsDisconnectModalOpen(false)}
-              disabled={isPending}
-              className="text-xs"
-            >
-              Cancelar
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleConfirmarDesconexao}
-              disabled={isPending}
-              className="gap-1.5 text-xs font-semibold"
-            >
-              {isPending ? (
-                <>
-                  <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
-                  Desconectando...
-                </>
-              ) : (
-                <>
-                  <LogOutIcon className="h-3.5 w-3.5" />
-                  Sim, desconectar
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Modal Padrão de Confirmação para Desconectar WhatsApp */}
+      <ConfirmDeleteDialog
+        open={isDisconnectModalOpen}
+        onOpenChange={setIsDisconnectModalOpen}
+        title="Desconectar WhatsApp"
+        icon={<LogOutIcon size={20} />}
+        description={
+          <>
+            Deseja realmente desconectar o número{" "}
+            <strong className="font-semibold text-slate-900">
+              {phone ? formatPhone(phone) : "deste restaurante"}
+            </strong>
+            ? As mensagens automáticas, notificações de pedidos e o robô de IA serão interrompidos até que um novo QR Code seja conectado.
+          </>
+        }
+        confirmLabel="Sim, desconectar"
+        cancelLabel="Cancelar"
+        loadingLabel="Desconectando..."
+        isPending={isPending}
+        onConfirm={handleConfirmarDesconexao}
+      />
     </>
   );
 }

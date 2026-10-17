@@ -80,8 +80,11 @@ function getEvolutionConfig(
   const cleanSlug = restaurantSlug
     ? restaurantSlug.toLowerCase().replace(/[^a-z0-9]/g, "_")
     : "loja";
+  const rawInstance = cleanKey(storedInstanceName);
   const instanceName =
-    cleanKey(storedInstanceName) || `restaurante_${cleanSlug}`;
+    !rawInstance || rawInstance === "burgercraft-bot"
+      ? "eeyfood-bot"
+      : rawInstance;
 
   return { evolutionUrl, apiKey, instanceName };
 }
@@ -180,8 +183,17 @@ export async function buscarStatusWhatsAppAction(
       where: eq(aiSettingsTable.restaurantId, restaurant.id),
     });
 
+    if (aiSettings?.evolutionInstanceName === "burgercraft-bot") {
+      await db
+        .update(aiSettingsTable)
+        .set({ evolutionInstanceName: "eeyfood-bot", updatedAt: new Date() })
+        .where(eq(aiSettingsTable.restaurantId, restaurant.id));
+    }
+
     const { evolutionUrl, apiKey, instanceName } = getEvolutionConfig(
-      aiSettings?.evolutionInstanceName,
+      aiSettings?.evolutionInstanceName === "burgercraft-bot"
+        ? "eeyfood-bot"
+        : aiSettings?.evolutionInstanceName,
       aiSettings?.evolutionApiKey,
       slug,
     );
