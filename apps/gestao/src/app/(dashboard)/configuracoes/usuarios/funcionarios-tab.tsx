@@ -577,14 +577,6 @@ export function FuncionariosTab({
                         {/* Status */}
                         <TableCell className="text-center">
                           <div className="flex items-center justify-center gap-2">
-                            <span
-                              className={cn(
-                                "text-xs font-medium",
-                                isAvailable ? "text-primary font-semibold" : "text-slate-400",
-                              )}
-                            >
-                              {isAvailable ? "Ativo" : "Inativo"}
-                            </span>
                             <Switch
                               checked={isAvailable}
                               disabled={isPending}
@@ -593,6 +585,14 @@ export function FuncionariosTab({
                               }
                               className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
                             />
+                            <span
+                              className={cn(
+                                "text-xs font-medium",
+                                isAvailable ? "text-primary font-semibold" : "text-slate-400",
+                              )}
+                            >
+                              {isAvailable ? "Ativo" : "Inativo"}
+                            </span>
                           </div>
                         </TableCell>
 

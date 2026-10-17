@@ -909,9 +909,6 @@ export function GarconsTab({
                         Comissão: <strong className="text-slate-700">{g.waiter.commissionPercent > 0 ? `${g.waiter.commissionPercent}%` : "Padrão"}</strong>
                       </span>
                       <div className="flex items-center gap-2">
-                        <span className={cn("text-xs font-medium", isAvailable ? "text-primary font-semibold" : "text-slate-400")}>
-                          {isAvailable ? "Ativo" : "Inativo"}
-                        </span>
                         <Switch
                           checked={isAvailable}
                           disabled={isPending}
@@ -920,6 +917,9 @@ export function GarconsTab({
                           }
                           className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-200"
                         />
+                        <span className={cn("text-xs font-medium", isAvailable ? "text-primary font-semibold" : "text-slate-400")}>
+                          {isAvailable ? "Ativo" : "Inativo"}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -1628,7 +1628,7 @@ export function GarconsTab({
             <div className="space-y-4 py-4">
               <div className="space-y-1.5">
                 <Label htmlFor="ruleName" className="text-xs font-semibold text-slate-700">
-                  Nome da Regra <span className="text-rose-500">*</span>
+                  Nome da Regra 
                 </Label>
                 <Input
                   id="ruleName"
@@ -1651,7 +1651,7 @@ export function GarconsTab({
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="serviceFeePercent" className="text-xs font-semibold text-slate-700">
-                    Taxa Sugerida na Comanda (%) <span className="text-rose-500">*</span>
+                    Taxa Sugerida na Comanda (%) 
                   </Label>
                   <Input
                     id="serviceFeePercent"
@@ -1679,7 +1679,7 @@ export function GarconsTab({
 
                 <div className="space-y-1.5">
                   <Label htmlFor="waiterSharePercent" className="text-xs font-semibold text-slate-700">
-                    Repasse para Equipe (%) <span className="text-rose-500">*</span>
+                    Repasse para Equipe (%) 
                   </Label>
                   <Input
                     id="waiterSharePercent"
